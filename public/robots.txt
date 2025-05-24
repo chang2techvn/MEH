@@ -1,0 +1,11 @@
+# Allow all crawlers
+User-agent: *
+Allow: /
+
+# Sitemap location
+Sitemap: https://englishmastery.com/sitemap.xml
+
+# Disallow admin routes
+User-agent: *
+Disallow: /admin/
+Disallow: /api/
