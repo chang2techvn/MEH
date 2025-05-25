@@ -30,15 +30,15 @@ type VideoCache = {
   timestamp: number
 }
 
-// Global cache that persists between requests (using var to allow reassignment)
-var globalVideoCache: VideoCache = {
+// Global cache that persists between requests
+let globalVideoCache: VideoCache = {
   video: null,
   date: null,
   timestamp: 0,
 }
 
-// Admin selected video that takes precedence  
-var adminSelectedVideo: VideoData | null = null
+// Admin selected video that takes precedence
+let adminSelectedVideo: VideoData | null = null
 
 // Function to get today's date as a string
 const getTodayDate = () => {
@@ -87,40 +87,34 @@ const fallbackVideos = [
 
 // Function to fetch random YouTube video
 export async function fetchRandomYoutubeVideo(
-  minDuration = 180,
-  maxDuration = 300,
+  minDuration = 60,
+  maxDuration = 2700,
   preferredTopics: string[] = [],
 ): Promise<VideoData> {
+  // Check if we already have a video for today
+  const today = getTodayDate()
+  // if (cachedVideo && lastFetchDate === today) {
+  //   return cachedVideo
+  // }
+
   try {
     console.log(`Attempting to fetch a random YouTube video (${minDuration}-${maxDuration} seconds)...`)
     console.log("Preferred topics:", preferredTopics.length > 0 ? preferredTopics.join(", ") : "Any")
 
-    // Try to scrape YouTube for videos with relaxed parameters first
-    try {
-      const videoData = await attemptYouTubeScraping(minDuration, maxDuration, preferredTopics)
-      return videoData
-    } catch (scrapingError) {
-      console.log("Primary scraping failed, trying with relaxed duration constraints...")
-      
-      // Try again with more relaxed duration constraints (±30 seconds)
-      try {
-        const relaxedMinDuration = Math.max(120, minDuration - 30)
-        const relaxedMaxDuration = maxDuration + 60
-        const videoData = await attemptYouTubeScraping(relaxedMinDuration, relaxedMaxDuration, preferredTopics)
-        return videoData
-      } catch (relaxedError) {
-        console.log("Relaxed scraping also failed, using fallback video")
-        // Don't throw error, go directly to fallback
-      }
-    }
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-    console.log("YouTube scraping failed, using fallback video:", errorMessage)
-  }
+    // Try to scrape YouTube for videos
+    const videoData = await attemptYouTubeScraping(minDuration, maxDuration, preferredTopics)
 
-  // Always use fallback if scraping fails
-  console.log("Using fallback video due to scraping issues")
-  return getFallbackVideo(minDuration, maxDuration, preferredTopics)
+    // Cache the video for today
+    // cachedVideo = videoData
+    // lastFetchDate = today
+
+    return videoData
+  } catch (error) {
+    console.error("Error fetching random YouTube video:", error)
+
+    // Use a fallback video when scraping fails
+    return getFallbackVideo(minDuration, maxDuration, preferredTopics)
+  }
 }
 
 // Function to attempt YouTube scraping
@@ -210,17 +204,8 @@ async function attemptYouTubeScraping(
 
     console.log(`Found ${videoIds.length} videos in search results`)
 
-    // If no videos found, fall back immediately rather than throwing error
-    if (videoIds.length === 0) {
-      console.log("No videos found in search results, will use fallback")
-      throw new Error("No videos found in search results")
-    }
-
     // Try videos one by one until we find one with appropriate duration
-    // Limit the search to first 10 videos for performance
-    const videosToCheck = videoIds.slice(0, Math.min(10, videoIds.length))
-    
-    for (const videoId of videosToCheck) {
+    for (const videoId of videoIds) {
       try {
         const videoDetails = await getVideoDetails(videoId, minDuration, maxDuration)
 
@@ -239,8 +224,7 @@ async function attemptYouTubeScraping(
       }
     }
 
-    // If we get here, we couldn't find a suitable video from the first 10 results
-    console.log(`No suitable videos found in first ${videosToCheck.length} results, will use fallback`)
+    // If we get here, we couldn't find a suitable video
     throw new Error("No videos with appropriate duration found")
   } catch (error) {
     console.error("YouTube scraping failed:", error)
@@ -340,7 +324,8 @@ async function getVideoDetails(videoId: string, minDuration: number, maxDuration
     const embedUrl = `https://www.youtube.com/embed/${videoId}`
 
     // Extract duration from the page (this is complex and might not always work)
-    // For simplicity, we'll use a random duration between min and max as fallback
+    // For simplicity, we'll use a random duration between min and max
+    // In a real implementation, you would parse the actual duration from the page
     const durationText = $('meta[itemprop="duration"]').attr("content") || ""
     let duration = Math.floor(Math.random() * (maxDuration - minDuration + 1)) + minDuration
 
@@ -354,21 +339,12 @@ async function getVideoDetails(videoId: string, minDuration: number, maxDuration
         const minutes = minutesMatch ? Number.parseInt(minutesMatch[1]) : 0
         const seconds = secondsMatch ? Number.parseInt(secondsMatch[1]) : 0
 
-        const parsedDuration = minutes * 60 + seconds
+        duration = minutes * 60 + seconds
 
-        // Only use parsed duration if it seems reasonable (> 30 seconds)
-        if (parsedDuration > 30) {
-          duration = parsedDuration
-          console.log(`Parsed duration from meta: ${duration} seconds (${minutes}m ${seconds}s)`)
-        } else {
-          console.log(`Parsed duration ${parsedDuration}s seems too short, using random duration: ${duration}s`)
-        }
+        console.log(`Parsed duration: ${duration} seconds (${minutes}m ${seconds}s)`)
       } catch (error) {
         console.error("Error parsing duration:", error)
-        console.log(`Using random duration: ${duration}s`)
       }
-    } else {
-      console.log(`No duration metadata found, using random duration: ${duration}s`)
     }
 
     // Extract transcript (simplified version)
@@ -453,23 +429,13 @@ function extractTopics(title: string, description: string): string[] {
 
 // Function to get a fallback video
 function getFallbackVideo(minDuration: number, maxDuration: number, preferredTopics: string[] = []): VideoData {
-  console.log(`Using fallback video - Duration range: ${minDuration}-${maxDuration}s, Topics:`, preferredTopics.length > 0 ? preferredTopics.join(", ") : "Any")
+  console.log("Using fallback video")
 
   // Filter fallback videos by duration
   let eligibleVideos = fallbackVideos.filter((video) => video.duration >= minDuration && video.duration <= maxDuration)
 
-  // If no videos match the duration criteria, use relaxed criteria
+  // If no videos match the duration criteria, use all fallback videos
   if (eligibleVideos.length === 0) {
-    console.log("No fallback videos match duration criteria, relaxing constraints...")
-    // Try with ±60 seconds tolerance
-    eligibleVideos = fallbackVideos.filter((video) => 
-      video.duration >= (minDuration - 60) && video.duration <= (maxDuration + 60)
-    )
-  }
-
-  // If still no videos match, use all fallback videos
-  if (eligibleVideos.length === 0) {
-    console.log("Using all fallback videos as no duration constraints could be satisfied")
     eligibleVideos = fallbackVideos
   }
 
@@ -484,14 +450,11 @@ function getFallbackVideo(minDuration: number, maxDuration: number, preferredTop
     // If we found videos matching the preferred topics, use those
     if (topicMatchedVideos.length > 0) {
       eligibleVideos = topicMatchedVideos
-      console.log(`Found ${topicMatchedVideos.length} fallback videos matching preferred topics`)
     }
   }
 
   // Select a random fallback video
   const fallback = eligibleVideos[Math.floor(Math.random() * eligibleVideos.length)]
-  
-  console.log(`Selected fallback video: "${fallback.title}" (${fallback.duration}s)`)
 
   // Create video data object from fallback
   return {
@@ -551,8 +514,8 @@ This is a simulated transcript for the video. In a real implementation, you woul
 
 // Modify the getTodayVideo function to ensure it only changes when admin approves
 export async function getTodayVideo(
-  adminMinDuration = 180,
-  adminMaxDuration = 300,
+  adminMinDuration = 60,
+  adminMaxDuration = 2700,
   adminTopics: string[] = [],
 ): Promise<VideoData> {
   // Get today's date
@@ -584,29 +547,18 @@ export async function getTodayVideo(
       timestamp: now,
     }
 
-    console.log("Successfully fetched and cached new video for today:", video.id)
     return video
   } catch (error) {
     console.error("Error fetching random video:", error)
 
     // If we have any cached video (even from a previous day), use it as fallback
     if (globalVideoCache.video) {
-      console.log("Using previously cached video as fallback:", globalVideoCache.video.id)
+      console.log("Using previously cached video as fallback")
       return globalVideoCache.video
     }
 
-    // Last resort: use a fallback video - this should never fail
-    console.log("No cached video available, using fallback video as last resort")
-    const fallbackVideo = getFallbackVideo(adminMinDuration, adminMaxDuration, adminTopics)
-    
-    // Cache the fallback video to prevent repeated failures
-    globalVideoCache = {
-      video: fallbackVideo,
-      date: today,
-      timestamp: now,
-    }
-    
-    return fallbackVideo
+    // Last resort: use a fallback video
+    return getFallbackVideo(adminMinDuration, adminMaxDuration, adminTopics)
   }
 }
 

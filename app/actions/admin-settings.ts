@@ -10,8 +10,8 @@ export interface VideoSettings {
 
 // Default settings
 const DEFAULT_SETTINGS: VideoSettings = {
-  minWatchTime: 180, // 3 minutes
-  maxVideoDuration: 300, // 5 minutes
+  minWatchTime: 60, // 3 minutes
+  maxVideoDuration: 2700, // 5 minutes
   autoPublish: true,
   enforceWatchTime: true,
 }

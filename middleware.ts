@@ -14,7 +14,7 @@ export function middleware(request: NextRequest) {
     "Referrer-Policy": "strict-origin-when-cross-origin",
     "Permissions-Policy": "camera=(), microphone=(), geolocation=(), interest-cohort=()",
     "Content-Security-Policy":
-      "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://analytics.englishmastery.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://api.englishmastery.com; frame-src 'self' https://www.youtube.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'; upgrade-insecure-requests;",
+       "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://analytics.englishmastery.com https://www.youtube.com https://s.ytimg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://api.englishmastery.com; frame-src 'self' https://www.youtube.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'; upgrade-insecure-requests;",
   }
 
   // Set security headers

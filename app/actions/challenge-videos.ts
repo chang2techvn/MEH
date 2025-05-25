@@ -11,15 +11,15 @@ type ChallengeCache = {
   timestamp: number
 }
 
-// Global cache for challenges (using var to allow reassignment)
-var globalChallengeCache: ChallengeCache = {
+// Global cache for challenges
+let globalChallengeCache: ChallengeCache = {
   challenges: [],
   date: null,
   timestamp: 0,
 }
 
-// Cache for current challenge (using var to allow reassignment)
-var currentChallengeCache: {
+// Cache for current challenge
+let currentChallengeCache: {
   challenge: Challenge | null
   date: string | null
 } = {
@@ -155,18 +155,18 @@ export async function fetchChallengesByDifficulty(
   const topics = challengeTopics[difficulty] || []
 
   // Thiết lập thời lượng video dựa trên cấp độ
-  let minDuration = 120 // 2 phút
-  let maxDuration = 300 // 5 phút
+  let minDuration = 60 // 2 phút
+  let maxDuration = 2700 // 5 phút
 
   if (difficulty === "beginner") {
     minDuration = 120 // 2 phút
-    maxDuration = 240 // 4 phút
+    maxDuration = 2700 // 4 phút
   } else if (difficulty === "intermediate") {
     minDuration = 180 // 3 phút
-    maxDuration = 300 // 5 phút
+    maxDuration = 2700 // 5 phút
   } else if (difficulty === "advanced") {
     minDuration = 240 // 4 phút
-    maxDuration = 420 // 7 phút
+    maxDuration = 2700 // 7 phút
   }
 
   // Lấy ngẫu nhiên các chủ đề từ danh sách
