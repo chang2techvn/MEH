@@ -25,8 +25,8 @@ export default function ChallengesPage() {
   const [activeTab, setActiveTab] = useState("all")
   const [loading, setLoading] = useState(true)
   const [currentChallenge, setCurrentChallenge] = useState<Challenge | null>(null)
-  const [createModalOpen, setCreateModalOpen] = useState(false)
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [createModalOpen, setCreateModalOpen] = useState(true)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(true)
   const [mounted, setMounted] = useState(false)
 
   // Add these state variables inside the ChallengesPage component

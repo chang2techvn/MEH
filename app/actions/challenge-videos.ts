@@ -34,7 +34,7 @@ const getTodayDate = () => {
 }
 
 // Định nghĩa các chủ đề cho thử thách
-export const challengeTopics = {
+const challengeTopics = {
   beginner: [
     "basic english vocabulary",
     "english for beginners",

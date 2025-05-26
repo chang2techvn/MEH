@@ -1,0 +1,487 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String                    @id @default(cuid())
+  email             String                    @unique
+  name              String?
+  avatar            String?
+  role              UserRole                  @default(MEMBER)
+  studentId         String?                   @unique
+  major             String?
+  academicYear      String?
+  bio               String?
+  points            Int                       @default(0)
+  level             Int                       @default(1)
+  experiencePoints  Int                       @default(0)
+  streakDays        Int                       @default(0)
+  lastActive        DateTime                  @default(now())
+  joinedAt          DateTime                  @default(now())
+  isActive          Boolean                   @default(true)
+  preferences       Json?
+  adminLogs         AdminLog[]
+  challenges        ChallengeSubmission[]
+  conversations     ConversationParticipant[]
+  evaluationLogs    EvaluationLog[]
+  flaggedContent    FlaggedContent[]
+  receivedMessages  Message[]                 @relation("MessageReceiver")
+  sentMessages      Message[]                 @relation("MessageSender")
+  sentNotifications Notification[]            @relation("NotificationSender")
+  notifications     Notification[]            @relation("NotificationUser")
+  resources         Resource[]
+  achievements      UserAchievement[]
+
+  @@map("users")
+}
+
+model UserAchievement {
+  id              String   @id @default(cuid())
+  userId          String
+  achievementType String
+  title           String
+  description     String?
+  earnedAt        DateTime @default(now())
+  points          Int      @default(0)
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_achievements")
+}
+
+model Conversation {
+  id            String                    @id @default(cuid())
+  type          ConversationType          @default(PRIVATE)
+  name          String?
+  description   String?
+  isGroup       Boolean                   @default(false)
+  maxMembers    Int?
+  createdAt     DateTime                  @default(now())
+  updatedAt     DateTime                  @updatedAt
+  lastMessageAt DateTime?
+  isActive      Boolean                   @default(true)
+  participants  ConversationParticipant[]
+  messages      Message[]
+
+  @@map("conversations")
+}
+
+model ConversationParticipant {
+  id             String          @id @default(cuid())
+  conversationId String
+  userId         String
+  role           ParticipantRole @default(MEMBER)
+  joinedAt       DateTime        @default(now())
+  lastReadAt     DateTime?
+  isActive       Boolean         @default(true)
+  conversation   Conversation    @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userId])
+  @@map("conversation_participants")
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  senderId       String
+  receiverId     String?
+  content        String
+  type           MessageType  @default(TEXT)
+  attachments    Json?
+  metadata       Json?
+  isEdited       Boolean      @default(false)
+  editedAt       DateTime?
+  isDeleted      Boolean      @default(false)
+  deletedAt      DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  receiver       User?        @relation("MessageReceiver", fields: [receiverId], references: [id])
+  sender         User         @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+  @@map("messages")
+}
+
+model Challenge {
+  id                 String                @id @default(cuid())
+  title              String
+  description        String
+  instructions       String
+  difficulty         ChallengeDifficulty
+  category           ChallengeCategory
+  type               ChallengeType
+  points             Int                   @default(10)
+  timeLimit          Int?
+  maxAttempts        Int?
+  isActive           Boolean               @default(true)
+  isPublic           Boolean               @default(true)
+  tags               String[]
+  resources          Json?
+  evaluationCriteria Json?
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
+  startDate          DateTime?
+  endDate            DateTime?
+  submissions        ChallengeSubmission[]
+
+  @@map("challenges")
+}
+
+model ChallengeSubmission {
+  id            String           @id @default(cuid())
+  challengeId   String
+  userId        String
+  content       String
+  attachments   Json?
+  status        SubmissionStatus @default(PENDING)
+  score         Float?
+  feedback      String?
+  aiEvaluation  Json?
+  attemptNumber Int              @default(1)
+  timeSpent     Int?
+  submittedAt   DateTime         @default(now())
+  evaluatedAt   DateTime?
+  challenge     Challenge        @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([challengeId, userId, attemptNumber])
+  @@map("challenge_submissions")
+}
+
+model Resource {
+  id           String               @id @default(cuid())
+  title        String
+  description  String?
+  content      String?
+  type         ResourceType
+  category     String
+  tags         String[]
+  difficulty   ChallengeDifficulty?
+  fileUrl      String?
+  thumbnailUrl String?
+  duration     Int?
+  size         Int?
+  downloads    Int                  @default(0)
+  views        Int                  @default(0)
+  isPublic     Boolean              @default(true)
+  isActive     Boolean              @default(true)
+  metadata     Json?
+  uploadedBy   String
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+  uploader     User                 @relation(fields: [uploadedBy], references: [id], onDelete: Cascade)
+
+  @@map("resources")
+}
+
+model Notification {
+  id         String               @id @default(cuid())
+  userId     String
+  senderId   String?
+  type       NotificationType
+  title      String
+  message    String
+  data       Json?
+  isRead     Boolean              @default(false)
+  isArchived Boolean              @default(false)
+  priority   NotificationPriority @default(NORMAL)
+  createdAt  DateTime             @default(now())
+  readAt     DateTime?
+  expiresAt  DateTime?
+  sender     User?                @relation("NotificationSender", fields: [senderId], references: [id])
+  user       User                 @relation("NotificationUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@map("notifications")
+}
+
+model AIModel {
+  id             String          @id @default(cuid())
+  name           String          @unique
+  provider       String
+  modelId        String
+  version        String?
+  description    String?
+  capabilities   String[]
+  maxTokens      Int?
+  costPerToken   Float?
+  isActive       Boolean         @default(true)
+  configuration  Json?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  evaluationLogs EvaluationLog[]
+
+  @@map("ai_models")
+}
+
+model APIKey {
+  id         String    @id @default(cuid())
+  name       String
+  provider   String
+  keyHash    String
+  isActive   Boolean   @default(true)
+  usageCount Int       @default(0)
+  lastUsed   DateTime?
+  rateLimit  Int?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  expiresAt  DateTime?
+
+  @@map("api_keys")
+}
+
+model EvaluationLog {
+  id           String   @id @default(cuid())
+  userId       String
+  modelId      String
+  submissionId String?
+  inputText    String
+  outputText   String?
+  tokensUsed   Int?
+  cost         Float?
+  duration     Int?
+  status       String
+  error        String?
+  metadata     Json?
+  createdAt    DateTime @default(now())
+  model        AIModel  @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("evaluation_logs")
+}
+
+model BannedTerm {
+  id          String      @id @default(cuid())
+  term        String      @unique
+  category    String
+  severity    BanSeverity @default(MEDIUM)
+  isActive    Boolean     @default(true)
+  description String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@map("banned_terms")
+}
+
+model AISafetyRule {
+  id          String       @id @default(cuid())
+  name        String       @unique
+  description String
+  rule        String
+  action      SafetyAction @default(FLAG)
+  isActive    Boolean      @default(true)
+  priority    Int          @default(1)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@map("ai_safety_rules")
+}
+
+model FlaggedContent {
+  id          String      @id @default(cuid())
+  contentId   String
+  contentType ContentType
+  userId      String?
+  reason      String
+  severity    BanSeverity @default(MEDIUM)
+  status      FlagStatus  @default(PENDING)
+  reviewedBy  String?
+  reviewedAt  DateTime?
+  reviewNotes String?
+  flaggedAt   DateTime    @default(now())
+  user        User?       @relation(fields: [userId], references: [id])
+
+  @@index([status, flaggedAt])
+  @@map("flagged_content")
+}
+
+model ScoringTemplate {
+  id          String            @id @default(cuid())
+  name        String            @unique
+  description String?
+  criteria    Json
+  maxScore    Int               @default(100)
+  category    ChallengeCategory
+  isDefault   Boolean           @default(false)
+  isActive    Boolean           @default(true)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@map("scoring_templates")
+}
+
+model AdminLog {
+  id          String      @id @default(cuid())
+  adminId     String
+  action      AdminAction
+  target      String?
+  targetType  String?
+  description String
+  metadata    Json?
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime    @default(now())
+  admin       User        @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([adminId, createdAt])
+  @@map("admin_logs")
+}
+
+enum UserRole {
+  ADMIN
+  MODERATOR
+  MEMBER
+  GUEST
+}
+
+enum ConversationType {
+  PRIVATE
+  GROUP
+  CHANNEL
+  AI_CHAT
+}
+
+enum ParticipantRole {
+  ADMIN
+  MODERATOR
+  MEMBER
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  FILE
+  AUDIO
+  VIDEO
+  SYSTEM
+  AI_RESPONSE
+}
+
+enum ChallengeDifficulty {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+  EXPERT
+}
+
+enum ChallengeCategory {
+  GRAMMAR
+  VOCABULARY
+  LISTENING
+  SPEAKING
+  READING
+  WRITING
+  PRONUNCIATION
+  CONVERSATION
+  BUSINESS_ENGLISH
+  IELTS_PREP
+  TOEFL_PREP
+}
+
+enum ChallengeType {
+  MULTIPLE_CHOICE
+  FILL_IN_BLANK
+  ESSAY
+  SPEAKING_RECORDING
+  LISTENING_COMPREHENSION
+  VOCABULARY_BUILDING
+  GRAMMAR_EXERCISE
+  CONVERSATION_PRACTICE
+  VIDEO_SUBMISSION
+}
+
+enum SubmissionStatus {
+  PENDING
+  EVALUATING
+  COMPLETED
+  FAILED
+  FLAGGED
+}
+
+enum ResourceType {
+  PDF
+  VIDEO
+  AUDIO
+  IMAGE
+  DOCUMENT
+  PRESENTATION
+  QUIZ
+  EXERCISE
+  LINK
+}
+
+enum NotificationType {
+  SYSTEM
+  MESSAGE
+  CHALLENGE
+  ACHIEVEMENT
+  REMINDER
+  ANNOUNCEMENT
+  FRIEND_REQUEST
+  EVALUATION_COMPLETE
+}
+
+enum NotificationPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum BanSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum SafetyAction {
+  FLAG
+  BLOCK
+  MODERATE
+  REVIEW
+}
+
+enum ContentType {
+  MESSAGE
+  SUBMISSION
+  RESOURCE
+  USER_PROFILE
+  COMMENT
+}
+
+enum FlagStatus {
+  PENDING
+  REVIEWING
+  APPROVED
+  REJECTED
+  RESOLVED
+}
+
+enum AdminAction {
+  USER_CREATE
+  USER_UPDATE
+  USER_DELETE
+  USER_BAN
+  USER_UNBAN
+  CONTENT_DELETE
+  CONTENT_FLAG
+  CONTENT_APPROVE
+  CHALLENGE_CREATE
+  CHALLENGE_UPDATE
+  CHALLENGE_DELETE
+  RESOURCE_CREATE
+  RESOURCE_UPDATE
+  RESOURCE_DELETE
+  SYSTEM_CONFIG
+  SAFETY_RULE_UPDATE
+  API_KEY_CREATE
+  API_KEY_DELETE
+}
