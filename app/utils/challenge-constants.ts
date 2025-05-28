@@ -1,0 +1,92 @@
+// Định nghĩa các chủ đề cho thử thách
+export const challengeTopics = {
+  beginner: [
+    "basic english vocabulary",
+    "english for beginners",
+    "simple english conversation",
+    "english pronunciation basics",
+    "elementary grammar",
+    "travel english phrases",
+    "daily english expressions",
+    "english learning for beginners",
+    "basic english grammar",
+    "english alphabet pronunciation",
+    "english numbers pronunciation",
+    "english greetings and introductions",
+    "english for kids",
+    "english phonics",
+  ],
+  intermediate: [
+    "business english",
+    "english idioms",
+    "english presentation skills",
+    "academic english",
+    "english debate topics",
+    "english interview tips",
+    "cultural differences",
+    "english phrasal verbs",
+    "english slang expressions",
+    "english for work",
+    "english for travel",
+    "english conversation practice",
+    "english listening practice",
+    "english speaking practice",
+  ],
+  advanced: [
+    "advanced english vocabulary",
+    "english literature analysis",
+    "complex grammar structures",
+    "professional english communication",
+    "english for specific purposes",
+    "english public speaking",
+    "english academic writing",
+    "english rhetoric",
+    "english for negotiations",
+    "english for presentations",
+    "english for academic research",
+    "english debate techniques",
+    "english persuasive speaking",
+    "english critical thinking",
+  ],
+  general: [
+    "ted talk english",
+    "english learning tips",
+    "english language history",
+    "english around the world",
+    "english language evolution",
+    "english language varieties",
+    "english pronunciation tips",
+    "english accent training",
+    "english fluency practice",
+    "english vocabulary building",
+    "english grammar tips",
+    "english speaking confidence",
+    "english learning motivation",
+    "english learning strategies",
+    "english for daily life",
+    "english for social media",
+    "english for technology",
+    "english for science",
+    "english for arts",
+    "english for sports",
+    "english for music",
+    "english for movies",
+    "english for literature",
+    "english for travel vlogs",
+  ],
+}
+
+// Định nghĩa kiểu dữ liệu cho thử thách
+export interface Challenge {
+  id: string
+  title: string
+  description: string
+  thumbnailUrl?: string
+  videoUrl: string
+  embedUrl?: string
+  duration: number
+  difficulty: string
+  createdAt: string
+  topics?: string[]
+  featured?: boolean
+}

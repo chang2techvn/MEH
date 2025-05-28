@@ -62,9 +62,9 @@ export default function UserMenu() {
         <Button variant="ghost" size="icon" className="rounded-full relative group">
           <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-neo-mint to-purist-blue blur-sm opacity-0 group-hover:opacity-70 transition-opacity"></div>
           <Avatar className="h-9 w-9 border-2 border-white dark:border-gray-800">
-            <AvatarImage src={user.image || "/placeholder.svg?height=36&width=36"} alt={user.name} />
+            <AvatarImage src={user.avatar || "/placeholder.svg?height=36&width=36"} alt={user.name || "User"} />
             <AvatarFallback className="bg-gradient-to-br from-neo-mint to-purist-blue text-white">
-              {user.name.substring(0, 2).toUpperCase()}
+              {user.name ? user.name.substring(0, 2).toUpperCase() : "U"}
             </AvatarFallback>
           </Avatar>
         </Button>

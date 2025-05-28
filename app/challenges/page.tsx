@@ -10,7 +10,8 @@ import { Filter, Search, Plus, Loader2, BookOpen } from "lucide-react"
 import AssignedTask from "@/components/assigned-task"
 import ChallengeCard from "@/components/challenge-card"
 import CreateChallengeModal from "@/components/create-challenge-modal"
-import { fetchAllChallenges, fetchCurrentChallenge, type Challenge } from "@/app/actions/challenge-videos"
+import { fetchAllChallenges, fetchCurrentChallenge} from "@/app/actions/challenge-videos"
+import { challengeTopics, type Challenge } from '../utils/challenge-constants'
 import { toast } from "@/hooks/use-toast"
 import MainHeader from "@/components/main-header"
 

@@ -33,6 +33,10 @@ CREATE POLICY "Public profiles are viewable by authenticated users"
 ON users FOR SELECT
 USING (auth.role() = 'authenticated');
 
+CREATE POLICY "Allow user creation during signup"
+ON users FOR INSERT
+WITH CHECK (auth.uid()::text = id);
+
 CREATE POLICY "Only admins can delete users"
 ON users FOR DELETE
 USING (

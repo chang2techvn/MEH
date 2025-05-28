@@ -1,10 +1,57 @@
+import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs'
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 
-export function middleware(request: NextRequest) {
-  const response = NextResponse.next()
+export async function middleware(request: NextRequest) {
+  const res = NextResponse.next()
+  
+  // Create a Supabase client configured to use cookies
+  const supabase = createMiddlewareClient({ req: request, res })
 
-  // Add security headers
+  // Refresh session if expired - required for Server Components
+  const { data: { session } } = await supabase.auth.getSession()
+
+  // Protected routes that require authentication
+  const protectedRoutes = [
+    '/profile',
+    '/admin',
+    '/challenges/create',
+    '/groups/create',
+    '/messages'
+  ]
+
+  // Check if the current path is protected
+  const isProtectedRoute = protectedRoutes.some(route => 
+    request.nextUrl.pathname.startsWith(route)
+  )
+
+  // Redirect to login if accessing protected route without session
+  if (isProtectedRoute && !session) {
+    const redirectUrl = new URL('/auth/login', request.url)
+    redirectUrl.searchParams.set('redirect', request.nextUrl.pathname)
+    return NextResponse.redirect(redirectUrl)
+  }
+
+  // Admin routes - additional check for admin role
+  if (request.nextUrl.pathname.startsWith('/admin') && session) {
+    try {
+      const { data: user } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', session.user.id)
+        .single()
+
+      if (!user || user.role !== 'ADMIN') {
+        return NextResponse.redirect(new URL('/', request.url))
+      }
+    } catch (error) {
+      console.error('Error checking admin role:', error)
+      return NextResponse.redirect(new URL('/', request.url))
+    }
+  }
+
+  const response = res
+  // Add security headers (CSP disabled temporarily for debugging)
   const securityHeaders = {
     "X-DNS-Prefetch-Control": "on",
     "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
@@ -13,8 +60,9 @@ export function middleware(request: NextRequest) {
     "X-Content-Type-Options": "nosniff",
     "Referrer-Policy": "strict-origin-when-cross-origin",
     "Permissions-Policy": "camera=(), microphone=(), geolocation=(), interest-cohort=()",
-    "Content-Security-Policy":
-       "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://analytics.englishmastery.com https://www.youtube.com https://s.ytimg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://api.englishmastery.com; frame-src 'self' https://www.youtube.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'; upgrade-insecure-requests;",
+    // CSP disabled temporarily for debugging
+    // "Content-Security-Policy":
+    //    "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://analytics.englishmastery.com https://www.youtube.com https://s.ytimg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' http://localhost:3000 https://yvsjynosfwyhvisqhasp.supabase.co wss://yvsjynosfwyhvisqhasp.supabase.co; frame-src 'self' https://www.youtube.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'; upgrade-insecure-requests;",
   }
 
   // Set security headers

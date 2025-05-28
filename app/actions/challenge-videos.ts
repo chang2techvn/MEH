@@ -2,6 +2,14 @@
 
 import { fetchRandomYoutubeVideo, type VideoData } from "./youtube-video"
 import { classifyChallengeDifficulty } from "../utils/challenge-classifier"
+import { challengeTopics, type Challenge } from '../utils/challenge-constants'
+import { 
+  saveChallengesArrayToDatabase, 
+  getTodaysChallengesFromDatabase,
+  saveChallengeToDatabase 
+} from './challenge-database'
+
+
 
 // Add these cache variables at the top of the file, after the imports
 // Cache mechanism for challenges
@@ -33,98 +41,7 @@ const getTodayDate = () => {
   return `${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`
 }
 
-// Định nghĩa các chủ đề cho thử thách
-const challengeTopics = {
-  beginner: [
-    "basic english vocabulary",
-    "english for beginners",
-    "simple english conversation",
-    "english pronunciation basics",
-    "elementary grammar",
-    "travel english phrases",
-    "daily english expressions",
-    "english learning for beginners",
-    "basic english grammar",
-    "english alphabet pronunciation",
-    "english numbers pronunciation",
-    "english greetings and introductions",
-    "english for kids",
-    "english phonics",
-  ],
-  intermediate: [
-    "business english",
-    "english idioms",
-    "english presentation skills",
-    "academic english",
-    "english debate topics",
-    "english interview tips",
-    "cultural differences",
-    "english phrasal verbs",
-    "english slang expressions",
-    "english for work",
-    "english for travel",
-    "english conversation practice",
-    "english listening practice",
-    "english speaking practice",
-  ],
-  advanced: [
-    "advanced english vocabulary",
-    "english literature analysis",
-    "complex grammar structures",
-    "professional english communication",
-    "english for specific purposes",
-    "english public speaking",
-    "english academic writing",
-    "english rhetoric",
-    "english for negotiations",
-    "english for presentations",
-    "english for academic research",
-    "english debate techniques",
-    "english persuasive speaking",
-    "english critical thinking",
-  ],
-  general: [
-    "ted talk english",
-    "english learning tips",
-    "english language history",
-    "english around the world",
-    "english language evolution",
-    "english language varieties",
-    "english pronunciation tips",
-    "english accent training",
-    "english fluency practice",
-    "english vocabulary building",
-    "english grammar tips",
-    "english speaking confidence",
-    "english learning motivation",
-    "english learning strategies",
-    "english for daily life",
-    "english for social media",
-    "english for technology",
-    "english for science",
-    "english for arts",
-    "english for sports",
-    "english for music",
-    "english for movies",
-    "english for literature",
-    "english for travel vlogs",
-  ],
-}
 
-// Định nghĩa kiểu dữ liệu cho thử thách
-export interface Challenge {
-  id: string
-  title: string
-  description: string
-  thumbnailUrl?: string
-  videoUrl: string
-  embedUrl?: string
-  duration: number
-  difficulty: string
-  createdAt: string
-  topics?: string[]
-  featured?: boolean
-}
 
 // Hàm chuyển đổi VideoData thành Challenge
 function videoDataToChallenge(videoData: VideoData, forceDifficulty?: string): Challenge {
@@ -190,9 +107,24 @@ export async function fetchChallengesByDifficulty(
 // Hàm lấy tất cả các thử thách cho trang challenges
 export async function fetchAllChallenges(countPerDifficulty = 2): Promise<Challenge[]> {
   try {
-    // Check if we have cached challenges for today
+    // Check if we have challenges in database for today first
     const today = getTodayDate()
+    
+    // Try to get today's challenges from database
+    const dbResult = await getTodaysChallengesFromDatabase()
+    
+    if (dbResult && dbResult.length >= (countPerDifficulty * 3)) {
+      console.log("Using challenges from database for today")
+      // Update cache with database data
+      globalChallengeCache = {
+        challenges: dbResult,
+        date: today,
+        timestamp: Date.now(),
+      }
+      return dbResult
+    }
 
+    // Check if we have cached challenges for today
     if (globalChallengeCache.challenges.length > 0 && globalChallengeCache.date === today) {
       console.log("Using cached challenges for today")
       return globalChallengeCache.challenges
@@ -214,6 +146,15 @@ export async function fetchAllChallenges(countPerDifficulty = 2): Promise<Challe
       ...(Array.isArray(advancedChallenges) ? advancedChallenges : []),
     ]
 
+    // Save new challenges to database
+    if (allChallenges.length > 0) {
+      console.log("Saving new challenges to database")
+      const saveResult = await saveChallengesArrayToDatabase(allChallenges)
+      if (!saveResult.success) {
+        console.warn("Failed to save challenges to database:", saveResult.error)
+      }
+    }
+
     // Update the cache
     globalChallengeCache = {
       challenges: allChallenges,
@@ -224,6 +165,17 @@ export async function fetchAllChallenges(countPerDifficulty = 2): Promise<Challe
     return allChallenges
   } catch (error) {
     console.error("Error fetching all challenges:", error)
+
+    // Try to get challenges from database as fallback
+    try {
+      const dbResult = await getTodaysChallengesFromDatabase()
+      if (dbResult && dbResult.length > 0) {
+        console.log("Using database challenges as fallback")
+        return dbResult
+      }
+    } catch (dbError) {
+      console.error("Database fallback also failed:", dbError)
+    }
 
     // If we have cached challenges (even from a previous day), use them as fallback
     if (globalChallengeCache.challenges.length > 0) {
@@ -254,6 +206,16 @@ export async function fetchCurrentChallenge(): Promise<Challenge | null> {
 
     const videoData = await fetchRandomYoutubeVideo(180, 300, [randomTopic])
     const challenge = videoDataToChallenge(videoData)
+
+    // Save current challenge to database
+    try {
+      const saveResult = await saveChallengeToDatabase(challenge)
+      if (!saveResult.success) {
+        console.warn("Failed to save current challenge to database:", saveResult.error)
+      }
+    } catch (saveError) {
+      console.warn("Error saving current challenge to database:", saveError)
+    }
 
     // Update the cache
     currentChallengeCache = {

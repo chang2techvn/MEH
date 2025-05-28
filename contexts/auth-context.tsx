@@ -3,13 +3,28 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "@/hooks/use-toast"
+import { supabase, dbHelpers } from "@/lib/supabase"
+import type { User as SupabaseUser } from "@supabase/supabase-js"
 
-// Define user type
+// Define user type that matches your database schema
 export interface User {
   id: string
-  name: string
   email: string
-  image?: string
+  name?: string
+  avatar?: string
+  role?: string
+  studentId?: string
+  major?: string
+  academicYear?: string
+  bio?: string
+  points?: number
+  level?: number
+  experiencePoints?: number
+  streakDays?: number
+  lastActive?: Date
+  joinedAt?: Date
+  isActive?: boolean
+  preferences?: any
 }
 
 // Define auth context type
@@ -19,9 +34,12 @@ interface AuthContextType {
   isAuthenticated: boolean
   login: (email: string, password: string, remember?: boolean) => Promise<void>
   register: (name: string, email: string, password: string) => Promise<void>
-  logout: () => void
+  logout: () => Promise<void>
   resetPassword: (email: string) => Promise<void>
   setNewPassword: (token: string, password: string) => Promise<void>
+  loginWithGoogle: () => Promise<void>
+  loginWithFacebook: () => Promise<void>
+  loginWithGitHub: () => Promise<void>
 }
 
 // Create auth context
@@ -32,83 +50,153 @@ interface AuthProviderProps {
   children: ReactNode
 }
 
-// Sample user data (in a real app, this would come from a database)
-const SAMPLE_USERS = [
-  {
-    id: "1",
-    name: "John Doe",
-    email: "john@example.com",
-    password: "Password123!",
-    image: "/placeholder.svg?height=96&width=96",
-  },
-  {
-    id: "2",
-    name: "Sarah Chen",
-    email: "sarah@example.com",
-    password: "Password123!",
-    image: "/placeholder.svg?height=96&width=96",
-  },
-]
-
 export function AuthProvider({ children }: AuthProviderProps) {
   const router = useRouter()
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState<boolean>(true)
 
-  // Check if user is logged in on mount
+  // Initialize auth state from Supabase
   useEffect(() => {
-    const storedUser = localStorage.getItem("user")
-    if (storedUser) {
+    const initializeAuth = async () => {
       try {
-        setUser(JSON.parse(storedUser))
+        // Get current session
+        const { data: { session }, error } = await supabase.auth.getSession()
+        
+        if (error) {
+          console.error('Error getting session:', error)
+          setIsLoading(false)
+          return
+        }
+
+        if (session?.user) {
+          // For now, just use Supabase auth user data
+          const userData: User = {
+            id: session.user.id,
+            email: session.user.email!,
+            name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0],
+            avatar: session.user.user_metadata?.avatar_url,
+            role: 'MEMBER',
+            isActive: true,
+            joinedAt: new Date(session.user.created_at),
+            lastActive: new Date(),
+          }
+          setUser(userData)
+          
+          // Try to sync with database, but don't fail if it doesn't work
+          try {
+            await createUserInDatabase(session.user)
+          } catch (error) {
+            console.log('Database sync failed, continuing with auth-only user:', error)
+          }
+        }
       } catch (error) {
-        console.error("Failed to parse stored user:", error)
-        localStorage.removeItem("user")
+        console.error('Error initializing auth:', error)
+      } finally {
+        setIsLoading(false)
       }
     }
-    setIsLoading(false)
+
+    initializeAuth()
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('Auth state changed:', event, session?.user?.email)
+        
+        if (event === 'SIGNED_IN' && session?.user) {
+          // Create user data from Supabase auth
+          const userData: User = {
+            id: session.user.id,
+            email: session.user.email!,
+            name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0],
+            avatar: session.user.user_metadata?.avatar_url,
+            role: 'MEMBER',
+            isActive: true,
+            joinedAt: new Date(session.user.created_at),
+            lastActive: new Date(),
+          }
+          setUser(userData)
+          
+          // Try to sync with database in background
+          try {
+            await createUserInDatabase(session.user)
+          } catch (error) {
+            console.log('Database sync failed:', error)
+          }
+        } else if (event === 'SIGNED_OUT') {
+          setUser(null)
+        }
+        
+        setIsLoading(false)
+      }
+    )
+
+    return () => subscription.unsubscribe()
   }, [])
+
+  // Helper function to create user in database
+  const createUserInDatabase = async (supabaseUser: SupabaseUser) => {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .insert({
+          id: supabaseUser.id, // Supabase auth ID is already a UUID
+          email: supabaseUser.email!,
+          name: supabaseUser.user_metadata?.full_name || supabaseUser.email?.split('@')[0],
+          avatar: supabaseUser.user_metadata?.avatar_url,
+          role: 'MEMBER',
+          isActive: true,
+          joinedAt: new Date().toISOString(),
+          lastActive: new Date().toISOString()
+        })
+        .select()
+        .single()
+
+      if (error) {
+        console.error('Error creating user in database:', error)
+        // Don't throw error, just log it
+        return null
+      }
+
+      // Update user state with database data if successful
+      if (data) {
+        setUser(data)
+        return data
+      }
+      return null
+    } catch (error) {
+      console.error('Error creating user:', error)
+      // Don't throw error, just log it
+      return null
+    }
+  }
 
   // Login function
   const login = async (email: string, password: string, remember = false) => {
     setIsLoading(true)
 
     try {
-      // Simulate API call delay
-      await new Promise((resolve) => setTimeout(resolve, 1500))
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
 
-      // Find user with matching email and password
-      const foundUser = SAMPLE_USERS.find(
-        (u) => u.email.toLowerCase() === email.toLowerCase() && u.password === password,
-      )
-
-      if (!foundUser) {
-        throw new Error("Invalid email or password")
-      }
-
-      // Create user object without password
-      const { password: _, ...userWithoutPassword } = foundUser
-
-      // Save user to state
-      setUser(userWithoutPassword)
-
-      // Save user to localStorage if remember is true
-      if (remember) {
-        localStorage.setItem("user", JSON.stringify(userWithoutPassword))
+      if (error) {
+        throw error
       }
 
       toast({
         title: "Login successful",
-        description: `Welcome back, ${userWithoutPassword.name}!`,
+        description: `Welcome back!`,
       })
 
       // Redirect to home page
       router.push("/")
-    } catch (error) {
+    } catch (error: any) {
       console.error("Login error:", error)
       toast({
         title: "Login failed",
-        description: error instanceof Error ? error.message : "An unknown error occurred",
+        description: error.message || "An unknown error occurred",
         variant: "destructive",
       })
       throw error
@@ -122,43 +210,37 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setIsLoading(true)
 
     try {
-      // Simulate API call delay
-      await new Promise((resolve) => setTimeout(resolve, 1500))
-
-      // Check if user with this email already exists
-      if (SAMPLE_USERS.some((u) => u.email.toLowerCase() === email.toLowerCase())) {
-        throw new Error("Email already in use")
-      }
-
-      // Create new user
-      const newUser = {
-        id: `${SAMPLE_USERS.length + 1}`,
-        name,
+      const { data, error } = await supabase.auth.signUp({
         email,
-        image: "/placeholder.svg?height=96&width=96",
-      }
-
-      // In a real app, you would save the user to the database here
-      // For this demo, we'll just add it to our state
-
-      // Save user to state
-      setUser(newUser)
-
-      // Save user to localStorage
-      localStorage.setItem("user", JSON.stringify(newUser))
-
-      toast({
-        title: "Registration successful",
-        description: `Welcome to EnglishMastery, ${name}!`,
+        password,
+        options: {
+          data: {
+            full_name: name,
+          }
+        }
       })
 
-      // Redirect to home page
-      router.push("/")
-    } catch (error) {
+      if (error) {
+        throw error
+      }
+
+      if (data.user && !data.session) {
+        toast({
+          title: "Check your email",
+          description: "We've sent you a confirmation link to complete your registration.",
+        })
+      } else if (data.session) {
+        toast({
+          title: "Registration successful",
+          description: `Welcome to EnglishMastery, ${name}!`,
+        })
+        router.push("/")
+      }
+    } catch (error: any) {
       console.error("Registration error:", error)
       toast({
         title: "Registration failed",
-        description: error instanceof Error ? error.message : "An unknown error occurred",
+        description: error.message || "An unknown error occurred",
         variant: "destructive",
       })
       throw error
@@ -168,14 +250,34 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }
 
   // Logout function
-  const logout = () => {
-    setUser(null)
-    localStorage.removeItem("user")
-    toast({
-      title: "Logged out",
-      description: "You have been successfully logged out.",
-    })
-    router.push("/")
+  const logout = async () => {
+    try {
+      // Sign out from Supabase
+      const { error } = await supabase.auth.signOut({
+        scope: 'global' // This ensures logout from all sessions
+      })
+      if (error) {
+        console.error('Logout error:', error)
+      }
+      
+      // Clear local state
+      setUser(null)
+      
+      // Clear any potential cached data
+      if (typeof window !== 'undefined') {
+        // Clear localStorage/sessionStorage if needed
+        localStorage.removeItem('supabase.auth.token')
+        sessionStorage.clear()
+      }
+      
+      toast({
+        title: "Logged out",
+        description: "You have been successfully logged out.",
+      })
+      router.push("/")
+    } catch (error) {
+      console.error('Logout error:', error)
+    }
   }
 
   // Reset password function
@@ -183,24 +285,25 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setIsLoading(true)
 
     try {
-      // Simulate API call delay
-      await new Promise((resolve) => setTimeout(resolve, 1500))
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth/reset-password`,
+      })
 
-      // Check if user with this email exists
-      const userExists = SAMPLE_USERS.some((u) => u.email.toLowerCase() === email.toLowerCase())
-
-      if (!userExists) {
-        // For security reasons, don't reveal if the email exists or not
-        // Just pretend we sent the email
-        console.log("User not found, but we won't tell the user that")
+      if (error) {
+        throw error
       }
 
-      // In a real app, you would send a password reset email here
-      console.log(`Password reset email would be sent to ${email}`)
-
-      return
-    } catch (error) {
+      toast({
+        title: "Reset link sent",
+        description: "Check your email for instructions to reset your password.",
+      })
+    } catch (error: any) {
       console.error("Reset password error:", error)
+      toast({
+        title: "Error",
+        description: error.message || "There was a problem sending the reset link. Please try again.",
+        variant: "destructive",
+      })
       throw error
     } finally {
       setIsLoading(false)
@@ -212,15 +315,125 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setIsLoading(true)
 
     try {
-      // Simulate API call delay
-      await new Promise((resolve) => setTimeout(resolve, 1500))
+      const { error } = await supabase.auth.updateUser({
+        password: password
+      })
 
-      // In a real app, you would validate the token and update the user's password
-      console.log(`Password would be updated for token ${token}`)
+      if (error) {
+        throw error
+      }
 
-      return
-    } catch (error) {
+      toast({
+        title: "Password updated",
+        description: "Your password has been successfully updated.",
+      })
+
+      router.push("/")
+    } catch (error: any) {
       console.error("Set new password error:", error)
+      toast({
+        title: "Error",
+        description: error.message || "There was an error updating your password. Please try again.",
+        variant: "destructive",
+      })
+      throw error
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // OAuth login functions
+  const loginWithGoogle = async () => {
+    setIsLoading(true)
+    try {
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'select_account'
+          }
+        }
+      })
+
+      if (error) {
+        throw error
+      }
+
+      toast({
+        title: "Redirecting to Google",
+        description: "Please wait while we redirect you to Google...",
+      })
+    } catch (error: any) {
+      console.error("Google login error:", error)
+      toast({
+        title: "Google login failed",
+        description: error.message || "An unknown error occurred",
+        variant: "destructive",
+      })
+      throw error
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const loginWithFacebook = async () => {
+    setIsLoading(true)
+    try {
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'facebook',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`
+        }
+      })
+
+      if (error) {
+        throw error
+      }
+
+      toast({
+        title: "Redirecting to Facebook",
+        description: "Please wait while we redirect you to Facebook...",
+      })
+    } catch (error: any) {
+      console.error("Facebook login error:", error)
+      toast({
+        title: "Facebook login failed",
+        description: error.message || "An unknown error occurred",
+        variant: "destructive",
+      })
+      throw error
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const loginWithGitHub = async () => {
+    setIsLoading(true)
+    try {
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'github',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`
+        }
+      })
+
+      if (error) {
+        throw error
+      }
+
+      toast({
+        title: "Redirecting to GitHub",
+        description: "Please wait while we redirect you to GitHub...",
+      })
+    } catch (error: any) {
+      console.error("GitHub login error:", error)
+      toast({
+        title: "GitHub login failed",
+        description: error.message || "An unknown error occurred",
+        variant: "destructive",
+      })
       throw error
     } finally {
       setIsLoading(false)
@@ -238,6 +451,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
         logout,
         resetPassword,
         setNewPassword,
+        loginWithGoogle,
+        loginWithFacebook,
+        loginWithGitHub,
       }}
     >
       {children}

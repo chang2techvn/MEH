@@ -1,7 +1,7 @@
 // Performance monitoring script
 ;(() => {
-  // Only run in production and if the browser supports the Performance API
-  if (process.env.NODE_ENV !== "production" || !("performance" in window)) return
+  // Only run if the browser supports the Performance API
+  if (!("performance" in window)) return
 
   // Core Web Vitals metrics
   const vitalsMetrics = ["CLS", "FID", "LCP", "FCP", "TTFB"]

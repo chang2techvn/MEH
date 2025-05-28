@@ -52,7 +52,7 @@ export default function ChatWindow({ conversationId }: ChatWindowProps) {
     zIndex: isActive ? 50 : 40,
   })
 
-  const otherParticipant = conversation?.participants.find((p) => p.id !== currentUser.id)
+  const otherParticipant = conversation?.participants.find((p) => p.id !== currentUser?.id)
 
   useEffect(() => {
     scrollToBottom()
@@ -234,7 +234,7 @@ export default function ChatWindow({ conversationId }: ChatWindowProps) {
             {/* Messages for this date */}
             <AnimatePresence initial={false}>
               {group.messages.map((message, index) => {
-                const isFromCurrentUser = message.senderId === currentUser.id
+                const isFromCurrentUser = message.senderId === currentUser?.id
                 const showSender = index === 0 || group.messages[index - 1].senderId !== message.senderId
                 const sender = conversation.participants.find((p) => p.id === message.senderId)
 

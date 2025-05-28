@@ -17,7 +17,7 @@ import { useAuth } from "@/contexts/auth-context"
 
 export default function LoginPage() {
   const router = useRouter()
-  const { login, isLoading } = useAuth()
+  const { login, loginWithGoogle, loginWithFacebook, loginWithGitHub, isLoading } = useAuth()
   const [showPassword, setShowPassword] = useState(false)
   const [formData, setFormData] = useState({
     email: "",
@@ -46,11 +46,28 @@ export default function LoginPage() {
     }
   }
 
-  const handleSocialLogin = (provider: string) => {
-    toast({
-      title: `${provider} login`,
-      description: `${provider} login is not implemented in this demo.`,
-    })
+  const handleGoogleLogin = async () => {
+    try {
+      await loginWithGoogle()
+    } catch (error) {
+      console.error("Google login error:", error)
+    }
+  }
+
+  const handleFacebookLogin = async () => {
+    try {
+      await loginWithFacebook()
+    } catch (error) {
+      console.error("Facebook login error:", error)
+    }
+  }
+
+  const handleGitHubLogin = async () => {
+    try {
+      await loginWithGitHub()
+    } catch (error) {
+      console.error("GitHub login error:", error)
+    }
   }
 
   return (
@@ -186,27 +203,30 @@ export default function LoginPage() {
               <div className="mt-6 grid grid-cols-3 gap-3">
                 <Button
                   variant="outline"
-                  className="bg-white/20 dark:bg-gray-800/20 backdrop-blur-sm"
-                  onClick={() => handleSocialLogin("Google")}
+                  className="bg-white/20 dark:bg-gray-800/20 backdrop-blur-sm hover:bg-white/30 dark:hover:bg-gray-800/30"
+                  onClick={handleGoogleLogin}
+                  disabled={isLoading}
                 >
-                  <Google className="h-4 w-4 mr-2" />
-                  Google
+                  <Google className="h-4 w-4" />
+                  <span className="sr-only">Google</span>
                 </Button>
                 <Button
                   variant="outline"
-                  className="bg-white/20 dark:bg-gray-800/20 backdrop-blur-sm"
-                  onClick={() => handleSocialLogin("Facebook")}
+                  className="bg-white/20 dark:bg-gray-800/20 backdrop-blur-sm hover:bg-white/30 dark:hover:bg-gray-800/30"
+                  onClick={handleFacebookLogin}
+                  disabled={isLoading}
                 >
-                  <Facebook className="h-4 w-4 mr-2" />
-                  Facebook
+                  <Facebook className="h-4 w-4" />
+                  <span className="sr-only">Facebook</span>
                 </Button>
                 <Button
                   variant="outline"
-                  className="bg-white/20 dark:bg-gray-800/20 backdrop-blur-sm"
-                  onClick={() => handleSocialLogin("GitHub")}
+                  className="bg-white/20 dark:bg-gray-800/20 backdrop-blur-sm hover:bg-white/30 dark:hover:bg-gray-800/30"
+                  onClick={handleGitHubLogin}
+                  disabled={isLoading}
                 >
-                  <Github className="h-4 w-4 mr-2" />
-                  GitHub
+                  <Github className="h-4 w-4" />
+                  <span className="sr-only">GitHub</span>
                 </Button>
               </div>
             </div>

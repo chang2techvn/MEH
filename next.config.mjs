@@ -76,11 +76,23 @@ const nextConfig = {
         {
           key: 'Permissions-Policy',
           value: 'camera=(), microphone=(), geolocation=(), interest-cohort=()',
-        },
-        {
+        },        {
           key: 'Cache-Control',
           value: 'public, max-age=3600, stale-while-revalidate=86400',
         },
+        // CSP disabled temporarily for debugging
+        // {
+        //   key: "Content-Security-Policy",
+        //   value: `
+        //     default-src 'self';
+        //     script-src 'self' 'unsafe-inline' 'unsafe-eval';
+        //     style-src 'self' 'unsafe-inline';
+        //     img-src * blob: data:;
+        //     font-src 'self' data:;
+        //     connect-src 'self' https://yvsjynosfwyhvisqhasp.supabase.co http://localhost:3000;
+        //     frame-src *;
+        //   `.replace(/\s{2,}/g, " ").trim(),
+        // },
       ],
     },
     {

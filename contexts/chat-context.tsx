@@ -3,122 +3,7 @@
 import type React from "react"
 import { createContext, useContext, useState, useEffect } from "react"
 import type { Conversation, Message, User } from "@/components/messages/types"
-
-// Sample data
-const currentUser: User = {
-  id: "current-user",
-  name: "You",
-  avatar: "/placeholder.svg?height=200&width=200",
-  status: "online",
-  lastActive: new Date(),
-}
-
-const sampleUsers: User[] = [
-  {
-    id: "user1",
-    name: "Sarah Johnson",
-    avatar: "/placeholder.svg?height=200&width=200&text=SJ",
-    status: "online",
-    lastActive: new Date(),
-  },
-  {
-    id: "user2",
-    name: "Michael Chen",
-    avatar: "/placeholder.svg?height=200&width=200&text=MC",
-    status: "offline",
-    lastActive: new Date(Date.now() - 1000 * 60 * 30),
-  },
-  {
-    id: "user3",
-    name: "Emma Williams",
-    avatar: "/placeholder.svg?height=200&width=200&text=EW",
-    status: "online",
-    lastActive: new Date(),
-  },
-  {
-    id: "user4",
-    name: "David Rodriguez",
-    avatar: "/placeholder.svg?height=200&width=200&text=DR",
-    status: "away",
-    lastActive: new Date(Date.now() - 1000 * 60 * 10),
-  },
-  {
-    id: "user5",
-    name: "Sophia Lee",
-    avatar: "/placeholder.svg?height=200&width=200&text=SL",
-    status: "online",
-    lastActive: new Date(),
-  },
-]
-
-const generateSampleMessages = (userId: string, count: number): Message[] => {
-  const messages: Message[] = []
-  const now = new Date()
-
-  for (let i = 0; i < count; i++) {
-    const isFromCurrentUser = Math.random() > 0.5
-    const timeOffset = 1000 * 60 * (count - i)
-
-    messages.push({
-      id: `msg-${userId}-${i}`,
-      senderId: isFromCurrentUser ? currentUser.id : userId,
-      text: getSampleMessage(isFromCurrentUser),
-      timestamp: new Date(now.getTime() - timeOffset),
-      status: "read",
-      attachments:
-        i % 7 === 0
-          ? [
-              {
-                type: "image",
-                url: `/placeholder.svg?height=300&width=400&text=Image+${i}`,
-                name: `image-${i}.jpg`,
-              },
-            ]
-          : [],
-      reactions: i % 5 === 0 ? [{ emoji: "👍", count: 1 }] : [],
-    })
-  }
-
-  return messages.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())
-}
-
-const getSampleMessage = (isFromCurrentUser: boolean): string => {
-  const currentUserMessages = [
-    "Hi there! How's your English practice going?",
-    "I've been working on my pronunciation. Any tips?",
-    "Could you help me understand this grammar rule?",
-    "I watched that movie you recommended. It was great for learning idioms!",
-    "When are we having our next speaking practice session?",
-  ]
-
-  const otherUserMessages = [
-    "Hello! My practice is going well. I've been focusing on vocabulary.",
-    "For pronunciation, try recording yourself and comparing with native speakers.",
-    "Of course! That grammar rule is about...",
-    "I'm glad you liked it! Movies are excellent for learning natural expressions.",
-    "How about Thursday at 6 PM?",
-  ]
-
-  const messages = isFromCurrentUser ? currentUserMessages : otherUserMessages
-  return messages[Math.floor(Math.random() * messages.length)]
-}
-
-const generateSampleConversations = (): Conversation[] => {
-  return sampleUsers.map((user) => {
-    const messageCount = 5 + Math.floor(Math.random() * 15)
-    const messages = generateSampleMessages(user.id, messageCount)
-    const lastMessage = messages[messages.length - 1]
-
-    return {
-      id: `conv-${user.id}`,
-      participants: [currentUser, user],
-      messages: messages,
-      unreadCount: Math.random() > 0.7 ? Math.floor(Math.random() * 5) + 1 : 0,
-      lastMessage: lastMessage,
-      isTyping: user.id === "user1" || user.id === "user5",
-    }
-  })
-}
+import { supabase, dbHelpers } from "@/lib/supabase"
 
 interface WindowPosition {
   x: number
@@ -132,8 +17,9 @@ interface ChatContextType {
   activeConversation: string | null
   isDropdownOpen: boolean
   totalUnreadCount: number
-  currentUser: User
+  currentUser: User | null
   windowPositions: Record<string, WindowPosition>
+  loading: boolean
   openChatWindow: (conversationId: string) => void
   closeChatWindow: (conversationId: string) => void
   minimizeChatWindow: (conversationId: string) => void
@@ -141,27 +27,114 @@ interface ChatContextType {
   setActiveConversation: (conversationId: string | null) => void
   toggleDropdown: () => void
   closeDropdown: () => void
-  sendMessage: (conversationId: string, text: string, attachments?: any[]) => void
+  sendMessage: (conversationId: string, text: string, attachments?: any[]) => Promise<void>
   getConversationById: (conversationId: string) => Conversation | undefined
   updateWindowPosition: (conversationId: string, position: WindowPosition) => void
   rearrangeAllWindows: () => void
+  loadConversations: () => Promise<void>
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined)
 
 export function ChatProvider({ children }: { children: React.ReactNode }) {
-  const [conversations, setConversations] = useState<Conversation[]>(generateSampleConversations())
+  const [conversations, setConversations] = useState<Conversation[]>([])
   const [openChatWindows, setOpenChatWindows] = useState<string[]>([])
   const [minimizedChatWindows, setMinimizedChatWindows] = useState<string[]>([])
   const [activeConversation, setActiveConversation] = useState<string | null>(null)
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const [windowPositions, setWindowPositions] = useState<Record<string, WindowPosition>>({})
+  const [currentUser, setCurrentUser] = useState<User | null>(null)
+  const [loading, setLoading] = useState(true)
 
   const totalUnreadCount = conversations.reduce((total, conv) => total + conv.unreadCount, 0)
 
+  // Load current user and conversations from Supabase
+  const loadConversations = async () => {
+    try {
+      setLoading(true)
+      
+      // Get current user
+      const user = await dbHelpers.getCurrentUser()
+      if (!user) return
+
+      setCurrentUser({
+        id: user.id,
+        name: user.name || "You",
+        avatar: user.avatar || "/placeholder.svg?height=200&width=200",
+        status: "online",
+        lastActive: new Date(user.last_active),
+      })
+
+      // Get user's conversations
+      const conversationData = await dbHelpers.getUserConversations(user.id)
+      
+      const formattedConversations: Conversation[] = (await Promise.all(
+        conversationData.map(async (item: any) => {
+          const conversation = item.conversation
+          if (!conversation) return null
+
+          // Get messages for this conversation
+          const messagesData = await dbHelpers.getConversationMessages(conversation.id)
+          
+          // Get other participants
+          const { data: participantsData } = await supabase
+            .from('conversation_participants')
+            .select(`
+              user:users(id, name, avatar, last_active)
+            `)
+            .eq('conversation_id', conversation.id)
+            .neq('user_id', user.id)
+
+          const participants: User[] = participantsData?.map((p: any) => ({
+            id: p.user.id,
+            name: p.user.name || "Unknown",
+            avatar: p.user.avatar || "/placeholder.svg?height=200&width=200",
+            status: "offline",
+            lastActive: new Date(p.user.last_active),
+          })) || []
+
+          participants.unshift({
+            id: user.id,
+            name: user.name || "You",
+            avatar: user.avatar || "/placeholder.svg?height=200&width=200",
+            status: "online",
+            lastActive: new Date(user.last_active),
+          })
+
+          const messages: Message[] = messagesData.map((msg: any) => ({
+            id: msg.id,
+            senderId: msg.sender_id,
+            text: msg.content,
+            timestamp: new Date(msg.created_at),
+            status: "read" as const,
+            attachments: msg.attachments ? JSON.parse(msg.attachments) : [],
+            reactions: [],
+          }))
+
+          const lastMessage = messages[messages.length - 1]
+
+          return {
+            id: conversation.id,
+            participants,
+            messages,
+            unreadCount: 0,
+            lastMessage,
+            isTyping: false,
+          }
+        })
+      )).filter(Boolean) as Conversation[]
+
+      setConversations(formattedConversations)
+    } catch (error) {
+      console.error('Error loading conversations:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   // Calculate a non-overlapping position for a new chat window
   const calculateNewWindowPosition = (conversationId: string): WindowPosition => {
-    // Default position for the first window - center it horizontally and vertically
+    // Default position for the first window
     if (Object.keys(windowPositions).length === 0) {
       return {
         x: Math.max(80, Math.min(window.innerWidth - 380, window.innerWidth / 2 - 175)),
@@ -176,11 +149,11 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
     // Find a position that doesn't overlap with existing windows
     const existingPositions = Object.values(windowPositions)
-    const windowWidth = 350 // Width of chat window
-    const windowHeight = 450 // Height of chat window
+    const windowWidth = 350
+    const windowHeight = 450
     const screenWidth = window.innerWidth
     const screenHeight = window.innerHeight
-    const padding = 20 // Padding between windows
+    const padding = 20
 
     // Define a grid of possible positions
     const positions: WindowPosition[] = []
@@ -199,24 +172,22 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     }
 
     // Add positions along the edges
-    positions.push({ x: 0, y: 0 }) // Top left
-    positions.push({ x: screenWidth - windowWidth, y: 0 }) // Top right
-    positions.push({ x: 0, y: screenHeight - windowHeight }) // Bottom left
-    positions.push({ x: screenWidth - windowWidth, y: screenHeight - windowHeight }) // Bottom right
-    positions.push({ x: (screenWidth - windowWidth) / 2, y: 0 }) // Top center
-    positions.push({ x: (screenWidth - windowWidth) / 2, y: screenHeight - windowHeight }) // Bottom center
-    positions.push({ x: 0, y: (screenHeight - windowHeight) / 2 }) // Middle left
-    positions.push({ x: screenWidth - windowWidth, y: (screenHeight - windowHeight) / 2 }) // Middle right
-    positions.push({ x: (screenWidth - windowWidth) / 2, y: (screenHeight - windowHeight) / 2 }) // Center
+    positions.push({ x: 0, y: 0 })
+    positions.push({ x: screenWidth - windowWidth, y: 0 })
+    positions.push({ x: 0, y: screenHeight - windowHeight })
+    positions.push({ x: screenWidth - windowWidth, y: screenHeight - windowHeight })
+    positions.push({ x: (screenWidth - windowWidth) / 2, y: 0 })
+    positions.push({ x: (screenWidth - windowWidth) / 2, y: screenHeight - windowHeight })
+    positions.push({ x: 0, y: (screenHeight - windowHeight) / 2 })
+    positions.push({ x: screenWidth - windowWidth, y: (screenHeight - windowHeight) / 2 })
+    positions.push({ x: (screenWidth - windowWidth) / 2, y: (screenHeight - windowHeight) / 2 })
 
     // Find the first position that doesn't overlap with existing windows
     for (const pos of positions) {
       let overlaps = false
 
       for (const existingPos of existingPositions) {
-        // Check if windows would overlap
         const horizontalOverlap = pos.x < existingPos.x + windowWidth && pos.x + windowWidth > existingPos.x
-
         const verticalOverlap = pos.y < existingPos.y + windowHeight && pos.y + windowHeight > existingPos.y
 
         if (horizontalOverlap && verticalOverlap) {
@@ -238,13 +209,13 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const updateWindowPosition = (conversationId: string, position: { x: number; y: number }) => {
+  const updateWindowPosition = (conversationId: string, position: WindowPosition) => {
     setWindowPositions((prev) => ({
       ...prev,
       [conversationId]: position,
     }))
 
-    // Lưu vị trí vào localStorage nếu có
+    // Save position to localStorage
     try {
       const savedPositions = JSON.parse(localStorage.getItem("chatWindowPositions") || "{}")
       localStorage.setItem(
@@ -289,14 +260,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
     // Close dropdown
     setIsDropdownOpen(false)
-
-    // Save window positions to localStorage for persistence
-    try {
-      const allPositions = { ...windowPositions }
-      localStorage.setItem("chatWindowPositions", JSON.stringify(allPositions))
-    } catch (e) {
-      console.error("Failed to save window positions", e)
-    }
   }
 
   const closeChatWindow = (conversationId: string) => {
@@ -337,123 +300,63 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     return conversations.find((conv) => conv.id === conversationId)
   }
 
-  const sendMessage = (conversationId: string, text: string, attachments: any[] = []) => {
+  const sendMessage = async (conversationId: string, text: string, attachments: any[] = []) => {
+    if (!currentUser) return
+
     const conversation = conversations.find((conv) => conv.id === conversationId)
     if (!conversation) return
 
-    const newMessage: Message = {
-      id: `msg-new-${Date.now()}`,
-      senderId: currentUser.id,
-      text,
-      timestamp: new Date(),
-      status: "sent",
-      attachments,
-      reactions: [],
-    }
+    try {
+      // Insert message into database
+      const { data: messageData, error } = await supabase
+        .from('messages')
+        .insert({
+          conversation_id: conversationId,
+          sender_id: currentUser.id,
+          content: text,
+          attachments: attachments.length > 0 ? JSON.stringify(attachments) : null,
+        })
+        .select()
+        .single()
 
-    // Add message to conversation
-    setConversations((prevConversations) =>
-      prevConversations.map((conv) => {
-        if (conv.id === conversationId) {
-          const updatedMessages = [...conv.messages, newMessage]
-          return {
-            ...conv,
-            messages: updatedMessages,
-            lastMessage: newMessage,
-          }
-        }
-        return conv
-      }),
-    )
+      if (error) throw error
 
-    // Simulate reply after a delay
-    setTimeout(() => {
-      const otherUser = conversation.participants.find((p) => p.id !== currentUser.id)
-      if (!otherUser) return
+      const newMessage: Message = {
+        id: messageData.id,
+        senderId: currentUser.id,
+        text,
+        timestamp: new Date(messageData.created_at),
+        status: "sent",
+        attachments,
+        reactions: [],
+      }
 
-      // Set typing indicator
+      // Add message to conversation
       setConversations((prevConversations) =>
         prevConversations.map((conv) => {
           if (conv.id === conversationId) {
-            return { ...conv, isTyping: true }
+            const updatedMessages = [...conv.messages, newMessage]
+            return {
+              ...conv,
+              messages: updatedMessages,
+              lastMessage: newMessage,
+            }
           }
           return conv
         }),
       )
 
-      // After a delay, add the response
-      setTimeout(
-        () => {
-          const replyMessage: Message = {
-            id: `msg-reply-${Date.now()}`,
-            senderId: otherUser.id,
-            text: getReplyMessage(text),
-            timestamp: new Date(),
-            status: "read",
-            attachments: [],
-            reactions: [],
-          }
+      // Update conversation's last_message_at
+      await supabase
+        .from('conversations')
+        .update({ last_message_at: new Date().toISOString() })
+        .eq('id', conversationId)
 
-          setConversations((prevConversations) =>
-            prevConversations.map((conv) => {
-              if (conv.id === conversationId) {
-                const updatedMessages = [...conv.messages, replyMessage]
-                return {
-                  ...conv,
-                  messages: updatedMessages,
-                  lastMessage: replyMessage,
-                  isTyping: false,
-                }
-              }
-              return conv
-            }),
-          )
-        },
-        1500 + Math.random() * 2000,
-      )
-    }, 1000)
-  }
-
-  const getReplyMessage = (text: string): string => {
-    const replies = [
-      "That's interesting! Tell me more about it.",
-      "I see what you mean. Have you considered trying a different approach?",
-      "Great point! I think that's a good way to practice English.",
-      "I agree with you. Let's schedule a practice session soon.",
-      "Thanks for sharing that. It's really helpful for my learning.",
-    ]
-
-    return replies[Math.floor(Math.random() * replies.length)]
-  }
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as HTMLElement
-      if (!target.closest(".chat-dropdown") && !target.closest(".chat-button")) {
-        closeDropdown()
-      }
-    }
-
-    document.addEventListener("mousedown", handleClickOutside)
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside)
-    }
-  }, [])
-
-  // Thêm đoạn code để khôi phục vị trí cửa sổ chat từ localStorage
-  useEffect(() => {
-    try {
-      const savedPositions = JSON.parse(localStorage.getItem("chatWindowPositions") || "{}")
-      if (Object.keys(savedPositions).length > 0) {
-        setWindowPositions(savedPositions)
-      }
     } catch (error) {
-      console.error("Failed to load window positions from localStorage", error)
+      console.error('Error sending message:', error)
     }
-  }, [])
+  }
 
-  // Thêm hàm để sắp xếp lại tất cả các cửa sổ chat
   const rearrangeAllWindows = () => {
     if (openChatWindows.length <= 1) return
 
@@ -465,9 +368,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
     const newPositions: Record<string, WindowPosition> = {}
 
-    // Arrange windows in a grid or cascade pattern
+    // Arrange windows in a grid pattern
     openChatWindows.forEach((id, index) => {
-      // For grid layout
       const cols = Math.max(1, Math.floor(Math.sqrt(openChatWindows.length)))
       const col = index % cols
       const row = Math.floor(index / cols)
@@ -488,6 +390,76 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  // Load conversations on mount
+  useEffect(() => {
+    loadConversations()
+
+    // Set up real-time subscriptions for new messages
+    const messagesSubscription = supabase
+      .channel('messages')
+      .on('postgres_changes', 
+        { event: 'INSERT', schema: 'public', table: 'messages' },
+        (payload) => {
+          const newMessage = payload.new as any
+          
+          setConversations((prevConversations) =>
+            prevConversations.map((conv) => {
+              if (conv.id === newMessage.conversation_id) {
+                const messageObj: Message = {
+                  id: newMessage.id,
+                  senderId: newMessage.sender_id,
+                  text: newMessage.content,
+                  timestamp: new Date(newMessage.created_at),
+                  status: "read",
+                  attachments: newMessage.attachments ? JSON.parse(newMessage.attachments) : [],
+                  reactions: [],
+                }
+
+                return {
+                  ...conv,
+                  messages: [...conv.messages, messageObj],
+                  lastMessage: messageObj,
+                }
+              }
+              return conv
+            })
+          )
+        }
+      )
+      .subscribe()
+
+    return () => {
+      messagesSubscription.unsubscribe()
+    }
+  }, [])
+
+  // Load window positions from localStorage
+  useEffect(() => {
+    try {
+      const savedPositions = JSON.parse(localStorage.getItem("chatWindowPositions") || "{}")
+      if (Object.keys(savedPositions).length > 0) {
+        setWindowPositions(savedPositions)
+      }
+    } catch (error) {
+      console.error("Failed to load window positions from localStorage", error)
+    }
+  }, [])
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement
+      if (!target.closest(".chat-dropdown") && !target.closest(".chat-button")) {
+        closeDropdown()
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside)
+    }
+  }, [])
+
   const value = {
     conversations,
     openChatWindows,
@@ -497,6 +469,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     totalUnreadCount,
     currentUser,
     windowPositions,
+    loading,
     openChatWindow,
     closeChatWindow,
     minimizeChatWindow,
@@ -508,6 +481,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     getConversationById,
     updateWindowPosition,
     rearrangeAllWindows,
+    loadConversations,
   }
 
   return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>
