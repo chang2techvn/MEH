@@ -20,22 +20,9 @@ export function useGeminiAI() {
   const [input, setInput] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [isTyping, setIsTyping] = useState(false)
-  const [streamedResponse, setStreamedResponse] = useState("")
 
   // Generate a unique ID for messages
   const generateId = () => `msg_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
-
-  // Simulate streaming effect for responses
-  useEffect(() => {
-    if (isTyping && streamedResponse) {
-      const lastMessage = messages[messages.length - 1]
-      if (lastMessage && lastMessage.role === "assistant" && lastMessage.type === "thinking") {
-        setMessages((prev) =>
-          prev.map((msg) => (msg.id === lastMessage.id ? { ...msg, content: streamedResponse, type: "text" } : msg)),
-        )
-      }
-    }
-  }, [streamedResponse, isTyping, messages])
 
   // Add a thinking message from the assistant
   const addThinkingMessage = useCallback(() => {
@@ -78,20 +65,8 @@ export function useGeminiAI() {
         Be concise, helpful, and provide examples when appropriate. Format your responses with markdown for better readability.
         Current conversation history: ${JSON.stringify(messages.map((m) => ({ role: m.role, content: m.content })))}`
 
-        // Simulate streaming by showing response character by character
+        // Gọi API và cập nhật trực tiếp message thinking
         const fullResponse = await generateGeminiResponse(input, systemPrompt)
-
-        // Simulate typing effect
-        let displayedResponse = ""
-        const typingSpeed = 10 // ms per character
-
-        for (let i = 0; i < fullResponse.length; i++) {
-          await new Promise((resolve) => setTimeout(resolve, typingSpeed))
-          displayedResponse += fullResponse[i]
-          setStreamedResponse(displayedResponse)
-        }
-
-        // Update the thinking message with the full response
         setMessages((prev) =>
           prev.map((msg) =>
             msg.id === thinkingId ? { ...msg, content: fullResponse, type: "text" as MessageType } : msg,
@@ -99,8 +74,6 @@ export function useGeminiAI() {
         )
       } catch (error) {
         console.error("Error calling Gemini API:", error)
-
-        // Update the thinking message with an error
         setMessages((prev) =>
           prev.map((msg) =>
             msg.id === thinkingId
@@ -115,7 +88,6 @@ export function useGeminiAI() {
       } finally {
         setIsLoading(false)
         setIsTyping(false)
-        setStreamedResponse("")
       }
     },
     [input, messages, isLoading, addThinkingMessage],
@@ -125,7 +97,7 @@ export function useGeminiAI() {
   const handleQuickResponse = useCallback(
     (text: string) => {
       setInput(text)
-      setTimeout(() => handleSubmit(), 100)
+      handleSubmit()
     },
     [handleSubmit],
   )

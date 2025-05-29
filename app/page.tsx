@@ -875,16 +875,6 @@ export default function Home() {
         </div>
       </main>
 
-      {/* Floating Chat Icon - lazy loaded */}
-      <Suspense fallback={null}>
-        <AIChatButtonComponent
-          onClick={() => {
-            setShowChatBox(true)
-            setMinimizedChat(!minimizedChat)
-          }}
-        />
-      </Suspense>
-
       {/* AI Chat Box - lazy loaded */}
       {showChatBox && !minimizedChat && (
         <Suspense fallback={null}>
