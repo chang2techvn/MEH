@@ -20,7 +20,8 @@ import {
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { toast } from "@/hooks/use-toast"
-import { fetchAllChallenges, type Challenge, challengeTopics } from "@/app/actions/challenge-videos"
+import { fetchAllChallenges } from "@/app/actions/challenge-videos"
+import { challengeTopics, type Challenge } from "@/app/utils/challenge-constants"
 import { extractVideoFromUrl } from "@/app/actions/youtube-video"
 import { getDifficultyBadgeColor, getDifficultyDisplayName } from "@/app/utils/challenge-classifier"
 import {
@@ -165,7 +166,7 @@ export default function AdminChallengesPage() {
     if (selectedTopics.length > 0) {
       filtered = filtered.filter((challenge) => {
         if (!challenge.topics) return false
-        return challenge.topics.some((topic) => selectedTopics.includes(topic))
+        return challenge.topics.some((topic: string) => selectedTopics.includes(topic))
       })
     }
 
@@ -1519,7 +1520,7 @@ function ChallengeTable({
                     <TableCell>
                       {challenge.topics && challenge.topics.length > 0 ? (
                         <div className="flex flex-wrap gap-1 max-w-[150px]">
-                          {challenge.topics.slice(0, 2).map((topic, index) => (
+                          {challenge.topics.slice(0, 2).map((topic: string, index: number) => (
                             <Badge key={index} variant="outline" className="text-xs">
                               {topic}
                             </Badge>
@@ -1672,7 +1673,7 @@ function ChallengeGrid({
 
                 {challenge.topics && challenge.topics.length > 0 && (
                   <div className="flex flex-wrap gap-1 mt-2">
-                    {challenge.topics.slice(0, 3).map((topic, index) => (
+                    {challenge.topics.slice(0, 3).map((topic: string, index: number) => (
                       <Badge key={index} variant="outline" className="text-xs">
                         {topic}
                       </Badge>

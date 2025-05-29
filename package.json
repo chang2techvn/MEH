@@ -6,7 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test:daily": "tsx scripts/test-daily-challenges.ts",
+    "test:daily-simple": "tsx scripts/test-daily-challenges-simple.ts",
+    "test:db": "tsx scripts/test-db.ts"
   },
   "dependencies": {
     "@emotion/is-prop-valid": "latest",

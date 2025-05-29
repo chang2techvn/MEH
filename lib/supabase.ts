@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 
 // Simplified Database type for Supabase client
-type Database = {
+export type Database = {
   public: {
     Tables: {
       [key: string]: {
@@ -15,7 +15,6 @@ type Database = {
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
 // Client for browser/user interactions
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
@@ -28,14 +27,6 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
     params: {
       eventsPerSecond: 10
     }
-  }
-})
-
-// Server-only client with service role privileges (for server actions)
-export const supabaseServer = createClient<Database>(supabaseUrl, supabaseServiceKey, {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false
   }
 })
 
