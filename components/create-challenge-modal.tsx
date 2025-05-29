@@ -19,7 +19,7 @@ import { extractVideoFromUrl } from "@/app/actions/youtube-video"
 import { Loader2, AlertCircle } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { toast } from "@/hooks/use-toast"
-import type { Challenge } from "@/app/actions/challenge-videos"
+import {type Challenge } from '@/app/utils/challenge-constants'
 
 interface CreateChallengeModalProps {
   open: boolean

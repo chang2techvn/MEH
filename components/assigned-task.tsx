@@ -24,7 +24,7 @@ export default function AssignedTask({
   description,
   videoUrl,
   dueDate,
-  userId = "user-1",
+  userId,
   username = "John Doe",
   userImage = "/placeholder.svg?height=40&width=40",
 }: AssignedTaskProps) {
@@ -33,6 +33,29 @@ export default function AssignedTask({
   const [progress, setProgress] = useState(25)
   const [videoWatched, setVideoWatched] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Helper function to extract YouTube video ID from URL
+  const extractVideoId = (url: string): string | null => {
+    console.log("🎥 [AssignedTask] Original videoUrl:", url)
+    
+    if (!url) {
+      console.log("❌ [AssignedTask] No URL provided")
+      return null
+    }
+    
+    // If it's already just a video ID, return it
+    if (url.length === 11 && !/[\/\?\&]/.test(url)) {
+      console.log("✅ [AssignedTask] Already a video ID:", url)
+      return url
+    }
+    
+    const regex = /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/
+    const match = url.match(regex)
+    const videoId = match ? match[1] : null
+    
+    console.log("🔍 [AssignedTask] Extracted videoId:", videoId)
+    return videoId
+  }
 
   // Handle submission completion
   const handleSubmissionComplete = (submissionId: string) => {
@@ -92,7 +115,7 @@ export default function AssignedTask({
               <div className="md:w-1/3 aspect-video rounded-xl overflow-hidden flex items-center justify-center relative group">
                 <div className="absolute inset-0 bg-gradient-to-br from-neo-mint/20 to-purist-blue/20 backdrop-blur-sm"></div>
                 <YouTubeVideoPlayer
-                  videoId="dQw4w9WgXcQ" // Replace with actual video ID from props
+                  videoId={extractVideoId(videoUrl) || videoUrl || "dQw4w9WgXcQ"}
                   title={title}
                   requiredWatchTime={180} // 3 minutes
                   onWatchComplete={() => setVideoWatched(true)}

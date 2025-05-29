@@ -23,7 +23,7 @@ import {
   MessageSquare,
   Tag,
 } from "lucide-react"
-import type { Challenge } from "@/app/actions/challenge-videos"
+import {type Challenge } from '@/app/utils/challenge-constants'
 import YoutubeVideoPlayer from "@/components/youtube-video-player"
 import { ScrollArea } from "@/components/ui/scroll-area"
 

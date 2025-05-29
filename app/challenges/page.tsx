@@ -28,6 +28,7 @@ export default function ChallengesPage() {
   const [activeTab, setActiveTab] = useState("daily")
   const [loading, setLoading] = useState(true)
   const [currentChallenge, setCurrentChallenge] = useState<Challenge | null>(null)
+  const [selectedChallenge, setSelectedChallenge] = useState<Challenge | null>(null) // New state for started challenge
   const [createModalOpen, setCreateModalOpen] = useState(true)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(true)
   const [mounted, setMounted] = useState(false)
@@ -148,11 +149,35 @@ export default function ChallengesPage() {
 
   // Xử lý khi người dùng bắt đầu thử thách
   const handleStartChallenge = (id: string) => {
-    // Trong ứng dụng thực tế, bạn sẽ chuyển hướng đến trang thử thách
-    toast({
-      title: "Challenge started",
-      description: `You've started the challenge with ID: ${id}`,
-    })
+    console.log("🎯 [ChallengesPage] Starting challenge with ID:", id);
+    console.log("📊 [ChallengesPage] Available challenges:", challenges.map(c => ({ id: c.id, title: c.title, videoUrl: c.videoUrl })));
+    
+    // Tìm challenge với id tương ứng
+    const challenge = challenges.find(c => c.id === id)
+    console.log("🔍 [ChallengesPage] Found challenge:", challenge);
+    
+    if (challenge) {
+      console.log("✅ [ChallengesPage] Setting selected challenge:", challenge);
+      console.log("📹 [ChallengesPage] Challenge videoUrl:", challenge.videoUrl);
+      
+      // Set challenge được chọn để hiển thị ở "Your Current Challenge"
+      setSelectedChallenge(challenge)
+      
+      toast({
+        title: "Challenge started",
+        description: `Started: ${challenge.title}`,
+      })
+      
+      // Scroll lên top để user có thể thấy "Your Current Challenge"
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    } else {
+      console.error("❌ [ChallengesPage] Challenge not found with ID:", id);
+      toast({
+        title: "Error",
+        description: "Challenge not found",
+        variant: "destructive",
+      })
+    }
   }
 
   // Hiển thị trạng thái loading
@@ -296,15 +321,26 @@ export default function ChallengesPage() {
           </div>
         </div>
 
-        {currentChallenge && (
+        {(selectedChallenge || currentChallenge) && (
           <div className="mb-8">
             <h2 className="text-xl font-bold mb-4">Your Current Challenge</h2>
-            <AssignedTask
-              title={currentChallenge.title}
-              description={currentChallenge.description}
-              videoUrl={currentChallenge.videoUrl}
-              dueDate="2025-04-05"
-            />
+            {(() => {
+              const challenge = selectedChallenge || currentChallenge;
+              console.log("🚀 [ChallengesPage] Rendering AssignedTask with challenge:", challenge);
+              console.log("📹 [ChallengesPage] Challenge videoUrl:", challenge?.videoUrl);
+              console.log("🎯 [ChallengesPage] Selected challenge:", selectedChallenge);
+              console.log("📅 [ChallengesPage] Current challenge:", currentChallenge);
+              return (
+                <AssignedTask
+                  key={challenge!.id} // Add key to force re-render when challenge changes
+                  title={challenge!.title}
+                  description={challenge!.description}
+                  videoUrl={challenge!.videoUrl}
+                  dueDate="2025-04-05"
+                  // Don't pass userId to force using original component
+                />
+              );
+            })()}
           </div>
         )}
 
