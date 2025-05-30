@@ -15,8 +15,10 @@ import YouTubeVideoPlayer from "./youtube-video-player"
 import ContentCreationStep from "./content-creation-step"
 import PostPreview from "./post-preview"
 import PublishSuccess from "./publish-success"
+import ContentComparisonFeedback from "./content-comparison-feedback"
 import { submitUserContent, publishSubmission } from "@/app/actions/user-submissions"
 import { getVideoSettings } from "@/app/actions/admin-settings"
+import { compareVideoContentWithUserContent, type ContentComparison } from "@/app/actions/content-comparison"
 import { v4 as uuidv4 } from "uuid"
 
 interface DailyChallengeProps {
@@ -48,6 +50,11 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
     autoPublish: true,
   })
   const [loadingSettings, setLoadingSettings] = useState(true)
+  
+  // Content comparison state
+  const [contentComparison, setContentComparison] = useState<ContentComparison | null>(null)
+  const [isComparingContent, setIsComparingContent] = useState(false)
+  const [showComparisonFeedback, setShowComparisonFeedback] = useState(false)
 
   // Steps for the challenge
   const steps = [
@@ -122,9 +129,8 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
       setVideoPreviewUrl(url)
     }
   }
-
   // Handle next step
-  const handleNextStep = () => {
+  const handleNextStep = async () => {
     if (activeStep < steps.length) {
       // Validate current step before proceeding
       if (activeStep === 1) {
@@ -141,6 +147,34 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
           setError("Please write at least 100 characters for your content.")
           return
         }
+
+        // Perform content comparison before proceeding to step 3
+        if (videoData) {
+          setIsComparingContent(true)
+          setError(null)
+          
+          try {
+            const comparison = await compareVideoContentWithUserContent(
+              videoData.id,
+              rewrittenContent,
+              80 // 80% threshold
+            )
+            
+            setContentComparison(comparison)
+            setShowComparisonFeedback(true)
+            setIsComparingContent(false)
+            
+            // If similarity is below threshold, don't proceed
+            if (!comparison.isAboveThreshold) {
+              return
+            }
+          } catch (error) {
+            console.error("Error comparing content:", error)
+            setError("Failed to analyze content. Please try again.")
+            setIsComparingContent(false)
+            return
+          }
+        }
       } else if (activeStep === 3) {
         // Validate rich text content and video
         if (richTextContent.trim().length < 100) {
@@ -156,7 +190,53 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
       setActiveStep(activeStep + 1)
       setProgress(((activeStep + 1) / steps.length) * 100)
       setError(null)
+      setShowComparisonFeedback(false)    }
+  }
+
+  // Handle content comparison feedback actions
+  const handleComparisonRetry = async () => {
+    if (videoData) {
+      setIsComparingContent(true)
+      setError(null)
+      
+      try {
+        const comparison = await compareVideoContentWithUserContent(
+          videoData.id,
+          rewrittenContent,
+          80
+        )
+        
+        setContentComparison(comparison)
+        setIsComparingContent(false)
+      } catch (error) {
+        console.error("Error comparing content:", error)
+        setError("Failed to analyze content. Please try again.")
+        setIsComparingContent(false)
+      }
     }
+  }
+  const handleComparisonProceed = () => {
+    setActiveStep(activeStep + 1)
+    setProgress(((activeStep + 1) / steps.length) * 100)
+    setShowComparisonFeedback(false)
+    setError(null)
+  }
+
+  const handleComparisonGoBack = () => {
+    // Reset all comparison-related state first
+    setShowComparisonFeedback(false)
+    setContentComparison(null)
+    setError(null)
+    
+    // Ensure we're back at step 2 (Rewrite Content) with proper state
+    setActiveStep(2)
+    setProgress(50) // Step 2 = 50% progress
+    
+    // Force a small delay to ensure UI updates properly
+    setTimeout(() => {
+      // Make sure the comparison feedback is fully hidden
+      setIsComparingContent(false)
+    }, 100)
   }
 
   // Handle submission
@@ -271,7 +351,6 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
   const handleRetry = () => {
     setRetryCount((prev) => prev + 1)
   }
-
   // Reset challenge
   const resetChallenge = () => {
     setRichTextContent("")
@@ -282,6 +361,9 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
     setVideoWatched(false)
     setIsPublished(false)
     setPublishedPostId(null)
+    setContentComparison(null)
+    setIsComparingContent(false)
+    setShowComparisonFeedback(false)
     setRetryCount((prev) => prev + 1)
   }
 
@@ -544,10 +626,15 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
                                     : isCompleted
                                       ? "bg-white/20 dark:bg-gray-800/20 backdrop-blur-sm text-foreground"
                                       : "bg-white/10 dark:bg-gray-800/10 backdrop-blur-sm text-muted-foreground"
-                                }`}
-                                onClick={() => {
+                                }`}                                onClick={() => {
                                   // Only allow going back to previous steps
                                   if (step.id < activeStep) {
+                                    // Reset comparison feedback when navigating away
+                                    setShowComparisonFeedback(false)
+                                    setContentComparison(null)
+                                    setError(null)
+                                    setIsComparingContent(false)
+                                    
                                     setActiveStep(step.id)
                                     setProgress((step.id / steps.length) * 100)
                                   }
@@ -621,14 +708,31 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
                           before proceeding to the next step.
                         </AlertDescription>
                       </Alert>
-                    </motion.div>
-                  )}
+                    </motion.div>                  )}
                 </div>
               )}
             </div>
           </div>
 
-          {activeStep !== 4 && (
+          {/* Content Comparison Feedback */}
+          {showComparisonFeedback && activeStep === 2 && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+              className="px-6 pb-4"
+            >
+              <ContentComparisonFeedback
+                comparison={contentComparison}
+                isLoading={isComparingContent}
+                onRetry={handleComparisonRetry}
+                onProceed={handleComparisonProceed}
+                onGoBack={handleComparisonGoBack}
+              />
+            </motion.div>
+          )}
+
+          {activeStep !== 4 && !showComparisonFeedback && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -639,15 +743,25 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
                 <span className="text-sm font-medium">Current Step:</span>
                 <span className="text-sm">{steps[activeStep - 1].name}</span>
               </div>
-              <div className="flex gap-2">
-                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              <div className="flex gap-2">                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                   <Button
                     size="sm"
                     onClick={handleNextStep}
-                    disabled={activeStep === 1 && adminSettings.enforceWatchTime && !videoWatched}
+                    disabled={
+                      (activeStep === 1 && adminSettings.enforceWatchTime && !videoWatched) ||
+                      isComparingContent ||
+                      (activeStep === 2 && showComparisonFeedback)
+                    }
                     className="bg-gradient-to-r from-neo-mint to-purist-blue hover:from-neo-mint/90 hover:to-purist-blue/90 text-white border-0"
                   >
-                    Next Step
+                    {isComparingContent ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Analyzing...
+                      </>
+                    ) : (
+                      "Next Step"
+                    )}
                   </Button>
                 </motion.div>
               </div>

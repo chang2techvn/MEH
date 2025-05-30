@@ -48,7 +48,7 @@ export async function compareContent(originalTranscript: string, userContent: st
       
       Provide specific strengths and weaknesses of the user's content.
       Calculate an overall score out of 100 based on these criteria.
-      
+
       Format your response as a JSON object with the following structure:
       {
         "score": number,
@@ -63,7 +63,7 @@ export async function compareContent(originalTranscript: string, userContent: st
 
     try {
       // Generate content using Gemini AI
-      const model = genAI.getGenerativeModel({ model: "gemini-pro" })
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" })
       const result = await model.generateContent(prompt)
       const response = result.response
       const text = response.text()
@@ -141,7 +141,7 @@ export async function evaluateVideoPresentation(
 
     try {
       // Generate content using Gemini AI
-      const model = genAI.getGenerativeModel({ model: "gemini-pro" })
+      const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" })
       const result = await model.generateContent(prompt)
       const response = result.response
       const text = response.text()

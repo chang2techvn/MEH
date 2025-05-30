@@ -686,12 +686,7 @@ export default function ResourcesPage() {
         </section>
 
         {/* Floating Chat Icon */}
-        <AIChatButton
-          onClick={() => {
-            setShowChatBox(true)
-            setMinimizedChat(!minimizedChat)
-          }}
-        />
+        <AIChatButton />
 
         {/* AI Chat Box */}
         {showChatBox && !minimizedChat && (
