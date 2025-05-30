@@ -541,21 +541,17 @@ export default function ChallengesPage() {
         />
 
         {/* Floating Chat Icon */}
-        <AIChatButton
+        <div
           onClick={() => {
             setShowChatBox(true)
             setMinimizedChat(!minimizedChat)
           }}
-        />
+          style={{ display: "inline-block" }}
+        >
+          <AIChatButton />
+        </div>
 
-        {/* AI Chat Box */}
-        {showChatBox && !minimizedChat && (
-          <AIChatBox 
-            onClose={() => setShowChatBox(false)} 
-            onMinimize={() => setMinimizedChat(true)}
-            buttonPosition={{ x: window.innerWidth - 80, y: window.innerHeight - 80 }}
-          />
-        )}
+
       </div>
       <footer className="border-t border-white/10 dark:border-gray-800/10 bg-white/40 dark:bg-gray-900/40 backdrop-blur-xl">
         <div className="container py-8">

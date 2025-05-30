@@ -106,13 +106,31 @@ export default function AssignedTask({
     }
   }
 
+  const handleStepClick = (stepId: number) => {
+    // Allow clicking on current step and previous steps
+    // But require completing previous steps to access later ones
+    if (stepId <= activeStep || stepId === activeStep + 1) {
+      // If trying to go to next step, validate current step
+      if (stepId > activeStep) {
+        if (activeStep === 1 && !videoWatched) {
+          setError("Please watch at least 3 minutes of the video before proceeding.")
+          return
+        }
+      }
+      setActiveStep(stepId)
+      setProgress(stepId * 25)
+      setError(null)
+    }
+  }
+
   return (
     <TooltipProvider>
       <Card className="neo-card overflow-hidden border-none bg-white/20 dark:bg-gray-800/20 backdrop-blur-sm shadow-neo">
         <div className="p-6">
           <div className="flex flex-col md:flex-row gap-6">
+            {/* Video Player - Only show in step 1 */}
             {activeStep === 1 && (
-              <div className="md:w-1/3 aspect-video rounded-xl overflow-hidden flex items-center justify-center relative group">
+              <div className="md:w-1/2 aspect-video rounded-xl overflow-hidden flex items-center justify-center relative group">
                 <div className="absolute inset-0 bg-gradient-to-br from-neo-mint/20 to-purist-blue/20 backdrop-blur-sm"></div>
                 <YouTubeVideoPlayer
                   videoId={extractVideoId(videoUrl) || videoUrl || "dQw4w9WgXcQ"}
@@ -122,7 +140,45 @@ export default function AssignedTask({
                 />
               </div>
             )}
-            <div className="md:w-2/3">
+
+            {/* Content Rewriting - Show in step 2 */}
+            {activeStep === 2 && (
+              <div className="md:w-1/2 aspect-video rounded-xl overflow-hidden flex items-center justify-center relative">
+                <textarea
+                  placeholder="Rewrite the content of the video in your own words. Try to be comprehensive and use proper grammar."
+                  className="w-full h-full resize-none p-4 bg-white/20 dark:bg-gray-800/20 backdrop-blur-sm border-white/20 dark:border-gray-800/20 rounded-xl focus:outline-none focus:ring-2 focus:ring-neo-mint"
+                />
+              </div>
+            )}
+
+            {/* Blog Post Creation - Show in step 3 */}
+            {activeStep === 3 && (
+              <div className="md:w-1/2 aspect-video rounded-xl overflow-hidden flex items-center justify-center relative">
+                <textarea
+                  placeholder="Create a blog post based on your rewritten content. Focus on proper grammar, structure, and engaging writing."
+                  className="w-full h-full resize-none p-4 bg-white/20 dark:bg-gray-800/20 backdrop-blur-sm border-white/20 dark:border-gray-800/20 rounded-xl focus:outline-none focus:ring-2 focus:ring-neo-mint"
+                />
+              </div>
+            )}
+
+            {/* Video Recording - Show in step 4 */}
+            {activeStep === 4 && (
+              <div className="md:w-1/2 aspect-video rounded-xl overflow-hidden flex flex-col items-center justify-center relative bg-white/20 dark:bg-gray-800/20 backdrop-blur-sm">
+                <div className="flex flex-col items-center justify-center h-full w-full p-4">
+                  <Film className="h-12 w-12 text-muted-foreground mb-4" />
+                  <p className="text-center text-muted-foreground mb-4">
+                    Record a video explaining the content in your own words
+                  </p>
+                  <Button
+                    className="bg-gradient-to-r from-neo-mint to-purist-blue hover:from-neo-mint/90 hover:to-purist-blue/90 text-white border-0"
+                  >
+                    Record Video
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            <div className="md:w-1/2">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
                 <h3 className="text-xl font-bold">{title}</h3>
                 <div className="flex items-center gap-2 text-sm bg-white/20 dark:bg-gray-800/20 backdrop-blur-sm px-3 py-1 rounded-full">
@@ -169,7 +225,7 @@ export default function AssignedTask({
                                   ? "bg-white/20 dark:bg-gray-800/20 backdrop-blur-sm text-foreground"
                                   : "bg-white/10 dark:bg-gray-800/10 backdrop-blur-sm text-muted-foreground"
                             }`}
-                            onClick={() => setActiveStep(step.id)}
+                            onClick={() => handleStepClick(step.id)}
                             whileHover={{ scale: 1.05 }}
                             transition={{ type: "spring", stiffness: 400, damping: 10 }}
                           >

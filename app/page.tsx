@@ -29,6 +29,9 @@ import { formatNewPost } from "@/app/utils/post-helpers"
 import { useInView } from "react-intersection-observer"
 import { Skeleton } from "@/components/ui/skeleton"
 import { debounce } from "lodash"
+import { fetchCurrentChallenge } from "@/app/actions/challenge-videos"
+import { type Challenge } from "./utils/challenge-constants"
+import { toast } from "@/hooks/use-toast"
 
 // Lazy load components that aren't needed immediately
 const AssignedTask = lazy(() => import("@/components/assigned-task"))
@@ -37,7 +40,6 @@ const FeedFilter = lazy(() => import("@/components/feed-filter"))
 const FeedEmptyState = lazy(() => import("@/components/feed-empty-state"))
 const ThemeToggle = lazy(() => import("@/components/theme-toggle"))
 const FeedPost = lazy(() => import("@/components/feed-post"))
-const AIChatBoxComponent = lazy(() => import("@/components/ai-chat-box").then((mod) => ({ default: mod.AIChatBox })))
 const AIChatButtonComponent = lazy(() =>
   import("@/components/ai-chat-button").then((mod) => ({ default: mod.AIChatButton })),
 )
@@ -49,6 +51,8 @@ const LoadingFallback = () => <div className="animate-pulse bg-gray-200 dark:bg-
 export default function Home() {
   const [mounted, setMounted] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [currentChallenge, setCurrentChallenge] = useState<Challenge | null>(null)
+  const [challengeLoading, setChallengeLoading] = useState(true)
   const isMobile = useMobile()
   const [newPostAdded, setNewPostAdded] = useState(false)
   const [posts, setPosts] = useState<any[]>([])
@@ -57,8 +61,6 @@ export default function Home() {
   const [hasMore, setHasMore] = useState(true)
   const [page, setPage] = useState(1)
   const loader = useRef(null)
-  const [showChatBox, setShowChatBox] = useState(false)
-  const [minimizedChat, setMinimizedChat] = useState(true)
 
   // Tối ưu hóa loadMorePosts với useCallback
   const loadMorePosts = useCallback(async () => {
@@ -235,11 +237,34 @@ export default function Home() {
       clearInterval(intervalId)
     }
   }, [])
-
   // Hydration
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  // Load current challenge
+  useEffect(() => {
+    const loadCurrentChallenge = async () => {
+      try {
+        setChallengeLoading(true)
+        const challenge = await fetchCurrentChallenge()
+        setCurrentChallenge(challenge)
+      } catch (error) {
+        console.error("Error loading current challenge:", error)
+        toast({
+          title: "Error",
+          description: "Failed to load current challenge. Please try again.",
+          variant: "destructive",
+        })
+      } finally {
+        setChallengeLoading(false)
+      }
+    }
+
+    if (mounted) {
+      loadCurrentChallenge()
+    }
+  }, [mounted])
 
   // Preload critical data
   useEffect(() => {
@@ -381,14 +406,24 @@ export default function Home() {
                       <Sparkles className="relative h-5 w-5 text-neo-mint dark:text-purist-blue" />
                     </div>
                     <h2 className="text-xl font-bold">Your Current Challenge</h2>
-                  </div>
-                  <Suspense fallback={<LoadingFallback />}>
-                    <AssignedTask
-                      title="The Impact of Technology on Modern Society"
-                      description="Watch this 3-minute video about how technology is changing our daily lives and follow the 4-skill process."
-                      videoUrl="https://example.com/videos/technology-impact"
-                      dueDate="2025-04-05"
-                    />
+                  </div>                  <Suspense fallback={<LoadingFallback />}>
+                    {challengeLoading ? (
+                      <LoadingFallback />
+                    ) : currentChallenge ? (                      <AssignedTask
+                        key={currentChallenge.id}
+                        title={currentChallenge.title}
+                        description={currentChallenge.description}
+                        videoUrl={currentChallenge.videoUrl}
+                        dueDate={new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
+                        userId="demo-user-id"
+                        username="Demo User"
+                        userImage="/placeholder.svg?height=40&width=40"
+                      />
+                    ) : (
+                      <div className="text-center py-8">
+                        <p className="text-muted-foreground">No current challenge available</p>
+                      </div>
+                    )}
                   </Suspense>
                 </div>
               </Card>
@@ -873,18 +908,10 @@ export default function Home() {
             </motion.div>
           </motion.div>
         </div>
-      </main>
-
-      {/* AI Chat Box - lazy loaded */}
-      {showChatBox && !minimizedChat && (
-        <Suspense fallback={null}>
-          <AIChatBoxComponent 
-            onClose={() => setShowChatBox(false)} 
-            onMinimize={() => setMinimizedChat(true)} 
-            buttonPosition={{ x: window.innerWidth - 80, y: window.innerHeight - 80 }}
-          />
-        </Suspense>
-      )}
+      </main>      {/* Floating Chat Icon - lazy loaded */}
+      <Suspense fallback={null}>
+        <AIChatButtonComponent />
+      </Suspense>
 
       <footer className="border-t border-white/10 dark:border-gray-800/10 bg-white/40 dark:bg-gray-900/40 backdrop-blur-xl">
         <div className="container py-8">
