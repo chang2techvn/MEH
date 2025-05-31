@@ -89,6 +89,33 @@ export default function ContentComparisonFeedback({
       animate={{ opacity: 1, y: 0 }}
       className="space-y-6"
     >
+       {/* Action Buttons */}
+       {/* <div className="flex gap-3 justify-end items-center w-full mb-4"> */}
+      <div className="flex gap-3 justify-center">
+        <Button onClick={onGoBack} variant="outline">
+          Go Back & Edit
+        </Button>
+        
+        {comparison.isAboveThreshold ? (
+          <Button onClick={onProceed} className="bg-neo-mint hover:bg-neo-mint/90">
+            Continue to Next Step
+          </Button>
+        ) : (
+          <Button onClick={onRetry} variant="outline">
+            Retry Analysis
+          </Button>
+        )}
+      </div>
+
+      {!comparison.isAboveThreshold && (
+        <Alert>
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            Your content similarity is below the 80% threshold required to proceed. 
+            Please review the video again and improve your content based on the suggestions above.
+          </AlertDescription>
+        </Alert>
+      )}
       {/* Main Score Card */}
       <Card className="p-6 neo-card">
         <div className="flex items-center justify-between mb-4">
@@ -340,33 +367,6 @@ export default function ContentComparisonFeedback({
             ))}
           </ul>
         </Card>
-      )}
-
-      {/* Action Buttons */}
-      <div className="flex gap-3 justify-center">
-        <Button onClick={onGoBack} variant="outline">
-          Go Back & Edit
-        </Button>
-        
-        {comparison.isAboveThreshold ? (
-          <Button onClick={onProceed} className="bg-neo-mint hover:bg-neo-mint/90">
-            Continue to Next Step
-          </Button>
-        ) : (
-          <Button onClick={onRetry} variant="outline">
-            Retry Analysis
-          </Button>
-        )}
-      </div>
-
-      {!comparison.isAboveThreshold && (
-        <Alert>
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>
-            Your content similarity is below the 80% threshold required to proceed. 
-            Please review the video again and improve your content based on the suggestions above.
-          </AlertDescription>
-        </Alert>
       )}
     </motion.div>
   )
