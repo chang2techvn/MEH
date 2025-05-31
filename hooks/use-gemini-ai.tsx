@@ -3,7 +3,6 @@
 import type React from "react"
 
 import { useState, useCallback, useEffect } from "react"
-import { generateGeminiResponse } from "@/lib/gemini-api"
 
 type MessageType = "text" | "thinking" | "error"
 
@@ -65,8 +64,26 @@ export function useGeminiAI() {
         Be concise, helpful, and provide examples when appropriate. Format your responses with markdown for better readability.
         Current conversation history: ${JSON.stringify(messages.map((m) => ({ role: m.role, content: m.content })))}`
 
-        // Gọi API và cập nhật trực tiếp message thinking
-        const fullResponse = await generateGeminiResponse(input, systemPrompt)
+        // Call the API route instead of directly calling Gemini API
+        const response = await fetch('/api/ai/chat', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            prompt: input,
+            systemPrompt: systemPrompt
+          })
+        })
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}))
+          throw new Error(errorData.error || `Request failed with status ${response.status}`)
+        }
+
+        const data = await response.json()
+        const fullResponse = data.response
+
         setMessages((prev) =>
           prev.map((msg) =>
             msg.id === thinkingId ? { ...msg, content: fullResponse, type: "text" as MessageType } : msg,
