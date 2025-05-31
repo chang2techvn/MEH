@@ -93,6 +93,7 @@
     "workbox-routing": "latest",
     "workbox-strategies": "latest",
     "xlsx": "latest",
+    "youtube-transcript": "^1.2.1",
     "zod": "latest"
   },
   "devDependencies": {

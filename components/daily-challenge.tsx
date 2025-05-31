@@ -19,6 +19,7 @@ import ContentComparisonFeedback from "./content-comparison-feedback"
 import { submitUserContent, publishSubmission } from "@/app/actions/user-submissions"
 import { getVideoSettings } from "@/app/actions/admin-settings"
 import { compareVideoContentWithUserContent, type ContentComparison } from "@/app/actions/content-comparison"
+import { extractYouTubeTranscript } from "@/app/utils/video-processor"
 import { v4 as uuidv4 } from "uuid"
 
 interface DailyChallengeProps {
@@ -44,6 +45,28 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
   const [richTextContent, setRichTextContent] = useState("")
   const [publishedPostId, setPublishedPostId] = useState<string | null>(null)
   const [isPublished, setIsPublished] = useState(false)
+    // Refs for scrolling
+  const challengeHeaderRef = useRef<HTMLDivElement>(null)
+  const rewriteContentRef = useRef<HTMLDivElement>(null)
+  const comparisonResultsRef = useRef<HTMLDivElement>(null)
+  
+  // Scroll utility functions
+  const scrollToElement = (ref: React.RefObject<HTMLDivElement | null>, offset = -100) => {
+    if (ref.current) {
+      const elementPosition = ref.current.offsetTop + offset
+      window.scrollTo({
+        top: elementPosition,
+        behavior: 'smooth'
+      })
+    }
+  }
+
+  const scrollToTop = () => {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    })
+  }
   const [adminSettings, setAdminSettings] = useState({
     minWatchTime: 180, // Default 3 minutes
     enforceWatchTime: true,
@@ -96,7 +119,6 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
 
     fetchSettings()
   }, [])
-
   // Fetch today's video
   useEffect(() => {
     const fetchVideo = async () => {
@@ -107,6 +129,18 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
         const video = await getTodayVideo()
         console.log("Video fetched successfully:", video.id)
         setVideoData(video)
+        
+        // Extract and log transcript for testing
+        console.log("=== EXTRACTING VIDEO TRANSCRIPT FOR TESTING ===")
+        try {
+          const transcript = await extractYouTubeTranscript(video.id)
+          console.log("✅ Transcript extracted successfully!")
+          console.log(`📝 Transcript length: ${transcript.length} characters`)
+        } catch (transcriptError) {
+          console.error("❌ Error extracting transcript:", transcriptError)
+        }
+        console.log("=== END TRANSCRIPT EXTRACTION ===")
+        
       } catch (err) {
         console.error("Error fetching video:", err)
         setError("Failed to load today's challenge. Please try again.")
@@ -146,9 +180,7 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
         if (rewrittenContent.trim().length < 100) {
           setError("Please write at least 100 characters for your content.")
           return
-        }
-
-        // Perform content comparison before proceeding to step 3
+        }        // Perform content comparison before proceeding to step 3
         if (videoData) {
           setIsComparingContent(true)
           setError(null)
@@ -164,10 +196,8 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
             setShowComparisonFeedback(true)
             setIsComparingContent(false)
             
-            // If similarity is below threshold, don't proceed
-            if (!comparison.isAboveThreshold) {
-              return
-            }
+            // Always return after comparison to show feedback - user must click proceed to continue
+            return
           } catch (error) {
             console.error("Error comparing content:", error)
             setError("Failed to analyze content. Please try again.")
@@ -192,12 +222,16 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
       setError(null)
       setShowComparisonFeedback(false)    }
   }
-
   // Handle content comparison feedback actions
   const handleComparisonRetry = async () => {
     if (videoData) {
       setIsComparingContent(true)
       setError(null)
+      
+      // Scroll to comparison results area with a small delay
+      setTimeout(() => {
+        scrollToElement(comparisonResultsRef)
+      }, 100)
       
       try {
         const comparison = await compareVideoContentWithUserContent(
@@ -221,7 +255,6 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
     setShowComparisonFeedback(false)
     setError(null)
   }
-
   const handleComparisonGoBack = () => {
     // Reset all comparison-related state first
     setShowComparisonFeedback(false)
@@ -236,7 +269,10 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
     setTimeout(() => {
       // Make sure the comparison feedback is fully hidden
       setIsComparingContent(false)
-    }, 100)
+      
+      // Scroll to the rewrite content area after UI updates
+      scrollToElement(rewriteContentRef)
+    }, 200)
   }
 
   // Handle submission
@@ -433,11 +469,10 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
       </Card>
     )
   }
-
   return (
     <TooltipProvider>
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-        <Card className="neo-card overflow-hidden border-none bg-white/20 dark:bg-gray-800/20 backdrop-blur-sm shadow-neo">
+        <Card ref={challengeHeaderRef} className="neo-card overflow-hidden border-none bg-white/20 dark:bg-gray-800/20 backdrop-blur-sm shadow-neo">
           <div className="p-6">
             <div className="flex flex-col md:flex-row gap-6">
               {activeStep === 1 && videoData && (
@@ -457,10 +492,9 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
                     />
                   </div>
                 </motion.div>
-              )}
-
-              {activeStep === 2 && (
+              )}              {activeStep === 2 && (
                 <motion.div
+                  ref={rewriteContentRef}
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ duration: 0.3 }}
@@ -712,11 +746,10 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
                 </div>
               )}
             </div>
-          </div>
-
-          {/* Content Comparison Feedback */}
+          </div>          {/* Content Comparison Feedback */}
           {showComparisonFeedback && activeStep === 2 && (
             <motion.div
+              ref={comparisonResultsRef}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3 }}

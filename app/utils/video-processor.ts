@@ -2,6 +2,7 @@
 import { mkdir } from "fs/promises"
 import path from "path"
 import os from "os"
+import { YoutubeTranscript } from 'youtube-transcript'
 
 // This is a server-side utility for processing videos
 // In a real implementation, you would use a proper video processing service
@@ -43,12 +44,76 @@ export async function downloadAndTrimYouTubeVideo(
 // Function to extract captions/transcript from a YouTube video
 export async function extractYouTubeTranscript(videoId: string): Promise<string> {
   try {
-    // In a real implementation, you would use a library like youtube-transcript or a YouTube API
-    // For this example, we'll return a detailed simulated transcript
-
     console.log(`Extracting transcript for video: ${videoId}`)
 
-    // Generate a detailed simulated transcript based on the video ID
+    try {
+      // Try to get the real transcript from YouTube
+      console.log(`🔍 Attempting to fetch real transcript for video: ${videoId}`)
+      
+      // Try different language options
+      const languages = ['en', 'en-US', 'en-GB']
+      let transcript = null
+      
+      for (const lang of languages) {
+        try {
+          console.log(`🌐 Trying language: ${lang}`)
+          transcript = await YoutubeTranscript.fetchTranscript(videoId, { lang })
+          if (transcript && transcript.length > 0) {
+            console.log(`✅ Found transcript in ${lang}`)
+            break
+          }
+        } catch (langError) {
+          console.log(`❌ No transcript found in ${lang}`)
+          continue
+        }
+      }
+      
+      // If no specific language worked, try without language specification
+      if (!transcript || transcript.length === 0) {
+        console.log(`🌍 Trying without specific language...`)
+        try {
+          transcript = await YoutubeTranscript.fetchTranscript(videoId)
+        } catch (generalError) {
+          console.log(`❌ No transcript found without language specification`)
+        }
+      }
+      
+      console.log(`📊 Transcript fetch result:`, {
+        transcriptFound: !!transcript,
+        transcriptLength: transcript?.length || 0,
+        firstItem: transcript?.[0] || null
+      })
+      
+      if (transcript && transcript.length > 0) {
+        // Combine all transcript segments into a single string
+        const fullTranscript = transcript
+          .map((item: any) => item.text)
+          .join(' ')
+          .replace(/\s+/g, ' ') // Clean up multiple spaces
+          .trim()
+
+        // Print transcript to terminal for testing
+        console.log(`\n=== ✅ REAL VIDEO TRANSCRIPT FOR ${videoId} ===`)
+        console.log(`Content Length: ${fullTranscript.length} characters`)
+        console.log(`\n--- TRANSCRIPT CONTENT ---`)
+        console.log(fullTranscript.substring(0, 1000) + (fullTranscript.length > 1000 ? '...' : '')) // Show first 1000 chars
+        console.log(`\n=== END REAL TRANSCRIPT ===\n`)
+
+        return fullTranscript
+      } else {
+        console.warn(`❌ No transcript data found for video ${videoId}`)
+      }
+    } catch (transcriptError) {
+      console.error(`❌ Failed to get real transcript for ${videoId}:`, {
+        error: transcriptError instanceof Error ? transcriptError.message : 'Unknown error',
+        stack: transcriptError instanceof Error ? transcriptError.stack : undefined
+      })
+      
+      // Fallback to simulated transcript
+      console.log("🔄 Falling back to simulated transcript...")
+    }
+
+    // Fallback: Generate a detailed simulated transcript based on the video ID
     const topics = [
       {
         name: "climate change",
@@ -68,8 +133,8 @@ export async function extractYouTubeTranscript(videoId: string): Promise<string>
     const topicIndex = videoId.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0) % topics.length
     const selectedTopic = topics[topicIndex]
 
-    // Print transcript to terminal for testing
-    console.log(`\n=== VIDEO TRANSCRIPT FOR ${videoId} ===`)
+    // Print simulated transcript to terminal for testing
+    console.log(`\n=== SIMULATED VIDEO TRANSCRIPT FOR ${videoId} ===`)
     console.log(`Topic: ${selectedTopic.name.toUpperCase()}`)
     console.log(`Content Length: ${selectedTopic.transcript.length} characters`)
     console.log(`\n--- TRANSCRIPT CONTENT ---`)
@@ -81,4 +146,110 @@ export async function extractYouTubeTranscript(videoId: string): Promise<string>
     console.error("Error extracting YouTube transcript:", error)
     return "Transcript unavailable"
   }
+}
+
+// Function to extract captions/transcript from a YouTube video up to a specific duration
+export async function extractYouTubeTranscriptForDuration(videoId: string, maxDurationSeconds: number): Promise<string> {
+  console.log(`Extracting transcript for video: ${videoId} (max duration: ${maxDurationSeconds}s)`)
+
+  // Try to get the real transcript from YouTube
+  console.log(`🔍 Attempting to fetch real transcript for video: ${videoId}`)
+  
+  // Try different language options
+  const languages = ['en', 'en-US', 'en-GB']
+  let transcript = null
+  
+  for (const lang of languages) {
+    try {
+      console.log(`🌐 Trying language: ${lang}`)
+      transcript = await YoutubeTranscript.fetchTranscript(videoId, { lang })
+      if (transcript && transcript.length > 0) {
+        console.log(`✅ Found transcript in ${lang}`)
+        break
+      }
+    } catch (langError) {
+      console.log(`❌ No transcript found in ${lang}`)
+      continue
+    }
+  }
+  
+  // If no specific language worked, try without language specification
+  if (!transcript || transcript.length === 0) {
+    console.log(`🌍 Trying without specific language...`)
+    try {
+      transcript = await YoutubeTranscript.fetchTranscript(videoId)
+    } catch (generalError) {
+      console.log(`❌ No transcript found without language specification`)
+    }
+  }
+  
+  console.log(`📊 Transcript fetch result:`, {
+    transcriptFound: !!transcript,
+    transcriptLength: transcript?.length || 0,
+    firstItem: transcript?.[0] || null
+  })
+  
+  // If no transcript found, throw error immediately
+  if (!transcript || transcript.length === 0) {
+    const errorMessage = `❌ Failed to extract transcript for video ${videoId}. No transcript available for the required watch time of ${maxDurationSeconds} seconds.`
+    console.error(errorMessage)
+    throw new Error(errorMessage)
+  }
+
+  // Filter transcript segments that fall within the specified duration (by cumulative duration)
+  let totalTime = 0
+  const filteredTranscript: any[] = []
+  for (const item of transcript) {
+    // Prefer duration if available, fallback to offset difference if not
+    let duration = 0
+    if (typeof item.duration === 'number') {
+      duration = item.duration
+    } else if (typeof item.duration === 'string') {
+      duration = parseFloat(item.duration)
+    } else if (item.offset && transcript.length > 1) {
+      // Estimate duration as difference to next offset (if possible)
+      const idx = transcript.indexOf(item)
+      if (idx < transcript.length - 1) {
+        const nextOffset = transcript[idx + 1].offset ? transcript[idx + 1].offset / 1000 : 0
+        const thisOffset = item.offset ? item.offset / 1000 : 0
+        duration = Math.max(0, nextOffset - thisOffset)
+      }
+    }
+    if (totalTime + duration > maxDurationSeconds) break
+    filteredTranscript.push(item)
+    totalTime += duration
+  }
+
+  console.log(`⏰ Filtering transcript by cumulative duration: ${filteredTranscript.length} segments, totalTime=${totalTime}s (limit=${maxDurationSeconds}s)`)
+  
+  // Check if we have any segments within the time limit
+  if (filteredTranscript.length === 0) {
+    const errorMessage = `❌ No transcript segments found within the required watch time of ${maxDurationSeconds} seconds for video ${videoId}.`
+    console.error(errorMessage)
+    throw new Error(errorMessage)
+  }
+
+  // Combine filtered transcript segments into a single string
+  const limitedTranscript = filteredTranscript
+    .map((item: any) => item.text)
+    .join(' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+
+  // Check if the limited transcript has meaningful content
+  if (!limitedTranscript || limitedTranscript.length < 10) {
+    const errorMessage = `❌ Insufficient transcript content found within the required watch time of ${maxDurationSeconds} seconds for video ${videoId}.`
+    console.error(errorMessage)
+    throw new Error(errorMessage)
+  }
+
+  // Print limited transcript to terminal for testing
+  console.log(`\n=== ✅ LIMITED REAL VIDEO TRANSCRIPT FOR ${videoId} (${maxDurationSeconds}s) ===`)
+  console.log(`Content Length: ${limitedTranscript.length} characters`)
+  console.log(`Segments Used: ${filteredTranscript.length}/${transcript.length}`)
+  console.log(`\n--- LIMITED TRANSCRIPT CONTENT ---`)
+  console.log(limitedTranscript.substring(0, 1000) + (limitedTranscript.length > 1000 ? '...' : ''))
+  console.log(`\n=== END LIMITED TRANSCRIPT ===\n`)
+
+  return limitedTranscript
 }

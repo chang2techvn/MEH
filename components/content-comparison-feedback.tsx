@@ -124,8 +124,7 @@ export default function ContentComparisonFeedback({
             </h3>
             <p className="text-red-600 dark:text-red-400">
               Your similarity score is {comparison.similarityScore}%, which is below the required 80% threshold.
-            </p>
-            <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg">
+            </p>            <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg">
               <h4 className="font-medium text-red-800 dark:text-red-200 mb-2">
                 📋 What you need to do:
               </h4>
@@ -136,33 +135,27 @@ export default function ContentComparisonFeedback({
                 <li>4. Rewrite your content to include more specific details</li>
                 <li>5. Try again when you feel more confident</li>
               </ol>
+              <div className="mt-3 p-3 bg-red-100 dark:bg-red-800/20 rounded border-l-4 border-red-400">
+                <p className="text-sm text-red-800 dark:text-red-200 font-medium">
+                  🔒 <strong>Access to detailed transcript requires 80%+ similarity score</strong>
+                </p>
+                <p className="text-xs text-red-700 dark:text-red-300 mt-1">
+                  You must demonstrate proper understanding before viewing the complete transcript.
+                </p>
+              </div>            </div>
+            
+            {/* Clear message about transcript access */}
+            <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg border border-yellow-200 dark:border-yellow-800">
+              <h4 className="font-medium text-yellow-800 dark:text-yellow-200 mb-2">
+                🔒 Transcript Access Locked
+              </h4>
+              <p className="text-sm text-yellow-700 dark:text-yellow-300">
+                You need to achieve at least 80% similarity score to unlock access to the complete video transcript. 
+                This ensures you truly understand the content before moving forward.
+              </p>
             </div>
             
-            {/* Show transcript for reference when failed */}
-            <Collapsible open={showTranscript} onOpenChange={setShowTranscript}>
-              <CollapsibleTrigger asChild>
-                <Button 
-                  variant="outline" 
-                  className="w-full justify-between border-red-200 hover:bg-red-50 dark:hover:bg-red-900/20"
-                >
-                  <span className="flex items-center gap-2">
-                    <FileText className="h-4 w-4" />
-                    View Video Transcript for Reference
-                  </span>
-                  {showTranscript ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                </Button>
-              </CollapsibleTrigger>
-              <CollapsibleContent className="mt-4">
-                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 max-h-80 overflow-y-auto">
-                  <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line">
-                    {comparison.detailedAnalysis?.originalTranscript || "Transcript not available"}
-                  </p>
-                </div>
-                <div className="mt-2 text-xs text-red-600">
-                  💡 Study this transcript carefully and include specific details in your rewrite.
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
+            {/* No transcript access when failed - must achieve 80% to view transcript */}
           </div>
         </Card>
       )}{/* Detailed Analysis - Only show when passed (≥80%) */}
@@ -282,8 +275,37 @@ export default function ContentComparisonFeedback({
                 <div className="text-2xl font-bold text-orange-600">{comparison.detailedAnalysis.missedConcepts.length}</div>
                 <div className="text-xs text-gray-500">Missed Concepts</div>
               </div>
-            </div>
-          </Card>
+            </div>          </Card>
+
+          {/* Full Transcript Collapsible - Only for successful users */}
+          {comparison.detailedAnalysis?.originalTranscript && (
+            <Card className="p-6 neo-card">
+              <Collapsible open={showTranscript} onOpenChange={setShowTranscript}>
+                <CollapsibleTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    className="w-full justify-between hover:bg-gray-50 dark:hover:bg-gray-800"
+                  >
+                    <span className="flex items-center gap-2">
+                      <FileText className="h-4 w-4" />
+                      View Complete Video Transcript
+                    </span>
+                    {showTranscript ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="mt-4">
+                  <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 max-h-80 overflow-y-auto">
+                    <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line">
+                      {comparison.detailedAnalysis.originalTranscript}
+                    </p>
+                  </div>
+                  <div className="mt-2 text-xs text-gray-500">
+                    🎉 Congratulations! You can now access the complete transcript for reference.
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            </Card>
+          )}
         </div>
       )}
 
@@ -317,36 +339,6 @@ export default function ContentComparisonFeedback({
               </li>
             ))}
           </ul>
-        </Card>
-      )}
-
-      {/* Full Transcript Collapsible */}
-      {comparison.detailedAnalysis?.originalTranscript && (
-        <Card className="p-6 neo-card">
-          <Collapsible open={showTranscript} onOpenChange={setShowTranscript}>
-            <CollapsibleTrigger asChild>
-              <Button 
-                variant="outline" 
-                className="w-full justify-between hover:bg-gray-50 dark:hover:bg-gray-800"
-              >
-                <span className="flex items-center gap-2">
-                  <FileText className="h-4 w-4" />
-                  View Complete Video Transcript
-                </span>
-                {showTranscript ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-              </Button>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="mt-4">
-              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 max-h-80 overflow-y-auto">
-                <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line">
-                  {comparison.detailedAnalysis.originalTranscript}
-                </p>
-              </div>
-              <div className="mt-2 text-xs text-gray-500">
-                💡 Use this transcript to improve your content and include specific details mentioned in the video.
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
         </Card>
       )}
 

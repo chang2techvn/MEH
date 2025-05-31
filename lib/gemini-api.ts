@@ -2,8 +2,8 @@
  * Utility functions for working with the Gemini API
  */
 
-// The API key for Google AI Studio
-export const GEMINI_API_KEY = "AIzaSyABciaGKcsOTGrELi8PgmJtDteZ77hTuTw"
+// The API key for Google AI Studio (from environment variable)
+export const GEMINI_API_KEY = process.env.GEMINI_API_KEY
 
 // The base URL for the Gemini API
 export const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta"

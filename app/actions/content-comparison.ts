@@ -1,7 +1,8 @@
 "use server"
 
 import { GoogleGenerativeAI } from "@google/generative-ai"
-import { extractYouTubeTranscript } from "@/app/utils/video-processor"
+import { extractYouTubeTranscript, extractYouTubeTranscriptForDuration } from "@/app/utils/video-processor"
+import { getVideoSettings } from "@/app/actions/admin-settings"
 
 // Types for content comparison
 export type ContentComparison = {
@@ -28,16 +29,25 @@ export async function compareVideoContentWithUserContent(
   threshold: number = 80
 ): Promise<ContentComparison> {
   try {
-    // Extract the video transcript
-    const videoTranscript = await extractYouTubeTranscript(videoId)
-    
-    // Print detailed comparison info to terminal
-    console.log(`\n=== CONTENT COMPARISON FOR VIDEO ${videoId} ===`)
+    // Get admin settings to determine minimum watch time
+    const videoSettings = await getVideoSettings()
+    const minWatchTimeSeconds = videoSettings.minWatchTime
+
+    console.log(`\n🔍 === CONTENT COMPARISON FOR VIDEO ${videoId} ===`)
+    console.log(`Admin Min Watch Time: ${minWatchTimeSeconds} seconds (${Math.round(minWatchTimeSeconds / 60)} minutes)`)
     console.log(`User Content Length: ${userContent.length} characters`)
     console.log(`Threshold: ${threshold}%`)
-    console.log(`\n--- USER CONTENT ---`)
+
+    // Extract only the portion of the video transcript corresponding to the minimum watch time
+    const videoTranscript = await extractYouTubeTranscriptForDuration(videoId, minWatchTimeSeconds)
+    
+    // Print detailed comparison info to terminal
+    console.log(`Video Transcript Length (limited): ${videoTranscript.length} characters`)
+    console.log(`\n📝 --- USER CONTENT ---`)
     console.log(userContent)
-    console.log(`\n--- COMPARING WITH TRANSCRIPT ---`)
+    console.log(`\n📺 --- LIMITED VIDEO TRANSCRIPT (${minWatchTimeSeconds}s) ---`)
+    console.log(videoTranscript.substring(0, 2000) + (videoTranscript.length > 2000 ? '...' : ''))
+    console.log(`\n⚖️ --- STARTING COMPARISON PROCESS ---`)
     
     // Check if API key exists
     const apiKey = process.env.GEMINI_API_KEY
@@ -48,13 +58,13 @@ export async function compareVideoContentWithUserContent(
     }
 
     // Initialize Gemini AI with API key
-    const genAI = new GoogleGenerativeAI(apiKey)
-
-    // Create a detailed prompt for Gemini AI to compare the content
+    const genAI = new GoogleGenerativeAI(apiKey)    // Create a detailed prompt for Gemini AI to compare the content
     const prompt = `
       You are an expert content evaluator. Compare a YouTube video transcript with a user's rewritten content to determine similarity and understanding.
       
-      ORIGINAL VIDEO TRANSCRIPT:
+      IMPORTANT NOTE: The transcript provided below represents only the portion of the video that the user was required to watch (based on admin-configured minimum watch time of ${minWatchTimeSeconds} seconds / ${Math.round(minWatchTimeSeconds / 60)} minutes). The user's content should be evaluated based on understanding of this specific portion only.
+      
+      ORIGINAL VIDEO TRANSCRIPT (First ${minWatchTimeSeconds} seconds only):
       """
       ${videoTranscript}
       """
@@ -65,29 +75,30 @@ export async function compareVideoContentWithUserContent(
       """
       
       EVALUATION CRITERIA:
-      1. Content Understanding (40%): How well does the user understand the main concepts?
-      2. Key Information Coverage (30%): Are the important facts and details included?
-      3. Accuracy (20%): Is the information correctly represented?
-      4. Depth and Detail (10%): Does the content show comprehensive understanding?
+      1. Content Understanding (40%): How well does the user understand the main concepts from the watched portion?
+      2. Key Information Coverage (30%): Are the important facts and details from the watched portion included?
+      3. Accuracy (20%): Is the information from the watched portion correctly represented?
+      4. Depth and Detail (10%): Does the content show comprehensive understanding of the watched portion?
       
       SCORING GUIDELINES:
-      - 90-100: Excellent understanding, covers all main concepts with accurate details
-      - 80-89: Good understanding, covers most key concepts with minor gaps
-      - 70-79: Fair understanding, covers some concepts but missing important elements
-      - 60-69: Basic understanding, limited coverage of main concepts
-      - 0-59: Poor understanding, significant gaps or inaccuracies
+      - 90-100: Excellent understanding, covers all main concepts from watched portion with accurate details
+      - 80-89: Good understanding, covers most key concepts from watched portion with minor gaps
+      - 70-79: Fair understanding, covers some concepts from watched portion but missing important elements
+      - 60-69: Basic understanding, limited coverage of main concepts from watched portion
+      - 0-59: Poor understanding, significant gaps or inaccuracies regarding the watched portion
       
       BE STRICT IN EVALUATION: 
       - Generic statements without specific details should score lower
       - Vague or superficial content should not exceed 70%
-      - Only award 80%+ for content that demonstrates real understanding of specific concepts
+      - Only award 80%+ for content that demonstrates real understanding of specific concepts from the watched portion
+      - Do not penalize for missing information that appears after the ${minWatchTimeSeconds}-second mark
       
       Identify:
-      - Specific concepts that match between original and user content
-      - Important concepts missed by the user
-      - Correct points the user made
-      - Any incorrect or inaccurate statements
-      - Specific suggestions for improvement
+      - Specific concepts that match between original (watched portion) and user content
+      - Important concepts from the watched portion missed by the user
+      - Correct points the user made about the watched portion
+      - Any incorrect or inaccurate statements about the watched portion
+      - Specific suggestions for improvement based on the watched portion
         Format your response as a JSON object:
       {
         "similarityScore": number,
@@ -103,22 +114,30 @@ export async function compareVideoContentWithUserContent(
           "keywordMatches": number
         }
       }
-    `
+    `    // Print the full prompt being sent to Gemini AI
+    console.log(`\n🚀 === FULL PROMPT SENT TO GEMINI AI ===`)
+    console.log(`Prompt Length: ${prompt.length} characters`)
+    console.log(`\n--- START PROMPT ---`)
+    console.log(prompt)
+    console.log(`--- END PROMPT ---\n`)
 
     try {
       // Generate content using Gemini AI - Updated to use latest model
+      console.log(`🔄 Sending request to Gemini AI (model: gemini-2.0-flash)...`)
       const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" })
       const result = await model.generateContent(prompt)
       const response = result.response
       const text = response.text()
 
-      console.log(`\n--- GEMINI AI RESPONSE ---`)
+      console.log(`\n✅ --- GEMINI AI RESPONSE RECEIVED ---`)
+      console.log(`Response Length: ${text.length} characters`)
+      console.log(`\n--- START RESPONSE ---`)
       console.log(text)
-
-      // Parse the JSON response
+      console.log(`--- END RESPONSE ---`)      // Parse the JSON response
       const jsonMatch = text.match(/```json\n([\s\S]*?)\n```/) || text.match(/({[\s\S]*})/)
       if (jsonMatch && jsonMatch[1]) {
         const comparison = JSON.parse(jsonMatch[1])
+        
         const result = {
           ...comparison,
           isAboveThreshold: comparison.similarityScore >= threshold,
@@ -128,10 +147,14 @@ export async function compareVideoContentWithUserContent(
           }
         } as ContentComparison
 
-        console.log(`\n--- FINAL EVALUATION ---`)
+        console.log(`\n📊 --- FINAL EVALUATION RESULTS ---`)
         console.log(`Similarity Score: ${result.similarityScore}%`)
         console.log(`Above Threshold (${threshold}%): ${result.isAboveThreshold}`)
-        console.log(`=== END COMPARISON ===\n`)
+        console.log(`Key Matches: ${result.keyMatches.length} items`)
+        console.log(`Suggestions: ${result.suggestions.length} items`)
+        console.log(`Word Count: ${result.detailedAnalysis.wordCount}`)
+        console.log(`Keyword Matches: ${result.detailedAnalysis.keywordMatches}`)
+        console.log(`🏁 === END COMPARISON ===\n`)
 
         return result
       }
@@ -263,7 +286,12 @@ export async function getContentImprovementSuggestions(
   userContent: string
 ): Promise<string[]> {
   try {
-    const videoTranscript = await extractYouTubeTranscript(videoId)
+    // Get admin settings to use the same watch time limit
+    const videoSettings = await getVideoSettings()
+    const minWatchTimeSeconds = videoSettings.minWatchTime
+    
+    // Use the limited transcript just like in the main comparison function
+    const videoTranscript = await extractYouTubeTranscriptForDuration(videoId, minWatchTimeSeconds)
     const apiKey = process.env.GEMINI_API_KEY
 
     if (!apiKey) {
@@ -277,9 +305,9 @@ export async function getContentImprovementSuggestions(
 
     const genAI = new GoogleGenerativeAI(apiKey)
     const prompt = `
-      Based on the original video transcript and the user's content, provide 3-5 specific suggestions for improvement:
+      Based on the original video transcript (limited to ${minWatchTimeSeconds} seconds that user was required to watch) and the user's content, provide 3-5 specific suggestions for improvement:
       
-      Original: ${videoTranscript.substring(0, 500)}...
+      Original (First ${minWatchTimeSeconds} seconds only): ${videoTranscript.substring(0, 500)}...
       User Content: ${userContent}
         Focus on what specific information or concepts are missing and how to improve understanding.
       Return as a JSON array of strings.
