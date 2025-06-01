@@ -507,8 +507,7 @@ export default function Home() {
                                   key={`post-suspense-${post.id || index}`}
                                   fallback={<Skeleton className="h-[300px] w-full rounded-xl" />}
                                 >
-                                  <div className="contain-layout">
-                                    <FeedPost
+                                  <div className="contain-layout">                                    <FeedPost
                                       key={`new-post-${post.id || index}`}
                                       username={formattedPost.username}
                                       userImage={formattedPost.userImage}
@@ -519,6 +518,7 @@ export default function Home() {
                                       comments={formattedPost.comments}
                                       isNew={post.isNew || false}
                                       submission={formattedPost.submission}
+                                      videoEvaluation={post.videoEvaluation || null}
                                     />
                                   </div>
                                 </Suspense>

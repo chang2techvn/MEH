@@ -315,7 +315,6 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
       setSubmitting(false)
     }
   }
-
   // Handle publishing to feed
   const handlePublish = async () => {
     if (!videoData || !richTextContent || !videoPreviewUrl) {
@@ -328,7 +327,17 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
       const postId = uuidv4()
       setPublishedPostId(postId)
 
-      // Create post data with all necessary information
+      // Perform AI evaluation before publishing
+      let videoEvaluation = null
+      try {
+        const { evaluateSubmissionForPublish } = await import("@/lib/gemini-video-evaluation")
+        videoEvaluation = await evaluateSubmissionForPublish(videoPreviewUrl, richTextContent)
+      } catch (error) {
+        console.error("Error during AI evaluation:", error)
+        // Continue with publishing even if evaluation fails
+      }
+
+      // Create post data with all necessary information including evaluation
       const postData = {
         id: postId,
         username,
@@ -336,6 +345,7 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
         title: videoData.title,
         content: richTextContent,
         videoUrl: videoPreviewUrl,
+        videoEvaluation, // Include the comprehensive AI evaluation
         createdAt: new Date().toISOString(), // Add timestamp
         isNew: true, // Flag to identify new posts
       }

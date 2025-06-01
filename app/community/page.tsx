@@ -71,6 +71,7 @@ import FeedPost from "@/components/feed-post"
 import FeedFilter from "@/components/feed-filter"
 import FeedEmptyState from "@/components/feed-empty-state"
 import SEOMeta from "@/components/seo-meta"
+import type { VideoEvaluation } from "@/lib/gemini-video-evaluation"
 import { useMobile } from "@/hooks/use-mobile"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -103,6 +104,7 @@ interface Post {
   comments: number
   isNew?: boolean
   aiEvaluation?: any
+  videoEvaluation?: VideoEvaluation | null
 }
 
 interface Contact {
@@ -294,6 +296,157 @@ export default function CommunityPage() {
         mediaUrl: "https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4", // Example video URL
         likes: 18,
         comments: 7,
+        videoEvaluation: {
+          score: 85,
+          feedback: "Excellent pronunciation practice! Your intonation has improved significantly.",
+          overallFeedback: "Excellent pronunciation practice! Your intonation has improved significantly.",
+          
+          // Individual component scores for backward compatibility
+          pronunciation: 88,
+          intonation: 90,
+          stress: 82,
+          linkingSounds: 78,
+          grammar: 92,
+          tenses: 88,
+          vocabulary: 85,
+          collocations: 80,
+          fluency: 87,
+          speakingSpeed: 83,
+          confidence: 91,
+          facialExpressions: 79,
+          bodyLanguage: 84,
+          eyeContact: 88,
+          audienceInteraction: 76,
+          captionSpelling: 95,
+          captionGrammar: 93,
+          appropriateVocabulary: 89,
+          clarity: 87,
+          callToAction: 72,
+          hashtags: 85,
+          seoCaption: 78,
+          creativity: 82,
+          emotions: 86,
+          personalBranding: 81,
+          
+          // Score-based naming for consistency
+          pronunciationScore: 88,
+          intonationScore: 90,
+          stressScore: 82,
+          linkingSoundsScore: 78,
+          grammarScore: 92,
+          tensesScore: 88,
+          vocabularyScore: 85,
+          collocationScore: 80,
+          fluencyScore: 87,
+          speakingSpeedScore: 83,
+          confidenceScore: 91,
+          facialExpressionsScore: 79,
+          bodyLanguageScore: 84,
+          eyeContactScore: 88,
+          audienceInteractionScore: 76,
+          captionSpellingScore: 95,
+          captionGrammarScore: 93,
+          appropriateVocabularyScore: 89,
+          clarityScore: 87,
+          callToActionScore: 72,
+          hashtagsScore: 85,
+          seoScore: 78,
+          creativityScore: 82,
+          emotionsScore: 86,
+          personalBrandingScore: 81,
+          
+          // Detailed feedback arrays
+          strengths: [
+            "Clear pronunciation of difficult sounds",
+            "Good pacing and rhythm",
+            "Confident delivery",
+            "Excellent grammar usage"
+          ],
+          weaknesses: [
+            "Could improve linking sounds between words",
+            "Add more engaging call-to-action",
+            "Consider using more varied vocabulary"
+          ],
+          improvements: [
+            "Practice linking sounds in natural speech",
+            "Add stronger call-to-action phrases",
+            "Expand vocabulary range"
+          ],
+          recommendations: [
+            "Focus on connected speech patterns",
+            "Study effective call-to-action examples",
+            "Read diverse content to expand vocabulary"
+          ],
+          
+          // Category-specific feedback
+          speakingFeedback: "Strong speaking performance with room for minor improvements",
+          languageFeedback: "Excellent command of English language fundamentals",
+          deliveryFeedback: "Natural and confident delivery",
+          visualFeedback: "Good presentation skills with potential for enhancement",
+          captionFeedback: "Well-written captions with strong technical execution",
+          
+          // Category breakdowns
+          speakingCategory: {
+            overallScore: 86,
+            score: 86,
+            feedback: "Strong speaking performance with room for minor improvements",
+            strengths: ["Clear pronunciation", "Good intonation patterns"],
+            areas_to_improve: ["Linking sounds consistency"],
+            pronunciation: 88,
+            intonation: 90,
+            stress: 82,
+            linkingSounds: 78
+          },
+          languageCategory: {
+            overallScore: 86,
+            score: 86,
+            feedback: "Excellent command of English language fundamentals",
+            strengths: ["Perfect grammar usage", "Rich vocabulary"],
+            areas_to_improve: ["More varied collocations"],
+            grammar: 92,
+            tenses: 88,
+            vocabulary: 85,
+            collocations: 80
+          },
+          deliveryCategory: {
+            overallScore: 87,
+            score: 87,
+            feedback: "Natural and confident delivery",
+            strengths: ["Smooth delivery", "Excellent confidence"],
+            areas_to_improve: ["Speaking pace variation"],
+            fluency: 87,
+            speakingSpeed: 83,
+            confidence: 91
+          },
+          visualCategory: {
+            overallScore: 82,
+            score: 82,
+            feedback: "Good presentation skills with potential for enhancement",
+            strengths: ["Good eye contact", "Natural body language"],
+            areas_to_improve: ["Audience interaction", "Facial expressions"],
+            facialExpressions: 79,
+            bodyLanguage: 84,
+            eyeContact: 88,
+            audienceInteraction: 76
+          },
+          captionCategory: {
+            overallScore: 88,
+            score: 88,
+            feedback: "Well-written captions with strong technical execution",
+            strengths: ["Perfect spelling", "Excellent grammar", "Clear messaging"],
+            areas_to_improve: ["Call-to-action engagement", "SEO optimization"],
+            captionSpelling: 95,
+            captionGrammar: 93,
+            appropriateVocabulary: 89,
+            clarity: 87,
+            callToAction: 72,
+            hashtags: 85,
+            seoCaption: 78,
+            creativity: 82,
+            emotions: 86,
+            personalBranding: 81
+          }
+        }
       },
     ]
   }
@@ -1027,6 +1180,7 @@ export default function CommunityPage() {
                         likes={post.likes}
                         comments={post.comments}
                         isNew={post.isNew}
+                        videoEvaluation={post.videoEvaluation}
                       />
                     ))
                   ) : (

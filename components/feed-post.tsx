@@ -21,13 +21,16 @@ import {
   Lightbulb,
   Zap,
   Star,
+  Brain,
 } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import type { UserSubmission } from "@/app/actions/user-submissions"
+import type { VideoEvaluation } from "@/lib/gemini-video-evaluation"
 import { toast } from "@/hooks/use-toast"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import VideoEvaluationDisplay from "@/components/video-evaluation-display"
 import Image from "next/image"
 
 // Reactions array for the new reaction feature
@@ -51,6 +54,7 @@ interface FeedPostProps {
   likes: number
   comments: number
   submission?: UserSubmission
+  videoEvaluation?: VideoEvaluation | null
   isNew?: boolean
 }
 
@@ -66,6 +70,7 @@ export default function FeedPost({
   likes,
   comments,
   submission,
+  videoEvaluation,
   isNew = false,
 }: FeedPostProps) {
   useEffect(() => {
@@ -438,68 +443,74 @@ export default function FeedPost({
                             Hide AI Evaluation
                           </Button>
 
-                          <motion.div
-                            className="p-4 rounded-xl border border-white/20 dark:border-gray-800/20 bg-white/20 dark:bg-gray-800/20 backdrop-blur-sm"
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.1 }}
-                          >
-                            <h4 className="font-medium mb-3">AI Evaluation</h4>
-                            <p className="text-sm mb-4">{submission.contentEvaluation.feedback}</p>
+                          {/* Display comprehensive video evaluation if available */}
+                          {videoEvaluation ? (
+                            <VideoEvaluationDisplay evaluation={videoEvaluation} showFullDetails={true} />
+                          ) : (
+                            /* Fallback to legacy content evaluation */
+                            <motion.div
+                              className="p-4 rounded-xl border border-white/20 dark:border-gray-800/20 bg-white/20 dark:bg-gray-800/20 backdrop-blur-sm"
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ delay: 0.1 }}
+                            >
+                              <h4 className="font-medium mb-3">AI Evaluation</h4>
+                              <p className="text-sm mb-4">{submission.contentEvaluation.feedback}</p>
 
-                            <div className="space-y-3">
-                              <div>
-                                <div className="flex justify-between text-sm mb-1">
-                                  <span>Grammar & Language</span>
-                                  <span className={getScoreColor(submission.contentEvaluation.grammarScore)}>
-                                    {submission.contentEvaluation.grammarScore}/100
-                                  </span>
+                              <div className="space-y-3">
+                                <div>
+                                  <div className="flex justify-between text-sm mb-1">
+                                    <span>Grammar & Language</span>
+                                    <span className={getScoreColor(submission.contentEvaluation.grammarScore)}>
+                                      {submission.contentEvaluation.grammarScore}/100
+                                    </span>
+                                  </div>
+                                  <Progress value={submission.contentEvaluation.grammarScore} className="h-2">
+                                    <motion.div
+                                      className="h-full bg-gradient-to-r from-neo-mint to-purist-blue rounded-full"
+                                      initial={{ width: 0 }}
+                                      animate={{ width: `${submission.contentEvaluation.grammarScore}%` }}
+                                      transition={{ duration: 1, delay: 0.2 }}
+                                    />
+                                  </Progress>
                                 </div>
-                                <Progress value={submission.contentEvaluation.grammarScore} className="h-2">
-                                  <motion.div
-                                    className="h-full bg-gradient-to-r from-neo-mint to-purist-blue rounded-full"
-                                    initial={{ width: 0 }}
-                                    animate={{ width: `${submission.contentEvaluation.grammarScore}%` }}
-                                    transition={{ duration: 1, delay: 0.2 }}
-                                  />
-                                </Progress>
-                              </div>
 
-                              <div>
-                                <div className="flex justify-between text-sm mb-1">
-                                  <span>Content Quality</span>
-                                  <span className={getScoreColor(submission.contentEvaluation.contentScore)}>
-                                    {submission.contentEvaluation.contentScore}/100
-                                  </span>
+                                <div>
+                                  <div className="flex justify-between text-sm mb-1">
+                                    <span>Content Quality</span>
+                                    <span className={getScoreColor(submission.contentEvaluation.contentScore)}>
+                                      {submission.contentEvaluation.contentScore}/100
+                                    </span>
+                                  </div>
+                                  <Progress value={submission.contentEvaluation.contentScore} className="h-2">
+                                    <motion.div
+                                      className="h-full bg-gradient-to-r from-neo-mint to-purist-blue rounded-full"
+                                      initial={{ width: 0 }}
+                                      animate={{ width: `${submission.contentEvaluation.contentScore}%` }}
+                                      transition={{ duration: 1, delay: 0.4 }}
+                                    />
+                                  </Progress>
                                 </div>
-                                <Progress value={submission.contentEvaluation.contentScore} className="h-2">
-                                  <motion.div
-                                    className="h-full bg-gradient-to-r from-neo-mint to-purist-blue rounded-full"
-                                    initial={{ width: 0 }}
-                                    animate={{ width: `${submission.contentEvaluation.contentScore}%` }}
-                                    transition={{ duration: 1, delay: 0.4 }}
-                                  />
-                                </Progress>
-                              </div>
 
-                              <div>
-                                <div className="flex justify-between text-sm mb-1">
-                                  <span>Originality</span>
-                                  <span className={getScoreColor(submission.contentEvaluation.originalityScore)}>
-                                    {submission.contentEvaluation.originalityScore}/100
-                                  </span>
+                                <div>
+                                  <div className="flex justify-between text-sm mb-1">
+                                    <span>Originality</span>
+                                    <span className={getScoreColor(submission.contentEvaluation.originalityScore)}>
+                                      {submission.contentEvaluation.originalityScore}/100
+                                    </span>
+                                  </div>
+                                  <Progress value={submission.contentEvaluation.originalityScore} className="h-2">
+                                    <motion.div
+                                      className="h-full bg-gradient-to-r from-neo-mint to-purist-blue rounded-full"
+                                      initial={{ width: 0 }}
+                                      animate={{ width: `${submission.contentEvaluation.originalityScore}%` }}
+                                      transition={{ duration: 1, delay: 0.6 }}
+                                    />
+                                  </Progress>
                                 </div>
-                                <Progress value={submission.contentEvaluation.originalityScore} className="h-2">
-                                  <motion.div
-                                    className="h-full bg-gradient-to-r from-neo-mint to-purist-blue rounded-full"
-                                    initial={{ width: 0 }}
-                                    animate={{ width: `${submission.contentEvaluation.originalityScore}%` }}
-                                    transition={{ duration: 1, delay: 0.6 }}
-                                  />
-                                </Progress>
                               </div>
-                            </div>
-                          </motion.div>
+                            </motion.div>
+                          )}
                         </motion.div>
                       ) : (
                         <motion.div
@@ -512,7 +523,7 @@ export default function FeedPost({
                             className="w-full flex items-center justify-center gap-2 py-2 bg-white/10 dark:bg-gray-800/10 hover:bg-white/20 dark:hover:bg-gray-800/20"
                           >
                             <Award className="h-4 w-4 mr-1" />
-                            Show AI Evaluation
+                            {videoEvaluation ? "Show Comprehensive AI Evaluation" : "Show AI Evaluation"}
                           </Button>
                         </motion.div>
                       )}
