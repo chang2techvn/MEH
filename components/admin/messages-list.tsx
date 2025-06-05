@@ -11,6 +11,29 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Flag, MessageSquare } from "lucide-react"
+import { supabase, dbHelpers } from "@/lib/supabase"
+import type { Database } from "@/types/database.types"
+import { toast } from "@/hooks/use-toast"
+
+// Types from Supabase schema
+type UserRow = Database['public']['Tables']['users']['Row']
+type MessageRow = Database['public']['Tables']['messages']['Row']
+type ConversationRow = Database['public']['Tables']['conversations']['Row']
+
+interface MessageListItem {
+  id: string
+  user: {
+    id: string
+    name: string
+    avatar: string | null
+    role: string
+  }
+  lastMessage: string
+  timestamp: Date
+  unread: boolean
+  flagged: boolean
+  status: string
+}
 
 interface MessagesListProps {
   isLoading: boolean
@@ -21,150 +44,6 @@ interface MessagesListProps {
   selectedConversationId: string | null
 }
 
-// Sample data for messages
-const sampleMessages = [
-  {
-    id: "msg1",
-    user: {
-      id: "user1",
-      name: "Sarah Johnson",
-      avatar: "/placeholder.svg?height=40&width=40&text=SJ",
-      role: "student",
-    },
-    lastMessage: "I'm having trouble with the pronunciation exercise in lesson 5. Could you help me?",
-    timestamp: new Date(2025, 4, 18, 14, 30),
-    unread: true,
-    flagged: false,
-    status: "active",
-  },
-  {
-    id: "msg2",
-    user: {
-      id: "user2",
-      name: "Michael Chen",
-      avatar: "/placeholder.svg?height=40&width=40&text=MC",
-      role: "student",
-    },
-    lastMessage: "Thank you for the feedback on my writing assignment. I've made the suggested changes.",
-    timestamp: new Date(2025, 4, 18, 12, 15),
-    unread: false,
-    flagged: true,
-    status: "active",
-  },
-  {
-    id: "msg3",
-    user: {
-      id: "user3",
-      name: "Emma Williams",
-      avatar: "/placeholder.svg?height=40&width=40&text=EW",
-      role: "teacher",
-    },
-    lastMessage: "I've uploaded the new speaking practice materials for the advanced students.",
-    timestamp: new Date(2025, 4, 18, 10, 45),
-    unread: true,
-    flagged: false,
-    status: "active",
-  },
-  {
-    id: "msg4",
-    user: {
-      id: "user4",
-      name: "David Rodriguez",
-      avatar: "/placeholder.svg?height=40&width=40&text=DR",
-      role: "student",
-    },
-    lastMessage: "When will the next live session be scheduled? I couldn't attend the last one.",
-    timestamp: new Date(2025, 4, 17, 16, 20),
-    unread: false,
-    flagged: false,
-    status: "active",
-  },
-  {
-    id: "msg5",
-    user: {
-      id: "user5",
-      name: "Sophia Lee",
-      avatar: "/placeholder.svg?height=40&width=40&text=SL",
-      role: "student",
-    },
-    lastMessage: "I'm experiencing technical issues with the listening comprehension quiz.",
-    timestamp: new Date(2025, 4, 17, 14, 10),
-    unread: true,
-    flagged: true,
-    status: "active",
-  },
-  {
-    id: "msg6",
-    user: {
-      id: "user6",
-      name: "James Wilson",
-      avatar: "/placeholder.svg?height=40&width=40&text=JW",
-      role: "student",
-    },
-    lastMessage: "Could you provide more examples of conditional sentences? I'm still confused.",
-    timestamp: new Date(2025, 4, 17, 11, 30),
-    unread: false,
-    flagged: false,
-    status: "archived",
-  },
-  {
-    id: "msg7",
-    user: {
-      id: "user7",
-      name: "Olivia Martinez",
-      avatar: "/placeholder.svg?height=40&width=40&text=OM",
-      role: "teacher",
-    },
-    lastMessage: "Here's the updated curriculum for the summer intensive program.",
-    timestamp: new Date(2025, 4, 16, 15, 45),
-    unread: false,
-    flagged: false,
-    status: "active",
-  },
-  {
-    id: "msg8",
-    user: {
-      id: "user8",
-      name: "Ethan Thompson",
-      avatar: "/placeholder.svg?height=40&width=40&text=ET",
-      role: "student",
-    },
-    lastMessage: "I've completed all the exercises in module 3. What should I focus on next?",
-    timestamp: new Date(2025, 4, 16, 13, 20),
-    unread: true,
-    flagged: false,
-    status: "active",
-  },
-  {
-    id: "msg9",
-    user: {
-      id: "user9",
-      name: "Ava Garcia",
-      avatar: "/placeholder.svg?height=40&width=40&text=AG",
-      role: "student",
-    },
-    lastMessage: "I'm planning to take the IELTS test next month. Do you have any specific preparation advice?",
-    timestamp: new Date(2025, 4, 16, 10, 15),
-    unread: false,
-    flagged: false,
-    status: "archived",
-  },
-  {
-    id: "msg10",
-    user: {
-      id: "user10",
-      name: "Noah Brown",
-      avatar: "/placeholder.svg?height=40&width=40&text=NB",
-      role: "student",
-    },
-    lastMessage: "The video in lesson 7 isn't loading properly. Is there an alternative link?",
-    timestamp: new Date(2025, 4, 15, 16, 40),
-    unread: false,
-    flagged: true,
-    status: "active",
-  },
-]
-
 export function MessagesList({
   isLoading,
   activeTab,
@@ -173,12 +52,99 @@ export function MessagesList({
   onSelectConversation,
   selectedConversationId,
 }: MessagesListProps) {
-  const [filteredMessages, setFilteredMessages] = useState(sampleMessages)
+  const [filteredMessages, setFilteredMessages] = useState<MessageListItem[]>([])
   const [selectedMessages, setSelectedMessages] = useState<string[]>([])
+  const [messages, setMessages] = useState<MessageListItem[]>([])
+  const [loading, setLoading] = useState(true)
+
+  // Load messages from Supabase
+  const loadMessages = async () => {
+    try {
+      setLoading(true)
+
+      // Get conversations with their participants and latest messages
+      const { data: conversationData, error: conversationError } = await supabase
+        .from('conversations')
+        .select(`
+          id,
+          name,
+          type,
+          is_group,
+          last_message_at,
+          created_at,
+          conversation_participants!inner(
+            user:users!inner(
+              id,
+              name,
+              avatar,
+              role
+            )
+          ),
+          messages(
+            id,
+            content,
+            created_at,
+            sender:users!sender_id(
+              id,
+              name
+            )
+          )
+        `)
+        .eq('conversation_participants.is_active', true)
+        .order('last_message_at', { ascending: false })
+        .order('created_at', { foreignTable: 'messages', ascending: false })
+        .limit(1, { foreignTable: 'messages' }) // Only get the latest message
+
+      if (conversationError) {
+        console.error('Error fetching conversations:', conversationError)
+        return
+      }
+
+      const messageItems: MessageListItem[] = conversationData?.map((conversation: any) => {
+        // Get the other participant (not the current user) for 1:1 conversations
+        const participants = conversation.conversation_participants || []
+        const otherParticipant = participants.find((p: any) => p.user.id !== 'current-user') // In real app, use actual current user ID
+        const user = otherParticipant?.user || participants[0]?.user
+
+        // Get the latest message
+        const latestMessage = conversation.messages?.[0]
+        
+        return {
+          id: conversation.id,
+          user: {
+            id: user?.id || 'unknown',
+            name: user?.name || 'Unknown User',
+            avatar: user?.avatar || null,
+            role: user?.role || 'student',
+          },
+          lastMessage: latestMessage?.content || 'No messages yet',
+          timestamp: new Date(latestMessage?.created_at || conversation.created_at),
+          unread: false, // Would need to track read status
+          flagged: false, // Would need to implement flagging
+          status: 'active',
+        }
+      }) || []
+
+      setMessages(messageItems)
+    } catch (error) {
+      console.error('Error loading messages:', error)
+      toast({
+        title: "Error loading messages",
+        description: "Failed to load messages. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    loadMessages()
+  }, [])
 
   // Filter messages based on activeTab, searchQuery, and filterStatus
   useEffect(() => {
-    let filtered = [...sampleMessages]
+    let filtered = [...messages]
 
     // Filter by tab
     if (activeTab === "unread") {
@@ -221,7 +187,7 @@ export function MessagesList({
     }
 
     setFilteredMessages(filtered)
-  }, [activeTab, searchQuery, filterStatus])
+  }, [activeTab, searchQuery, filterStatus, messages])
 
   // Toggle message selection
   const toggleMessageSelection = (id: string, e: React.MouseEvent) => {
@@ -252,7 +218,7 @@ export function MessagesList({
     }
   }
 
-  if (isLoading) {
+  if (isLoading || loading) {
     return (
       <div className="p-4 space-y-4">
         {Array.from({ length: 5 }).map((_, i) => (

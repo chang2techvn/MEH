@@ -86,35 +86,17 @@ const chartTypeOptions = [
   { value: "pie", label: "Pie Chart", icon: PieChart },
 ]
 
-const retentionCohortData = [
-  { cohort: "Week 1", day1: 100, day7: 82, day14: 68, day30: 54, day60: 42, day90: 35 },
-  { cohort: "Week 2", day1: 100, day7: 85, day14: 72, day30: 58, day60: 45, day90: 38 },
-  { cohort: "Week 3", day1: 100, day7: 80, day14: 65, day30: 52, day60: 40, day90: 32 },
-  { cohort: "Week 4", day1: 100, day7: 88, day14: 75, day30: 62, day60: 48, day90: 40 },
-  { cohort: "Week 5", day1: 100, day7: 84, day14: 70, day30: 56, day60: 44, day90: 36 },
-]
-
-const learningPathData = [
-  { path: "Conversational English", users: 1245, completionRate: 68, satisfaction: 4.2 },
-  { path: "Business English", users: 876, completionRate: 72, satisfaction: 4.5 },
-  { path: "Academic English", users: 654, completionRate: 65, satisfaction: 4.0 },
-  { path: "Travel English", users: 1532, completionRate: 82, satisfaction: 4.7 },
-  { path: "English for Interviews", users: 945, completionRate: 75, satisfaction: 4.3 },
-]
-
-// Helper function to format numbers
+// Helper functions
 const formatNumber = (num: number) => {
   return new Intl.NumberFormat().format(num)
 }
 
-// Helper function to format time
 const formatTime = (seconds: number) => {
   const mins = Math.floor(seconds / 60)
   const secs = seconds % 60
   return `${mins}:${secs.toString().padStart(2, "0")}`
 }
 
-// Helper function to get trend color
 const getTrendColor = (trend: string) => {
   return trend === "up" ? "text-green-500" : "text-red-500"
 }

@@ -7,31 +7,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          operationName?: string
-          query?: string
-          variables?: Json
-          extensions?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
       achievements: {
@@ -72,198 +47,199 @@ export type Database = {
       }
       admin_logs: {
         Row: {
-          action: string
-          admin_id: string | null
-          created_at: string | null
-          details: Json | null
+          action: Database["public"]["Enums"]["AdminAction"]
+          adminId: string
+          createdAt: string
+          description: string
           id: string
-          ip_address: unknown | null
-          resource_id: string | null
-          resource_type: string | null
-          user_agent: string | null
+          ipAddress: string | null
+          metadata: Json | null
+          target: string | null
+          targetType: string | null
+          userAgent: string | null
         }
         Insert: {
-          action: string
-          admin_id?: string | null
-          created_at?: string | null
-          details?: Json | null
-          id?: string
-          ip_address?: unknown | null
-          resource_id?: string | null
-          resource_type?: string | null
-          user_agent?: string | null
+          action: Database["public"]["Enums"]["AdminAction"]
+          adminId: string
+          createdAt?: string
+          description: string
+          id: string
+          ipAddress?: string | null
+          metadata?: Json | null
+          target?: string | null
+          targetType?: string | null
+          userAgent?: string | null
         }
         Update: {
-          action?: string
-          admin_id?: string | null
-          created_at?: string | null
-          details?: Json | null
+          action?: Database["public"]["Enums"]["AdminAction"]
+          adminId?: string
+          createdAt?: string
+          description?: string
           id?: string
-          ip_address?: unknown | null
-          resource_id?: string | null
-          resource_type?: string | null
-          user_agent?: string | null
+          ipAddress?: string | null
+          metadata?: Json | null
+          target?: string | null
+          targetType?: string | null
+          userAgent?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "admin_logs_admin_id_fkey"
-            columns: ["admin_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       ai_models: {
         Row: {
           capabilities: string[] | null
           configuration: Json | null
-          cost_per_token: number | null
-          created_at: string | null
+          costPerToken: number | null
+          createdAt: string
           description: string | null
           id: string
-          is_active: boolean | null
-          max_tokens: number | null
+          isActive: boolean
+          maxTokens: number | null
+          modelId: string
           name: string
           provider: string
-          updated_at: string | null
+          updatedAt: string
+          version: string | null
         }
         Insert: {
           capabilities?: string[] | null
           configuration?: Json | null
-          cost_per_token?: number | null
-          created_at?: string | null
+          costPerToken?: number | null
+          createdAt?: string
           description?: string | null
-          id?: string
-          is_active?: boolean | null
-          max_tokens?: number | null
+          id: string
+          isActive?: boolean
+          maxTokens?: number | null
+          modelId: string
           name: string
           provider: string
-          updated_at?: string | null
+          updatedAt: string
+          version?: string | null
         }
         Update: {
           capabilities?: string[] | null
           configuration?: Json | null
-          cost_per_token?: number | null
-          created_at?: string | null
+          costPerToken?: number | null
+          createdAt?: string
           description?: string | null
           id?: string
-          is_active?: boolean | null
-          max_tokens?: number | null
+          isActive?: boolean
+          maxTokens?: number | null
+          modelId?: string
           name?: string
           provider?: string
-          updated_at?: string | null
+          updatedAt?: string
+          version?: string | null
         }
         Relationships: []
       }
       ai_safety_rules: {
         Row: {
-          configuration: Json
-          created_at: string | null
-          description: string | null
+          action: Database["public"]["Enums"]["SafetyAction"]
+          createdAt: string
+          description: string
           id: string
-          is_active: boolean | null
+          isActive: boolean
           name: string
-          rule_type: string
-          severity: string | null
-          updated_at: string | null
+          priority: number
+          rule: string
+          updatedAt: string
         }
         Insert: {
-          configuration?: Json
-          created_at?: string | null
-          description?: string | null
-          id?: string
-          is_active?: boolean | null
+          action?: Database["public"]["Enums"]["SafetyAction"]
+          createdAt?: string
+          description: string
+          id: string
+          isActive?: boolean
           name: string
-          rule_type: string
-          severity?: string | null
-          updated_at?: string | null
+          priority?: number
+          rule: string
+          updatedAt: string
         }
         Update: {
-          configuration?: Json
-          created_at?: string | null
-          description?: string | null
+          action?: Database["public"]["Enums"]["SafetyAction"]
+          createdAt?: string
+          description?: string
           id?: string
-          is_active?: boolean | null
+          isActive?: boolean
           name?: string
-          rule_type?: string
-          severity?: string | null
-          updated_at?: string | null
+          priority?: number
+          rule?: string
+          updatedAt?: string
         }
         Relationships: []
       }
       api_keys: {
         Row: {
-          created_at: string | null
-          expires_at: string | null
+          createdAt: string
+          expiresAt: string | null
           id: string
-          is_active: boolean | null
-          is_default: boolean | null
-          key_hash: string
-          last_used: string | null
+          isActive: boolean
+          keyHash: string
+          lastUsed: string | null
           name: string
           provider: string
-          rate_limit: number | null
-          updated_at: string | null
-          usage_count: number | null
+          rateLimit: number | null
+          updatedAt: string
+          usageCount: number
         }
         Insert: {
-          created_at?: string | null
-          expires_at?: string | null
-          id?: string
-          is_active?: boolean | null
-          is_default?: boolean | null
-          key_hash: string
-          last_used?: string | null
+          createdAt?: string
+          expiresAt?: string | null
+          id: string
+          isActive?: boolean
+          keyHash: string
+          lastUsed?: string | null
           name: string
           provider: string
-          rate_limit?: number | null
-          updated_at?: string | null
-          usage_count?: number | null
+          rateLimit?: number | null
+          updatedAt: string
+          usageCount?: number
         }
         Update: {
-          created_at?: string | null
-          expires_at?: string | null
+          createdAt?: string
+          expiresAt?: string | null
           id?: string
-          is_active?: boolean | null
-          is_default?: boolean | null
-          key_hash?: string
-          last_used?: string | null
+          isActive?: boolean
+          keyHash?: string
+          lastUsed?: string | null
           name?: string
           provider?: string
-          rate_limit?: number | null
-          updated_at?: string | null
-          usage_count?: number | null
+          rateLimit?: number | null
+          updatedAt?: string
+          usageCount?: number
         }
         Relationships: []
       }
       banned_terms: {
         Row: {
-          action: string | null
-          category: string | null
-          created_at: string | null
+          category: string
+          createdAt: string
+          description: string | null
           id: string
-          is_active: boolean | null
-          severity: string | null
+          isActive: boolean
+          severity: Database["public"]["Enums"]["BanSeverity"]
           term: string
+          updatedAt: string
         }
         Insert: {
-          action?: string | null
-          category?: string | null
-          created_at?: string | null
-          id?: string
-          is_active?: boolean | null
-          severity?: string | null
+          category: string
+          createdAt?: string
+          description?: string | null
+          id: string
+          isActive?: boolean
+          severity?: Database["public"]["Enums"]["BanSeverity"]
           term: string
+          updatedAt: string
         }
         Update: {
-          action?: string | null
-          category?: string | null
-          created_at?: string | null
+          category?: string
+          createdAt?: string
+          description?: string | null
           id?: string
-          is_active?: boolean | null
-          severity?: string | null
+          isActive?: boolean
+          severity?: Database["public"]["Enums"]["BanSeverity"]
           term?: string
+          updatedAt?: string
         }
         Relationships: []
       }
@@ -497,65 +473,180 @@ export type Database = {
           },
         ]
       }
-      evaluation_logs: {
+      conversation_participants: {
         Row: {
-          cost: number | null
-          created_at: string | null
-          evaluation_type: string
-          feedback: string | null
+          conversationId: string
           id: string
-          input_data: Json
-          model_id: string | null
-          output_data: Json
-          processing_time: number | null
-          score: number | null
-          tokens_used: number | null
-          user_id: string | null
+          isActive: boolean
+          joinedAt: string
+          lastReadAt: string | null
+          role: Database["public"]["Enums"]["ParticipantRole"]
+          userId: string
         }
         Insert: {
-          cost?: number | null
-          created_at?: string | null
-          evaluation_type: string
-          feedback?: string | null
-          id?: string
-          input_data: Json
-          model_id?: string | null
-          output_data: Json
-          processing_time?: number | null
-          score?: number | null
-          tokens_used?: number | null
-          user_id?: string | null
+          conversationId: string
+          id: string
+          isActive?: boolean
+          joinedAt?: string
+          lastReadAt?: string | null
+          role?: Database["public"]["Enums"]["ParticipantRole"]
+          userId: string
         }
         Update: {
-          cost?: number | null
-          created_at?: string | null
-          evaluation_type?: string
-          feedback?: string | null
+          conversationId?: string
           id?: string
-          input_data?: Json
-          model_id?: string | null
-          output_data?: Json
-          processing_time?: number | null
-          score?: number | null
-          tokens_used?: number | null
-          user_id?: string | null
+          isActive?: boolean
+          joinedAt?: string
+          lastReadAt?: string | null
+          role?: Database["public"]["Enums"]["ParticipantRole"]
+          userId?: string
         }
         Relationships: [
           {
-            foreignKeyName: "evaluation_logs_model_id_fkey"
-            columns: ["model_id"]
+            foreignKeyName: "conversation_participants_conversationId_fkey"
+            columns: ["conversationId"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      conversations: {
+        Row: {
+          createdAt: string
+          description: string | null
+          id: string
+          isActive: boolean
+          isGroup: boolean
+          lastMessageAt: string | null
+          maxMembers: number | null
+          name: string | null
+          type: Database["public"]["Enums"]["ConversationType"]
+          updatedAt: string
+        }
+        Insert: {
+          createdAt?: string
+          description?: string | null
+          id: string
+          isActive?: boolean
+          isGroup?: boolean
+          lastMessageAt?: string | null
+          maxMembers?: number | null
+          name?: string | null
+          type?: Database["public"]["Enums"]["ConversationType"]
+          updatedAt: string
+        }
+        Update: {
+          createdAt?: string
+          description?: string | null
+          id?: string
+          isActive?: boolean
+          isGroup?: boolean
+          lastMessageAt?: string | null
+          maxMembers?: number | null
+          name?: string | null
+          type?: Database["public"]["Enums"]["ConversationType"]
+          updatedAt?: string
+        }
+        Relationships: []
+      }
+      evaluation_logs: {
+        Row: {
+          cost: number | null
+          createdAt: string
+          duration: number | null
+          error: string | null
+          id: string
+          inputText: string
+          metadata: Json | null
+          modelId: string
+          outputText: string | null
+          status: string
+          submissionId: string | null
+          tokensUsed: number | null
+          userId: string
+        }
+        Insert: {
+          cost?: number | null
+          createdAt?: string
+          duration?: number | null
+          error?: string | null
+          id: string
+          inputText: string
+          metadata?: Json | null
+          modelId: string
+          outputText?: string | null
+          status: string
+          submissionId?: string | null
+          tokensUsed?: number | null
+          userId: string
+        }
+        Update: {
+          cost?: number | null
+          createdAt?: string
+          duration?: number | null
+          error?: string | null
+          id?: string
+          inputText?: string
+          metadata?: Json | null
+          modelId?: string
+          outputText?: string | null
+          status?: string
+          submissionId?: string | null
+          tokensUsed?: number | null
+          userId?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evaluation_logs_modelId_fkey"
+            columns: ["modelId"]
             isOneToOne: false
             referencedRelation: "ai_models"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "evaluation_logs_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
         ]
+      }
+      flagged_content: {
+        Row: {
+          contentId: string
+          contentType: Database["public"]["Enums"]["ContentType"]
+          flaggedAt: string
+          id: string
+          reason: string
+          reviewedAt: string | null
+          reviewedBy: string | null
+          reviewNotes: string | null
+          severity: Database["public"]["Enums"]["BanSeverity"]
+          status: Database["public"]["Enums"]["FlagStatus"]
+          userId: string | null
+        }
+        Insert: {
+          contentId: string
+          contentType: Database["public"]["Enums"]["ContentType"]
+          flaggedAt?: string
+          id: string
+          reason: string
+          reviewedAt?: string | null
+          reviewedBy?: string | null
+          reviewNotes?: string | null
+          severity?: Database["public"]["Enums"]["BanSeverity"]
+          status?: Database["public"]["Enums"]["FlagStatus"]
+          userId?: string | null
+        }
+        Update: {
+          contentId?: string
+          contentType?: Database["public"]["Enums"]["ContentType"]
+          flaggedAt?: string
+          id?: string
+          reason?: string
+          reviewedAt?: string | null
+          reviewedBy?: string | null
+          reviewNotes?: string | null
+          severity?: Database["public"]["Enums"]["BanSeverity"]
+          status?: Database["public"]["Enums"]["FlagStatus"]
+          userId?: string | null
+        }
+        Relationships: []
       }
       follows: {
         Row: {
@@ -987,47 +1078,42 @@ export type Database = {
       }
       scoring_templates: {
         Row: {
-          created_at: string | null
-          created_by: string | null
+          category: Database["public"]["Enums"]["ChallengeCategory"]
+          createdAt: string
           criteria: Json
           description: string | null
           id: string
-          is_active: boolean | null
-          max_score: number | null
+          isActive: boolean
+          isDefault: boolean
+          maxScore: number
           name: string
-          updated_at: string | null
+          updatedAt: string
         }
         Insert: {
-          created_at?: string | null
-          created_by?: string | null
-          criteria?: Json
+          category: Database["public"]["Enums"]["ChallengeCategory"]
+          createdAt?: string
+          criteria: Json
           description?: string | null
-          id?: string
-          is_active?: boolean | null
-          max_score?: number | null
+          id: string
+          isActive?: boolean
+          isDefault?: boolean
+          maxScore?: number
           name: string
-          updated_at?: string | null
+          updatedAt: string
         }
         Update: {
-          created_at?: string | null
-          created_by?: string | null
+          category?: Database["public"]["Enums"]["ChallengeCategory"]
+          createdAt?: string
           criteria?: Json
           description?: string | null
           id?: string
-          is_active?: boolean | null
-          max_score?: number | null
+          isActive?: boolean
+          isDefault?: boolean
+          maxScore?: number
           name?: string
-          updated_at?: string | null
+          updatedAt?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "scoring_templates_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       user_achievements: {
         Row: {
@@ -1206,9 +1292,36 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      cleanup_expired_challenges: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
+      cleanup_old_daily_challenges: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
     }
     Enums: {
+      AdminAction:
+        | "USER_CREATE"
+        | "USER_UPDATE"
+        | "USER_DELETE"
+        | "USER_BAN"
+        | "USER_UNBAN"
+        | "CONTENT_DELETE"
+        | "CONTENT_FLAG"
+        | "CONTENT_APPROVE"
+        | "CHALLENGE_CREATE"
+        | "CHALLENGE_UPDATE"
+        | "CHALLENGE_DELETE"
+        | "RESOURCE_CREATE"
+        | "RESOURCE_UPDATE"
+        | "RESOURCE_DELETE"
+        | "SYSTEM_CONFIG"
+        | "SAFETY_RULE_UPDATE"
+        | "API_KEY_CREATE"
+        | "API_KEY_DELETE"
+      BanSeverity: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL"
       challenge_category:
         | "LISTENING"
         | "SPEAKING"
@@ -1222,7 +1335,57 @@ export type Database = {
         | "TEXT_SUBMISSION"
         | "QUIZ"
         | "INTERACTIVE"
+      ChallengeCategory:
+        | "GRAMMAR"
+        | "VOCABULARY"
+        | "LISTENING"
+        | "SPEAKING"
+        | "READING"
+        | "WRITING"
+        | "PRONUNCIATION"
+        | "CONVERSATION"
+        | "BUSINESS_ENGLISH"
+        | "IELTS_PREP"
+        | "TOEFL_PREP"
+      ChallengeDifficulty: "BEGINNER" | "INTERMEDIATE" | "ADVANCED" | "EXPERT"
+      ChallengeType:
+        | "MULTIPLE_CHOICE"
+        | "FILL_IN_BLANK"
+        | "ESSAY"
+        | "SPEAKING_RECORDING"
+        | "LISTENING_COMPREHENSION"
+        | "VOCABULARY_BUILDING"
+        | "GRAMMAR_EXERCISE"
+        | "CONVERSATION_PRACTICE"
+        | "VIDEO_SUBMISSION"
+      ContentType:
+        | "MESSAGE"
+        | "SUBMISSION"
+        | "RESOURCE"
+        | "USER_PROFILE"
+        | "COMMENT"
+      ConversationType: "PRIVATE" | "GROUP" | "CHANNEL" | "AI_CHAT"
       difficulty_level: "BEGINNER" | "INTERMEDIATE" | "ADVANCED"
+      FlagStatus: "PENDING" | "REVIEWING" | "APPROVED" | "REJECTED" | "RESOLVED"
+      MessageType:
+        | "TEXT"
+        | "IMAGE"
+        | "FILE"
+        | "AUDIO"
+        | "VIDEO"
+        | "SYSTEM"
+        | "AI_RESPONSE"
+      NotificationPriority: "LOW" | "NORMAL" | "HIGH" | "URGENT"
+      NotificationType:
+        | "SYSTEM"
+        | "MESSAGE"
+        | "CHALLENGE"
+        | "ACHIEVEMENT"
+        | "REMINDER"
+        | "ANNOUNCEMENT"
+        | "FRIEND_REQUEST"
+        | "EVALUATION_COMPLETE"
+      ParticipantRole: "ADMIN" | "MODERATOR" | "MEMBER"
       resource_type:
         | "VIDEO"
         | "AUDIO"
@@ -1230,8 +1393,26 @@ export type Database = {
         | "QUIZ"
         | "INTERACTIVE"
         | "ARTICLE"
+      ResourceType:
+        | "PDF"
+        | "VIDEO"
+        | "AUDIO"
+        | "IMAGE"
+        | "DOCUMENT"
+        | "PRESENTATION"
+        | "QUIZ"
+        | "EXERCISE"
+        | "LINK"
+      SafetyAction: "FLAG" | "BLOCK" | "MODERATE" | "REVIEW"
       submission_status: "PENDING" | "REVIEWED" | "APPROVED" | "REJECTED"
+      SubmissionStatus:
+        | "PENDING"
+        | "EVALUATING"
+        | "COMPLETED"
+        | "FAILED"
+        | "FLAGGED"
       user_role: "STUDENT" | "TEACHER" | "ADMIN" | "MODERATOR" | "MEMBER"
+      UserRole: "ADMIN" | "MODERATOR" | "MEMBER" | "GUEST"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1345,11 +1526,29 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {
+      AdminAction: [
+        "USER_CREATE",
+        "USER_UPDATE",
+        "USER_DELETE",
+        "USER_BAN",
+        "USER_UNBAN",
+        "CONTENT_DELETE",
+        "CONTENT_FLAG",
+        "CONTENT_APPROVE",
+        "CHALLENGE_CREATE",
+        "CHALLENGE_UPDATE",
+        "CHALLENGE_DELETE",
+        "RESOURCE_CREATE",
+        "RESOURCE_UPDATE",
+        "RESOURCE_DELETE",
+        "SYSTEM_CONFIG",
+        "SAFETY_RULE_UPDATE",
+        "API_KEY_CREATE",
+        "API_KEY_DELETE",
+      ],
+      BanSeverity: ["LOW", "MEDIUM", "HIGH", "CRITICAL"],
       challenge_category: [
         "LISTENING",
         "SPEAKING",
@@ -1365,7 +1564,62 @@ export const Constants = {
         "QUIZ",
         "INTERACTIVE",
       ],
+      ChallengeCategory: [
+        "GRAMMAR",
+        "VOCABULARY",
+        "LISTENING",
+        "SPEAKING",
+        "READING",
+        "WRITING",
+        "PRONUNCIATION",
+        "CONVERSATION",
+        "BUSINESS_ENGLISH",
+        "IELTS_PREP",
+        "TOEFL_PREP",
+      ],
+      ChallengeDifficulty: ["BEGINNER", "INTERMEDIATE", "ADVANCED", "EXPERT"],
+      ChallengeType: [
+        "MULTIPLE_CHOICE",
+        "FILL_IN_BLANK",
+        "ESSAY",
+        "SPEAKING_RECORDING",
+        "LISTENING_COMPREHENSION",
+        "VOCABULARY_BUILDING",
+        "GRAMMAR_EXERCISE",
+        "CONVERSATION_PRACTICE",
+        "VIDEO_SUBMISSION",
+      ],
+      ContentType: [
+        "MESSAGE",
+        "SUBMISSION",
+        "RESOURCE",
+        "USER_PROFILE",
+        "COMMENT",
+      ],
+      ConversationType: ["PRIVATE", "GROUP", "CHANNEL", "AI_CHAT"],
       difficulty_level: ["BEGINNER", "INTERMEDIATE", "ADVANCED"],
+      FlagStatus: ["PENDING", "REVIEWING", "APPROVED", "REJECTED", "RESOLVED"],
+      MessageType: [
+        "TEXT",
+        "IMAGE",
+        "FILE",
+        "AUDIO",
+        "VIDEO",
+        "SYSTEM",
+        "AI_RESPONSE",
+      ],
+      NotificationPriority: ["LOW", "NORMAL", "HIGH", "URGENT"],
+      NotificationType: [
+        "SYSTEM",
+        "MESSAGE",
+        "CHALLENGE",
+        "ACHIEVEMENT",
+        "REMINDER",
+        "ANNOUNCEMENT",
+        "FRIEND_REQUEST",
+        "EVALUATION_COMPLETE",
+      ],
+      ParticipantRole: ["ADMIN", "MODERATOR", "MEMBER"],
       resource_type: [
         "VIDEO",
         "AUDIO",
@@ -1374,9 +1628,28 @@ export const Constants = {
         "INTERACTIVE",
         "ARTICLE",
       ],
+      ResourceType: [
+        "PDF",
+        "VIDEO",
+        "AUDIO",
+        "IMAGE",
+        "DOCUMENT",
+        "PRESENTATION",
+        "QUIZ",
+        "EXERCISE",
+        "LINK",
+      ],
+      SafetyAction: ["FLAG", "BLOCK", "MODERATE", "REVIEW"],
       submission_status: ["PENDING", "REVIEWED", "APPROVED", "REJECTED"],
+      SubmissionStatus: [
+        "PENDING",
+        "EVALUATING",
+        "COMPLETED",
+        "FAILED",
+        "FLAGGED",
+      ],
       user_role: ["STUDENT", "TEACHER", "ADMIN", "MODERATOR", "MEMBER"],
+      UserRole: ["ADMIN", "MODERATOR", "MEMBER", "GUEST"],
     },
   },
 } as const
-

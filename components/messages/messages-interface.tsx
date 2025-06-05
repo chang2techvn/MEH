@@ -8,153 +8,169 @@ import { AnimatePresence, motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Menu } from "lucide-react"
 import { useMediaQuery } from "@/hooks/use-mobile"
+import { supabase, dbHelpers } from "@/lib/supabase"
+import type { Database } from "@/types/database.types"
+import { toast } from "@/hooks/use-toast"
 
-// Sample data
-const currentUser: User = {
-  id: "current-user",
-  name: "You",
-  avatar: "/placeholder.svg?height=200&width=200",
-  status: "online",
-  lastActive: new Date(),
+// Types from Supabase schema
+type UserRow = Database['public']['Tables']['users']['Row']
+type MessageRow = Database['public']['Tables']['messages']['Row']
+type ConversationRow = Database['public']['Tables']['conversations']['Row']
+
+// Current user will be loaded from auth context in a real app
+const getCurrentUserId = () => {
+  // For now, we'll use a hardcoded ID. In a real app, this would come from auth context
+  return "current-user-id" // This should be replaced with actual user ID from auth
 }
 
-const sampleUsers: User[] = [
-  {
-    id: "user1",
-    name: "Sarah Johnson",
-    avatar: "/placeholder.svg?height=200&width=200&text=SJ",
-    status: "online",
-    lastActive: new Date(),
-  },
-  {
-    id: "user2",
-    name: "Michael Chen",
-    avatar: "/placeholder.svg?height=200&width=200&text=MC",
-    status: "offline",
-    lastActive: new Date(Date.now() - 1000 * 60 * 30),
-  },
-  {
-    id: "user3",
-    name: "Emma Williams",
-    avatar: "/placeholder.svg?height=200&width=200&text=EW",
-    status: "online",
-    lastActive: new Date(),
-  },
-  {
-    id: "user4",
-    name: "David Rodriguez",
-    avatar: "/placeholder.svg?height=200&width=200&text=DR",
-    status: "away",
-    lastActive: new Date(Date.now() - 1000 * 60 * 10),
-  },
-  {
-    id: "user5",
-    name: "Sophia Lee",
-    avatar: "/placeholder.svg?height=200&width=200&text=SL",
-    status: "online",
-    lastActive: new Date(),
-  },
-  {
-    id: "user6",
-    name: "James Wilson",
-    avatar: "/placeholder.svg?height=200&width=200&text=JW",
-    status: "offline",
-    lastActive: new Date(Date.now() - 1000 * 60 * 60 * 3),
-  },
-  {
-    id: "user7",
-    name: "Olivia Martinez",
-    avatar: "/placeholder.svg?height=200&width=200&text=OM",
-    status: "online",
-    lastActive: new Date(),
-  },
-]
+// Mapping function to convert Supabase data to component types
+const mapUserRowToUser = (userRow: UserRow): User => ({
+  id: userRow.id,
+  name: userRow.name || 'Unknown User',
+  avatar: userRow.avatar || '/placeholder.svg?height=40&width=40&text=' + (userRow.name?.[0] || 'U'),
+  status: userRow.is_active ? 'online' : 'offline',
+  lastActive: new Date(userRow.last_active || userRow.created_at || Date.now()),
+})
 
-const generateSampleMessages = (userId: string, count: number): Message[] => {
-  const messages: Message[] = []
-  const now = new Date()
+const mapMessageRowToMessage = (messageRow: MessageRow, senderData: UserRow | null): Message => ({
+  id: messageRow.id,
+  senderId: messageRow.sender_id || 'unknown',
+  text: messageRow.content,
+  timestamp: new Date(messageRow.created_at || Date.now()),
+  status: 'read', // Default status
+  attachments: messageRow.media_urls ? messageRow.media_urls.map(url => ({ url, type: 'image' })) : [],
+  reactions: [], // Could be extended if reactions are added to schema
+})
 
-  for (let i = 0; i < count; i++) {
-    const isFromCurrentUser = Math.random() > 0.5
-    const timeOffset = 1000 * 60 * (count - i)
-
-    messages.push({
-      id: `msg-${userId}-${i}`,
-      senderId: isFromCurrentUser ? currentUser.id : userId,
-      text: getSampleMessage(isFromCurrentUser),
-      timestamp: new Date(now.getTime() - timeOffset),
-      status: "read",
-      attachments:
-        i % 7 === 0
-          ? [
-              {
-                type: "image",
-                url: `/placeholder.svg?height=300&width=400&text=Image+${i}`,
-                name: `image-${i}.jpg`,
-              },
-            ]
-          : [],
-      reactions: i % 5 === 0 ? [{ emoji: "👍", count: 1 }] : [],
-    })
+const mapConversationData = (
+  conversationRow: ConversationRow,
+  participants: UserRow[],
+  messages: MessageRow[],
+  currentUserId: string
+): Conversation => {
+  const mappedParticipants = participants.map(mapUserRowToUser)
+  const mappedMessages = messages.map(msg => mapMessageRowToMessage(msg, null))
+  const lastMessage = mappedMessages.length > 0 ? mappedMessages[mappedMessages.length - 1] : null
+  
+  return {
+    id: conversationRow.id,
+    participants: mappedParticipants,
+    messages: mappedMessages,
+    unreadCount: 0, // Could be calculated based on last_read_at in participants
+    lastMessage,
+    isTyping: false, // Could be extended with real-time typing indicators
   }
-
-  return messages.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())
-}
-
-const getSampleMessage = (isFromCurrentUser: boolean): string => {
-  const currentUserMessages = [
-    "Hi there! How's your English practice going?",
-    "I've been working on my pronunciation. Any tips?",
-    "Could you help me understand this grammar rule?",
-    "I watched that movie you recommended. It was great for learning idioms!",
-    "When are we having our next speaking practice session?",
-    "I'm struggling with the difference between 'affect' and 'effect'. Can you explain?",
-    "Thanks for your help yesterday!",
-    "I completed the writing assignment. Would you mind reviewing it?",
-    "What resources do you recommend for improving listening skills?",
-    "I'm planning to take the IELTS test next month. Any advice?",
-  ]
-
-  const otherUserMessages = [
-    "Hello! My practice is going well. I've been focusing on vocabulary.",
-    "For pronunciation, try recording yourself and comparing with native speakers.",
-    "Of course! That grammar rule is about...",
-    "I'm glad you liked it! Movies are excellent for learning natural expressions.",
-    "How about Thursday at 6 PM?",
-    "'Affect' is usually a verb, while 'effect' is usually a noun. For example...",
-    "You're welcome! You're making great progress.",
-    "Sure, I'd be happy to review it. Just send it over.",
-    "Podcasts are fantastic for improving listening skills. I recommend...",
-    "For IELTS, focus on time management and practice with past papers.",
-  ]
-
-  const messages = isFromCurrentUser ? currentUserMessages : otherUserMessages
-  return messages[Math.floor(Math.random() * messages.length)]
-}
-
-const generateSampleConversations = (): Conversation[] => {
-  return sampleUsers.map((user) => {
-    const messageCount = 5 + Math.floor(Math.random() * 15)
-    const messages = generateSampleMessages(user.id, messageCount)
-    const lastMessage = messages[messages.length - 1]
-
-    return {
-      id: `conv-${user.id}`,
-      participants: [currentUser, user],
-      messages: messages,
-      unreadCount: Math.random() > 0.7 ? Math.floor(Math.random() * 5) + 1 : 0,
-      lastMessage: lastMessage,
-      isTyping: user.id === "user1" || user.id === "user5",
-    }
-  })
 }
 
 export default function MessagesInterface() {
-  const [conversations, setConversations] = useState<Conversation[]>(generateSampleConversations())
+  const [conversations, setConversations] = useState<Conversation[]>([])
   const [activeConversation, setActiveConversation] = useState<Conversation | null>(null)
   const [showSidebar, setShowSidebar] = useState(true)
+  const [loading, setLoading] = useState(true)
+  const [currentUser, setCurrentUser] = useState<User | null>(null)
   const isMobile = useMediaQuery("(max-width: 768px)")
   const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  // Load current user and conversations from Supabase
+  const loadConversations = async () => {
+    try {
+      setLoading(true)
+      const currentUserId = getCurrentUserId()
+      
+      // First, get current user data
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', currentUserId)
+        .single()
+
+      if (userError) {
+        console.error('Error fetching current user:', userError)
+        // For demo purposes, create a default user
+        setCurrentUser({
+          id: currentUserId,
+          name: 'Current User',
+          avatar: '/placeholder.svg?height=40&width=40&text=CU',
+          status: 'online',
+          lastActive: new Date(),
+        })
+      } else {
+        setCurrentUser(mapUserRowToUser(userData))
+      }
+
+      // Get user's conversations with participants and messages
+      const { data: conversationData, error: conversationError } = await supabase
+        .from('conversation_participants')
+        .select(`
+          conversation:conversations(
+            id,
+            type,
+            name,
+            description,
+            is_group,
+            last_message_at,
+            created_at
+          )
+        `)
+        .eq('user_id', currentUserId)
+        .eq('is_active', true)
+
+      if (conversationError) {
+        console.error('Error fetching conversations:', conversationError)
+        toast({
+          title: "Error loading conversations",
+          description: "Failed to load your conversations. Please try again.",
+          variant: "destructive",
+        })
+        return
+      }
+
+      const conversationPromises = conversationData?.map(async (item: any) => {
+        const conversation = item.conversation
+        
+        // Get all participants for this conversation
+        const { data: participantData, error: participantError } = await supabase
+          .from('conversation_participants')
+          .select('user:users(*)')
+          .eq('conversation_id', conversation.id)
+          .eq('is_active', true)
+
+        // Get recent messages for this conversation
+        const { data: messageData, error: messageError } = await supabase
+          .from('messages')
+          .select(`
+            *,
+            sender:users!sender_id(id, name, avatar)
+          `)
+          .eq('conversation_id', conversation.id)
+          .eq('is_deleted', false)
+          .order('created_at', { ascending: true })
+          .limit(50) // Limit to recent 50 messages
+
+        const participants = participantError ? [] : participantData?.map((p: any) => p.user) || []
+        const messages = messageError ? [] : messageData || []
+
+        return mapConversationData(conversation, participants, messages, currentUserId)
+      }) || []
+
+      const loadedConversations = await Promise.all(conversationPromises)
+      setConversations(loadedConversations)
+
+    } catch (error) {
+      console.error('Error loading conversations:', error)
+      toast({
+        title: "Error",
+        description: "Failed to load conversations. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    loadConversations()
+  }, [])
 
   useEffect(() => {
     // Set the first conversation as active by default
@@ -185,111 +201,98 @@ export default function MessagesInterface() {
     setActiveConversation(conversation)
   }
 
-  const handleSendMessage = (text: string, attachments: any[] = []) => {
-    if (!activeConversation) return
+  const handleSendMessage = async (text: string, attachments: any[] = []) => {
+    if (!activeConversation || !currentUser) return
 
-    const newMessage: Message = {
-      id: `msg-new-${Date.now()}`,
-      senderId: currentUser.id,
-      text,
-      timestamp: new Date(),
-      status: "sent",
-      attachments,
-      reactions: [],
-    }
+    try {
+      // Create the message in the database
+      const { data: newMessageData, error } = await supabase
+        .from('messages')
+        .insert({
+          conversation_id: activeConversation.id,
+          sender_id: currentUser.id,
+          content: text,
+          type: 'TEXT',
+          attachments: attachments.length > 0 ? JSON.stringify(attachments) : null,
+        })
+        .select()
+        .single()
 
-    // Add message to conversation
-    const updatedConversations = conversations.map((conv) => {
-      if (conv.id === activeConversation.id) {
-        const updatedMessages = [...conv.messages, newMessage]
-        return {
-          ...conv,
-          messages: updatedMessages,
-          lastMessage: newMessage,
-        }
+      if (error) {
+        console.error('Error sending message:', error)
+        toast({
+          title: "Error sending message",
+          description: "Failed to send your message. Please try again.",
+          variant: "destructive",
+        })
+        return
       }
-      return conv
-    })
 
-    setConversations(updatedConversations)
-    setActiveConversation({
-      ...activeConversation,
-      messages: [...activeConversation.messages, newMessage],
-      lastMessage: newMessage,
-    })
+      // Create the message object for local state
+      const newMessage: Message = {
+        id: newMessageData.id,
+        senderId: currentUser.id,
+        text,
+        timestamp: new Date(newMessageData.created_at),
+        status: "sent",
+        attachments,
+        reactions: [],
+      }
 
-    // Simulate reply after a delay
-    setTimeout(() => {
-      const otherUser = activeConversation.participants.find((p) => p.id !== currentUser.id)
-      if (!otherUser) return
+      // Update conversation's last_message_at
+      await supabase
+        .from('conversations')
+        .update({ last_message_at: new Date().toISOString() })
+        .eq('id', activeConversation.id)
 
-      // Set typing indicator
-      const withTypingIndicator = conversations.map((conv) => {
+      // Add message to local state
+      const updatedConversations = conversations.map((conv) => {
         if (conv.id === activeConversation.id) {
-          return { ...conv, isTyping: true }
+          const updatedMessages = [...conv.messages, newMessage]
+          return {
+            ...conv,
+            messages: updatedMessages,
+            lastMessage: newMessage,
+          }
         }
         return conv
       })
-      setConversations(withTypingIndicator)
 
-      // After a delay, add the response
-      setTimeout(
-        () => {
-          const replyMessage: Message = {
-            id: `msg-reply-${Date.now()}`,
-            senderId: otherUser.id,
-            text: getReplyMessage(text),
-            timestamp: new Date(),
-            status: "read",
-            attachments: [],
-            reactions: [],
-          }
+      setConversations(updatedConversations)
+      setActiveConversation({
+        ...activeConversation,
+        messages: [...activeConversation.messages, newMessage],
+        lastMessage: newMessage,
+      })
 
-          const finalConversations = conversations.map((conv) => {
-            if (conv.id === activeConversation.id) {
-              const updatedMessages = [...conv.messages, newMessage, replyMessage]
-              return {
-                ...conv,
-                messages: updatedMessages,
-                lastMessage: replyMessage,
-                isTyping: false,
-              }
-            }
-            return conv
-          })
-
-          setConversations(finalConversations)
-          setActiveConversation({
-            ...activeConversation,
-            messages: [...activeConversation.messages, newMessage, replyMessage],
-            lastMessage: replyMessage,
-            isTyping: false,
-          })
-        },
-        1500 + Math.random() * 2000,
-      )
-    }, 1000)
-  }
-
-  const getReplyMessage = (text: string): string => {
-    const replies = [
-      "That's interesting! Tell me more about it.",
-      "I see what you mean. Have you considered trying a different approach?",
-      "Great point! I think that's a good way to practice English.",
-      "I agree with you. Let's schedule a practice session soon.",
-      "Thanks for sharing that. It's really helpful for my learning.",
-      "I had a similar experience when I was learning that topic.",
-      "That's a good question. Let me think about it...",
-      "I'm not sure I understand. Could you explain it differently?",
-      "That's exactly what I needed to know. Thank you!",
-      "Let's discuss this more during our next lesson.",
-    ]
-
-    return replies[Math.floor(Math.random() * replies.length)]
+    } catch (error) {
+      console.error('Error sending message:', error)
+      toast({
+        title: "Error",
+        description: "Failed to send message. Please try again.",
+        variant: "destructive",
+      })
+    }
   }
 
   const toggleSidebar = () => {
     setShowSidebar(!showSidebar)
+  }
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="container mx-auto p-4 h-[calc(100vh-4rem)]">
+        <div className="flex h-full rounded-lg overflow-hidden border shadow-lg bg-card">
+          <div className="flex-1 flex items-center justify-center">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+              <p className="text-muted-foreground">Loading conversations...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -313,13 +316,18 @@ export default function MessagesInterface() {
               className={`${
                 isMobile ? "absolute z-40 h-[calc(100vh-4rem)] w-4/5 max-w-sm" : "hidden md:flex md:w-1/3 lg:w-1/4"
               } flex-col border-r bg-card`}
-            >
-              <ConversationList
-                conversations={conversations}
-                activeConversationId={activeConversation?.id}
-                onSelectConversation={handleSelectConversation}
-                currentUser={currentUser}
-              />
+            >            <ConversationList
+              conversations={conversations}
+              activeConversationId={activeConversation?.id}
+              onSelectConversation={handleSelectConversation}
+              currentUser={currentUser || {
+                id: 'current-user',
+                name: 'Current User',
+                avatar: '/placeholder.svg?height=40&width=40&text=CU',
+                status: 'online',
+                lastActive: new Date(),
+              }}
+            />
             </motion.div>
           )}
         </AnimatePresence>
@@ -329,7 +337,13 @@ export default function MessagesInterface() {
           {activeConversation ? (
             <MessageThread
               conversation={activeConversation}
-              currentUser={currentUser}
+              currentUser={currentUser || {
+                id: 'current-user',
+                name: 'Current User',
+                avatar: '/placeholder.svg?height=40&width=40&text=CU',
+                status: 'online',
+                lastActive: new Date(),
+              }}
               onSendMessage={handleSendMessage}
               messagesEndRef={messagesEndRef}
             />

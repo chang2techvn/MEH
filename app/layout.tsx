@@ -9,7 +9,6 @@ import ChatWindowsManager from "@/components/messages/chat-windows-manager"
 import MinimizedChatBar from "@/components/messages/minimized-chat-bar"
 import { ThemeProvider } from "@/contexts/theme-context"
 import Script from "next/script"
-import PerformanceMonitor from "@/components/performance-monitor"
 
 // Tối ưu font loading
 const outfit = Outfit({
@@ -125,13 +124,9 @@ export default function RootLayout({
                 <MinimizedChatBar />
               </div>
               <Toaster />
-              {process.env.NODE_ENV === "development" && <PerformanceMonitor />}
             </ChatProvider>
           </ThemeProvider>
         </AuthProvider>
-
-        {/* Preload critical scripts */}
-        <Script src="/scripts/performance-monitor.js" strategy="afterInteractive" id="performance-monitor" />
 
         {/* Structured data for SEO */}
         <Script

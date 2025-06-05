@@ -39,6 +39,42 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
+import { supabase, dbHelpers } from "@/lib/supabase"
+import type { Database } from "@/types/database.types"
+
+// Types from Supabase schema
+type UserRow = Database['public']['Tables']['users']['Row']
+type MessageRow = Database['public']['Tables']['messages']['Row']
+type ConversationRow = Database['public']['Tables']['conversations']['Row']
+
+interface ConversationData {
+  user: {
+    id: string
+    name: string
+    avatar: string | null
+    role: string
+    email: string
+    phone?: string
+    location?: string
+    timezone?: string
+    lastActive: string
+    memberSince: string
+    level?: string
+  }
+  messages: Array<{
+    id: string
+    sender: 'user' | 'admin'
+    text: string
+    timestamp: Date
+    status: 'sent' | 'delivered' | 'read'
+  }>
+  notes: Array<{
+    id: string
+    text: string
+    timestamp: Date
+    author: string
+  }>
+}
 
 interface ConversationViewProps {
   conversationId: string | null
@@ -47,195 +83,126 @@ interface ConversationViewProps {
   isMobile: boolean
 }
 
-// Sample conversation data
-const sampleConversations: Record<string, any> = {
-  msg1: {
-    user: {
-      id: "user1",
-      name: "Sarah Johnson",
-      avatar: "/placeholder.svg?height=40&width=40&text=SJ",
-      role: "student",
-      email: "sarah.johnson@example.com",
-      phone: "+1 (555) 123-4567",
-      location: "New York, USA",
-      timezone: "GMT-5",
-      lastActive: "2 hours ago",
-      memberSince: "Jan 2025",
-      level: "Intermediate",
-    },
-    messages: [
-      {
-        id: "m1",
-        sender: "user",
-        text: "Hello! I'm having trouble with the pronunciation exercise in lesson 5. Could you help me?",
-        timestamp: new Date(2025, 4, 18, 14, 30),
-        status: "read",
-      },
-      {
-        id: "m2",
-        sender: "admin",
-        text: "Hi Sarah, I'd be happy to help with the pronunciation exercise. Which specific words or sounds are you struggling with?",
-        timestamp: new Date(2025, 4, 18, 14, 35),
-        status: "read",
-      },
-      {
-        id: "m3",
-        sender: "user",
-        text: "Thank you! I'm having difficulty with the 'th' sound in words like 'think' and 'though'. They sound the same to me.",
-        timestamp: new Date(2025, 4, 18, 14, 40),
-        status: "read",
-      },
-      {
-        id: "m4",
-        sender: "admin",
-        text: "I understand. The 'th' sound can be tricky for many English learners. There are actually two different 'th' sounds in English: the voiceless 'th' (as in 'think') and the voiced 'th' (as in 'though').",
-        timestamp: new Date(2025, 4, 18, 14, 45),
-        status: "read",
-      },
-      {
-        id: "m5",
-        sender: "admin",
-        text: "For 'think', place the tip of your tongue between your teeth and blow air out without vibrating your vocal cords. For 'though', the tongue position is the same, but you need to vibrate your vocal cords.",
-        timestamp: new Date(2025, 4, 18, 14, 47),
-        status: "read",
-      },
-      {
-        id: "m6",
-        sender: "user",
-        text: "I'll try that! Is there a video demonstration in the course materials that shows the difference?",
-        timestamp: new Date(2025, 4, 18, 14, 52),
-        status: "read",
-      },
-    ],
-    notes: [
-      {
-        id: "n1",
-        text: "Student struggles with 'th' sounds - recommend additional pronunciation exercises",
-        timestamp: new Date(2025, 4, 18, 14, 55),
-        author: "Admin",
-      },
-      {
-        id: "n2",
-        text: "Follow up next week to check progress on pronunciation",
-        timestamp: new Date(2025, 4, 18, 15, 0),
-        author: "Admin",
-      },
-    ],
-  },
-  msg2: {
-    user: {
-      id: "user2",
-      name: "Michael Chen",
-      avatar: "/placeholder.svg?height=40&width=40&text=MC",
-      role: "student",
-      email: "michael.chen@example.com",
-      phone: "+1 (555) 987-6543",
-      location: "San Francisco, USA",
-      timezone: "GMT-8",
-      lastActive: "5 hours ago",
-      memberSince: "Feb 2025",
-      level: "Advanced",
-    },
-    messages: [
-      {
-        id: "m1",
-        sender: "user",
-        text: "I've completed the writing assignment on environmental issues. Could you review it when you have time?",
-        timestamp: new Date(2025, 4, 17, 10, 15),
-        status: "read",
-      },
-      {
-        id: "m2",
-        sender: "admin",
-        text: "Hi Michael, I'll review your assignment today. Is there any specific aspect you'd like me to focus on?",
-        timestamp: new Date(2025, 4, 17, 11, 30),
-        status: "read",
-      },
-      {
-        id: "m3",
-        sender: "user",
-        text: "Thank you! I'm particularly concerned about my use of transitional phrases and paragraph structure.",
-        timestamp: new Date(2025, 4, 17, 12, 45),
-        status: "read",
-      },
-      {
-        id: "m4",
-        sender: "admin",
-        text: "I've reviewed your assignment. Your arguments are well-researched and compelling. Regarding transitions, I've added some suggestions in the comments. Your paragraph structure is generally good, but some paragraphs could be more focused on a single main idea.",
-        timestamp: new Date(2025, 4, 18, 9, 20),
-        status: "read",
-      },
-      {
-        id: "m5",
-        sender: "user",
-        text: "Thank you for the feedback on my writing assignment. I've made the suggested changes.",
-        timestamp: new Date(2025, 4, 18, 12, 15),
-        status: "read",
-      },
-    ],
-    notes: [
-      {
-        id: "n1",
-        text: "Student shows strong analytical skills but needs work on cohesion",
-        timestamp: new Date(2025, 4, 18, 9, 30),
-        author: "Admin",
-      },
-    ],
-  },
-  msg3: {
-    user: {
-      id: "user3",
-      name: "Emma Williams",
-      avatar: "/placeholder.svg?height=40&width=40&text=EW",
-      role: "teacher",
-      email: "emma.williams@example.com",
-      phone: "+1 (555) 234-5678",
-      location: "Chicago, USA",
-      timezone: "GMT-6",
-      lastActive: "1 hour ago",
-      memberSince: "Dec 2024",
-      level: "Advanced",
-    },
-    messages: [
-      {
-        id: "m1",
-        sender: "user",
-        text: "I've uploaded the new speaking practice materials for the advanced students. Could you review them before I share with the class?",
-        timestamp: new Date(2025, 4, 18, 10, 45),
-        status: "read",
-      },
-      {
-        id: "m2",
-        sender: "admin",
-        text: "Hi Emma, I'll take a look at the materials today. Are there any specific aspects you'd like feedback on?",
-        timestamp: new Date(2025, 4, 18, 11, 0),
-        status: "read",
-      },
-      {
-        id: "m3",
-        sender: "user",
-        text: "Thanks! I'm particularly interested in whether the difficulty level is appropriate and if the topics are engaging enough for advanced students.",
-        timestamp: new Date(2025, 4, 18, 11, 15),
-        status: "read",
-      },
-    ],
-    notes: [
-      {
-        id: "n1",
-        text: "Emma consistently provides high-quality materials - very reliable team member",
-        timestamp: new Date(2025, 4, 18, 11, 30),
-        author: "Admin",
-      },
-    ],
-  },
+// Database operations and data loading
+const loadNotes = async (conversationId: string) => {
+  try {
+    // Load notes from database (implement when notes table is ready)
+    // For now, return empty array
+    return []
+  } catch (error) {
+    console.error('Error loading notes:', error)
+    return []
+  }
 }
 
 export function ConversationView({ conversationId, isLoading, onBackToList, isMobile }: ConversationViewProps) {
   const [replyText, setReplyText] = useState("")
   const [activeTab, setActiveTab] = useState("conversation")
   const [newNote, setNewNote] = useState("")
+  const [conversation, setConversation] = useState<ConversationData | null>(null)
+  const [loadingConversation, setLoadingConversation] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const { toast } = useToast()
+
+  // Load conversation data from Supabase
+  const loadConversation = async (id: string) => {
+    try {
+      setLoadingConversation(true)
+      
+      // Fetch conversation with participants and messages
+      const { data: conversationData, error: convError } = await supabase
+        .from('conversations')
+        .select(`
+          id,
+          title,
+          status,
+          created_at,
+          updated_at,
+          participants:conversation_participants!inner(
+            role,
+            user:users!inner(
+              id,
+              name,
+              email,
+              avatar,
+              last_active,
+              created_at,
+              level
+            )
+          ),
+          messages(
+            id,
+            content,
+            sender_id,
+            created_at,
+            is_read,
+            sender:users!inner(
+              id,
+              full_name,
+              avatar_url
+            )
+          )
+        `)
+        .eq('id', id)
+        .single()
+
+      if (convError) {
+        console.error('Error loading conversation:', convError)
+        throw new Error('Failed to load conversation: ' + convError.message)
+      }
+
+      if (!conversationData) {
+        setConversation(null)
+        return
+      }
+
+      // Transform data to match ConversationData interface
+      const studentParticipant = conversationData.participants.find(p => p.role === 'student')
+      const userArray = studentParticipant?.user
+      const user = Array.isArray(userArray) ? userArray[0] : userArray
+
+      if (!user) {
+        setConversation(null)
+        return
+      }
+
+      const transformedConversation: ConversationData = {
+        user: {
+          id: user.id,
+          name: user.name || 'Unknown User',
+          avatar: user.avatar || '/placeholder.svg?height=40&width=40&text=' + (user.name?.[0] || 'U'),
+          role: 'student',
+          email: user.email || '',
+          phone: 'N/A', // Not available in schema
+          location: 'N/A', // Not available in schema
+          timezone: 'N/A', // Not available in schema
+          lastActive: user.last_active ? format(new Date(user.last_active), 'MMM d, yyyy') : 'Never',
+          memberSince: format(new Date(user.created_at), 'MMM yyyy'),
+          level: user.level ? `Level ${user.level}` : 'Beginner'
+        },
+        messages: conversationData.messages.map(msg => ({
+          id: msg.id,
+          sender: msg.sender_id === user.id ? 'user' : 'admin',
+          text: msg.content,
+          timestamp: new Date(msg.created_at),
+          status: msg.is_read ? 'read' : 'delivered'
+        })),
+        notes: await loadNotes(id) // Load notes from database
+      }
+
+      setConversation(transformedConversation)
+    } catch (error) {
+      console.error('Error loading conversation:', error)
+      toast({
+        title: "Error",
+        description: "Failed to load conversation data.",
+        variant: "destructive"
+      })
+      setConversation(null)
+    } finally {
+      setLoadingConversation(false)
+    }
+  }
 
   // Scroll to bottom of messages when conversation changes
   useEffect(() => {
@@ -244,53 +211,182 @@ export function ConversationView({ conversationId, isLoading, onBackToList, isMo
     }
   }, [conversationId])
 
+  // Load conversation data when conversationId changes
+  useEffect(() => {
+    if (conversationId) {
+      loadConversation(conversationId)
+    } else {
+      setConversation(null)
+    }
+  }, [conversationId])
+
   // Handle sending a reply
-  const handleSendReply = () => {
-    if (!replyText.trim()) return
+  const handleSendReply = async () => {
+    if (!replyText.trim() || !conversationId) return
 
-    toast({
-      title: "Message sent",
-      description: "Your reply has been sent successfully.",
-    })
+    try {
+      // Get current user (admin)
+      const { data: { user }, error: userError } = await supabase.auth.getUser()
+      if (userError || !user) {
+        throw new Error('Failed to get current user')
+      }
 
-    setReplyText("")
+      // Send message to database
+      const { error } = await supabase
+        .from('messages')
+        .insert({
+          conversation_id: conversationId,
+          content: replyText.trim(),
+          sender_id: user.id,
+        })
+
+      if (error) {
+        throw error
+      }
+
+      toast({
+        title: "Message sent",
+        description: "Your reply has been sent successfully.",
+      })
+
+      setReplyText("")
+      
+      // Reload conversation to show new message
+      await loadConversation(conversationId)
+    } catch (error) {
+      console.error('Error sending message:', error)
+      toast({
+        title: "Error",
+        description: "Failed to send message. Please try again.",
+        variant: "destructive"
+      })
+    }
   }
 
   // Handle adding a note
-  const handleAddNote = () => {
-    if (!newNote.trim()) return
+  const handleAddNote = async () => {
+    if (!newNote.trim() || !conversationId) return
 
-    toast({
-      title: "Note added",
-      description: "Your note has been added to this conversation.",
-    })
+    try {
+      // Get current user (admin)
+      const { data: { user }, error: userError } = await supabase.auth.getUser()
+      if (userError || !user) {
+        throw new Error('Failed to get current user')
+      }
 
-    setNewNote("")
+      // Add note to database (implement when notes table is ready)
+      // For now, just show success message
+      toast({
+        title: "Note added",
+        description: "Your note has been added to this conversation.",
+      })
+
+      setNewNote("")
+      
+      // Reload conversation to show new note
+      await loadConversation(conversationId)
+    } catch (error) {
+      console.error('Error adding note:', error)
+      toast({
+        title: "Error",
+        description: "Failed to add note. Please try again.",
+        variant: "destructive"
+      })
+    }
   }
 
   // Handle flagging a conversation
-  const handleFlagConversation = () => {
-    toast({
-      title: "Conversation flagged",
-      description: "This conversation has been flagged for review.",
-    })
+  const handleFlagConversation = async () => {
+    if (!conversationId) return
+
+    try {
+      // Update conversation status in database
+      const { error } = await supabase
+        .from('conversations')
+        .update({ status: 'flagged' })
+        .eq('id', conversationId)
+
+      if (error) {
+        throw error
+      }
+
+      toast({
+        title: "Conversation flagged",
+        description: "This conversation has been flagged for review.",
+      })
+    } catch (error) {
+      console.error('Error flagging conversation:', error)
+      toast({
+        title: "Error",
+        description: "Failed to flag conversation. Please try again.",
+        variant: "destructive"
+      })
+    }
   }
 
   // Handle archiving a conversation
-  const handleArchiveConversation = () => {
-    toast({
-      title: "Conversation archived",
-      description: "This conversation has been moved to the archive.",
-    })
+  const handleArchiveConversation = async () => {
+    if (!conversationId) return
+
+    try {
+      // Update conversation status in database
+      const { error } = await supabase
+        .from('conversations')
+        .update({ status: 'archived' })
+        .eq('id', conversationId)
+
+      if (error) {
+        throw error
+      }
+
+      toast({
+        title: "Conversation archived",
+        description: "This conversation has been moved to the archive.",
+      })
+      
+      // Go back to list after archiving
+      onBackToList()
+    } catch (error) {
+      console.error('Error archiving conversation:', error)
+      toast({
+        title: "Error",
+        description: "Failed to archive conversation. Please try again.",
+        variant: "destructive"
+      })
+    }
   }
 
   // Handle deleting a conversation
-  const handleDeleteConversation = () => {
-    toast({
-      title: "Conversation deleted",
-      description: "This conversation has been permanently deleted.",
-      variant: "destructive",
-    })
+  const handleDeleteConversation = async () => {
+    if (!conversationId) return
+
+    try {
+      // Delete conversation from database
+      const { error } = await supabase
+        .from('conversations')
+        .delete()
+        .eq('id', conversationId)
+
+      if (error) {
+        throw error
+      }
+
+      toast({
+        title: "Conversation deleted",
+        description: "This conversation has been permanently deleted.",
+        variant: "destructive",
+      })
+      
+      // Go back to list after deleting
+      onBackToList()
+    } catch (error) {
+      console.error('Error deleting conversation:', error)
+      toast({
+        title: "Error",
+        description: "Failed to delete conversation. Please try again.",
+        variant: "destructive"
+      })
+    }
   }
 
   // Format message time
@@ -313,7 +409,20 @@ export function ConversationView({ conversationId, isLoading, onBackToList, isMo
     )
   }
 
-  const conversation = sampleConversations[conversationId]
+  // Show loading state while fetching conversation
+  if (loadingConversation) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[500px] p-8 text-center">
+        <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center mb-6">
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
+        </div>
+        <h3 className="text-xl font-bold mb-2">Loading Conversation</h3>
+        <p className="text-muted-foreground max-w-md">
+          Please wait while we load the conversation details.
+        </p>
+      </div>
+    )
+  }
 
   // If conversation not found
   if (!conversation) {
@@ -660,8 +769,8 @@ export function ConversationView({ conversationId, isLoading, onBackToList, isMo
                 icon={<User className="h-4 w-4" />}
                 items={[
                   { label: "Email", value: conversation.user.email },
-                  { label: "Phone", value: conversation.user.phone },
-                  { label: "Location", value: conversation.user.location },
+                  { label: "Phone", value: conversation.user.phone || 'N/A' },
+                  { label: "Location", value: conversation.user.location || 'N/A' },
                 ]}
               />
 
@@ -671,7 +780,7 @@ export function ConversationView({ conversationId, isLoading, onBackToList, isMo
                 items={[
                   { label: "Member Since", value: conversation.user.memberSince },
                   { label: "Last Active", value: conversation.user.lastActive },
-                  { label: "Timezone", value: conversation.user.timezone },
+                  { label: "Timezone", value: conversation.user.timezone || 'N/A' },
                 ]}
               />
             </div>

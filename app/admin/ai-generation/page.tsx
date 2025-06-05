@@ -29,6 +29,8 @@ import {
   Layers,
 } from "lucide-react"
 
+import { dbHelpers } from "@/lib/supabase"
+
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -53,97 +55,71 @@ import {
 } from "@/components/ui/dialog"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
-// Mock data for templates
-const contentTemplates = [
+// Default content templates (fallback when database is empty)
+const defaultContentTemplates = [
   {
-    id: 1,
+    id: "default-1",
     name: "Daily Challenge",
     description: "Generate a daily language challenge with instructions and examples",
-    icon: <Award className="h-5 w-5 text-amber-500" />,
-    prompt:
-      "Create a daily English language challenge focused on {topic}. Include instructions, examples, and a difficulty level of {difficulty}.",
+    icon: "Award",
+    prompt: "Create a daily English language challenge focused on {topic}. Include instructions, examples, and a difficulty level of {difficulty}.",
+    category: "challenges",
+    is_active: true
   },
   {
-    id: 2,
+    id: "default-2", 
     name: "Lesson Plan",
     description: "Complete lesson plan with objectives, activities and resources",
-    icon: <BookOpen className="h-5 w-5 text-emerald-500" />,
-    prompt:
-      "Generate a comprehensive English lesson plan on {topic} for {level} students. Include learning objectives, warm-up activities, main exercises, and assessment methods.",
+    icon: "BookOpen",
+    prompt: "Generate a comprehensive English lesson plan on {topic} for {level} students. Include learning objectives, warm-up activities, main exercises, and assessment methods.",
+    category: "lessons",
+    is_active: true
   },
   {
-    id: 3,
-    name: "Conversation Starter",
+    id: "default-3",
+    name: "Conversation Starter", 
     description: "Engaging conversation topics with guiding questions",
-    icon: <MessageSquare className="h-5 w-5 text-blue-500" />,
-    prompt:
-      "Create a set of conversation starters about {topic} for {level} English learners. Include 5 main questions and 3 follow-up questions for each.",
+    icon: "MessageSquare",
+    prompt: "Create a set of conversation starters about {topic} for {level} English learners. Include 5 main questions and 3 follow-up questions for each.",
+    category: "conversation",
+    is_active: true
   },
   {
-    id: 4,
+    id: "default-4",
     name: "Grammar Explanation",
-    description: "Clear explanation of grammar rules with examples",
-    icon: <FileText className="h-5 w-5 text-purple-500" />,
-    prompt:
-      "Explain the grammar rule of {grammar_point} for {level} English learners. Include the rule, usage notes, 5 examples, and common mistakes to avoid.",
+    description: "Clear explanation of grammar rules with examples", 
+    icon: "FileText",
+    prompt: "Explain the grammar rule of {grammar_point} for {level} English learners. Include the rule, usage notes, 5 examples, and common mistakes to avoid.",
+    category: "grammar",
+    is_active: true
   },
   {
-    id: 5,
+    id: "default-5",
     name: "Video Script",
     description: "Script for educational videos with visual cues",
-    icon: <Video className="h-5 w-5 text-red-500" />,
-    prompt:
-      "Write a script for a 3-5 minute educational video about {topic} for {level} English learners. Include an engaging introduction, clear explanations, visual cues, and a summary.",
-  },
+    icon: "Video", 
+    prompt: "Write a script for a 3-5 minute educational video about {topic} for {level} English learners. Include an engaging introduction, clear explanations, visual cues, and a summary.",
+    category: "content",
+    is_active: true
+  }
 ]
 
-// Mock data for generation history
-const generationHistory = [
-  {
-    id: "gen-1",
-    title: "Advanced Phrasal Verbs Lesson",
-    type: "Lesson Plan",
-    date: "2023-05-18T14:30:00",
-    status: "completed",
-    prompt: "Generate a comprehensive English lesson plan on phrasal verbs for advanced students.",
-  },
-  {
-    id: "gen-2",
-    title: "Business English Conversation",
-    type: "Conversation Starter",
-    date: "2023-05-17T10:15:00",
-    status: "completed",
-    prompt: "Create a set of conversation starters about business meetings for intermediate English learners.",
-  },
-  {
-    id: "gen-3",
-    title: "Present Perfect Challenge",
-    type: "Daily Challenge",
-    date: "2023-05-16T16:45:00",
-    status: "completed",
-    prompt: "Create a daily English language challenge focused on present perfect tense.",
-  },
-  {
-    id: "gen-4",
-    title: "Pronunciation Video Script",
-    type: "Video Script",
-    date: "2023-05-15T09:20:00",
-    status: "completed",
-    prompt: "Write a script for a 3-5 minute educational video about English pronunciation.",
-  },
-  {
-    id: "gen-5",
-    title: "Conditional Sentences Explanation",
-    type: "Grammar Explanation",
-    date: "2023-05-14T13:10:00",
-    status: "completed",
-    prompt: "Explain the grammar rule of conditional sentences for intermediate English learners.",
-  },
-]
+// Helper function to get icon component from string
+const getIconComponent = (iconName: string) => {
+  const iconMap: Record<string, any> = {
+    Award: <Award className="h-5 w-5 text-amber-500" />,
+    BookOpen: <BookOpen className="h-5 w-5 text-emerald-500" />,
+    MessageSquare: <MessageSquare className="h-5 w-5 text-blue-500" />,
+    FileText: <FileText className="h-5 w-5 text-purple-500" />,
+    Video: <Video className="h-5 w-5 text-red-500" />,
+    Sparkles: <Sparkles className="h-5 w-5 text-indigo-500" />,
+  }
+  return iconMap[iconName] || <FileText className="h-5 w-5 text-gray-500" />
+}
 
 export default function AIGenerationPage() {
   const [activeTab, setActiveTab] = useState("text")
-  const [selectedTemplate, setSelectedTemplate] = useState<number | null>(null)
+  const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
   const [generatedContent, setGeneratedContent] = useState("")
   const [copied, setCopied] = useState(false)
@@ -157,7 +133,6 @@ export default function AIGenerationPage() {
   const [grammarPoint, setGrammarPoint] = useState("")
   const [difficulty, setDifficulty] = useState("medium")
   const [isLoading, setIsLoading] = useState(true)
-  const [savedTemplates, setSavedTemplates] = useState<any[]>([])
   const [newTemplateName, setNewTemplateName] = useState("")
   const [newTemplatePrompt, setNewTemplatePrompt] = useState("")
   const [showNewTemplateDialog, setShowNewTemplateDialog] = useState(false)
@@ -169,16 +144,41 @@ export default function AIGenerationPage() {
     adaptToLearningStyle: false,
   })
 
-  // Simulate loading
+  // Real data from database
+  const [contentTemplates, setContentTemplates] = useState<any[]>([])
+  const [generationHistory, setGenerationHistory] = useState<any[]>([])
+  const [generationStats, setGenerationStats] = useState<any>(null)
+
+  // Load data from database
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsLoading(false)
-    }, 1500)
-    return () => clearTimeout(timer)
+    const loadData = async () => {
+      setIsLoading(true)
+      try {
+        const [templates, history, stats] = await Promise.all([
+          dbHelpers.getAIGenerationTemplates(),
+          dbHelpers.getAIGenerationHistory(20),
+          dbHelpers.getAIGenerationStats()
+        ])
+
+        // Use database templates or fall back to defaults
+        const allTemplates = templates.length > 0 ? templates : defaultContentTemplates
+        setContentTemplates(allTemplates)
+        setGenerationHistory(history)
+        setGenerationStats(stats)
+      } catch (error) {
+        console.error('Error loading AI generation data:', error)
+        // Fallback to default templates on error
+        setContentTemplates(defaultContentTemplates)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    loadData()
   }, [])
 
   // Handle template selection
-  const handleTemplateSelect = (id: number) => {
+  const handleTemplateSelect = (id: string) => {
     setSelectedTemplate(id)
     const template = contentTemplates.find((t) => t.id === id)
     if (template) {
@@ -187,7 +187,7 @@ export default function AIGenerationPage() {
   }
 
   // Handle content generation
-  const generateContent = () => {
+  const generateContent = async () => {
     setIsGenerating(true)
     setGeneratedContent("")
 
@@ -209,10 +209,41 @@ export default function AIGenerationPage() {
       } else {
         clearInterval(interval)
         setIsGenerating(false)
+        // Save generation result to database
+        saveGenerationResult(fullContent, processedPrompt)
       }
     }, 10)
 
     return () => clearInterval(interval)
+  }
+
+  // Save generation result to database
+  const saveGenerationResult = async (content: string, prompt: string) => {
+    try {
+      const template = contentTemplates.find(t => t.id === selectedTemplate)
+      await dbHelpers.saveAIGenerationResult({
+        title: `Generated ${template?.name || 'Content'} - ${topic || 'General'}`,
+        type: template?.name || 'General Content',
+        prompt: prompt,
+        content: content,
+        parameters: {
+          topic,
+          level,
+          grammarPoint,
+          difficulty,
+          creativity: creativity[0],
+          length: length[0],
+          enhancementOptions
+        },
+        template_id: selectedTemplate || undefined
+      })
+      
+      // Refresh generation history
+      const history = await dbHelpers.getAIGenerationHistory(20)
+      setGenerationHistory(history)
+    } catch (error) {
+      console.error('Error saving generation result:', error)
+    }
   }
 
   // Simulate content based on prompt
@@ -241,19 +272,33 @@ export default function AIGenerationPage() {
   }
 
   // Handle save template
-  const saveNewTemplate = () => {
+  const saveNewTemplate = async () => {
     if (newTemplateName && newTemplatePrompt) {
-      const newTemplate = {
-        id: savedTemplates.length + 100, // Avoid ID conflicts with default templates
-        name: newTemplateName,
-        description: "Custom template",
-        icon: <Sparkles className="h-5 w-5 text-indigo-500" />,
-        prompt: newTemplatePrompt,
+      try {
+        const { data, error } = await dbHelpers.createAIGenerationTemplate({
+          name: newTemplateName,
+          description: "Custom template",
+          prompt: newTemplatePrompt,
+          category: "custom",
+          icon: "Sparkles",
+          is_active: true
+        })
+
+        if (!error && data) {
+          // Add to local state
+          setContentTemplates(prev => [...prev, {
+            ...data,
+            icon: "Sparkles"
+          }])
+          setNewTemplateName("")
+          setNewTemplatePrompt("")
+          setShowNewTemplateDialog(false)
+        } else {
+          console.error('Error saving template:', error)
+        }
+      } catch (error) {
+        console.error('Error saving template:', error)
       }
-      setSavedTemplates([...savedTemplates, newTemplate])
-      setNewTemplateName("")
-      setNewTemplatePrompt("")
-      setShowNewTemplateDialog(false)
     }
   }
 
@@ -393,31 +438,27 @@ export default function AIGenerationPage() {
 
                   <ScrollArea className="h-[300px] pr-4">
                     <div className="space-y-3">
-                      {[...contentTemplates, ...savedTemplates].map((template) => (
+                      {contentTemplates.map((template) => (
                         <motion.div key={template.id} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                           <Card
                             className={`cursor-pointer transition-all hover:shadow-md ${selectedTemplate === template.id ? "ring-2 ring-primary ring-offset-2" : ""}`}
                             onClick={() => handleTemplateSelect(template.id)}
                           >
-                            <CardHeader className="p-4 pb-2">
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                  {template.icon}
-                                  <CardTitle className="text-base">{template.name}</CardTitle>
+                            <CardContent className="p-4">
+                              <div className="flex items-start gap-3">
+                                <div className="p-2 rounded-full bg-primary/10">
+                                  {getIconComponent(template.icon || 'FileText')}
+                                </div>
+                                <div className="flex-1">
+                                  <h3 className="font-medium text-sm mb-1">{template.name}</h3>
+                                  <p className="text-xs text-muted-foreground">{template.description}</p>
                                 </div>
                                 {selectedTemplate === template.id && (
-                                  <motion.div
-                                    initial={{ scale: 0 }}
-                                    animate={{ scale: 1 }}
-                                    className="h-6 w-6 rounded-full bg-primary flex items-center justify-center"
-                                  >
+                                  <div className="p-1 rounded-full bg-primary">
                                     <Check className="h-4 w-4 text-white" />
-                                  </motion.div>
+                                  </div>
                                 )}
                               </div>
-                            </CardHeader>
-                            <CardContent className="p-4 pt-0">
-                              <CardDescription>{template.description}</CardDescription>
                             </CardContent>
                           </Card>
                         </motion.div>
@@ -561,89 +602,110 @@ export default function AIGenerationPage() {
                 <Card>
                   <CardContent className="p-6">
                     <div className="space-y-4">
-                      {generationHistory.map((item) => (
-                        <motion.div
-                          key={item.id}
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.3 }}
-                        >
-                          <Card className="overflow-hidden">
-                            <div
-                              className="p-4 cursor-pointer"
-                              onClick={() => setExpandedHistory(expandedHistory === item.id ? null : item.id)}
+                      {generationHistory.length === 0 ? (
+                        <div className="text-center py-8">
+                          <p className="text-muted-foreground">No generation history found.</p>
+                        </div>
+                      ) : (
+                        generationHistory.map((item) => {
+                          const inputData = item.input_data || {}
+                          const outputData = item.output_data || {}
+                          
+                          return (
+                            <motion.div
+                              key={item.id}
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ duration: 0.3 }}
                             >
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                  <div className="p-2 rounded-full bg-primary/10">
-                                    {item.type === "Lesson Plan" ? (
-                                      <BookOpen className="h-4 w-4 text-primary" />
-                                    ) : item.type === "Daily Challenge" ? (
-                                      <Award className="h-4 w-4 text-amber-500" />
-                                    ) : item.type === "Conversation Starter" ? (
-                                      <MessageSquare className="h-4 w-4 text-blue-500" />
-                                    ) : item.type === "Grammar Explanation" ? (
-                                      <FileText className="h-4 w-4 text-purple-500" />
-                                    ) : (
-                                      <Video className="h-4 w-4 text-red-500" />
-                                    )}
-                                  </div>
-                                  <div>
-                                    <h3 className="font-medium">{item.title}</h3>
-                                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                      <Badge variant="outline">{item.type}</Badge>
-                                      <span>{formatDate(item.date)}</span>
-                                    </div>
-                                  </div>
-                                </div>
-                                <div>
-                                  {expandedHistory === item.id ? (
-                                    <ChevronDown className="h-5 w-5" />
-                                  ) : (
-                                    <ChevronRight className="h-5 w-5" />
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-
-                            <AnimatePresence>
-                              {expandedHistory === item.id && (
-                                <motion.div
-                                  initial={{ height: 0, opacity: 0 }}
-                                  animate={{ height: "auto", opacity: 1 }}
-                                  exit={{ height: 0, opacity: 0 }}
-                                  transition={{ duration: 0.3 }}
+                              <Card className="overflow-hidden">
+                                <div
+                                  className="p-4 cursor-pointer"
+                                  onClick={() => setExpandedHistory(expandedHistory === item.id ? null : item.id)}
                                 >
-                                  <div className="px-4 pb-4 border-t pt-3">
-                                    <div className="mb-3">
-                                      <h4 className="text-sm font-medium mb-1">Prompt</h4>
-                                      <p className="text-sm text-muted-foreground">{item.prompt}</p>
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                      <div className="p-2 rounded-full bg-primary/10">
+                                        {getIconComponent(inputData.type === "Lesson Plan" ? "BookOpen" :
+                                          inputData.type === "Daily Challenge" ? "Award" :
+                                          inputData.type === "Conversation Starter" ? "MessageSquare" :
+                                          inputData.type === "Grammar Explanation" ? "FileText" :
+                                          inputData.type === "Video Script" ? "Video" : "FileText")}
+                                      </div>
+                                      <div>
+                                        <h3 className="font-medium">{inputData.title || 'Generated Content'}</h3>
+                                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                          <Badge variant="outline">{inputData.type || 'General Content'}</Badge>
+                                          <span>{formatDate(item.created_at)}</span>
+                                        </div>
+                                      </div>
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                      <Button size="sm" variant="outline">
-                                        <Copy className="h-3.5 w-3.5 mr-1" />
-                                        Copy
-                                      </Button>
-                                      <Button size="sm" variant="outline">
-                                        <RefreshCw className="h-3.5 w-3.5 mr-1" />
-                                        Regenerate
-                                      </Button>
-                                      <Button
-                                        size="sm"
-                                        variant="outline"
-                                        className="text-destructive hover:text-destructive"
-                                      >
-                                        <Trash2 className="h-3.5 w-3.5 mr-1" />
-                                        Delete
-                                      </Button>
+                                    <div>
+                                      {expandedHistory === item.id ? (
+                                        <ChevronDown className="h-5 w-5" />
+                                      ) : (
+                                        <ChevronRight className="h-5 w-5" />
+                                      )}
                                     </div>
                                   </div>
-                                </motion.div>
-                              )}
-                            </AnimatePresence>
-                          </Card>
-                        </motion.div>
-                      ))}
+                                </div>
+
+                                <AnimatePresence>
+                                  {expandedHistory === item.id && (
+                                    <motion.div
+                                      initial={{ height: 0, opacity: 0 }}
+                                      animate={{ height: "auto", opacity: 1 }}
+                                      exit={{ height: 0, opacity: 0 }}
+                                      transition={{ duration: 0.3 }}
+                                    >
+                                      <div className="px-4 pb-4 border-t pt-3">
+                                        <div className="mb-3">
+                                          <h4 className="text-sm font-medium mb-1">Prompt</h4>
+                                          <p className="text-sm text-muted-foreground">{inputData.prompt || 'No prompt available'}</p>
+                                        </div>
+                                        {outputData.content && (
+                                          <div className="mb-3">
+                                            <h4 className="text-sm font-medium mb-1">Generated Content</h4>
+                                            <div className="max-h-32 overflow-y-auto text-sm text-muted-foreground bg-muted/50 p-2 rounded">
+                                              {outputData.content.substring(0, 200)}...
+                                            </div>
+                                          </div>
+                                        )}
+                                        <div className="flex items-center gap-2">
+                                          <Button size="sm" variant="outline" onClick={() => {
+                                            if (outputData.content) {
+                                              navigator.clipboard.writeText(outputData.content)
+                                            }
+                                          }}>
+                                            <Copy className="h-3.5 w-3.5 mr-1" />
+                                            Copy
+                                          </Button>
+                                          <Button size="sm" variant="outline" onClick={() => {
+                                            if (inputData.prompt) {
+                                              setCustomPrompt(inputData.prompt)
+                                              if (inputData.parameters) {
+                                                const params = inputData.parameters
+                                                setTopic(params.topic || "")
+                                                setLevel(params.level || "intermediate")
+                                                setGrammarPoint(params.grammarPoint || "")
+                                                setDifficulty(params.difficulty || "medium")
+                                              }
+                                              setShowHistory(false)
+                                            }
+                                          }}>
+                                            <RefreshCw className="h-3.5 w-3.5 mr-1" />
+                                            Use Template
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    </motion.div>
+                                  )}
+                                </AnimatePresence>
+                              </Card>
+                            </motion.div>
+                          )
+                        })
+                      )}
                     </div>
                   </CardContent>
                 </Card>

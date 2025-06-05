@@ -25,7 +25,7 @@
           console.log("CLS:", clsValue.toFixed(4))
           // Here you would send this to your analytics
         }
-      })
+
 
       clsObserver.observe({ type: "layout-shift", buffered: true })
 
@@ -67,7 +67,7 @@
     } catch (e) {
       console.error("Performance Observer error:", e)
     }
-  }
+
 
   // Report performance metrics when the page is fully loaded
   window.addEventListener("load", () => {
@@ -145,4 +145,4 @@
       // Here you would send this to your analytics
     }, 30000) // Check every 30 seconds
   }
-})()
+

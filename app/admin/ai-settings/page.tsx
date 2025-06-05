@@ -22,6 +22,8 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { toast } from "@/hooks/use-toast"
+import { supabase } from "@/lib/supabase"
+import { Database } from "@/types/database.types"
 import {
   AlertCircle,
   Check,
@@ -45,41 +47,27 @@ import {
   Zap,
   BarChart,
   Cpu,
-  Database,
   Globe,
   HelpCircle,
   Info,
   Shield,
+  Server,
 } from "lucide-react"
 import { Progress } from "@/components/ui/progress"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 
-// Define types for our API keys and models
-interface ApiKey {
-  id: string
-  name: string
-  key: string
-  provider: "openai" | "gemini" | "anthropic" | "mistral" | "cohere" | "custom"
-  isActive: boolean
-  isDefault: boolean
-  createdAt: Date
-  lastUsed: Date | null
-  usageCount: number
-  usageLimit: number | null
-  expiresAt: Date | null
+// Define types based on our Supabase schema
+type ApiKeyRow = Database['public']['Tables']['api_keys']['Row']
+type AIModelRow = Database['public']['Tables']['ai_models']['Row']
+
+interface ApiKey extends ApiKeyRow {
+  key?: string // For display purposes, we'll mask the actual key
+  isDefault?: boolean
 }
 
-interface AIModel {
-  id: string
-  name: string
-  provider: "openai" | "gemini" | "anthropic" | "mistral" | "cohere" | "custom"
-  description: string
-  capabilities: string[]
-  isEnabled: boolean
-  contextLength: number
-  costPer1kTokens: number
-  strengths: string[]
+interface AIModel extends AIModelRow {
+  strengths?: string[]
   apiEndpoint?: string
 }
 
@@ -132,144 +120,80 @@ export default function AISettingsPage() {
   const [expandedCard, setExpandedCard] = useState<string | null>(null)
   const [timeRange, setTimeRange] = useState("7d")
 
-  // Sample data for API keys
-  const sampleApiKeys: ApiKey[] = [
-    {
-      id: "key1",
-      name: "OpenAI Production",
-      key: "sk-o91H5Xwpe3ndj28Svn3nT3BlbkFJoie9I34k2jd92jd92",
-      provider: "openai",
-      isActive: true,
-      isDefault: true,
-      createdAt: new Date(2023, 5, 15),
-      lastUsed: new Date(2023, 6, 28),
-      usageCount: 1243,
-      usageLimit: 5000,
-      expiresAt: new Date(2024, 5, 15),
-    },
-    {
-      id: "key2",
-      name: "Gemini API Key",
-      key: "AIzaSyBciaGKcsOTGrELi8PgmJtDteZ77hTuTw",
-      provider: "gemini",
-      isActive: true,
-      isDefault: false,
-      createdAt: new Date(2023, 8, 10),
-      lastUsed: new Date(2023, 9, 5),
-      usageCount: 567,
-      usageLimit: 10000,
-      expiresAt: null,
-    },
-    {
-      id: "key3",
-      name: "Anthropic Development",
-      key: "sk-ant-api03-jd92jd92-dev",
-      provider: "anthropic",
-      isActive: false,
-      isDefault: false,
-      createdAt: new Date(2023, 7, 20),
-      lastUsed: null,
-      usageCount: 0,
-      usageLimit: null,
-      expiresAt: null,
-    },
-    {
-      id: "key4",
-      name: "Mistral Testing",
-      key: "mst-jd92jd92-test",
-      provider: "mistral",
-      isActive: true,
-      isDefault: false,
-      createdAt: new Date(2023, 9, 1),
-      lastUsed: new Date(2023, 9, 10),
-      usageCount: 125,
-      usageLimit: 1000,
-      expiresAt: new Date(2024, 3, 1),
-    },
-    {
-      id: "key5",
-      name: "Cohere Sandbox",
-      key: "coh-sandbox-jd92jd92",
-      provider: "cohere",
-      isActive: true,
-      isDefault: false,
-      createdAt: new Date(2023, 10, 5),
-      lastUsed: new Date(2023, 10, 15),
-      usageCount: 78,
-      usageLimit: 2000,
-      expiresAt: null,
-    },
-  ]
+  // Load data from Supabase
+  useEffect(() => {
+    loadApiKeys()
+    loadAiModels()
+    loadUsageData()
+  }, [])
 
-  // Sample data for AI models
-  const sampleAiModels: AIModel[] = [
-    {
-      id: "model1",
-      name: "GPT-4o",
-      provider: "openai",
-      description: "OpenAI's most advanced model, optimized for both vision and language tasks.",
-      capabilities: ["text", "image", "code"],
-      isEnabled: true,
-      contextLength: 128000,
-      costPer1kTokens: 0.01,
-      strengths: ["General knowledge", "Creative writing", "Code generation", "Visual understanding"],
-    },
-    {
-      id: "model2",
-      name: "GPT-3.5 Turbo",
-      provider: "openai",
-      description: "A good balance between performance and cost for most language tasks.",
-      capabilities: ["text", "code"],
-      isEnabled: true,
-      contextLength: 16385,
-      costPer1kTokens: 0.0015,
-      strengths: ["Fast responses", "Cost-effective", "General knowledge"],
-    },
-    {
-      id: "model3",
-      name: "Gemini Pro",
-      provider: "gemini",
-      description: "Google's multimodal AI model with strong reasoning capabilities.",
-      capabilities: ["text", "image", "code"],
-      isEnabled: true,
-      contextLength: 32768,
-      costPer1kTokens: 0.0025,
-      strengths: ["Reasoning", "Multimodal understanding", "Up-to-date knowledge"],
-    },
-    {
-      id: "model4",
-      name: "Claude 3 Opus",
-      provider: "anthropic",
-      description: "Anthropic's most capable model with excellent reasoning and safety features.",
-      capabilities: ["text", "image"],
-      isEnabled: false,
-      contextLength: 200000,
-      costPer1kTokens: 0.015,
-      strengths: ["Reasoning", "Safety", "Long context", "Instruction following"],
-    },
-    {
-      id: "model5",
-      name: "Mistral Large",
-      provider: "mistral",
-      description: "Powerful and efficient language model from Mistral AI.",
-      capabilities: ["text", "code"],
-      isEnabled: true,
-      contextLength: 32768,
-      costPer1kTokens: 0.008,
-      strengths: ["Efficiency", "Reasoning", "Instruction following"],
-    },
-    {
-      id: "model6",
-      name: "Cohere Command R",
-      provider: "cohere",
-      description: "Specialized for enterprise use cases with strong retrieval capabilities.",
-      capabilities: ["text"],
-      isEnabled: true,
-      contextLength: 128000,
-      costPer1kTokens: 0.005,
-      strengths: ["Enterprise knowledge", "Retrieval", "Structured data"],
-    },
-  ]
+  const loadApiKeys = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('api_keys')
+        .select('*')
+        .order('createdAt', { ascending: false })
+
+      if (error) throw error
+
+      // Transform data and mask keys for security
+      const transformedKeys: ApiKey[] = data.map(key => ({
+        ...key,
+        key: `${key.keyHash.substring(0, 8)}...${key.keyHash.substring(key.keyHash.length - 8)}`,
+        isDefault: false, // We'll need to implement default key logic
+        createdAt: key.createdAt,
+        lastUsed: key.lastUsed,
+        expiresAt: key.expiresAt,
+        usageLimit: key.rateLimit
+      }))
+
+      setApiKeys(transformedKeys)
+    } catch (error) {
+      console.error('Error loading API keys:', error)
+      toast({
+        title: "Error",
+        description: "Failed to load API keys",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const loadAiModels = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('ai_models')
+        .select('*')
+        .order('createdAt', { ascending: false })
+
+      if (error) throw error
+
+      // Transform data to match our interface
+      const transformedModels: AIModel[] = data.map(model => ({
+        ...model,
+        contextLength: model.maxTokens || 4096,
+        costPer1kTokens: model.costPerToken || 0.001,
+        isEnabled: model.isActive,
+        strengths: [], // We'll need to implement strengths logic
+        capabilities: model.capabilities || ['text']
+      }))
+
+      setAiModels(transformedModels)
+    } catch (error) {
+      console.error('Error loading AI models:', error)
+      toast({
+        title: "Error",
+        description: "Failed to load AI models",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const loadUsageData = () => {
+    // For now, we'll generate sample usage data until we implement real usage tracking
+    setUsageData(generateUsageData())
+  }
 
   // Sample usage data
   const generateUsageData = () => {
@@ -304,22 +228,7 @@ export default function AISettingsPage() {
     return data.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
   }
 
-  // Load data
-  useEffect(() => {
-    const loadData = async () => {
-      setIsLoading(true)
-
-      // Simulate API call delay
-      await new Promise((resolve) => setTimeout(resolve, 1500))
-
-      setApiKeys(sampleApiKeys)
-      setAiModels(sampleAiModels)
-      setUsageData(generateUsageData())
-      setIsLoading(false)
-    }
-
-    loadData()
-  }, [timeRange])
+  // Data loading is now handled by individual functions called in useEffect above
 
   // Filter API keys based on search and provider filter
   const filteredApiKeys = apiKeys.filter((key) => {
@@ -334,13 +243,13 @@ export default function AISettingsPage() {
   const filteredAiModels = aiModels.filter((model) => {
     const matchesSearch =
       model.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      model.description.toLowerCase().includes(searchQuery.toLowerCase())
+      model.description?.toLowerCase().includes(searchQuery.toLowerCase())
     const matchesProvider = filterProvider === "all" || model.provider === filterProvider
     return matchesSearch && matchesProvider
   })
 
   // Handle adding a new API key
-  const handleAddApiKey = () => {
+  const handleAddApiKey = async () => {
     if (!newKeyName || !newKeyValue || !newKeyProvider) {
       toast({
         title: "Missing information",
@@ -352,24 +261,40 @@ export default function AISettingsPage() {
 
     setIsLoading(true)
 
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      // Hash the key for security (in production, this should be done server-side)
+      const keyHash = btoa(newKeyValue).substring(0, 32)
+      
+      const { data, error } = await supabase
+        .from('api_keys')
+        .insert({
+          name: newKeyName,
+          provider: newKeyProvider,
+          keyHash: keyHash,
+          isActive: true,
+          usageCount: 0,
+          rateLimit: newKeyUsageLimit ? Number.parseInt(newKeyUsageLimit) : null,
+          expiresAt: null,
+        })
+        .select()
+        .single()
+
+      if (error) {
+        throw error
+      }
+
+      // Transform the new key for display
       const newKey: ApiKey = {
-        id: `key${apiKeys.length + 1}`,
-        name: newKeyName,
-        key: newKeyValue,
-        provider: newKeyProvider,
-        isActive: true,
-        isDefault: apiKeys.length === 0, // Make default if it's the first key
-        createdAt: new Date(),
-        lastUsed: null,
-        usageCount: 0,
-        usageLimit: newKeyUsageLimit ? Number.parseInt(newKeyUsageLimit) : null,
-        expiresAt: null,
+        ...data,
+        key: `${keyHash.substring(0, 8)}...${keyHash.substring(keyHash.length - 8)}`,
+        isDefault: apiKeys.length === 0,
+        usageLimit: data.rateLimit,
+        createdAt: data.createdAt,
+        lastUsed: data.lastUsed,
+        expiresAt: data.expiresAt,
       }
 
       setApiKeys([...apiKeys, newKey])
-      setIsLoading(false)
       setShowAddKeyDialog(false)
       setNewKeyName("")
       setNewKeyValue("")
@@ -380,11 +305,20 @@ export default function AISettingsPage() {
         title: "API Key added",
         description: "Your new API key has been added successfully",
       })
-    }, 1000)
+    } catch (error) {
+      console.error('Error adding API key:', error)
+      toast({
+        title: "Error",
+        description: "Failed to add API key. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   // Handle editing an API key
-  const handleEditApiKey = () => {
+  const handleEditApiKey = async () => {
     if (!selectedKey || !newKeyName) {
       toast({
         title: "Missing information",
@@ -396,23 +330,43 @@ export default function AISettingsPage() {
 
     setIsLoading(true)
 
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      const updateData: any = {
+        name: newKeyName,
+        provider: newKeyProvider,
+        rateLimit: newKeyUsageLimit ? Number.parseInt(newKeyUsageLimit) : null,
+      }
+
+      // Only update keyHash if a new key value is provided
+      if (newKeyValue) {
+        updateData.keyHash = btoa(newKeyValue).substring(0, 32)
+      }
+
+      const { data, error } = await supabase
+        .from('api_keys')
+        .update(updateData)
+        .eq('id', selectedKey.id)
+        .select()
+        .single()
+
+      if (error) {
+        throw error
+      }
+
       const updatedKeys = apiKeys.map((key) => {
         if (key.id === selectedKey.id) {
           return {
             ...key,
             name: newKeyName,
-            key: newKeyValue || key.key,
+            key: newKeyValue ? `${updateData.keyHash.substring(0, 8)}...${updateData.keyHash.substring(updateData.keyHash.length - 8)}` : key.key,
             provider: newKeyProvider,
-            usageLimit: newKeyUsageLimit ? Number.parseInt(newKeyUsageLimit) : key.usageLimit,
+            usageLimit: data.rateLimit,
           }
         }
         return key
       })
 
       setApiKeys(updatedKeys)
-      setIsLoading(false)
       setShowEditKeyDialog(false)
       setSelectedKey(null)
       setNewKeyName("")
@@ -424,22 +378,47 @@ export default function AISettingsPage() {
         title: "API Key updated",
         description: "Your API key has been updated successfully",
       })
-    }, 1000)
+    } catch (error) {
+      console.error('Error updating API key:', error)
+      toast({
+        title: "Error",
+        description: "Failed to update API key. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   // Handle deleting an API key
-  const handleDeleteApiKey = () => {
+  const handleDeleteApiKey = async () => {
     if (!selectedKey) return
 
     setIsLoading(true)
 
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      // Delete from Supabase
+      const { error } = await supabase
+        .from('api_keys')
+        .delete()
+        .eq('id', selectedKey.id)
+
+      if (error) {
+        throw error
+      }
+
+      // Update local state
       const updatedKeys = apiKeys.filter((key) => key.id !== selectedKey.id)
 
       // If we deleted the default key, make another one default
       if (selectedKey.isDefault && updatedKeys.length > 0) {
         updatedKeys[0].isDefault = true
+        
+        // Update the new default key in database
+        await supabase
+          .from('api_keys')
+          .update({ isDefault: true })
+          .eq('id', updatedKeys[0].id)
       }
 
       setApiKeys(updatedKeys)
@@ -451,15 +430,39 @@ export default function AISettingsPage() {
         title: "API Key deleted",
         description: "The API key has been deleted successfully",
       })
-    }, 1000)
+    } catch (error) {
+      console.error('Error deleting API key:', error)
+      setIsLoading(false)
+      toast({
+        title: "Error",
+        description: "Failed to delete API key. Please try again.",
+        variant: "destructive",
+      })
+    }
   }
 
   // Handle setting a key as default
-  const handleSetDefaultKey = (keyId: string) => {
+  const handleSetDefaultKey = async (keyId: string) => {
     setIsLoading(true)
 
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      // First, set all keys to non-default
+      await supabase
+        .from('api_keys')
+        .update({ isDefault: false })
+        .neq('id', keyId)
+
+      // Then set the selected key as default
+      const { error } = await supabase
+        .from('api_keys')
+        .update({ isDefault: true })
+        .eq('id', keyId)
+
+      if (error) {
+        throw error
+      }
+
+      // Update local state
       const updatedKeys = apiKeys.map((key) => ({
         ...key,
         isDefault: key.id === keyId,
@@ -472,15 +475,33 @@ export default function AISettingsPage() {
         title: "Default key updated",
         description: "The default API key has been updated successfully",
       })
-    }, 500)
+    } catch (error) {
+      console.error('Error setting default key:', error)
+      setIsLoading(false)
+      toast({
+        title: "Error",
+        description: "Failed to set default API key. Please try again.",
+        variant: "destructive",
+      })
+    }
   }
 
   // Handle toggling a key's active status
-  const handleToggleKeyActive = (keyId: string, newStatus: boolean) => {
+  const handleToggleKeyActive = async (keyId: string, newStatus: boolean) => {
     setIsLoading(true)
 
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      // Update in Supabase
+      const { error } = await supabase
+        .from('api_keys')
+        .update({ isActive: newStatus })
+        .eq('id', keyId)
+
+      if (error) {
+        throw error
+      }
+
+      // Update local state
       const updatedKeys = apiKeys.map((key) => {
         if (key.id === keyId) {
           return {
@@ -498,11 +519,19 @@ export default function AISettingsPage() {
         title: newStatus ? "API Key activated" : "API Key deactivated",
         description: `The API key has been ${newStatus ? "activated" : "deactivated"} successfully`,
       })
-    }, 500)
+    } catch (error) {
+      console.error('Error toggling key status:', error)
+      setIsLoading(false)
+      toast({
+        title: "Error",
+        description: "Failed to update API key status. Please try again.",
+        variant: "destructive",
+      })
+    }
   }
 
   // Handle adding a new AI model
-  const handleAddAiModel = () => {
+  const handleAddAiModel = async () => {
     if (!newModelName || !newModelProvider || !newModelDescription) {
       toast({
         title: "Missing information",
@@ -514,19 +543,47 @@ export default function AISettingsPage() {
 
     setIsLoading(true)
 
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      // Insert into Supabase
+      const { data, error } = await supabase
+        .from('ai_models')
+        .insert({
+          name: newModelName,
+          provider: newModelProvider,
+          description: newModelDescription,
+          capabilities: newModelCapabilities,
+          isActive: true,
+          maxTokens: Number.parseInt(newModelContextLength),
+          costPerToken: Number.parseFloat(newModelCost),
+          configuration: {
+            strengths: newModelStrengths,
+            apiEndpoint: newModelEndpoint || undefined,
+          }
+        })
+        .select()
+        .single()
+
+      if (error) {
+        throw error
+      }
+
+      // Create new model object for local state
       const newModel: AIModel = {
-        id: `model${aiModels.length + 1}`,
-        name: newModelName,
-        provider: newModelProvider,
-        description: newModelDescription,
-        capabilities: newModelCapabilities,
-        isEnabled: true,
-        contextLength: Number.parseInt(newModelContextLength),
-        costPer1kTokens: Number.parseFloat(newModelCost),
-        strengths: newModelStrengths,
-        apiEndpoint: newModelEndpoint || undefined,
+        id: data.id,
+        name: data.name,
+        provider: data.provider,
+        description: data.description,
+        capabilities: data.capabilities,
+        isActive: data.isActive,
+        maxTokens: data.maxTokens,
+        costPerToken: data.costPerToken,
+        modelId: data.modelId,
+        version: data.version,
+        createdAt: data.createdAt,
+        updatedAt: data.updatedAt,
+        configuration: data.configuration,
+        strengths: data.configuration?.strengths || [],
+        apiEndpoint: data.configuration?.apiEndpoint,
       }
 
       setAiModels([...aiModels, newModel])
@@ -538,11 +595,19 @@ export default function AISettingsPage() {
         title: "AI Model added",
         description: "Your new AI model has been added successfully",
       })
-    }, 1000)
+    } catch (error) {
+      console.error('Error adding AI model:', error)
+      setIsLoading(false)
+      toast({
+        title: "Error",
+        description: "Failed to add AI model. Please try again.",
+        variant: "destructive",
+      })
+    }
   }
 
   // Handle editing an AI model
-  const handleEditAiModel = () => {
+  const handleEditAiModel = async () => {
     if (!selectedModel || !newModelName || !newModelDescription) {
       toast({
         title: "Missing information",
@@ -554,8 +619,31 @@ export default function AISettingsPage() {
 
     setIsLoading(true)
 
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      // Update in Supabase
+      const { data, error } = await supabase
+        .from('ai_models')
+        .update({
+          name: newModelName,
+          provider: newModelProvider,
+          description: newModelDescription,
+          capabilities: newModelCapabilities,
+          maxTokens: Number.parseInt(newModelContextLength),
+          costPerToken: Number.parseFloat(newModelCost),
+          configuration: {
+            strengths: newModelStrengths,
+            apiEndpoint: newModelEndpoint || selectedModel.apiEndpoint,
+          }
+        })
+        .eq('id', selectedModel.id)
+        .select()
+        .single()
+
+      if (error) {
+        throw error
+      }
+
+      // Update local state
       const updatedModels = aiModels.map((model) => {
         if (model.id === selectedModel.id) {
           return {
@@ -583,15 +671,33 @@ export default function AISettingsPage() {
         title: "AI Model updated",
         description: "Your AI model has been updated successfully",
       })
-    }, 1000)
+    } catch (error) {
+      console.error('Error updating AI model:', error)
+      setIsLoading(false)
+      toast({
+        title: "Error",
+        description: "Failed to update AI model. Please try again.",
+        variant: "destructive",
+      })
+    }
   }
 
   // Handle toggling a model's enabled status
-  const handleToggleModelEnabled = (modelId: string, newStatus: boolean) => {
+  const handleToggleModelEnabled = async (modelId: string, newStatus: boolean) => {
     setIsLoading(true)
 
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      // Update in Supabase
+      const { error } = await supabase
+        .from('ai_models')
+        .update({ isActive: newStatus })
+        .eq('id', modelId)
+
+      if (error) {
+        throw error
+      }
+
+      // Update local state
       const updatedModels = aiModels.map((model) => {
         if (model.id === modelId) {
           return {
@@ -609,7 +715,15 @@ export default function AISettingsPage() {
         title: newStatus ? "Model enabled" : "Model disabled",
         description: `The AI model has been ${newStatus ? "enabled" : "disabled"} successfully`,
       })
-    }, 500)
+    } catch (error) {
+      console.error('Error toggling model status:', error)
+      setIsLoading(false)
+      toast({
+        title: "Error",
+        description: "Failed to update model status. Please try again.",
+        variant: "destructive",
+      })
+    }
   }
 
   // Reset model form
@@ -625,40 +739,70 @@ export default function AISettingsPage() {
   }
 
   // Handle testing an API key
-  const handleTestApiKey = (key: ApiKey) => {
+  const handleTestApiKey = async (key: ApiKey) => {
     setTestingKey(key.id)
 
-    // Simulate API call
-    setTimeout(() => {
-      // Randomly succeed or fail for demo purposes
-      const success = Math.random() > 0.3
-
-      setTestResult({
-        success,
-        message: success
-          ? `API key validated successfully with ${key.provider}`
-          : `Failed to validate API key: ${getRandomErrorMessage(key.provider)}`,
-        response: success ? getRandomSuccessResponse(key.provider) : undefined,
+    try {
+      // Validate API key with real API call
+      const response = await fetch('/api/ai/validate-key', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          provider: key.provider,
+          apiKey: key.key,
+        }),
       })
 
+      const result = await response.json()
+
+      setTestResult({
+        success: result.success,
+        message: result.success
+          ? `API key validated successfully with ${key.provider}`
+          : `Failed to validate API key: ${result.error || 'Unknown error'}`,
+        response: result.response,
+      })
+
+      if (result.success) {
+        // Update last used date and usage count in database
+        const { error } = await supabase
+          .from('api_keys')
+          .update({
+            lastUsed: new Date().toISOString(),
+            usageCount: (key.usageCount || 0) + 1,
+          })
+          .eq('id', key.id)
+
+        if (error) {
+          console.error('Error updating API key usage:', error)
+        } else {
+          // Update local state
+          const updatedKeys = apiKeys.map((k) => {
+            if (k.id === key.id) {
+              return {
+                ...k,
+                lastUsed: new Date().toISOString(),
+                usageCount: (k.usageCount || 0) + 1,
+              }
+            }
+            return k
+          })
+          setApiKeys(updatedKeys)
+        }
+      }
+    } catch (error) {
+      console.error('Error testing API key:', error)
+      setTestResult({
+        success: false,
+        message: `Network error while testing ${key.provider} API key`,
+        response: undefined,
+      })
+    } finally {
       setTestingKey(null)
       setShowTestResultDialog(true)
-
-      if (success) {
-        // Update last used date and usage count
-        const updatedKeys = apiKeys.map((k) => {
-          if (k.id === key.id) {
-            return {
-              ...k,
-              lastUsed: new Date(),
-              usageCount: k.usageCount + 1,
-            }
-          }
-          return k
-        })
-        setApiKeys(updatedKeys)
-      }
-    }, 2000)
+    }
   }
 
   // Get a random error message for demo
@@ -721,15 +865,16 @@ export default function AISettingsPage() {
   }
 
   // Format date
-  const formatDate = (date: Date | null) => {
+  const formatDate = (date: Date | string | null) => {
     if (!date) return "Never"
+    const dateObj = typeof date === 'string' ? new Date(date) : date
     return new Intl.DateTimeFormat("en-US", {
       year: "numeric",
       month: "short",
       day: "numeric",
       hour: "2-digit",
       minute: "2-digit",
-    }).format(date)
+    }).format(dateObj)
   }
 
   // Get provider color
@@ -762,7 +907,7 @@ export default function AISettingsPage() {
       case "mistral":
         return <Cpu className="h-4 w-4" />
       case "cohere":
-        return <Database className="h-4 w-4" />
+        return <Server className="h-4 w-4" />
       default:
         return <Settings className="h-4 w-4" />
     }
@@ -1107,7 +1252,7 @@ export default function AISettingsPage() {
                             <div className="mt-3 flex flex-col sm:flex-row sm:items-center gap-3">
                               <div className="flex-1 flex items-center gap-2 bg-muted/50 rounded-md px-3 py-2">
                                 <div className="font-mono text-sm truncate flex-1">
-                                  {showApiKeys ? key.key : "•".repeat(Math.min(24, key.key.length))}
+                                  {showApiKeys ? (key.key || "•••••••••••••••••••••••") : "•".repeat(Math.min(24, (key.key || "•••••••••••••••••••••••").length))}
                                 </div>
                                 <Button
                                   variant="ghost"
@@ -1121,7 +1266,8 @@ export default function AISettingsPage() {
                                   variant="ghost"
                                   size="icon"
                                   className="h-8 w-8"
-                                  onClick={() => copyToClipboard(key.key)}
+                                  onClick={() => copyToClipboard(key.key || "")}
+                                  disabled={!key.key}
                                 >
                                   <Copy className="h-4 w-4" />
                                 </Button>
@@ -1159,18 +1305,16 @@ export default function AISettingsPage() {
                                         <p className="text-xs text-muted-foreground">Expires</p>
                                         <p className="text-sm">{key.expiresAt ? formatDate(key.expiresAt) : "Never"}</p>
                                       </div>
-                                    </div>
-
-                                    <div className="space-y-2">
-                                      <div className="flex items-center justify-between">
-                                        <p className="text-xs text-muted-foreground">Usage</p>
-                                        <p className="text-xs">
-                                          {key.usageCount} / {key.usageLimit || "∞"}
-                                        </p>
-                                      </div>
-                                      {key.usageLimit && (
-                                        <Progress value={(key.usageCount / key.usageLimit) * 100} className="h-1.5" />
-                                      )}
+                                    </div>                                      <div className="space-y-2">
+                                        <div className="flex items-center justify-between">
+                                          <p className="text-xs text-muted-foreground">Usage</p>
+                                          <p className="text-xs">
+                                            {key.usageCount} / {key.rateLimit || "∞"}
+                                          </p>
+                                        </div>
+                                        {key.rateLimit && (
+                                          <Progress value={(key.usageCount / key.rateLimit) * 100} className="h-1.5" />
+                                        )}
                                     </div>
 
                                     <div className="flex flex-wrap gap-2">
@@ -1186,8 +1330,8 @@ export default function AISettingsPage() {
                                         onClick={() => {
                                           setSelectedKey(key)
                                           setNewKeyName(key.name)
-                                          setNewKeyProvider(key.provider)
-                                          setNewKeyUsageLimit(key.usageLimit ? key.usageLimit.toString() : "")
+                                          setNewKeyProvider(key.provider as "openai" | "gemini" | "anthropic" | "mistral" | "cohere" | "custom")
+                                          setNewKeyUsageLimit(key.rateLimit ? key.rateLimit.toString() : "")
                                           setShowEditKeyDialog(true)
                                         }}
                                       >
@@ -1315,7 +1459,7 @@ export default function AISettingsPage() {
                           key={model.id}
                           variants={itemVariants}
                           className={`rounded-lg border ${
-                            model.isEnabled ? "" : "bg-gray-50 dark:bg-gray-900/50 opacity-75"
+                            model.isActive ? "" : "bg-gray-50 dark:bg-gray-900/50 opacity-75"
                           } hover:shadow-md transition-all duration-300`}
                         >
                           <div className="p-4">
@@ -1331,7 +1475,7 @@ export default function AISettingsPage() {
                                 <h3 className="font-medium">{model.name}</h3>
                               </div>
                               <Switch
-                                checked={model.isEnabled}
+                                checked={model.isActive}
                                 onCheckedChange={(checked) => handleToggleModelEnabled(model.id, checked)}
                               />
                             </div>
@@ -1339,7 +1483,7 @@ export default function AISettingsPage() {
                             <p className="text-sm text-muted-foreground mt-2 line-clamp-2">{model.description}</p>
 
                             <div className="flex flex-wrap gap-2 mt-3">
-                              {model.capabilities.map((capability) => (
+                              {model.capabilities?.map((capability) => (
                                 <div key={capability}>{getCapabilityBadge(capability)}</div>
                               ))}
                             </div>
@@ -1348,12 +1492,12 @@ export default function AISettingsPage() {
                               <div>
                                 <span className="block">Context Length</span>
                                 <span className="font-medium text-foreground">
-                                  {formatNumber(model.contextLength)} tokens
+                                  {formatNumber(model.maxTokens || 0)} tokens
                                 </span>
                               </div>
                               <div>
                                 <span className="block">Cost per 1K tokens</span>
-                                <span className="font-medium text-foreground">${model.costPer1kTokens.toFixed(4)}</span>
+                                <span className="font-medium text-foreground">${model.costPerToken?.toFixed(6)}</span>
                               </div>
                             </div>
 
@@ -1362,7 +1506,7 @@ export default function AISettingsPage() {
                                 <AccordionTrigger className="py-2 text-sm">Strengths & Capabilities</AccordionTrigger>
                                 <AccordionContent>
                                   <ul className="text-xs space-y-1 text-muted-foreground">
-                                    {model.strengths.map((strength, i) => (
+                                    {model.strengths?.map((strength, i) => (
                                       <li key={i} className="flex items-start gap-2">
                                         <Check className="h-3 w-3 mt-0.5 text-green-500" />
                                         <span>{strength}</span>
@@ -1381,12 +1525,12 @@ export default function AISettingsPage() {
                                 onClick={() => {
                                   setSelectedModel(model)
                                   setNewModelName(model.name)
-                                  setNewModelProvider(model.provider)
-                                  setNewModelDescription(model.description)
-                                  setNewModelCapabilities(model.capabilities)
-                                  setNewModelContextLength(model.contextLength.toString())
-                                  setNewModelCost(model.costPer1kTokens.toString())
-                                  setNewModelStrengths(model.strengths)
+                                  setNewModelProvider(model.provider as any)
+                                  setNewModelDescription(model.description || "")
+                                  setNewModelCapabilities(model.capabilities || ["text"])
+                                  setNewModelContextLength(model.maxTokens?.toString() || "4096")
+                                  setNewModelCost(model.costPerToken?.toString() || "0.001")
+                                  setNewModelStrengths(model.strengths || [])
                                   setNewModelEndpoint(model.apiEndpoint || "")
                                   setShowEditModelDialog(true)
                                 }}

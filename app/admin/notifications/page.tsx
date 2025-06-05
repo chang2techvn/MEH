@@ -32,112 +32,83 @@ import {
   BarChart3,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Switch } from "@/components/ui/switch"
-import { Label } from "@/components/ui/label"
-import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Calendar } from "@/components/ui/calendar"
-import { Progress } from "@/components/ui/progress"
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-import { Checkbox } from "@/components/ui/checkbox"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { supabase, dbHelpers } from "@/lib/supabase"
+import type { Database } from "@/types/database.types"
 import { toast } from "@/hooks/use-toast"
 
-// Mock data for users
-const mockUsers = [
-  {
-    id: 1,
-    name: "Alex Johnson",
-    email: "alex@example.com",
-    role: "Student",
-    lastActive: "2 hours ago",
-    avatar: "/placeholder.svg?height=40&width=40",
-  },
-  {
-    id: 2,
-    name: "Sarah Williams",
-    email: "sarah@example.com",
-    role: "Student",
-    lastActive: "5 mins ago",
-    avatar: "/placeholder.svg?height=40&width=40",
-  },
-  {
-    id: 3,
-    name: "Michael Brown",
-    email: "michael@example.com",
-    role: "Teacher",
-    lastActive: "1 day ago",
-    avatar: "/placeholder.svg?height=40&width=40",
-  },
-  {
-    id: 4,
-    name: "Emily Davis",
-    email: "emily@example.com",
-    role: "Student",
-    lastActive: "Just now",
-    avatar: "/placeholder.svg?height=40&width=40",
-  },
-  {
-    id: 5,
-    name: "David Wilson",
-    email: "david@example.com",
-    role: "Student",
-    lastActive: "3 days ago",
-    avatar: "/placeholder.svg?height=40&width=40",
-  },
-  {
-    id: 6,
-    name: "Jessica Taylor",
-    email: "jessica@example.com",
-    role: "Teacher",
-    lastActive: "1 hour ago",
-    avatar: "/placeholder.svg?height=40&width=40",
-  },
-  {
-    id: 7,
-    name: "Ryan Martinez",
-    email: "ryan@example.com",
-    role: "Student",
-    lastActive: "2 days ago",
-    avatar: "/placeholder.svg?height=40&width=40",
-  },
-  {
-    id: 8,
-    name: "Olivia Anderson",
-    email: "olivia@example.com",
-    role: "Student",
-    lastActive: "4 hours ago",
-    avatar: "/placeholder.svg?height=40&width=40",
-  },
-]
+// UI Components
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from "@/components/ui/select"
+import { Switch } from "@/components/ui/switch"
+import { Badge } from "@/components/ui/badge"
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
+import { Progress } from "@/components/ui/progress"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Checkbox } from "@/components/ui/checkbox"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Calendar } from "@/components/ui/calendar"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
-// Mock data for message templates
-const messageTemplates = [
+// Types from Supabase schema
+type UserRow = Database['public']['Tables']['users']['Row']
+type NotificationRow = Database['public']['Tables']['notifications']['Row']
+
+// Interface for users
+interface User {
+  id: string
+  name: string
+  email: string
+  role: string
+  last_active: string
+  avatar?: string
+}
+
+// Interface for notification templates
+interface NotificationTemplate {
+  id: number
+  name: string
+  subject: string
+  content: string
+}
+
+// Interface for scheduled messages
+interface ScheduledMessage {
+  id: number
+  title: string
+  type: string
+  recipients: number
+  date: Date
+  status: string
+  recurring: string
+}
+
+// Interface for notification stats
+interface NotificationStats {
+  totalSent: number
+  openRate: number
+  clickRate: number
+  deliveryRate: number
+}
+
+// Interface for recent activity
+interface RecentActivity {
+  id: number
+  title: string
+  type: string
+  recipients: number
+  sentAt: string
+  openRate: number
+}
+
+// Message templates (these could come from a templates table later)
+const messageTemplates: NotificationTemplate[] = [
   {
     id: 1,
     name: "New Event Announcement",
@@ -159,8 +130,8 @@ const messageTemplates = [
   },
 ]
 
-// Mock data for scheduled messages
-const initialScheduledMessages = [
+// Sample scheduled messages (these would come from a scheduled_notifications table)
+const initialScheduledMessages: ScheduledMessage[] = [
   {
     id: 1,
     title: "Weekly Newsletter",
@@ -199,13 +170,33 @@ const initialScheduledMessages = [
   },
 ]
 
-// Mock data for notification stats
-const notificationStats = {
-  totalSent: 12458,
-  openRate: 68,
-  clickRate: 24,
-  deliveryRate: 98,
-}
+// Sample recent activity (this would come from notification_history table)
+const recentActivity: RecentActivity[] = [
+  {
+    id: 1,
+    title: "Course Update Notification",
+    type: "email",
+    recipients: 1248,
+    sentAt: "2 hours ago",
+    openRate: 42,
+  },
+  {
+    id: 2,
+    title: "Weekend Challenge Reminder",
+    type: "zalo",
+    recipients: 876,
+    sentAt: "Yesterday",
+    openRate: 68,
+  },
+  {
+    id: 3,
+    title: "New Learning Resources",
+    type: "email",
+    recipients: 1024,
+    sentAt: "3 days ago",
+    openRate: 51,
+  },
+]
 
 // Helper function to get future dates based on recurring pattern
 const getFutureDates = (baseDate: Date, recurring: string, count = 3) => {
@@ -242,38 +233,11 @@ const aiSuggestionPrompts = [
   "Write a message encouraging users to practice daily",
 ]
 
-// Recent notification activity
-const recentActivity = [
-  {
-    id: 1,
-    title: "Course Update Notification",
-    type: "email",
-    recipients: 1248,
-    sentAt: "2 hours ago",
-    openRate: 42,
-  },
-  {
-    id: 2,
-    title: "Weekend Challenge Reminder",
-    type: "zalo",
-    recipients: 876,
-    sentAt: "Yesterday",
-    openRate: 68,
-  },
-  {
-    id: 3,
-    title: "New Learning Resources",
-    type: "email",
-    recipients: 1024,
-    sentAt: "3 days ago",
-    openRate: 51,
-  },
-]
-
 export default function NotificationsPage() {
   const [activeTab, setActiveTab] = useState("overview")
   const [messageType, setMessageType] = useState("email")
-  const [selectedUsers, setSelectedUsers] = useState<number[]>([])
+  const [selectedUsers, setSelectedUsers] = useState<string[]>([])
+  const [users, setUsers] = useState<User[]>([])
   const [selectAll, setSelectAll] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [date, setDate] = useState<Date | undefined>(new Date())
@@ -299,14 +263,75 @@ export default function NotificationsPage() {
   const [aiSuggestions, setAiSuggestions] = useState<string[]>([])
   const [isGeneratingSuggestions, setIsGeneratingSuggestions] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [notificationStats, setNotificationStats] = useState<NotificationStats>({
+    totalSent: 0,
+    openRate: 0,
+    clickRate: 0,
+    deliveryRate: 0,
+  })
   const [progressValues, setProgressValues] = useState({
     openRate: 0,
     clickRate: 0,
     deliveryRate: 0,
   })
 
+  // Load data on component mount
+  useEffect(() => {
+    loadUsers()
+    loadNotificationStats()
+  }, [])
+
+  const loadUsers = async () => {
+    try {
+      setIsLoading(true)
+      const userData = await dbHelpers.getAllUsers()
+      
+      // Transform Supabase user data to User interface
+      const transformedUsers: User[] = userData.map((user: any) => ({
+        id: user.id,
+        name: user.name || 'Unknown User',
+        email: user.email || '',
+        role: user.role || 'Student',
+        last_active: user.last_active || new Date().toISOString(),
+        avatar: user.avatar || undefined
+      }))
+      
+      setUsers(transformedUsers)
+    } catch (error) {
+      console.error('Error loading users:', error)
+      toast({
+        title: "Error",
+        description: "Failed to load users",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const loadNotificationStats = async () => {
+    try {
+      const stats = await dbHelpers.getNotificationStats()
+      
+      setNotificationStats({
+        totalSent: stats.total || 0,
+        openRate: 68, // Sample data - would need tracking
+        clickRate: 24, // Sample data - would need tracking
+        deliveryRate: 98, // Sample data - would need tracking
+      })
+      
+      setProgressValues({
+        openRate: 68,
+        clickRate: 24,
+        deliveryRate: 98,
+      })
+    } catch (error) {
+      console.error('Error loading notification stats:', error)
+    }
+  }
+
   // Filter users based on search query
-  const filteredUsers = mockUsers.filter(
+  const filteredUsers = users.filter(
     (user) =>
       user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -324,7 +349,7 @@ export default function NotificationsPage() {
   }
 
   // Handle individual user selection
-  const handleSelectUser = (userId: number) => {
+  const handleSelectUser = (userId: string) => {
     if (selectedUsers.includes(userId)) {
       setSelectedUsers(selectedUsers.filter((id) => id !== userId))
       setSelectAll(false)
@@ -391,47 +416,86 @@ export default function NotificationsPage() {
   }
 
   // Handle send message
-  const handleSendMessage = () => {
-    if (selectedUsers.length === 0) return
+  const handleSendMessage = async () => {
+    if (selectedUsers.length === 0) {
+      toast({
+        title: "No recipients selected",
+        description: "Please select at least one user to send the notification",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (!messageSubject.trim() || !messageContent.trim()) {
+      toast({
+        title: "Missing content",
+        description: "Please provide both subject and message content",
+        variant: "destructive",
+      })
+      return
+    }
 
     setIsSending(true)
 
-    // Simulate sending delay
-    setTimeout(() => {
-      setIsSending(false)
-      setShowSuccess(true)
+    try {
+      // Send notification using Supabase
+      const result = await dbHelpers.sendNotification({
+        userIds: selectedUsers,
+        title: messageSubject,
+        message: messageContent,
+        type: messageType,
+      })
 
-      // If scheduling, add to scheduled messages
-      if (date && activeTab === "compose") {
-        const [hours, minutes] = selectedTime.split(":").map(Number)
-        const scheduleDate = new Date(date)
-        scheduleDate.setHours(hours, minutes)
+      if (result.success) {
+        setShowSuccess(true)
+        toast({
+          title: "Notification sent successfully",
+          description: `Message sent to ${selectedUsers.length} recipients`,
+        })
 
-        const newScheduledMessage = {
-          id: scheduledMessages.length + 1,
-          title: messageSubject || "Untitled Message",
-          type: messageType,
-          recipients: selectedUsers.length,
-          date: scheduleDate,
-          status: "scheduled",
-          recurring: selectedScheduleType,
+        // If scheduling, add to scheduled messages
+        if (date && activeTab === "compose") {
+          const [hours, minutes] = selectedTime.split(":").map(Number)
+          const scheduleDate = new Date(date)
+          scheduleDate.setHours(hours, minutes)
+
+          const newScheduledMessage = {
+            id: scheduledMessages.length + 1,
+            title: messageSubject || "Untitled Message",
+            type: messageType,
+            recipients: selectedUsers.length,
+            date: scheduleDate,
+            status: "scheduled",
+            recurring: selectedScheduleType,
+          }
+
+          setScheduledMessages([...scheduledMessages, newScheduledMessage])
         }
 
-        setScheduledMessages([...scheduledMessages, newScheduledMessage])
+        // Reset form after success
+        setTimeout(() => {
+          setShowSuccess(false)
+          if (activeTab === "compose") {
+            setMessageSubject("")
+            setMessageContent("")
+            setSelectedUsers([])
+            setSelectAll(false)
+            setSelectedTemplate(null)
+          }
+        }, 3000)
+      } else {
+        throw new Error(result.error?.message || 'Failed to send notification')
       }
-
-      // Reset form after success
-      setTimeout(() => {
-        setShowSuccess(false)
-        if (activeTab === "compose") {
-          setMessageSubject("")
-          setMessageContent("")
-          setSelectedUsers([])
-          setSelectAll(false)
-          setSelectedTemplate(null)
-        }
-      }, 3000)
-    }, 2000)
+    } catch (error) {
+      console.error('Error sending notification:', error)
+      toast({
+        title: "Error",
+        description: "Failed to send notification. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSending(false)
+    }
   }
 
   // Handle delete scheduled message
@@ -474,19 +538,28 @@ export default function NotificationsPage() {
       deliveryRate: 0,
     })
 
-    // Simulate API call
-    setTimeout(() => {
-      setProgressValues({
-        openRate: notificationStats.openRate,
-        clickRate: notificationStats.clickRate,
-        deliveryRate: notificationStats.deliveryRate,
+    // Load fresh data
+    Promise.all([loadUsers(), loadNotificationStats()])
+      .then(() => {
+        setProgressValues({
+          openRate: notificationStats.openRate,
+          clickRate: notificationStats.clickRate,
+          deliveryRate: notificationStats.deliveryRate,
+        })
+        setIsLoading(false)
+        toast({
+          title: "Dashboard refreshed",
+          description: "Latest notification data has been loaded",
+        })
       })
-      setIsLoading(false)
-      toast({
-        title: "Dashboard refreshed",
-        description: "Latest notification data has been loaded",
+      .catch(() => {
+        setIsLoading(false)
+        toast({
+          title: "Error",
+          description: "Failed to refresh data",
+          variant: "destructive",
+        })
       })
-    }, 1500)
   }
 
   // Effect to generate AI suggestions when content changes
@@ -1035,7 +1108,7 @@ export default function NotificationsPage() {
                             <ScrollArea className="h-[300px] rounded-md border p-2">
                               <div className="space-y-2">
                                 {selectedUsers.map((userId) => {
-                                  const user = mockUsers.find((u) => u.id === userId)
+                                  const user = users.find((u) => u.id === userId)
                                   if (!user) return null
 
                                   return (
@@ -1420,7 +1493,7 @@ export default function NotificationsPage() {
                                   {aiSuggestions.map((suggestion, index) => (
                                     <li
                                       key={index}
-                                      className="text-xs text-purple-700 dark:text-purple-400 flex items-start"
+                                      className="text-[10px] p-1 rounded truncate flex items-start"
                                     >
                                       <Check className="h-3 w-3 mr-1 mt-0.5 flex-shrink-0" />
                                       {suggestion}
@@ -2008,7 +2081,7 @@ export default function NotificationsPage() {
                         <TableCell>
                           <Badge variant={user.role === "Teacher" ? "outline" : "secondary"}>{user.role}</Badge>
                         </TableCell>
-                        <TableCell className="text-muted-foreground">{user.lastActive}</TableCell>
+                        <TableCell className="text-muted-foreground">{user.last_active}</TableCell>
                       </TableRow>
                     ))
                   ) : (

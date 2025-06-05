@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import PageHeader from "@/components/page-header"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -45,6 +45,8 @@ import {
   BarChart,
   Info,
 } from "lucide-react"
+
+import { dbHelpers } from "@/lib/supabase"
 
 // Types
 type SafetyRule = {
@@ -255,10 +257,10 @@ const mockSafetyMetrics: SafetyMetric[] = [
 ]
 
 export default function AISafetyPage() {
-  const [safetyRules, setSafetyRules] = useState<SafetyRule[]>(mockSafetyRules)
-  const [flaggedContent, setFlaggedContent] = useState<FlaggedContent[]>(mockFlaggedContent)
-  const [bannedTerms, setBannedTerms] = useState<BannedTerm[]>(mockBannedTerms)
-  const [safetyMetrics, setSafetyMetrics] = useState<SafetyMetric[]>(mockSafetyMetrics)
+  const [safetyRules, setSafetyRules] = useState<SafetyRule[]>([])
+  const [flaggedContent, setFlaggedContent] = useState<FlaggedContent[]>([])
+  const [bannedTerms, setBannedTerms] = useState<BannedTerm[]>([])
+  const [safetyMetrics, setSafetyMetrics] = useState<SafetyMetric[]>([])
   const [activeTab, setActiveTab] = useState("overview")
   const [searchQuery, setSearchQuery] = useState("")
   const [isTestDialogOpen, setIsTestDialogOpen] = useState(false)
@@ -266,6 +268,32 @@ export default function AISafetyPage() {
   const [testResults, setTestResults] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [showSuccessAlert, setShowSuccessAlert] = useState(false)
+
+  // Load data from database on component mount
+  useEffect(() => {
+    loadSafetyData()
+  }, [])
+
+  const loadSafetyData = async () => {
+    try {
+      setIsLoading(true)
+      const [rulesData, flaggedData, bannedData, metricsData] = await Promise.all([
+        dbHelpers.getAISafetyRules(),
+        dbHelpers.getFlaggedContent(),
+        dbHelpers.getBannedTerms(),
+        dbHelpers.getAISafetyMetrics(),
+      ])
+      
+      setSafetyRules(rulesData)
+      setFlaggedContent(flaggedData)
+      setBannedTerms(bannedData)
+      setSafetyMetrics(metricsData)
+    } catch (error) {
+      console.error('Error loading safety data:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   // Filter flagged content based on search query
   const filteredFlaggedContent = flaggedContent.filter(
@@ -276,59 +304,82 @@ export default function AISafetyPage() {
   )
 
   // Toggle rule enabled state
-  const toggleRuleEnabled = (ruleId: string) => {
-    setSafetyRules(safetyRules.map((rule) => (rule.id === ruleId ? { ...rule, enabled: !rule.enabled } : rule)))
+  const toggleRuleEnabled = async (ruleId: string) => {
+    try {
+      const rule = safetyRules.find(r => r.id === ruleId)
+      if (rule) {
+        const updatedRule = { ...rule, enabled: !rule.enabled }
+        await dbHelpers.updateAISafetyRule(ruleId, updatedRule)
+        setSafetyRules(safetyRules.map((r) => (r.id === ruleId ? updatedRule : r)))
+      }
+    } catch (error) {
+      console.error('Error toggling rule:', error)
+    }
   }
 
   // Update rule threshold
-  const updateRuleThreshold = (ruleId: string, value: number[]) => {
-    setSafetyRules(safetyRules.map((rule) => (rule.id === ruleId ? { ...rule, threshold: value[0] } : rule)))
+  const updateRuleThreshold = async (ruleId: string, value: number[]) => {
+    try {
+      const rule = safetyRules.find(r => r.id === ruleId)
+      if (rule) {
+        const updatedRule = { ...rule, threshold: value[0] }
+        await dbHelpers.updateAISafetyRule(ruleId, updatedRule)
+        setSafetyRules(safetyRules.map((r) => (r.id === ruleId ? updatedRule : r)))
+      }
+    } catch (error) {
+      console.error('Error updating rule threshold:', error)
+    }
   }
 
   // Add new banned term
-  const addBannedTerm = (term: string, category: string, replacement: string) => {
-    const newTerm: BannedTerm = {
-      id: `term-${bannedTerms.length + 1}`,
-      term,
-      category,
-      replacement,
-      addedBy: "Admin",
-      addedAt: new Date().toISOString(),
+  const addBannedTerm = async (term: string, category: string, replacement: string) => {
+    try {
+      const result = await dbHelpers.createBannedTerm({ term, category, replacement })
+      if (result.data) {
+        setBannedTerms([...bannedTerms, result.data as BannedTerm])
+      }
+    } catch (error) {
+      console.error('Error adding banned term:', error)
     }
-    setBannedTerms([...bannedTerms, newTerm])
   }
 
   // Remove banned term
-  const removeBannedTerm = (termId: string) => {
-    setBannedTerms(bannedTerms.filter((term) => term.id !== termId))
+  const removeBannedTerm = async (termId: string) => {
+    try {
+      await dbHelpers.deleteBannedTerm(termId)
+      setBannedTerms(bannedTerms.filter((term) => term.id !== termId))
+    } catch (error) {
+      console.error('Error removing banned term:', error)
+    }
   }
 
   // Update flagged content status
-  const updateContentStatus = (contentId: string, status: "pending" | "reviewed" | "approved" | "rejected") => {
-    setFlaggedContent(flaggedContent.map((item) => (item.id === contentId ? { ...item, status } : item)))
+  const updateContentStatus = async (contentId: string, status: "pending" | "reviewed" | "approved" | "rejected") => {
+    try {
+      await dbHelpers.updateFlaggedContentStatus(contentId, status)
+      setFlaggedContent(flaggedContent.map((item) => (item.id === contentId ? { ...item, status } : item)))
+    } catch (error) {
+      console.error('Error updating content status:', error)
+    }
   }
 
   // Test content against safety rules
-  const testContentSafety = () => {
+  const testContentSafety = async () => {
     setIsLoading(true)
 
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      // In a real implementation, this would call your AI safety API
+      // For now, simulate the test with actual safety rules from the database
+      await new Promise(resolve => setTimeout(resolve, 1500))
+      
       const mockTestResults = {
         overallSafetyScore: 78,
         flagged: true,
-        triggeredRules: [
-          {
-            ruleName: "Inappropriate Language Filter",
-            confidence: 82,
-            severity: "medium",
-          },
-          {
-            ruleName: "Personal Information Detection",
-            confidence: 65,
-            severity: "critical",
-          },
-        ],
+        triggeredRules: safetyRules.filter(rule => rule.enabled && Math.random() > 0.5).slice(0, 2).map(rule => ({
+          ruleName: rule.name,
+          confidence: Math.floor(Math.random() * 40) + 60,
+          severity: rule.severity,
+        })),
         suggestedActions: [
           "Review and modify content to remove inappropriate language",
           "Remove or redact any personal information",
@@ -337,14 +388,26 @@ export default function AISafetyPage() {
       }
 
       setTestResults(mockTestResults)
+    } catch (error) {
+      console.error('Error testing content safety:', error)
+    } finally {
       setIsLoading(false)
-    }, 1500)
+    }
   }
 
   // Save settings
-  const saveSettings = () => {
-    setShowSuccessAlert(true)
-    setTimeout(() => setShowSuccessAlert(false), 3000)
+  const saveSettings = async () => {
+    try {
+      setIsLoading(true)
+      // In a real implementation, you might want to batch save all changes
+      // For now, just show success since individual updates are already saved
+      setShowSuccessAlert(true)
+      setTimeout(() => setShowSuccessAlert(false), 3000)
+    } catch (error) {
+      console.error('Error saving settings:', error)
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   // Animation variants
