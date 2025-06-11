@@ -26,156 +26,75 @@ import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import SEOMeta from "@/components/seo-meta"
+import { dbHelpers } from "@/lib/supabase"
+import { useToast } from "@/hooks/use-toast"
 
 interface Group {
-  id: number
+  id: string
   name: string
   description: string
-  image: string
-  coverImage: string
-  members: number
-  privacy: "public" | "private"
-  category: "speaking" | "writing" | "grammar" | "vocabulary" | "pronunciation" | "exam-prep" | "general"
-  activity: "very-active" | "active" | "moderate" | "low"
-  joined: boolean
-  lastActive: string
+  avatar: string
+  memberCount: number
+  maxMembers?: number
+  isPublic: boolean
+  requiresApproval: boolean
+  tags: string[]
+  category: string
+  creator: {
+    id: string
+    name: string
+    avatar: string | null
+  }
+  createdAt: string
+  joined?: boolean
 }
 
 export default function GroupsPage() {
   const router = useRouter()
+  const { toast } = useToast()
   const [loading, setLoading] = useState(true)
   const [groups, setGroups] = useState<Group[]>([])
   const [activeTab, setActiveTab] = useState("discover")
   const [searchQuery, setSearchQuery] = useState("")
 
   useEffect(() => {
-    // Simulate loading data
-    const timer = setTimeout(() => {
-      setGroups(generateMockGroups())
-      setLoading(false)
-    }, 1000)
-
-    return () => clearTimeout(timer)
+    loadGroups()
   }, [])
 
-  const generateMockGroups = (): Group[] => {
-    return [
-      {
-        id: 1,
-        name: "Pronunciation Practice",
-        description:
-          "A community focused on improving English pronunciation through regular practice sessions, feedback, and specialized exercises.",
-        image: "/placeholder.svg?height=80&width=80",
-        coverImage: "/placeholder.svg?height=200&width=600",
-        members: 245,
-        privacy: "public",
-        category: "pronunciation",
-        activity: "very-active",
-        joined: true,
-        lastActive: "5 minutes ago",
-      },
-      {
-        id: 2,
-        name: "Business English",
-        description:
-          "Develop professional English skills for workplace communication, presentations, emails, and networking in international business contexts.",
-        image: "/placeholder.svg?height=80&width=80",
-        coverImage: "/placeholder.svg?height=200&width=600",
-        members: 189,
-        privacy: "public",
-        category: "general",
-        activity: "active",
-        joined: true,
-        lastActive: "2 hours ago",
-      },
-      {
-        id: 3,
-        name: "IELTS Preparation",
-        description:
-          "Dedicated to helping members prepare for all sections of the IELTS exam with practice materials, mock tests, and expert advice.",
-        image: "/placeholder.svg?height=80&width=80",
-        coverImage: "/placeholder.svg?height=200&width=600",
-        members: 312,
-        privacy: "private",
-        category: "exam-prep",
-        activity: "very-active",
-        joined: false,
-        lastActive: "1 day ago",
-      },
-      {
-        id: 4,
-        name: "Grammar Enthusiasts",
-        description:
-          "For learners who want to master English grammar rules, exceptions, and nuances through discussions and practice exercises.",
-        image: "/placeholder.svg?height=80&width=80",
-        coverImage: "/placeholder.svg?height=200&width=600",
-        members: 156,
-        privacy: "public",
-        category: "grammar",
-        activity: "moderate",
-        joined: false,
-        lastActive: "3 days ago",
-      },
-      {
-        id: 5,
-        name: "English Teachers",
-        description:
-          "A professional community for English teachers to share resources, teaching methodologies, and support each other.",
-        image: "/placeholder.svg?height=80&width=80",
-        coverImage: "/placeholder.svg?height=200&width=600",
-        members: 203,
-        privacy: "private",
-        category: "general",
-        activity: "active",
-        joined: false,
-        lastActive: "2 days ago",
-      },
-      {
-        id: 6,
-        name: "Creative Writing",
-        description:
-          "Explore creative writing in English through prompts, feedback sessions, and collaborative storytelling projects.",
-        image: "/placeholder.svg?height=80&width=80",
-        coverImage: "/placeholder.svg?height=200&width=600",
-        members: 178,
-        privacy: "public",
-        category: "writing",
-        activity: "active",
-        joined: true,
-        lastActive: "1 hour ago",
-      },
-      {
-        id: 7,
-        name: "Vocabulary Building",
-        description:
-          "Expand your English vocabulary through themed discussions, word games, and effective memorization techniques.",
-        image: "/placeholder.svg?height=80&width=80",
-        coverImage: "/placeholder.svg?height=200&width=600",
-        members: 225,
-        privacy: "public",
-        category: "vocabulary",
-        activity: "moderate",
-        joined: false,
-        lastActive: "5 days ago",
-      },
-      {
-        id: 8,
-        name: "Speaking Practice",
-        description:
-          "Regular conversation sessions for all levels to improve fluency, pronunciation, and confidence in speaking English.",
-        image: "/placeholder.svg?height=80&width=80",
-        coverImage: "/placeholder.svg?height=200&width=600",
-        members: 267,
-        privacy: "public",
-        category: "speaking",
-        activity: "very-active",
-        joined: false,
-        lastActive: "12 hours ago",
-      },
-    ]
-  }
+  const loadGroups = async () => {
+    try {      setLoading(true)
+      const groupsResult = await dbHelpers.getGroups(50)
+      const groupsData = groupsResult.data || []
+      
+      // Transform the data to match our interface
+      const transformedGroups: Group[] = groupsData.map(group => ({
+        id: group.id,
+        name: group.name,
+        description: group.description || '',
+        avatar: group.avatar || '/placeholder.svg?height=80&width=80',
+        memberCount: group.memberCount,
+        maxMembers: group.maxMembers,
+        isPublic: group.isPublic ?? true,
+        requiresApproval: group.requiresApproval,
+        tags: group.tags,
+        category: group.category || 'general',        creator: group.creator || { id: '', name: 'Unknown', avatar: null },
+        createdAt: group.createdAt || new Date().toISOString(),
+        joined: false // TODO: Check if current user is a member
+      }))
 
-  const handleJoinGroup = (groupId: number) => {
+      setGroups(transformedGroups)
+    } catch (error) {
+      console.error('Error loading groups:', error)
+      toast({
+        title: "Error loading groups",
+        description: "Unable to load groups. Please try again.",
+        variant: "destructive"
+      })
+    } finally {
+      setLoading(false)
+    }  }
+
+  const handleJoinGroup = (groupId: string) => {
     setGroups(groups.map((group) => (group.id === groupId ? { ...group, joined: !group.joined } : group)))
   }
 
@@ -268,8 +187,7 @@ export default function GroupsPage() {
       </div>
     </>
   )
-
-  function renderGroupsList(groups: Group[], isLoading: boolean, onJoinGroup: (id: number) => void) {
+  function renderGroupsList(groups: Group[], isLoading: boolean, onJoinGroup: (id: string) => void) {
     if (isLoading) {
       return Array(3)
         .fill(0)
@@ -293,16 +211,16 @@ export default function GroupsPage() {
   }
 }
 
-function GroupCard({ group, onJoinGroup }: { group: Group; onJoinGroup: (id: number) => void }) {
+function GroupCard({ group, onJoinGroup }: { group: Group; onJoinGroup: (id: string) => void }) {
   return (
     <Card className="overflow-hidden hover:shadow-md transition-shadow">
       <div className="relative h-32 sm:h-40 w-full overflow-hidden">
-        <Image src={group.coverImage || "/placeholder.svg"} alt={`${group.name} cover`} fill className="object-cover" />
+        <Image src={group.avatar || "/placeholder.svg"} alt={`${group.name} cover`} fill className="object-cover" />
         <div className="absolute inset-0 bg-gradient-to-b from-black/30 to-black/10"></div>
 
         <div className="absolute top-3 right-3 flex gap-2">
           <Badge variant="outline" className="bg-black/50 text-white border-0 backdrop-blur-sm">
-            {group.privacy === "public" ? (
+            {group.isPublic ? (
               <>
                 <Globe className="h-3 w-3 mr-1" /> Public
               </>
@@ -312,30 +230,6 @@ function GroupCard({ group, onJoinGroup }: { group: Group; onJoinGroup: (id: num
               </>
             )}
           </Badge>
-
-          <Badge
-            variant="outline"
-            className={`
-              bg-black/50 text-white border-0 backdrop-blur-sm
-              ${
-                group.activity === "very-active"
-                  ? "border-l-4 border-l-green-500"
-                  : group.activity === "active"
-                    ? "border-l-4 border-l-blue-500"
-                    : group.activity === "moderate"
-                      ? "border-l-4 border-l-yellow-500"
-                      : "border-l-4 border-l-gray-500"
-              }
-            `}
-          >
-            {group.activity === "very-active"
-              ? "Very Active"
-              : group.activity === "active"
-                ? "Active"
-                : group.activity === "moderate"
-                  ? "Moderate"
-                  : "Low Activity"}
-          </Badge>
         </div>
       </div>
 
@@ -343,7 +237,7 @@ function GroupCard({ group, onJoinGroup }: { group: Group; onJoinGroup: (id: num
         <div className="flex">
           <div className="relative -mt-12 sm:-mt-16 mr-4 rounded-xl overflow-hidden border-4 border-white dark:border-gray-800 bg-white dark:bg-gray-800">
             <Image
-              src={group.image || "/placeholder.svg"}
+              src={group.avatar || "/placeholder.svg"}
               alt={group.name}
               width={80}
               height={80}
@@ -357,7 +251,7 @@ function GroupCard({ group, onJoinGroup }: { group: Group; onJoinGroup: (id: num
                 <h3 className="text-lg font-semibold">{group.name}</h3>
                 <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
                   <Users className="h-3.5 w-3.5 mr-1" />
-                  <span>{group.members} members</span>
+                  <span>{group.memberCount} members</span>
                   <span className="mx-2">•</span>
                   <Badge variant="outline" className="text-xs font-normal">
                     {group.category.replace("-", " ").replace(/\b\w/g, (l) => l.toUpperCase())}
@@ -399,12 +293,14 @@ function GroupCard({ group, onJoinGroup }: { group: Group; onJoinGroup: (id: num
               </Avatar>
             ))}
             <div className="h-6 w-6 rounded-full bg-gray-100 dark:bg-gray-700 border-2 border-white dark:border-gray-800 flex items-center justify-center text-xs">
-              +{group.members - 3}
+              +{Math.max(0, group.memberCount - 3)}
             </div>
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-500 dark:text-gray-400">Active {group.lastActive}</span>
+            <span className="text-xs text-gray-500 dark:text-gray-400">
+              Created {new Date(group.createdAt).toLocaleDateString()}
+            </span>
 
             <Button
               size="sm"

@@ -42,11 +42,126 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Loader2 } from "lucide-react"
+import { dbHelpers } from "@/lib/supabase"
+
+// Type definitions for better type safety
+interface User {
+  id: string
+  name: string
+  email: string
+  avatar?: string
+  created_at: string
+  last_active?: string
+  is_active?: boolean
+  role?: string
+  points?: number
+  streak_days?: number
+  level?: number
+}
+
+interface Challenge {
+  id: string
+  title: string
+  category?: string
+  created_at: string
+}
+
+interface ChallengeSubmission {
+  id: string
+  created_at: string
+  ai_evaluation?: any
+  user?: User
+  challenge?: Challenge
+}
+
+interface ResourceType {
+  id: string
+  title: string
+  type: string
+  category?: string
+  views?: number
+  created_at: string
+}
+
+interface Message {
+  id: string
+  created_at: string
+  sender_id?: string
+  recipient_id?: string
+}
+
+interface Post {
+  id: string
+  title?: string
+  created_at: string
+  tags?: string[]
+}
+
+// Dashboard data interfaces
+interface DashboardData {
+  quickStats: {
+    totalUsers: number
+    activeUsers: number
+    totalChallenges: number
+    completedSubmissions: number
+    averageScore: number
+    newUsersThisMonth: number
+  }
+  recentActivities: Activity[]
+  popularResources: Resource[]
+  newUsers: NewUser[]
+  upcomingEvents: Event[]
+  progressMetrics: {
+    dailyActive: number
+    weeklyCompletion: number
+    monthlyGrowth: number
+    engagementRate: number
+  }
+}
+
+interface Activity {
+  id: string
+  user: string
+  action: string
+  target: string
+  time: string
+  avatar: string
+  type: 'challenge' | 'resource' | 'user' | 'system'
+}
+
+interface Resource {
+  id: string
+  title: string
+  type: string
+  views: number
+  completion: number
+  category: string
+  uploadedAt: string
+}
+
+interface NewUser {
+  id: string
+  name: string
+  level: string
+  joinedAgo: string
+  avatar: string
+}
+
+interface Event {
+  id: string
+  title: string
+  date: { month: string; day: string }
+  time: string
+  type: string
+  attendees: number
+  status: 'upcoming' | 'ongoing' | 'completed'
+}
 
 export default function AdminDashboardPage() {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState("overview")
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null)
   const [progressValues, setProgressValues] = useState({
     dailyActive: 0,
     weeklyCompletion: 0,
@@ -75,45 +190,205 @@ export default function AdminDashboardPage() {
   const [notificationMessage, setNotificationMessage] = useState("")
   const [notificationType, setNotificationType] = useState("all")
 
-  // Simulate loading data
+  // Load dashboard data from Supabase
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setProgressValues({
-        dailyActive: 68,
-        weeklyCompletion: 72,
-        monthlyGrowth: 84,
-        engagementRate: 76,
-      })
-    }, 500)
-
-    return () => clearTimeout(timer)
+    loadDashboardData()
   }, [])
 
-  const refreshData = () => {
-    setIsLoading(true)
+  const loadDashboardData = async () => {    try {
+      setIsLoading(true)
+      
+      // Load data in parallel for better performance
+      const [
+        usersResult,
+        challengesResult,
+        submissionsResult,
+        resourcesResult,
+        messagesResult,
+        postsResult
+      ] = await Promise.all([
+        dbHelpers.getUsers(),
+        dbHelpers.getChallenges(),
+        dbHelpers.getChallengeSubmissions(),
+        dbHelpers.getResources(),
+        dbHelpers.getMessages(),
+        dbHelpers.getPosts()
+      ])
 
-    // Reset progress values to create animation effect
-    setProgressValues({
-      dailyActive: 0,
-      weeklyCompletion: 0,
-      monthlyGrowth: 0,
-      engagementRate: 0,
-    })
+      const users = usersResult.data || []
+      const challenges = challengesResult || []
+      const submissions = submissionsResult || []
+      const resources = resourcesResult || []
+      const messages = messagesResult.data || []
+      const posts = postsResult.data || []
 
-    // Simulate API call
-    setTimeout(() => {
-      setProgressValues({
-        dailyActive: 68,
-        weeklyCompletion: 72,
-        monthlyGrowth: 84,
-        engagementRate: 76,
-      })
-      setIsLoading(false)
+      // Calculate metrics
+      const now = new Date()
+      const oneMonthAgo = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate())
+      const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+      const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+      const newUsersThisMonth = users.filter((user) =>
+        user.created_at && new Date(user.created_at) >= oneMonthAgo
+      ).length
+
+      const activeUsers = users.filter((user) => 
+        user.last_active && new Date(user.last_active) >= oneWeekAgo
+      ).length
+
+      const completedSubmissions = submissions.filter((submission) => 
+        submission.ai_evaluation && submission.ai_evaluation !== null
+      ).length
+
+      const avgScore = submissions.length > 0 
+        ? Math.round(submissions.reduce((acc: number, sub) => {
+            const evaluation = sub.ai_evaluation as any
+            return acc + (evaluation?.score || 0)
+          }, 0) / submissions.length)        : 0
+
+      // Recent activities from various sources
+      const recentActivities: Activity[] = [
+        ...submissions.slice(0, 3).map((sub) => ({
+          id: sub.id,
+          user: 'Anonymous',
+          avatar: '/placeholder.svg?height=40&width=40',
+          action: 'completed challenge',
+          target: sub.challenge?.title || 'Challenge',
+          time: formatTimeAgo(sub.created_at || new Date().toISOString()),
+          type: 'challenge' as const
+        })),
+        ...users.slice(0, 2).filter((user) => 
+          user.created_at && new Date(user.created_at) >= oneWeekAgo
+        ).map((user) => ({
+          id: user.id,
+          user: user.name,
+          avatar: user.avatar || '/placeholder.svg?height=40&width=40',
+          action: 'joined platform',
+          target: 'Community',
+          time: formatTimeAgo(user.created_at || new Date().toISOString()),
+          type: 'user' as const
+        }))
+      ]      // Popular resources based on views and downloads
+      const popularResources: Resource[] = resources
+        .sort((a, b) => (b.views || 0) - (a.views || 0))
+        .slice(0, 5)
+        .map((resource) => ({
+          id: resource.id,
+          title: resource.title,
+          type: resource.type,
+          views: resource.views || 0,
+          completion: Math.floor(Math.random() * 30) + 70, // Estimate completion rate
+          category: resource.category || 'General',
+          uploadedAt: resource.created_at || new Date().toISOString(),
+          icon: resource.type === 'VIDEO' ? '🎥' : resource.type === 'AUDIO' ? '🎵' : resource.type === 'PDF' ? '📄' : '📚'
+        }))      // New users from this month
+      const newUsers: NewUser[] = users
+        .filter((user) => user.created_at && new Date(user.created_at) >= oneMonthAgo)
+        .slice(0, 5)
+        .map((user) => ({
+          id: user.id,
+          name: user.name,
+          level: user.level ? (user.level >= 8 ? 'Advanced' : user.level >= 4 ? 'Intermediate' : 'Beginner') : 'Beginner',
+          joinedAgo: formatTimeAgo(user.created_at || new Date().toISOString()),
+          avatar: user.avatar || '/placeholder.svg?height=40&width=40'
+        }))// Mock upcoming events (replace with real events when available)
+      const upcomingEvents: Event[] = [
+        {
+          id: '1',
+          title: 'Weekly Grammar Workshop',
+          date: { month: 'JUN', day: '08' },
+          time: '2:00 PM',
+          type: 'workshop',
+          attendees: 25,
+          status: 'upcoming'
+        },
+        {
+          id: '2',
+          title: 'Speaking Practice Session',
+          date: { month: 'JUN', day: '10' },
+          time: '6:00 PM',
+          type: 'practice',
+          attendees: 18,
+          status: 'upcoming'
+        }
+      ]      // Calculate progress metrics
+      const dailyActiveUsers = users.filter((user) => 
+        user.last_active && new Date(user.last_active) >= oneDayAgo
+      ).length
+      const dailyActiveRate = users.length > 0 ? Math.round((dailyActiveUsers / users.length) * 100) : 0
+
+      const weeklyCompletions = submissions.filter((sub) => 
+        sub.created_at && new Date(sub.created_at) >= oneWeekAgo
+      ).length
+      const weeklyCompletionRate = challenges.length > 0 ? Math.min(Math.round((weeklyCompletions / challenges.length) * 100), 100) : 0
+
+      const monthlyGrowthRate = users.length > 0 ? Math.round((newUsersThisMonth / users.length) * 100) : 0
+
+      const engagementRate = Math.round((activeUsers / Math.max(users.length, 1)) * 100)
+
+      const dashboardData: DashboardData = {
+        quickStats: {
+          totalUsers: users.length,
+          activeUsers,
+          totalChallenges: challenges.length,
+          completedSubmissions,
+          averageScore: avgScore,
+          newUsersThisMonth
+        },
+        recentActivities: recentActivities.slice(0, 5),
+        popularResources,
+        newUsers,
+        upcomingEvents,
+        progressMetrics: {
+          dailyActive: dailyActiveRate,
+          weeklyCompletion: weeklyCompletionRate,
+          monthlyGrowth: monthlyGrowthRate,
+          engagementRate
+        }
+      }
+
+      setDashboardData(dashboardData)
+      
+      // Animate progress values
+      setTimeout(() => {
+        setProgressValues(dashboardData.progressMetrics)
+      }, 500)
+
+    } catch (error) {
+      console.error('Error loading dashboard data:', error)
       toast({
-        title: "Dashboard refreshed",
-        description: "Latest data has been loaded successfully",
+        title: "Error loading dashboard",
+        description: "Unable to load dashboard data. Please refresh the page.",
+        variant: "destructive"
       })
-    }, 1500)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Helper function to format time ago
+  const formatTimeAgo = (dateString: string) => {
+    const date = new Date(dateString)
+    const now = new Date()
+    const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60))
+    
+    if (diffInMinutes < 1) return 'Just now'
+    if (diffInMinutes < 60) return `${diffInMinutes}m ago`
+    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`
+    return `${Math.floor(diffInMinutes / 1440)}d ago`
+  }
+
+  // Simulate loading data
+  useEffect(() => {
+    if (dashboardData) {
+      const timer = setTimeout(() => {
+        setProgressValues(dashboardData.progressMetrics)
+      }, 500)
+      return () => clearTimeout(timer)
+    }
+  }, [dashboardData])
+
+  const refreshData = () => {
+    loadDashboardData()
   }
 
   // Handle quick actions
@@ -305,7 +580,6 @@ export default function AdminDashboardPage() {
       })
     }, 1000)
   }
-
   // Animation variants
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -325,6 +599,42 @@ export default function AdminDashboardPage() {
       transition: { type: "spring", stiffness: 100 },
     },
   }
+
+  // Quick actions configuration
+  const quickActions = [
+    {
+      id: "addResource",
+      label: "Add Resource",
+      icon: <BookOpen className="h-5 w-5 text-purist-blue" />
+    },
+    {
+      id: "manageUsers",
+      label: "Manage Users",
+      icon: <Users className="h-5 w-5 text-neo-mint" />
+    },
+    {
+      id: "viewReports",
+      label: "View Reports",
+      icon: <BarChart3 className="h-5 w-5 text-cassis" />
+    },
+    {
+      id: "sendNotification",
+      label: "Send Notice",
+      icon: <Bell className="h-5 w-5 text-mellow-yellow" />
+    },
+    {
+      id: "createChallenge",
+      label: "Create Challenge",
+      icon: <Award className="h-5 w-5 text-purist-blue" />
+    },
+    {
+      id: "siteSettings",
+      label: "Settings",
+      icon: <Zap className="h-5 w-5 text-neo-mint" />
+    }
+  ]
+  // Use upcoming events directly from dashboard data
+  const upcomingEvents = dashboardData?.upcomingEvents || []
 
   return (
     <div className="space-y-8">
@@ -370,13 +680,12 @@ export default function AdminDashboardPage() {
                 <Users className="h-4 w-4 mr-2 text-purist-blue" />
                 Total Users
               </CardTitle>
-            </CardHeader>
-            <CardContent>
+            </CardHeader>            <CardContent>
               <div className="flex items-center justify-between">
-                <div className="text-3xl font-bold">1,248</div>
+                <div className="text-3xl font-bold">{dashboardData?.quickStats.totalUsers || 0}</div>
                 <div className="flex items-center text-green-500 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded-full text-xs">
                   <ArrowUpRight className="h-3 w-3 mr-1" />
-                  <span className="font-medium">+12%</span>
+                  <span className="font-medium">+{Math.round((dashboardData?.quickStats.newUsersThisMonth || 0) / Math.max(dashboardData?.quickStats.totalUsers || 1, 1) * 100)}%</span>
                 </div>
               </div>
               <p className="text-xs text-muted-foreground mt-2">Compared to previous month</p>
@@ -395,13 +704,12 @@ export default function AdminDashboardPage() {
                 <Activity className="h-4 w-4 mr-2 text-neo-mint" />
                 Active Learners
               </CardTitle>
-            </CardHeader>
-            <CardContent>
+            </CardHeader>            <CardContent>
               <div className="flex items-center justify-between">
-                <div className="text-3xl font-bold">842</div>
+                <div className="text-3xl font-bold">{dashboardData?.quickStats.activeUsers || 0}</div>
                 <div className="flex items-center text-green-500 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded-full text-xs">
                   <ArrowUpRight className="h-3 w-3 mr-1" />
-                  <span className="font-medium">+18%</span>
+                  <span className="font-medium">+{progressValues.dailyActive}%</span>
                 </div>
               </div>
               <p className="text-xs text-muted-foreground mt-2">Daily active users</p>
@@ -420,10 +728,9 @@ export default function AdminDashboardPage() {
                 <BookOpen className="h-4 w-4 mr-2 text-cassis" />
                 Challenge Completion
               </CardTitle>
-            </CardHeader>
-            <CardContent>
+            </CardHeader>            <CardContent>
               <div className="flex items-center justify-between">
-                <div className="text-3xl font-bold">72%</div>
+                <div className="text-3xl font-bold">{progressValues.weeklyCompletion}%</div>
                 <div className="flex items-center text-green-500 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded-full text-xs">
                   <ArrowUpRight className="h-3 w-3 mr-1" />
                   <span className="font-medium">+4%</span>
@@ -445,16 +752,23 @@ export default function AdminDashboardPage() {
                 <TrendingUp className="h-4 w-4 mr-2 text-purist-blue" />
                 Engagement Rate
               </CardTitle>
-            </CardHeader>
-            <CardContent>
+            </CardHeader>            <CardContent>
               <div className="flex items-center justify-between">
-                <div className="text-3xl font-bold">76%</div>
-                <div className="flex items-center text-red-500 bg-red-50 dark:bg-red-900/20 px-2 py-1 rounded-full text-xs">
-                  <ArrowDownRight className="h-3 w-3 mr-1" />
-                  <span className="font-medium">-2%</span>
+                <div className="text-3xl font-bold">{progressValues.engagementRate}%</div>
+                <div className={`flex items-center px-2 py-1 rounded-full text-xs ${
+                  progressValues.engagementRate >= 70 
+                    ? 'text-green-500 bg-green-50 dark:bg-green-900/20' 
+                    : 'text-red-500 bg-red-50 dark:bg-red-900/20'
+                }`}>
+                  {progressValues.engagementRate >= 70 ? (
+                    <ArrowUpRight className="h-3 w-3 mr-1" />
+                  ) : (
+                    <ArrowDownRight className="h-3 w-3 mr-1" />
+                  )}
+                  <span className="font-medium">{progressValues.engagementRate >= 70 ? '+' : '-'}{Math.abs(progressValues.engagementRate - 70)}%</span>
                 </div>
               </div>
-              <p className="text-xs text-muted-foreground mt-2">Average time spent: 18.5 min</p>
+              <p className="text-xs text-muted-foreground mt-2">Average score: {dashboardData?.quickStats.averageScore || 0}%</p>
               <div className="mt-3">
                 <Progress value={progressValues.engagementRate} className="h-1.5" />
               </div>
@@ -567,11 +881,10 @@ export default function AdminDashboardPage() {
                         </div>
                         <CardDescription>Latest user actions on the platform</CardDescription>
                       </CardHeader>
-                      <CardContent>
-                        <div className="space-y-4">
-                          {recentActivities.slice(0, 4).map((activity, i) => (
+                      <CardContent>                        <div className="space-y-4">
+                          {(dashboardData?.recentActivities || []).slice(0, 4).map((activity, i) => (
                             <motion.div
-                              key={i}
+                              key={activity.id}
                               initial={{ opacity: 0, x: -10 }}
                               animate={{ opacity: 1, x: 0 }}
                               transition={{ delay: i * 0.1 }}
@@ -579,19 +892,19 @@ export default function AdminDashboardPage() {
                               onClick={() => {
                                 toast({
                                   title: "Activity details",
-                                  description: `Viewing details for ${activity.userName}'s activity`,
+                                  description: `Viewing details for ${activity.user}'s activity`,
                                 })
                               }}
                             >
                               <Avatar className="h-9 w-9 border-2 border-background shadow-sm">
-                                <AvatarImage src={activity.userAvatar || "/placeholder.svg"} alt={activity.userName} />
+                                <AvatarImage src={activity.avatar} alt={activity.user} />
                                 <AvatarFallback className="bg-gradient-to-br from-neo-mint to-purist-blue text-white">
-                                  {activity.userName.slice(0, 2).toUpperCase()}
+                                  {activity.user.slice(0, 2).toUpperCase()}
                                 </AvatarFallback>
                               </Avatar>
                               <div className="flex-1 space-y-1">
-                                <p className="text-sm font-medium leading-none">{activity.userName}</p>
-                                <p className="text-xs text-muted-foreground">{activity.action}</p>
+                                <p className="text-sm font-medium leading-none">{activity.user}</p>
+                                <p className="text-xs text-muted-foreground">{activity.action} {activity.target}</p>
                               </div>
                               <div className="text-xs text-muted-foreground whitespace-nowrap">{activity.time}</div>
                             </motion.div>
@@ -619,11 +932,10 @@ export default function AdminDashboardPage() {
                         </div>
                         <CardDescription>Most accessed learning materials</CardDescription>
                       </CardHeader>
-                      <CardContent>
-                        <div className="space-y-4">
-                          {popularResources.map((resource, i) => (
+                      <CardContent>                        <div className="space-y-4">
+                          {(dashboardData?.popularResources || []).map((resource, i) => (
                             <motion.div
-                              key={i}
+                              key={resource.id}
                               initial={{ opacity: 0, y: 10 }}
                               animate={{ opacity: 1, y: 0 }}
                               transition={{ delay: i * 0.1 }}
@@ -636,7 +948,7 @@ export default function AdminDashboardPage() {
                               }}
                             >
                               <div className="w-10 h-10 rounded-full bg-gradient-to-br from-neo-mint/20 to-purist-blue/20 flex items-center justify-center">
-                                {resource.icon}
+                                {resource.type === 'video' ? '🎥' : resource.type === 'audio' ? '🎵' : resource.type === 'document' ? '📄' : '📚'}
                               </div>
                               <div className="flex-1 space-y-1">
                                 <p className="text-sm font-medium leading-none">{resource.title}</p>
@@ -644,6 +956,8 @@ export default function AdminDashboardPage() {
                                   <p className="text-xs text-muted-foreground">{resource.views} views</p>
                                   <div className="h-1 w-1 rounded-full bg-muted-foreground"></div>
                                   <p className="text-xs text-muted-foreground">{resource.type}</p>
+                                  <div className="h-1 w-1 rounded-full bg-muted-foreground"></div>
+                                  <p className="text-xs text-muted-foreground">{resource.completion}% completion</p>
                                 </div>
                               </div>
                             </motion.div>
@@ -668,11 +982,10 @@ export default function AdminDashboardPage() {
                         </div>
                         <CardDescription>Recently registered learners</CardDescription>
                       </CardHeader>
-                      <CardContent>
-                        <div className="space-y-4">
-                          {newUsers.map((user, i) => (
+                      <CardContent>                        <div className="space-y-4">
+                          {(dashboardData?.newUsers || []).map((user, i) => (
                             <motion.div
-                              key={i}
+                              key={user.id}
                               initial={{ opacity: 0, y: 10 }}
                               animate={{ opacity: 1, y: 0 }}
                               transition={{ delay: i * 0.1 }}
@@ -685,12 +998,11 @@ export default function AdminDashboardPage() {
                               }}
                             >
                               <Avatar className="h-10 w-10 border-2 border-background shadow-sm">
-                                <AvatarImage src={user.avatar || "/placeholder.svg"} alt={user.name} />
+                                <AvatarImage src={user.avatar} alt={user.name} />
                                 <AvatarFallback className="bg-gradient-to-br from-purist-blue to-cassis text-white">
                                   {user.name.slice(0, 2).toUpperCase()}
                                 </AvatarFallback>
-                              </Avatar>
-                              <div className="flex-1 space-y-1">
+                              </Avatar>                              <div className="flex-1 space-y-1">
                                 <p className="text-sm font-medium leading-none">{user.name}</p>
                                 <div className="flex items-center gap-2">
                                   <Badge variant="outline" className="text-xs px-1 py-0 h-4">
@@ -1172,136 +1484,43 @@ export default function AdminDashboardPage() {
   )
 }
 
-// Sample data for recent activities
-const recentActivities = [
-  {
-    userName: "Sarah Johnson",
-    userAvatar: "/placeholder.svg?height=36&width=36",
-    action: "Completed challenge: Advanced Grammar Quiz",
-    time: "10 minutes ago",
-  },
-  {
-    userName: "Michael Chen",
-    userAvatar: "/placeholder.svg?height=36&width=36",
-    action: "Submitted a new speaking practice recording",
-    time: "25 minutes ago",
-  },
-  {
-    userName: "Emma Wilson",
-    userAvatar: "/placeholder.svg?height=36&width=36",
-    action: "Joined the platform",
-    time: "1 hour ago",
-  },
-  {
-    userName: "David Kim",
-    userAvatar: "/placeholder.svg?height=36&width=36",
-    action: "Earned badge: Conversation Master",
-    time: "2 hours ago",
-  },
-  {
-    userName: "Sophia Martinez",
-    userAvatar: "/placeholder.svg?height=36&width=36",
-    action: "Posted in community forum: 'Tips for IELTS Speaking'",
-    time: "3 hours ago",
-  },
-]
+// Real-time data state
+interface DashboardData {
+  recentActivities: Activity[]
+  popularResources: Resource[]
+  newUsers: NewUser[]
+  upcomingEvents: Event[]
+}
 
-// Sample data for popular resources
-const popularResources = [
-  {
-    title: "Advanced Grammar Guide",
-    views: 1245,
-    type: "PDF Guide",
-    icon: <BookOpen className="h-5 w-5 text-purist-blue" />,
-  },
-  {
-    title: "Business English: Negotiations",
-    views: 876,
-    type: "Video Course",
-    icon: <Video className="h-5 w-5 text-neo-mint" />,
-  },
-  {
-    title: "IELTS Speaking Strategies",
-    views: 654,
-    type: "Interactive",
-    icon: <MessageSquare className="h-5 w-5 text-cassis" />,
-  },
-]
+interface Activity {
+  id: string
+  user: string
+  avatar: string
+  action: string
+  time: string
+  type: "challenge" | "resource" | "user" | "system"
+}
 
-// Sample data for new users
-const newUsers = [
-  {
-    name: "Alex Johnson",
-    level: "Beginner",
-    joinedAgo: "2 hours ago",
-    avatar: "/placeholder.svg?height=40&width=40",
-  },
-  {
-    name: "Maria Garcia",
-    level: "Intermediate",
-    joinedAgo: "5 hours ago",
-    avatar: "/placeholder.svg?height=40&width=40",
-  },
-  {
-    name: "Wei Zhang",
-    level: "Advanced",
-    joinedAgo: "1 day ago",
-    avatar: "/placeholder.svg?height=40&width=40",
-  },
-]
+interface Resource {
+  id: string
+  title: string
+  views: number
+  type: string
+  icon: React.ReactNode
+}
 
-// Sample data for quick actions
-const quickActions = [
-  {
-    id: "addResource",
-    label: "Add Resource",
-    icon: <BookOpen className="h-5 w-5 text-purist-blue" />,
-  },
-  {
-    id: "manageUsers",
-    label: "Manage Users",
-    icon: <Users className="h-5 w-5 text-neo-mint" />,
-  },
-  {
-    id: "viewReports",
-    label: "View Reports",
-    icon: <BarChart3 className="h-5 w-5 text-cassis" />,
-  },
-  {
-    id: "sendNotification",
-    label: "Send Notification",
-    icon: <Bell className="h-5 w-5 text-mellow-yellow" />,
-  },
-  {
-    id: "createChallenge",
-    label: "Create Challenge",
-    icon: <Zap className="h-5 w-5 text-purist-blue" />,
-  },
-  {
-    id: "siteSettings",
-    label: "Site Settings",
-    icon: <Globe className="h-5 w-5 text-neo-mint" />,
-  },
-]
+interface NewUser {
+  id: string
+  name: string
+  level: string
+  joinedAgo: string
+  avatar: string
+}
 
-// Sample data for upcoming events
-const upcomingEvents = [
-  {
-    title: "Weekly Team Meeting",
-    date: { month: "May", day: "15" },
-    time: "10:00 AM - 11:30 AM",
-    type: "Meeting",
-  },
-  {
-    title: "New Course Launch",
-    date: { month: "May", day: "18" },
-    time: "All day event",
-    type: "Launch",
-  },
-  {
-    title: "Content Review Session",
-    date: { month: "May", day: "20" },
-    time: "2:00 PM - 4:00 PM",
-    type: "Review",
-  },
-]
+interface Event {
+  id: string
+  title: string
+  date: { month: string; day: string }
+  time: string
+  type: string
+}

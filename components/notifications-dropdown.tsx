@@ -9,8 +9,9 @@ import { Input } from "@/components/ui/input"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { formatDistanceToNow } from "date-fns"
 import { supabase, dbHelpers } from "@/lib/supabase"
-import type { Database } from "@/types/database.types"
+import type { Database } from "@/lib/database.types"
 import { toast } from "@/hooks/use-toast"
+import { useAuth } from "@/contexts/auth-context"
 
 // Types from Supabase schema
 type NotificationRow = Database['public']['Tables']['notifications']['Row']
@@ -33,6 +34,7 @@ interface NotificationItem {
 }
 
 export default function NotificationsDropdown() {
+  const { user, isAuthenticated } = useAuth()
   const [isOpen, setIsOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [notifications, setNotifications] = useState<NotificationItem[]>([])
@@ -44,51 +46,53 @@ export default function NotificationsDropdown() {
   const loadNotifications = async () => {
     try {
       setLoading(true)
-      // For now, we'll use a hardcoded current user ID
-      // In a real app, this would come from auth context
-      const currentUserId = 'current-user-id'
+      
+      // Check if user is authenticated
+      if (!isAuthenticated || !user?.id) {
+        console.log('User not authenticated, using sample notifications')
+        setSampleNotifications()
+        return
+      }
 
       const { data: notificationData, error } = await supabase
         .from('notifications')
-        .select(`
-          *,
-          sender:users!sender_id(
-            id,
-            name,
-            avatar
-          )
-        `)
-        .eq('user_id', currentUserId)
+        .select('*')
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(10)
 
       if (error) {
-        console.error('Error fetching notifications:', error)
+        console.error('Error fetching notifications:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
+        })
         // Fallback to sample data
         setSampleNotifications()
         return
       }
 
-      const mappedNotifications: NotificationItem[] = notificationData?.map((notification: any) => ({
+      const mappedNotifications: NotificationItem[] = notificationData?.map((notification) => ({
         id: notification.id,
-        type: notification.type,
+        type: notification.notification_type,
         title: notification.title,
         message: notification.message,
-        time: new Date(notification.created_at),
-        read: notification.is_read,
-        avatar: notification.sender?.avatar || "/placeholder.svg?height=40&width=40",
-        link: notification.action_url,
+        time: new Date(notification.created_at || Date.now()),
+        read: notification.is_read || false,
+        avatar: "/placeholder.svg?height=40&width=40", // Default avatar since no sender info
+        link: (notification.data as any)?.action_url || undefined,
         sender: {
-          name: notification.sender?.name || "System",
-          avatar: notification.sender?.avatar || "/placeholder.svg?height=40&width=40",
-          status: "system", // Could be extended with real user status
+          name: "System", // Default to system since no sender in schema
+          avatar: "/placeholder.svg?height=40&width=40",
+          status: "system",
         },
       })) || []
 
       setNotifications(mappedNotifications)
       setUnreadCount(mappedNotifications.filter(n => !n.read).length)
     } catch (error) {
-      console.error('Error loading notifications:', error)
+      console.error('Error loading notifications:', error instanceof Error ? error.message : String(error))
       setSampleNotifications()
       toast({
         title: "Error loading notifications",
@@ -155,7 +159,7 @@ export default function NotificationsDropdown() {
 
   useEffect(() => {
     loadNotifications()
-  }, [])
+  }, [user?.id]) // Reload when user changes
 
   // Filter notifications based on search query
   const filteredNotifications = notifications.filter(
@@ -182,11 +186,30 @@ export default function NotificationsDropdown() {
   // Mark notification as read
   const markAsRead = async (id: string) => {
     try {
+      if (!user?.id) {
+        // Just update local state if not authenticated
+        setNotifications(prev => prev.map(n => 
+          n.id === id ? { ...n, read: true } : n
+        ))
+        setUnreadCount(prev => Math.max(0, prev - 1))
+        return
+      }
+
       // Update in database
-      await supabase
+      const { error } = await supabase
         .from('notifications')
         .update({ is_read: true })
         .eq('id', id)
+
+      if (error) {
+        console.error('Error marking notification as read:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
+        })
+        return
+      }
 
       // Update local state
       setNotifications(prev => prev.map(n => 
@@ -194,7 +217,7 @@ export default function NotificationsDropdown() {
       ))
       setUnreadCount(prev => Math.max(0, prev - 1))
     } catch (error) {
-      console.error('Error marking notification as read:', error)
+      console.error('Error marking notification as read:', error instanceof Error ? error.message : String(error))
       // Fallback to local state update only
       setNotifications(prev => prev.map(n => 
         n.id === id ? { ...n, read: true } : n
@@ -206,17 +229,38 @@ export default function NotificationsDropdown() {
   // Mark all notifications as read
   const markAllAsRead = async () => {
     try {
+      if (!user?.id) {
+        // Just update local state if not authenticated
+        setNotifications(prev => prev.map(n => ({ ...n, read: true })))
+        setUnreadCount(0)
+        return
+      }
+
       // Update all unread notifications in database
-      await supabase
+      const { error } = await supabase
         .from('notifications')
         .update({ is_read: true })
+        .eq('user_id', user.id)
         .eq('is_read', false)
+
+      if (error) {
+        console.error('Error marking all notifications as read:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
+        })
+        // Fallback to local state update only
+        setNotifications(prev => prev.map(n => ({ ...n, read: true })))
+        setUnreadCount(0)
+        return
+      }
 
       // Update local state
       setNotifications(prev => prev.map(n => ({ ...n, read: true })))
       setUnreadCount(0)
     } catch (error) {
-      console.error('Error marking all notifications as read:', error)
+      console.error('Error marking all notifications as read:', error instanceof Error ? error.message : String(error))
       // Fallback to local state update only
       setNotifications(prev => prev.map(n => ({ ...n, read: true })))
       setUnreadCount(0)

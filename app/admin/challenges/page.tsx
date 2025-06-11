@@ -24,6 +24,7 @@ import { fetchAllChallenges } from "@/app/actions/challenge-videos"
 import { challengeTopics, type Challenge } from "@/app/utils/challenge-constants"
 import { extractVideoFromUrl } from "@/app/actions/youtube-video"
 import { getDifficultyBadgeColor, getDifficultyDisplayName } from "@/app/utils/challenge-classifier"
+import { setStorageItem, getStorageItem, setStorageItemDebounced, cleanupStorage } from "@/lib/storage-utils"
 import {
   BookOpen,
   Clock,
@@ -183,38 +184,30 @@ export default function AdminChallengesPage() {
 
     setFilteredChallenges(filtered)
   }, [challenges, activeTab, searchTerm, sortOrder, selectedTopics])
-
-  // Load challenges from API and localStorage
+  // Load challenges from API and localStorage - optimized
   const loadChallenges = useCallback(async (forceRefresh = false) => {
     try {
       setLoading(true)
 
       // Check if we need to refresh based on date
       const today = new Date().toISOString().split("T")[0]
-      const lastRefreshDate = localStorage.getItem("lastChallengeRefresh")
+      const lastRefreshDate = getStorageItem<string>("lastChallengeRefresh")
 
       // If we have cached challenges and it's the same day, use them unless forceRefresh is true
-      const cachedChallenges = localStorage.getItem(STORAGE_KEY)
-
+      const cachedChallenges = getStorageItem<Challenge[]>(STORAGE_KEY)
       if (cachedChallenges && lastRefreshDate === today && !forceRefresh) {
-        const parsedChallenges = JSON.parse(cachedChallenges)
-        setChallenges(parsedChallenges)
-        setFilteredChallenges(parsedChallenges)
+        setChallenges(cachedChallenges)
+        setFilteredChallenges(cachedChallenges)
         setLastRefreshed(lastRefreshDate)
         setLoading(false)
         return
       }
 
       // Fetch new challenges
-      const allChallenges = await fetchAllChallenges(4) // 4 challenges per difficulty
+      const allChallenges = await fetchAllChallenges() // 10 daily challenges
 
       // Get user-created challenges from localStorage
-      const userChallengesJson = localStorage.getItem("userChallenges")
-      let userChallenges: Challenge[] = []
-
-      if (userChallengesJson) {
-        userChallenges = JSON.parse(userChallengesJson)
-      }
+      const userChallenges = getStorageItem<Challenge[]>("userChallenges") || []
 
       // Combine API challenges with user-created ones
       const combinedChallenges = [
@@ -222,9 +215,12 @@ export default function AdminChallengesPage() {
         ...(Array.isArray(allChallenges) ? allChallenges : []),
       ]
 
-      // Save to localStorage for caching
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(combinedChallenges))
-      localStorage.setItem("lastChallengeRefresh", today)
+      // Save to localStorage for caching with TTL (24 hours)
+      setStorageItem(STORAGE_KEY, combinedChallenges, { 
+        ttl: 24 * 60 * 60 * 1000, // 24 hours
+        essential: true 
+      })
+      setStorageItem("lastChallengeRefresh", today, { essential: true })
 
       setChallenges(combinedChallenges)
       setFilteredChallenges(combinedChallenges)
@@ -245,11 +241,10 @@ export default function AdminChallengesPage() {
       })
 
       // Try to load from cache as fallback
-      const cachedChallenges = localStorage.getItem(STORAGE_KEY)
+      const cachedChallenges = getStorageItem<Challenge[]>(STORAGE_KEY)
       if (cachedChallenges) {
-        const parsedChallenges = JSON.parse(cachedChallenges)
-        setChallenges(parsedChallenges)
-        setFilteredChallenges(parsedChallenges)
+        setChallenges(cachedChallenges)
+        setFilteredChallenges(cachedChallenges)
         toast({
           title: "Using cached data",
           description: "Showing previously loaded challenges",
@@ -527,20 +522,20 @@ export default function AdminChallengesPage() {
         createdAt: new Date().toISOString(),
         topics: Array.isArray(formState.topics) ? formState.topics : [],
         featured: formState.featured,
-      }
-
-      // Add to challenges list
+      }      // Add to challenges list
       const updatedChallenges = [newChallenge, ...challenges]
       setChallenges(updatedChallenges)
 
-      // Save to localStorage for admin challenges
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedChallenges))
+      // Debounced save to localStorage for admin challenges
+      setStorageItemDebounced(STORAGE_KEY, updatedChallenges, 300, { 
+        ttl: 24 * 60 * 60 * 1000,
+        essential: true 
+      })
 
       // Save to localStorage for user challenges
-      const savedChallenges = localStorage.getItem("userChallenges")
-      let userChallenges = savedChallenges ? JSON.parse(savedChallenges) : []
-      userChallenges = [newChallenge, ...userChallenges]
-      localStorage.setItem("userChallenges", JSON.stringify(userChallenges))
+      const userChallenges = getStorageItem<Challenge[]>("userChallenges") || []
+      const updatedUserChallenges = [newChallenge, ...userChallenges]
+      setStorageItemDebounced("userChallenges", updatedUserChallenges, 300, { essential: true })
 
       // Close modal and show success message
       setCreateModalOpen(false)

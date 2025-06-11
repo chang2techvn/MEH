@@ -17,6 +17,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Badge } from "@/components/ui/badge"
 import { toast } from "@/hooks/use-toast"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { dbHelpers, supabase } from "@/lib/supabase"
 import {
   Users,
   Search,
@@ -79,6 +80,36 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { format } from "date-fns"
 import { useState, useEffect, useRef } from "react"
 
+// Helper functions
+const formatTimeAgo = (dateString: string) => {
+  const now = new Date()
+  const date = new Date(dateString)
+  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000)
+
+  if (diffInSeconds < 60) return "Just now"
+  if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`
+  if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`
+  if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)}d ago`
+  return date.toLocaleDateString()
+}
+
+const extractYouTubeId = (url: string): string | undefined => {
+  const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/
+  const match = url.match(regex)
+  return match ? match[1] : undefined
+}
+
+const isToday = (date: Date): boolean => {
+  const today = new Date()
+  return date.toDateString() === today.toDateString()
+}
+
+const isTomorrow = (date: Date): boolean => {
+  const tomorrow = new Date()
+  tomorrow.setDate(tomorrow.getDate() + 1)
+  return date.toDateString() === tomorrow.toDateString()
+}
+
 // Types
 interface Story {
   id: number
@@ -96,7 +127,7 @@ interface Post {
   userImage: string
   timeAgo: string
   content: string
-  mediaType: "video" | "text" | "none" | "ai-submission" | "youtube"
+  mediaType: "video" | "text" | "none" | "ai-submission" | "youtube" | "image"
   mediaUrl?: string | null
   youtubeVideoId?: string
   textContent?: string
@@ -171,56 +202,201 @@ export default function CommunityPage() {
 
   const [selectedDate, setSelectedDate] = useState<Date>()
   const [location, setLocation] = useState<string>("")
-  const [showLocationPicker, setShowLocationPicker] = useState(false)
+  const [showLocationPicker, setShowLocationPicker] = useState(false) 
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
   const [showTagPeople, setShowTagPeople] = useState(false)
   const [selectedFeeling, setSelectedFeeling] = useState<string | null>(null)
   const [selectedMedia, setSelectedMedia] = useState<File | null>(null)
   const [mediaPreview, setMediaPreview] = useState<string | null>(null)
   const [taggedPeople, setTaggedPeople] = useState<string[]>([])
-
   const mainRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const postFileInputRef = useRef<HTMLInputElement>(null)
   const [storyViewers, setStoryViewers] = useState<StoryViewer[]>([])
+  
+  // Load real data from Supabase
+  const loadData = async () => {
+    try {
+      setLoading(true)      // Load all data in parallel for better performance
+      const [
+        postsResult,
+        storiesResult,
+        onlineUsersResult,
+        eventsResult,
+        groupsResult,
+        trendingResult      ] = await Promise.all([
+        supabase
+          .from('posts')
+          .select(`
+            *,
+            users!user_id(id, name, avatar)
+          `)
+          .eq('is_public', true)
+          .order('created_at', { ascending: false })
+          .limit(20),
+        dbHelpers.getStories(10),
+        dbHelpers.getOnlineUsers(10),
+        dbHelpers.getEvents(),
+        dbHelpers.getGroups(),
+        dbHelpers.getTrendingTopics(10)
+      ])
 
-  // Initialize data on mount and handle window resize
+      const postsData = postsResult.data || []
+      const storiesData = storiesResult.data || []
+      const onlineUsersData = onlineUsersResult.data || []
+      const eventsData = eventsResult.data || []
+      const groupsData = groupsResult.data || []
+      const trendingData = trendingResult.data || []      // Transform posts data to include user information
+      console.log('📊 Posts data from Supabase:', postsData)
+      setFeedPosts(postsData.map((post: any) => {
+        console.log('📝 Processing post:', post)
+        return {
+          id: post.id, // Keep as string UUID instead of converting to number
+          username: post.users?.name || 'Unknown User',
+          userImage: post.users?.avatar || "/placeholder.svg?height=40&width=40",
+          timeAgo: formatTimeAgo(post.created_at || ''),
+          content: post.content || '',
+          mediaType: post.post_type === 'video' ? 'video' : 
+                    post.post_type === 'youtube' ? 'youtube' : 
+                    post.media_url ? 'image' : 'text',
+          mediaUrl: post.media_url,
+          youtubeVideoId: post.post_type === 'youtube' ? extractYouTubeId(post.media_url || '') : undefined,
+          textContent: post.post_type === 'text' ? post.content : undefined,
+          likes: post.likes_count || 0,          
+          comments: post.comments_count || 0,
+          isNew: false
+        }
+      }))
+
+      // Transform stories data to include user information
+      setStories([
+        {
+          id: 0,
+          user: "Add Story",
+          userImage: "/placeholder.svg?height=40&width=40",
+          storyImage: "",
+          time: "",
+          viewed: false,
+          isAddStory: true,
+        },        ...storiesData.map((story: any) => ({
+          id: Number(story.id),
+          user: story.author?.name || 'Unknown User',
+          userImage: story.author?.avatar || "/placeholder.svg?height=40&width=40",
+          storyImage: story.media_url || "/placeholder.svg?height=200&width=200",
+          time: formatTimeAgo(story.created_at || ''),
+          viewed: viewedStories.includes(Number(story.id)),
+        }))
+      ])      // Transform contacts data (online users)
+      setContacts(onlineUsersData.map((user: any) => ({
+        id: Number(user.id.substring(0, 8)), // Use first 8 chars of UUID as number
+        name: user.name,
+        image: user.avatar || "/placeholder.svg?height=40&width=40",
+        online: user.last_active && new Date(user.last_active) > new Date(Date.now() - 30 * 60 * 1000), // Active in last 30 minutes
+        lastActive: user.last_active && new Date(user.last_active) <= new Date(Date.now() - 30 * 60 * 1000) ? formatTimeAgo(user.last_active) : undefined
+      })))      // Transform events data
+      setEvents(eventsData.map((event: any) => ({
+        id: Number(event.id),
+        title: event.title,
+        date: new Date(event.startTime).toLocaleDateString(),
+        time: new Date(event.startTime).toLocaleTimeString(),
+        location: event.location,
+        attendees: event.attendeeCount || 0,
+        badge: isToday(new Date(event.startTime)) ? 'today' as const : 
+               isTomorrow(new Date(event.startTime)) ? 'tomorrow' as const : 'upcoming' as const
+      })))      // Transform groups data
+      setGroups(groupsData.map((group: any) => ({
+        id: Number(group.id),
+        name: group.name,
+        image: group.avatar || "/placeholder.svg?height=40&width=40",
+        members: group.memberCount || 0,
+        privacy: group.isPublic ? 'public' as const : 'private' as const,
+        active: true
+      })))
+
+      // Transform trending topics data
+      setTrendingTopics(trendingData.map((topic: any) => ({
+        name: topic.name,
+        count: topic.count
+      })))
+
+    } catch (error) {
+      console.error('Error loading community data:', error)
+      toast({
+        title: "Error loading data",
+        description: "Unable to load community data. Please refresh the page.",
+        variant: "destructive"
+      })
+      
+      // Set empty arrays instead of mock data
+      setFeedPosts([])
+      setStories([{
+        id: 0,
+        user: "Add Story",
+        userImage: "/placeholder.svg?height=40&width=40",
+        storyImage: "",
+        time: "",
+        viewed: false,
+        isAddStory: true,
+      }])
+      setContacts([])
+      setEvents([])
+      setGroups([])
+      setTrendingTopics([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
   useEffect(() => {
-    setMounted(true)
+    loadData()
 
     // Handle window resize
     const handleResize = () => {
       setWindowWidth(window.innerWidth)
-
-      // Auto-close sidebars on larger screens
-      if (window.innerWidth >= 1024) {
-        // lg breakpoint
-        setShowLeftSidebar(false)
-        setShowRightSidebar(false)
-      }
     }
 
     window.addEventListener("resize", handleResize)
-    handleResize() // Initial call
-
-    // Simulate loading state
-    const timer = setTimeout(() => {
-      setLoading(false)
-
-      // Initialize mock data
-      setFeedPosts(generateMockPosts())
-      setStories(generateMockStories())
-      setContacts(generateMockContacts())
-      setEvents(generateMockEvents())
-      setGroups(generateMockGroups())
-      setTrendingTopics(generateMockTrendingTopics())
-    }, 1500)
-
+    
     return () => {
       window.removeEventListener("resize", handleResize)
-      clearTimeout(timer)
     }
+  }, [viewedStories])
+
+  // Set mounted to true for client-side rendering
+  useEffect(() => {
+    setMounted(true)
   }, [])
+
+  // Helper functions for data formatting
+  const formatTimeAgo = (dateString: string) => {
+    const date = new Date(dateString)
+    const now = new Date()
+    const diff = now.getTime() - date.getTime()
+    const minutes = Math.floor(diff / (1000 * 60))
+    const hours = Math.floor(diff / (1000 * 60 * 60))
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+    
+    if (minutes < 60) return `${minutes}m ago`
+    if (hours < 24) return `${hours}h ago`
+    return `${days}d ago`
+  }
+
+  const extractYouTubeId = (url: string | undefined) => {
+    if (!url) return undefined
+    const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/)
+    return match ? match[1] : undefined
+  }
+
+  const isToday = (date: Date) => {
+    const today = new Date()
+    return date.toDateString() === today.toDateString()
+  }
+
+  const isTomorrow = (date: Date) => {
+    const tomorrow = new Date()
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    return date.toDateString() === tomorrow.toDateString()
+  }
 
   // Handle scroll to show/hide scroll to top button
   useEffect(() => {
@@ -235,398 +411,8 @@ export default function CommunityPage() {
     window.addEventListener("scroll", handleScroll)
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
-
-  // Generate mock data functions
-  const generateMockPosts = (): Post[] => {
-    return [
-      {
-        id: 1,
-        username: "Sarah Chen",
-        userImage: "/placeholder.svg?height=40&width=40",
-        timeAgo: "2 hours ago",
-        content:
-          "I've been struggling with the pronunciation of 'th' sounds. Any tips or exercises that helped you master this sound?",
-        mediaType: "none",
-        likes: 24,
-        comments: 8,
-      },
-      {
-        id: 2,
-        username: "John Wilson",
-        userImage: "/placeholder.svg?height=40&width=40",
-        timeAgo: "5 hours ago",
-        content:
-          "Just completed the Business Communication challenge! The video about presentation skills was incredibly helpful. I've been applying these techniques in my work meetings and already seeing improvements.",
-        mediaType: "youtube",
-        youtubeVideoId: "dQw4w9WgXcQ", // Example YouTube ID
-        likes: 42,
-        comments: 15,
-      },
-      {
-        id: 3,
-        username: "Lisa Wong",
-        userImage: "/placeholder.svg?height=40&width=40",
-        timeAgo: "1 day ago",
-        content:
-          "What's your favorite method for learning new vocabulary? I've been using flashcards but looking for more engaging approaches. Any apps or techniques you recommend?",
-        mediaType: "text",
-        textContent:
-          "My current vocabulary learning routine:\n1. Find new words in context\n2. Create flashcards with example sentences\n3. Review daily using spaced repetition\n4. Try to use new words in writing and speaking\n\nLooking for more interactive methods!",
-        likes: 36,
-        comments: 21,
-      },
-      {
-        id: 4,
-        username: "Mike Johnson",
-        userImage: "/placeholder.svg?height=40&width=40",
-        timeAgo: "2 days ago",
-        content:
-          "I'm preparing for the IELTS exam next month. Anyone here who has taken it recently? Would love some advice on the speaking and writing sections.",
-        mediaType: "none",
-        likes: 29,
-        comments: 14,
-      },
-      {
-        id: 5,
-        username: "David Kim",
-        userImage: "/placeholder.svg?height=40&width=40",
-        timeAgo: "3 days ago",
-        content: "Check out my pronunciation practice video! I'd appreciate any feedback on my intonation and rhythm.",
-        mediaType: "video",
-        mediaUrl: "https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4", // Example video URL
-        likes: 18,
-        comments: 7,
-        videoEvaluation: {
-          score: 85,
-          feedback: "Excellent pronunciation practice! Your intonation has improved significantly.",
-          overallFeedback: "Excellent pronunciation practice! Your intonation has improved significantly.",
-          
-          // Individual component scores for backward compatibility
-          pronunciation: 88,
-          intonation: 90,
-          stress: 82,
-          linkingSounds: 78,
-          grammar: 92,
-          tenses: 88,
-          vocabulary: 85,
-          collocations: 80,
-          fluency: 87,
-          speakingSpeed: 83,
-          confidence: 91,
-          facialExpressions: 79,
-          bodyLanguage: 84,
-          eyeContact: 88,
-          audienceInteraction: 76,
-          captionSpelling: 95,
-          captionGrammar: 93,
-          appropriateVocabulary: 89,
-          clarity: 87,
-          callToAction: 72,
-          hashtags: 85,
-          seoCaption: 78,
-          creativity: 82,
-          emotions: 86,
-          personalBranding: 81,
-          
-          // Score-based naming for consistency
-          pronunciationScore: 88,
-          intonationScore: 90,
-          stressScore: 82,
-          linkingSoundsScore: 78,
-          grammarScore: 92,
-          tensesScore: 88,
-          vocabularyScore: 85,
-          collocationScore: 80,
-          fluencyScore: 87,
-          speakingSpeedScore: 83,
-          confidenceScore: 91,
-          facialExpressionsScore: 79,
-          bodyLanguageScore: 84,
-          eyeContactScore: 88,
-          audienceInteractionScore: 76,
-          captionSpellingScore: 95,
-          captionGrammarScore: 93,
-          appropriateVocabularyScore: 89,
-          clarityScore: 87,
-          callToActionScore: 72,
-          hashtagsScore: 85,
-          seoScore: 78,
-          creativityScore: 82,
-          emotionsScore: 86,
-          personalBrandingScore: 81,
-          
-          // Detailed feedback arrays
-          strengths: [
-            "Clear pronunciation of difficult sounds",
-            "Good pacing and rhythm",
-            "Confident delivery",
-            "Excellent grammar usage"
-          ],
-          weaknesses: [
-            "Could improve linking sounds between words",
-            "Add more engaging call-to-action",
-            "Consider using more varied vocabulary"
-          ],
-          improvements: [
-            "Practice linking sounds in natural speech",
-            "Add stronger call-to-action phrases",
-            "Expand vocabulary range"
-          ],
-          recommendations: [
-            "Focus on connected speech patterns",
-            "Study effective call-to-action examples",
-            "Read diverse content to expand vocabulary"
-          ],
-          
-          // Category-specific feedback
-          speakingFeedback: "Strong speaking performance with room for minor improvements",
-          languageFeedback: "Excellent command of English language fundamentals",
-          deliveryFeedback: "Natural and confident delivery",
-          visualFeedback: "Good presentation skills with potential for enhancement",
-          captionFeedback: "Well-written captions with strong technical execution",
-          
-          // Category breakdowns
-          speakingCategory: {
-            overallScore: 86,
-            score: 86,
-            feedback: "Strong speaking performance with room for minor improvements",
-            strengths: ["Clear pronunciation", "Good intonation patterns"],
-            areas_to_improve: ["Linking sounds consistency"],
-            pronunciation: 88,
-            intonation: 90,
-            stress: 82,
-            linkingSounds: 78
-          },
-          languageCategory: {
-            overallScore: 86,
-            score: 86,
-            feedback: "Excellent command of English language fundamentals",
-            strengths: ["Perfect grammar usage", "Rich vocabulary"],
-            areas_to_improve: ["More varied collocations"],
-            grammar: 92,
-            tenses: 88,
-            vocabulary: 85,
-            collocations: 80
-          },
-          deliveryCategory: {
-            overallScore: 87,
-            score: 87,
-            feedback: "Natural and confident delivery",
-            strengths: ["Smooth delivery", "Excellent confidence"],
-            areas_to_improve: ["Speaking pace variation"],
-            fluency: 87,
-            speakingSpeed: 83,
-            confidence: 91
-          },
-          visualCategory: {
-            overallScore: 82,
-            score: 82,
-            feedback: "Good presentation skills with potential for enhancement",
-            strengths: ["Good eye contact", "Natural body language"],
-            areas_to_improve: ["Audience interaction", "Facial expressions"],
-            facialExpressions: 79,
-            bodyLanguage: 84,
-            eyeContact: 88,
-            audienceInteraction: 76
-          },
-          captionCategory: {
-            overallScore: 88,
-            score: 88,
-            feedback: "Well-written captions with strong technical execution",
-            strengths: ["Perfect spelling", "Excellent grammar", "Clear messaging"],
-            areas_to_improve: ["Call-to-action engagement", "SEO optimization"],
-            captionSpelling: 95,
-            captionGrammar: 93,
-            appropriateVocabulary: 89,
-            clarity: 87,
-            callToAction: 72,
-            hashtags: 85,
-            seoCaption: 78,
-            creativity: 82,
-            emotions: 86,
-            personalBranding: 81
-          }
-        }
-      },
-    ]
-  }
-
-  const generateMockStories = (): Story[] => {
-    return [
-      {
-        id: 1,
-        user: "Sarah Chen",
-        userImage: "/placeholder.svg?height=40&width=40",
-        storyImage: "/placeholder.svg?height=200&width=200",
-        time: "2h",
-        viewed: viewedStories.includes(1),
-      },
-      {
-        id: 2,
-        user: "John Wilson",
-        userImage: "/placeholder.svg?height=40&width=40",
-        storyImage: "/placeholder.svg?height=200&width=200",
-        time: "4h",
-        viewed: viewedStories.includes(2),
-      },
-      {
-        id: 3,
-        user: "Lisa Wong",
-        userImage: "/placeholder.svg?height=40&width=40",
-        storyImage: "/placeholder.svg?height=200&width=200",
-        time: "6h",
-        viewed: viewedStories.includes(3),
-      },
-      {
-        id: 4,
-        user: "Mike Johnson",
-        userImage: "/placeholder.svg?height=40&width=40",
-        storyImage: "/placeholder.svg?height=200&width=200",
-        time: "8h",
-        viewed: viewedStories.includes(4),
-      },
-      {
-        id: 5,
-        user: "David Kim",
-        userImage: "/placeholder.svg?height=40&width=40",
-        storyImage: "/placeholder.svg?height=200&width=200",
-        time: "10h",
-        viewed: viewedStories.includes(5),
-      },
-      {
-        id: 6,
-        user: "Emma Thompson",
-        userImage: "/placeholder.svg?height=40&width=40",
-        storyImage: "/placeholder.svg?height=200&width=200",
-        time: "12h",
-        viewed: viewedStories.includes(6),
-      },
-      {
-        id: 7,
-        user: "Carlos Rodriguez",
-        userImage: "/placeholder.svg?height=40&width=40",
-        storyImage: "/placeholder.svg?height=200&width=200",
-        time: "14h",
-        viewed: viewedStories.includes(7),
-      },
-    ]
-  }
-
-  const generateMockContacts = (): Contact[] => {
-    return [
-      { id: 1, name: "Sarah Chen", image: "/placeholder.svg?height=40&width=40", online: true },
-      { id: 2, name: "John Wilson", image: "/placeholder.svg?height=40&width=40", online: true },
-      { id: 3, name: "Lisa Wong", image: "/placeholder.svg?height=40&width=40", online: false, lastActive: "5m" },
-      { id: 4, name: "Mike Johnson", image: "/placeholder.svg?height=40&width=40", online: true },
-      { id: 5, name: "David Kim", image: "/placeholder.svg?height=40&width=40", online: false, lastActive: "1h" },
-      { id: 6, name: "Emma Thompson", image: "/placeholder.svg?height=40&width=40", online: true },
-      {
-        id: 7,
-        name: "Carlos Rodriguez",
-        image: "/placeholder.svg?height=40&width=40",
-        online: false,
-        lastActive: "2h",
-      },
-      { id: 8, name: "Sophia Lee", image: "/placeholder.svg?height=40&width=40", online: true },
-      { id: 9, name: "Alex Martinez", image: "/placeholder.svg?height=40&width=40", online: true },
-      { id: 10, name: "Olivia Brown", image: "/placeholder.svg?height=40&width=40", online: false, lastActive: "30m" },
-    ]
-  }
-
-  const generateMockEvents = (): Event[] => {
-    return [
-      {
-        id: 1,
-        title: "Pronunciation Workshop",
-        date: "May 22, 2025",
-        time: "8:00 PM GMT",
-        location: "Online (Zoom)",
-        attendees: 45,
-        badge: "today",
-      },
-      {
-        id: 2,
-        title: "Speaking Practice Meetup",
-        date: "May 23, 2025",
-        time: "6:30 PM GMT",
-        location: "Online (Discord)",
-        attendees: 32,
-        badge: "tomorrow",
-      },
-      {
-        id: 3,
-        title: "IELTS Writing Workshop",
-        date: "May 25, 2025",
-        time: "7:00 PM GMT",
-        location: "Online (Zoom)",
-        attendees: 28,
-        badge: "upcoming",
-      },
-    ]
-  }
-
-  const generateMockGroups = (): Group[] => {
-    return [
-      {
-        id: 1,
-        name: "Pronunciation Practice",
-        image: "/placeholder.svg?height=40&width=40",
-        members: 245,
-        privacy: "public",
-        active: true,
-      },
-      {
-        id: 2,
-        name: "Business English",
-        image: "/placeholder.svg?height=40&width=40",
-        members: 189,
-        privacy: "public",
-        active: true,
-      },
-      {
-        id: 3,
-        name: "IELTS Preparation",
-        image: "/placeholder.svg?height=40&width=40",
-        members: 312,
-        privacy: "private",
-        active: true,
-      },
-      {
-        id: 4,
-        name: "Grammar Enthusiasts",
-        image: "/placeholder.svg?height=40&width=40",
-        members: 156,
-        privacy: "public",
-        active: false,
-      },
-      {
-        id: 5,
-        name: "English Teachers",
-        image: "/placeholder.svg?height=40&width=40",
-        members: 203,
-        privacy: "private",
-        active: true,
-      },
-    ]
-  }
-
-  const generateMockTrendingTopics = () => {
-    return [
-      { name: "pronunciation", count: 1245 },
-      { name: "grammar", count: 987 },
-      { name: "vocabulary", count: 856 },
-      { name: "speaking", count: 743 },
-      { name: "writing", count: 621 },
-      { name: "listening", count: 589 },
-      { name: "ielts", count: 478 },
-      { name: "toefl", count: 412 },
-      { name: "business", count: 356 },
-      { name: "idioms", count: 298 },
-    ]
-  }
-
   const handleStoryClick = (id: number) => {
-    if (id === 8) {
+    if (id === 0) {
       // This is the "Add Story" button
       setShowStoryCreator(true)
       return
@@ -636,7 +422,7 @@ export default function CommunityPage() {
     if (!viewedStories.includes(id)) {
       setViewedStories([...viewedStories, id])
 
-      // Generate mock viewers for this story
+      // In a real app, you would load actual story viewers from the database
       setStoryViewers([
         { id: 1, name: "Sarah Chen", image: "/placeholder.svg?height=40&width=40", timeViewed: "5m ago" },
         { id: 2, name: "John Wilson", image: "/placeholder.svg?height=40&width=40", timeViewed: "10m ago" },
@@ -726,8 +512,7 @@ export default function CommunityPage() {
   const removeTaggedPerson = (person: string) => {
     setTaggedPeople(taggedPeople.filter((p) => p !== person))
   }
-
-  const handlePostSubmit = () => {
+  const handlePostSubmit = async () => {
     if (!newPostContent.trim() && !mediaPreview) return
 
     setIsPostingContent(true)
@@ -737,29 +522,67 @@ export default function CommunityPage() {
       navigator.vibrate([50, 30, 50])
     }
 
-    // Simulate posting delay with a more realistic timing
-    setTimeout(() => {
-      const newPost = {
-        id: Date.now(),
-        username: "You",
-        userImage: "/placeholder.svg?height=40&width=40",
+    try {
+      // Get current user
+      const currentUser = await dbHelpers.getCurrentUser()
+      if (!currentUser) {
+        toast({
+          title: "Authentication required",
+          description: "Please log in to create a post.",
+          variant: "destructive",
+        })
+        setIsPostingContent(false)
+        return
+      }
+
+      // Prepare post content
+      let fullContent = newPostContent
+      if (selectedFeeling) fullContent += ` — feeling ${selectedFeeling}`
+      if (location) fullContent += ` — at ${location}`
+      if (taggedPeople.length > 0) fullContent += ` — with ${taggedPeople.join(", ")}`
+      if (selectedDate) fullContent += ` — ${format(selectedDate, "PPP")}`
+
+      // Determine post type
+      let postType = 'text'
+      if (mediaPreview && selectedMedia?.type.startsWith("video/")) {
+        postType = 'video'
+      } else if (mediaPreview && selectedMedia?.type.startsWith("image/")) {
+        postType = 'image'
+      }      // Create post in Supabase
+      const { data: newPost, error } = await dbHelpers.createPost({
+        title: fullContent.substring(0, 100), // Use first 100 chars as title
+        content: fullContent,
+        author_id: currentUser.id,
+        type: postType,
+        tags: [] // Could extract hashtags from content
+      })
+      
+      if (error || !newPost) {
+        console.error('Error creating post:', error)
+        toast({
+          title: "Error creating post",
+          description: "There was an error publishing your post. Please try again.",
+          variant: "destructive",
+        })
+        setIsPostingContent(false)
+        return
+      }      // Add the new post to the feed
+      const newPostForFeed = {
+        id: newPost.id, // Keep as string UUID instead of converting to number
+        username: currentUser.name || "You",
+        userImage: currentUser.avatar || "/placeholder.svg?height=40&width=40",
         timeAgo: "Just now",
-        content:
-          newPostContent +
-          (selectedFeeling ? ` — feeling ${selectedFeeling}` : "") +
-          (location ? ` — at ${location}` : "") +
-          (taggedPeople.length > 0 ? ` — with ${taggedPeople.join(", ")}` : "") +
-          (selectedDate ? ` — ${format(selectedDate, "PPP")}` : ""),
-        mediaType: mediaPreview 
-          ? (selectedMedia?.type.startsWith("video/") ? "video" : "text") 
-          : ("none" as "video" | "text" | "none" | "ai-submission" | "youtube"),
+        content: fullContent,
+        mediaType: postType === 'video' ? 'video' : mediaPreview ? 'text' : 'none' as "video" | "text" | "none" | "ai-submission" | "youtube",
         mediaUrl: mediaPreview,
         likes: 0,
         comments: 0,
         isNew: true,
       }
 
-      setFeedPosts([newPost, ...feedPosts])
+      setFeedPosts([newPostForFeed, ...feedPosts])
+      
+      // Reset form
       setNewPostContent("")
       setIsPostingContent(false)
       setShowNewPostForm(false)
@@ -782,7 +605,15 @@ export default function CommunityPage() {
           behavior: "smooth",
         })
       }, 300)
-    }, 1500)
+    } catch (error) {
+      console.error('Error creating post:', error)
+      toast({
+        title: "Error creating post",
+        description: "There was an error publishing your post. Please try again.",
+        variant: "destructive",
+      })
+      setIsPostingContent(false)
+    }
   }
 
   const handleScrollToTop = () => {
@@ -1182,10 +1013,9 @@ export default function CommunityPage() {
                         isNew={post.isNew}
                         videoEvaluation={post.videoEvaluation}
                       />
-                    ))
-                  ) : (
+                    ))                  ) : (
                     <FeedEmptyState
-                      onRefresh={() => setFeedPosts(generateMockPosts())}
+                      onRefresh={() => loadData()}
                       filterActive={activeFilters.length > 0}
                     />
                   )}

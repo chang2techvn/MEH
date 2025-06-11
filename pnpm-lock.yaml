@@ -137,9 +137,6 @@ importers:
       '@tremor/react':
         specifier: latest
         version: 3.18.7(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
-      autoprefixer:
-        specifier: ^10.4.20
-        version: 10.4.21(postcss@8.5.4)
       bcryptjs:
         specifier: ^3.0.2
         version: 3.0.2
@@ -286,6 +283,9 @@ importers:
       '@types/react-window-infinite-loader':
         specifier: ^1.0.9
         version: 1.0.9
+      autoprefixer:
+        specifier: ^10.4.20
+        version: 10.4.21(postcss@8.5.4)
       critters:
         specifier: ^0.0.25
         version: 0.0.25

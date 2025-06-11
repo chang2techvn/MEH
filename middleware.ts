@@ -31,7 +31,6 @@ export async function middleware(request: NextRequest) {
     redirectUrl.searchParams.set('redirect', request.nextUrl.pathname)
     return NextResponse.redirect(redirectUrl)
   }
-
   // Admin routes - additional check for admin role
   if (request.nextUrl.pathname.startsWith('/admin') && session) {
     try {
@@ -41,7 +40,7 @@ export async function middleware(request: NextRequest) {
         .eq('id', session.user.id)
         .single()
 
-      if (!user || user.role !== 'ADMIN') {
+      if (!user || user.role !== 'admin') {
         return NextResponse.redirect(new URL('/', request.url))
       }
     } catch (error) {

@@ -55,21 +55,20 @@ export const dbHelpers = {
     
     return error ? null : data
   },
-
   async updateUserProfile(id: string, updates: {
     name?: string
     avatar?: string
     bio?: string
-    studentId?: string
+    student_id?: string
     major?: string
-    academicYear?: string
-    lastActive?: string
+    academic_year?: string
+    last_active?: string
   }) {
     const { data, error } = await supabase
       .from('users')
       .update({
         ...updates,
-        lastActive: new Date().toISOString()
+        last_active: new Date().toISOString()
       })
       .eq('id', id)
       .select()
@@ -77,7 +76,6 @@ export const dbHelpers = {
     
     return { data, error }
   },
-
   // Message operations
   async getConversationMessages(conversationId: string) {
     const { data, error } = await supabase
@@ -87,29 +85,50 @@ export const dbHelpers = {
         sender:users!sender_id(id, name, avatar),
         receiver:users!receiver_id(id, name, avatar)
       `)
-      .eq('conversation_id', conversationId)
+      .or(`sender_id.eq.${conversationId.split('_')[1]},receiver_id.eq.${conversationId.split('_')[2]}`)
       .order('created_at', { ascending: true })
     
     return error ? [] : data
   },
-
   async getUserConversations(userId: string) {
+    // Note: conversation_participants table doesn't exist in current schema
+    // Using messages table to create mock conversations for now
     const { data, error } = await supabase
-      .from('conversation_participants')
+      .from('messages')
       .select(`
-        conversation:conversations(
-          id,
-          name,
-          type,
-          is_group,
-          last_message_at,
-          messages(id, content, created_at, sender:users!sender_id(name, avatar))
-        )
+        *,
+        sender:users!sender_id(id, name, avatar),
+        receiver:users!receiver_id(id, name, avatar)
       `)
-      .eq('user_id', userId)
-      .eq('is_active', true)
+      .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
+      .order('created_at', { ascending: false })
     
-    return error ? [] : data
+    if (error) return []
+    
+    // Group messages by conversation partner to create mock conversations
+    const conversations: any[] = []
+    const seenPartners = new Set()
+    
+    for (const message of data) {
+      const partnerId = message.sender_id === userId ? message.receiver_id : message.sender_id
+      const partner = message.sender_id === userId ? message.receiver : message.sender
+      
+      if (!seenPartners.has(partnerId) && partner && 'name' in partner) {
+        seenPartners.add(partnerId)
+        conversations.push({
+          conversation: {
+            id: `conv_${userId}_${partnerId}`,
+            name: partner.name,
+            type: 'direct',
+            is_group: false,
+            last_message_at: message.created_at,
+            messages: [message]
+          }
+        })
+      }
+    }
+    
+    return conversations
   },
 
   // Challenge operations
@@ -136,99 +155,80 @@ export const dbHelpers = {
     
     return error ? [] : data
   },
-
+  async getChallengeSubmissions() {
+    const { data, error } = await supabase
+      .from('challenge_submissions')
+      .select(`
+        *,
+        challenge:challenges(id, title, difficulty, category),
+        user:users(id, name, email)
+      `)
+      .order('submitted_at', { ascending: false })
+    
+    return error ? [] : data
+  },
   // Resource operations
   async getResources() {
     const { data, error } = await supabase
       .from('resources')
       .select('*')
-      .eq('is_public', true)
-      .eq('is_active', true)
       .order('created_at', { ascending: false })
     
     return error ? [] : data
   },
-
   // Admin resource operations
   async getAdminResources() {
     const { data, error } = await supabase
       .from('resources')
-      .select(`
-        *,
-        uploader:users!uploaded_by(name, email)
-      `)
-      .order('updated_at', { ascending: false })
+      .select('*')
+      .order('created_at', { ascending: false })
     
     return error ? [] : data
   },
-
   async getResourceById(id: string) {
     const { data, error } = await supabase
       .from('resources')
-      .select(`
-        *,
-        uploader:users!uploaded_by(name, email)
-      `)
+      .select('*')
       .eq('id', id)
       .single()
     
     return error ? null : data
   },
-
   async createResource(resource: {
-    title: string
-    description?: string
-    content?: string
-    type: string
-    category: string
-    tags?: string[]
-    difficulty?: string
-    file_url?: string
-    thumbnail_url?: string
+    alt_text?: string
+    challenge_id?: string
     duration?: number
-    size?: number
-    is_public?: boolean
-    is_active?: boolean
-    metadata?: any
-    uploaded_by: string
+    file_size?: number
+    resource_type: string
+    url: string
   }) {
     const { data, error } = await supabase
       .from('resources')
       .insert({
-        ...resource,
-        downloads: 0,
-        views: 0,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        alt_text: resource.alt_text,
+        challenge_id: resource.challenge_id,
+        duration: resource.duration,
+        file_size: resource.file_size,
+        resource_type: resource.resource_type,
+        url: resource.url,
+        created_at: new Date().toISOString()
       })
       .select()
       .single()
     
     return { data, error }
   },
-
   async updateResource(id: string, updates: {
-    title?: string
-    description?: string
-    content?: string
-    type?: string
-    category?: string
-    tags?: string[]
-    difficulty?: string
-    file_url?: string
-    thumbnail_url?: string
+    alt_text?: string
+    challenge_id?: string
     duration?: number
-    size?: number
-    is_public?: boolean
-    is_active?: boolean
-    metadata?: any
+    file_size?: number
+    resource_type?: string
+    url?: string
   }) {
     const { data, error } = await supabase
       .from('resources')
-      .update({
-        ...updates,
-        updated_at: new Date().toISOString()
-      })
+      .update(updates)
       .eq('id', id)
       .select()
       .single()
@@ -244,19 +244,13 @@ export const dbHelpers = {
     
     return { success: !error, error }
   },
-
   async bulkUpdateResources(ids: string[], updates: {
-    is_public?: boolean
-    is_active?: boolean
-    category?: string
-    difficulty?: string
+    alt_text?: string
+    resource_type?: string
   }) {
     const { data, error } = await supabase
       .from('resources')
-      .update({
-        ...updates,
-        updated_at: new Date().toISOString()
-      })
+      .update(updates)
       .in('id', ids)
       .select()
     
@@ -271,64 +265,29 @@ export const dbHelpers = {
     
     return { success: !error, error }
   },
-
-  async incrementResourceViews(id: string) {
-    const { data, error } = await supabase
-      .rpc('increment_resource_views', { resource_id: id })
-    
-    return { success: !error, error }
-  },
-
-  async incrementResourceDownloads(id: string) {
-    const { data, error } = await supabase
-      .rpc('increment_resource_downloads', { resource_id: id })
-    
-    return { success: !error, error }
-  },
   async getResourceAnalytics() {
     const { data, error } = await supabase
       .from('resources')
-      .select('id, title, type, category, difficulty, views, downloads, is_public, is_active, created_at')
+      .select('id, resource_type, created_at')
     
     if (error) return null
 
     const totalResources = data.length
-    const totalViews = data.reduce((sum, resource) => sum + (resource.views || 0), 0)
-    const totalDownloads = data.reduce((sum, resource) => sum + (resource.downloads || 0), 0)
     
     const resourcesByType = data.reduce((acc, resource) => {
-      acc[resource.type] = (acc[resource.type] || 0) + 1
+      acc[resource.resource_type] = (acc[resource.resource_type] || 0) + 1
       return acc
     }, {} as Record<string, number>)
-
-    const resourcesByCategory = data.reduce((acc, resource) => {
-      acc[resource.category] = (acc[resource.category] || 0) + 1
-      return acc
-    }, {} as Record<string, number>)
-
-    const resourcesByDifficulty = data.reduce((acc, resource) => {
-      const level = resource.difficulty || 'all-levels'
-      acc[level] = (acc[level] || 0) + 1
-      return acc
-    }, {} as Record<string, number>)
-
-    const topResources = data
-      .sort((a, b) => (b.views || 0) - (a.views || 0))
-      .slice(0, 5)
-      .map(resource => ({
-        title: resource.title || 'Untitled',
-        views: resource.views || 0
-      }))
 
     return {
       totalResources,
-      totalViews,
-      totalDownloads,
-      totalLikes: 0, // Not implemented in current schema
+      totalViews: 0, // Not available in current schema
+      totalDownloads: 0, // Not available in current schema
+      totalLikes: 0, // Not available in current schema
       resourcesByType: Object.entries(resourcesByType).map(([type, count]) => ({ type, count })),
-      resourcesByCategory: Object.entries(resourcesByCategory).map(([category, count]) => ({ category, count })),
-      resourcesByLevel: Object.entries(resourcesByDifficulty).map(([level, count]) => ({ level, count })),
-      topResources
+      resourcesByCategory: [], // Not available in current schema
+      resourcesByLevel: [], // Not available in current schema
+      topResources: [] // Not available in current schema
     }
   },
   // Notification operations
@@ -749,7 +708,338 @@ export const dbHelpers = {
       .single()
     
     return { data, error }
-  }
+  },
+
+  // AI Assistant operations
+  async getAIAssistants() {
+    const { data, error } = await supabase
+      .from('ai_assistants')
+      .select(`
+        *,
+        creator:users!created_by(id, name, email)
+      `)
+      .order('created_at', { ascending: false })
+    
+    return error ? [] : data
+  },
+
+  async getAIAssistantById(id: string) {
+    const { data, error } = await supabase
+      .from('ai_assistants')
+      .select(`
+        *,
+        creator:users!created_by(id, name, email)
+      `)
+      .eq('id', id)
+      .single()
+    
+    return error ? null : data
+  },  async createAIAssistant(assistant: {
+    name: string
+    avatar?: string
+    description?: string
+    system_prompt: string
+    model?: string
+    created_by: string
+    capabilities?: string[]
+    category?: string
+    is_active?: boolean
+  }) {
+    const { data, error } = await supabase
+      .from('ai_assistants')
+      .insert({
+        name: assistant.name,
+        avatar: assistant.avatar,
+        description: assistant.description,
+        system_prompt: assistant.system_prompt,
+        model: assistant.model || 'gpt-3.5-turbo',
+        capabilities: assistant.capabilities,
+        category: assistant.category,
+        is_active: assistant.is_active !== undefined ? assistant.is_active : true,
+        created_by: assistant.created_by,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .select()
+      .single()
+    
+    return { data, error }
+  },
+
+  async updateAIAssistant(id: string, updates: {
+    name?: string
+    avatar?: string
+    description?: string
+    system_prompt?: string
+    model?: string
+    capabilities?: string[]
+    category?: string
+    is_active?: boolean
+  }) {
+    const { data, error } = await supabase
+      .from('ai_assistants')
+      .update({
+        ...updates,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select()
+      .single()
+    
+    return { data, error }
+  },
+
+  async deleteAIAssistant(id: string) {
+    const { data, error } = await supabase
+      .from('ai_assistants')
+      .delete()
+      .eq('id', id)
+    
+    return { success: !error, error }
+  },
+  async toggleAIAssistantStatus(id: string, newStatus?: boolean) {
+    // First get current status if newStatus is not provided
+    const { data: current, error: fetchError } = await supabase
+      .from('ai_assistants')
+      .select('is_active')
+      .eq('id', id)
+      .single()
+    
+    if (fetchError) return { success: false, error: fetchError }
+    
+    const targetStatus = newStatus !== undefined ? newStatus : !current.is_active
+    
+    const { data, error } = await supabase
+      .from('ai_assistants')
+      .update({ 
+        is_active: targetStatus,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select()
+      .single()
+      return { success: !error, error, data }
+  },
+
+  // Additional helper methods needed by components
+  async getUsers(limit?: number) {
+    const query = supabase
+      .from('users')
+      .select('*')
+      .order('created_at', { ascending: false })
+    
+    if (limit) {
+      query.limit(limit)
+    }
+    
+    const { data, error } = await query
+    return { data: data || [], error }
+  },
+
+  async getMessages(limit?: number) {
+    const query = supabase
+      .from('messages')
+      .select(`
+        *,
+        sender:users!sender_id(name, avatar),
+        receiver:users!receiver_id(name, avatar)
+      `)
+      .order('created_at', { ascending: false })
+    
+    if (limit) {
+      query.limit(limit)
+    }
+    
+    const { data, error } = await query
+    return { data: data || [], error }
+  },
+
+  async getPosts(options?: { limit?: number }) {
+    const query = supabase
+      .from('posts')
+      .select(`
+        *,
+        author:users!author_id(name, avatar),
+        likes_count:post_likes(count),
+        comments_count:post_comments(count)
+      `)
+      .order('created_at', { ascending: false })
+    
+    if (options?.limit) {
+      query.limit(options.limit)
+    }
+    
+    const { data, error } = await query
+    return { data: data || [], error }
+  },
+
+  async getEvents(limit?: number) {
+    const query = supabase
+      .from('events')
+      .select('*')
+      .gte('start_date', new Date().toISOString())
+      .order('start_date', { ascending: true })
+    
+    if (limit) {
+      query.limit(limit)
+    }
+    
+    const { data, error } = await query
+    return { data: data || [], error }
+  },
+
+  async getPastEvents(limit?: number) {
+    const query = supabase
+      .from('events')
+      .select('*')
+      .lt('end_date', new Date().toISOString())
+      .order('end_date', { ascending: false })
+    
+    if (limit) {
+      query.limit(limit)
+    }
+    
+    const { data, error } = await query
+    return { data: data || [], error }
+  },
+
+  async getGroups(limit?: number) {
+    const query = supabase
+      .from('groups')
+      .select(`
+        *,
+        members_count:group_members(count),
+        owner:users!owner_id(name, avatar)
+      `)
+      .order('created_at', { ascending: false })
+    
+    if (limit) {
+      query.limit(limit)
+    }
+    
+    const { data, error } = await query
+    return { data: data || [], error }
+  },
+
+  async getStories(limit: number = 10) {
+    const { data, error } = await supabase
+      .from('stories')
+      .select(`
+        *,
+        author:users!author_id(name, avatar)
+      `)
+      .order('created_at', { ascending: false })
+      .limit(limit)
+    
+    return { data: data || [], error }
+  },
+
+  async getOnlineUsers(limit: number = 10) {
+    const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString()
+    
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .gte('last_active', thirtyMinutesAgo)
+      .order('last_active', { ascending: false })
+      .limit(limit)
+    
+    return { data: data || [], error }
+  },
+
+  async getTrendingTopics(limit: number = 10) {
+    const { data, error } = await supabase
+      .from('trending_topics')
+      .select('*')
+      .order('engagement_score', { ascending: false })
+      .limit(limit)
+    
+    return { data: data || [], error }
+  },
+
+  async getLeaderboard(limit: number = 10) {
+    const { data, error } = await supabase
+      .from('users')
+      .select('id, name, avatar, score, level')
+      .order('score', { ascending: false })
+      .limit(limit)
+    
+    return { data: data || [], error }
+  },
+
+  async createPost(postData: {
+    title: string
+    content: string
+    author_id: string
+    type?: string
+    tags?: string[]
+  }) {
+    const { data, error } = await supabase
+      .from('posts')
+      .insert([{
+        ...postData,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }])
+      .select()
+      .single()
+    
+    return { data, error }
+  },
+
+  async getNotificationTemplates() {
+    const { data, error } = await supabase
+      .from('notification_templates')
+      .select('*')
+      .order('created_at', { ascending: false })
+    
+    return { data: data || [], error }
+  },
+
+  async getScheduledMessages() {
+    const { data, error } = await supabase
+      .from('scheduled_messages')
+      .select(`
+        *,
+        template:notification_templates(name, content)
+      `)
+      .order('scheduled_for', { ascending: true })
+    
+    return { data: data || [], error }
+  },
+
+  async getRecentNotificationActivity() {
+    const { data, error } = await supabase
+      .from('notification_logs')
+      .select(`
+        *,
+        template:notification_templates(name)
+      `)
+      .order('created_at', { ascending: false })
+      .limit(50)
+    
+    return { data: data || [], error }
+  },
+
+  async createFlaggedContent(contentData: {
+    content_type: string
+    content_id: string
+    reason: string
+    flagged_by: string
+    details?: any
+  }) {
+    const { data, error } = await supabase
+      .from('flagged_content')
+      .insert([{
+        ...contentData,
+        created_at: new Date().toISOString(),
+        status: 'pending'
+      }])
+      .select()
+      .single()
+    
+    return { data, error }
+  },
 }
 
 export type SupabaseClient = typeof supabase

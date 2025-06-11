@@ -40,12 +40,13 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
 import { supabase, dbHelpers } from "@/lib/supabase"
-import type { Database } from "@/types/database.types"
+import type { Database } from "@/lib/database.types"
 
 // Types from Supabase schema
 type UserRow = Database['public']['Tables']['users']['Row']
-type MessageRow = Database['public']['Tables']['messages']['Row']
+type MessageRow = Database['public']['Tables']['conversation_messages']['Row']
 type ConversationRow = Database['public']['Tables']['conversations']['Row']
+type ConversationParticipantRow = Database['public']['Tables']['conversation_participants']['Row']
 
 interface ConversationData {
   user: {
@@ -117,38 +118,67 @@ export function ConversationView({ conversationId, isLoading, onBackToList, isMo
           title,
           status,
           created_at,
-          updated_at,
-          participants:conversation_participants!inner(
-            role,
-            user:users!inner(
-              id,
-              name,
-              email,
-              avatar,
-              last_active,
-              created_at,
-              level
-            )
-          ),
-          messages(
-            id,
-            content,
-            sender_id,
-            created_at,
-            is_read,
-            sender:users!inner(
-              id,
-              full_name,
-              avatar_url
-            )
-          )
+          updated_at
         `)
         .eq('id', id)
         .single()
 
       if (convError) {
         console.error('Error loading conversation:', convError)
-        throw new Error('Failed to load conversation: ' + convError.message)
+        throw convError
+      }
+
+      // Fetch participants separately
+      const { data: participantsData, error: participantsError } = await supabase
+        .from('conversation_participants')
+        .select(`
+          role,
+          joined_at,
+          user:users!inner(
+            id,
+            name,
+            email,
+            avatar,
+            last_active,
+            created_at,
+            level
+          )
+        `)
+        .eq('conversation_id', id)
+
+      if (participantsError) {
+        console.error('Error loading participants:', participantsError)
+        throw participantsError
+      }
+
+      // Fetch messages separately
+      const { data: messagesData, error: messagesError } = await supabase
+        .from('conversation_messages')
+        .select(`
+          id,
+          content,
+          sender_id,
+          created_at,
+          message_type,
+          media_url,
+          sender:users!inner(
+            id,
+            name,
+            avatar
+          )
+        `)
+        .eq('conversation_id', id)
+        .eq('is_deleted', false)
+        .order('created_at', { ascending: true })
+
+      if (messagesError) {
+        console.error('Error loading messages:', messagesError)
+        throw messagesError
+      }
+
+      if (convError) {
+        console.error('Error loading conversation:', convError)
+        throw new Error('Failed to load conversation')
       }
 
       if (!conversationData) {
@@ -157,14 +187,16 @@ export function ConversationView({ conversationId, isLoading, onBackToList, isMo
       }
 
       // Transform data to match ConversationData interface
-      const studentParticipant = conversationData.participants.find(p => p.role === 'student')
-      const userArray = studentParticipant?.user
-      const user = Array.isArray(userArray) ? userArray[0] : userArray
+      const studentParticipant = participantsData?.find(p => p.role === 'student')
+      const userData = studentParticipant?.user
 
-      if (!user) {
+      if (!userData) {
         setConversation(null)
         return
       }
+
+      // Handle case where user might be an array (due to join structure)
+      const user = Array.isArray(userData) ? userData[0] : userData
 
       const transformedConversation: ConversationData = {
         user: {
@@ -177,16 +209,16 @@ export function ConversationView({ conversationId, isLoading, onBackToList, isMo
           location: 'N/A', // Not available in schema
           timezone: 'N/A', // Not available in schema
           lastActive: user.last_active ? format(new Date(user.last_active), 'MMM d, yyyy') : 'Never',
-          memberSince: format(new Date(user.created_at), 'MMM yyyy'),
+          memberSince: format(new Date(user.created_at || new Date()), 'MMM yyyy'),
           level: user.level ? `Level ${user.level}` : 'Beginner'
         },
-        messages: conversationData.messages.map(msg => ({
+        messages: messagesData?.map(msg => ({
           id: msg.id,
           sender: msg.sender_id === user.id ? 'user' : 'admin',
           text: msg.content,
-          timestamp: new Date(msg.created_at),
-          status: msg.is_read ? 'read' : 'delivered'
-        })),
+          timestamp: new Date(msg.created_at || new Date()),
+          status: 'read' // Default to read since we don't track this in conversation_messages
+        })) || [],
         notes: await loadNotes(id) // Load notes from database
       }
 
@@ -303,7 +335,7 @@ export function ConversationView({ conversationId, isLoading, onBackToList, isMo
       // Update conversation status in database
       const { error } = await supabase
         .from('conversations')
-        .update({ status: 'flagged' })
+        .update({ status: 'FLAGGED' })
         .eq('id', conversationId)
 
       if (error) {
@@ -332,7 +364,7 @@ export function ConversationView({ conversationId, isLoading, onBackToList, isMo
       // Update conversation status in database
       const { error } = await supabase
         .from('conversations')
-        .update({ status: 'archived' })
+        .update({ status: 'ARCHIVED' })
         .eq('id', conversationId)
 
       if (error) {

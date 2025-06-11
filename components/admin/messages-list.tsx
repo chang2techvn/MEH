@@ -12,7 +12,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Flag, MessageSquare } from "lucide-react"
 import { supabase, dbHelpers } from "@/lib/supabase"
-import type { Database } from "@/types/database.types"
+import type { Database } from "@/lib/database.types"
 import { toast } from "@/hooks/use-toast"
 
 // Types from Supabase schema

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
-import { toast } from "@/components/ui/use-toast"
+import { toast } from "@/hooks/use-toast"
 
 export default function ServiceWorkerManager() {
   const [waitingWorker, setWaitingWorker] = useState<ServiceWorker | null>(null)

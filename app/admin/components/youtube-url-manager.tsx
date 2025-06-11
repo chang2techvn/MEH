@@ -229,12 +229,11 @@ export default function YouTubeUrlManager() {
             <TabsTrigger value="auto">Auto Fetch</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="current" className="space-y-4">
-            <div className="flex justify-between items-center">
+          <TabsContent value="current" className="space-y-4">            <div className="flex justify-between items-center">
               <h3 className="text-lg font-medium">Today's Challenge Video</h3>
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Clock className="h-4 w-4" />
-                <span>Updated daily at midnight</span>
+                <span>Auto-refreshes daily at 23:59</span>
               </div>
             </div>
 
@@ -450,11 +449,11 @@ export default function YouTubeUrlManager() {
             <div className="p-4 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800">
               <div className="flex items-start gap-3">
                 <AlertTriangle className="h-5 w-5 text-amber-500 mt-0.5 flex-shrink-0" />
-                <div>
-                  <p className="font-medium text-amber-700 dark:text-amber-400">Auto-Fetch Information</p>
+                <div>                  <p className="font-medium text-amber-700 dark:text-amber-400">Auto-Refresh Information</p>
                   <p className="text-sm text-amber-600 dark:text-amber-300 mt-1">
-                    The system will suggest educational videos based on your settings. You can approve or reject the
-                    suggestion. The daily video will only change when you approve a new video.
+                    The system automatically refreshes with a new educational video every day at 23:59 (11:59 PM). 
+                    The same video is shown to all users throughout the day. You can manually override this by 
+                    selecting a custom video, which will persist until you clear it or the next automatic refresh.
                   </p>
                 </div>
               </div>

@@ -162,14 +162,14 @@ const loadAnalyticsData = async (timeRange: string): Promise<AnalyticsData> => {
       const monthStart = startOfMonth(subMonths(now, i))
       const monthEnd = endOfMonth(subMonths(now, i))
       const monthUsers = users.filter(u => {
-        const createdAt = new Date(u.joined_at)
+        const createdAt = new Date(u.joined_at || Date.now())
         return createdAt >= monthStart && createdAt <= monthEnd
       }).length
 
       const prevMonthStart = startOfMonth(subMonths(now, i + 1))
       const prevMonthEnd = endOfMonth(subMonths(now, i + 1))
       const prevMonthUsers = users.filter(u => {
-        const createdAt = new Date(u.joined_at)
+        const createdAt = new Date(u.joined_at || Date.now())
         return createdAt >= prevMonthStart && createdAt <= prevMonthEnd
       }).length
 
@@ -183,7 +183,7 @@ const loadAnalyticsData = async (timeRange: string): Promise<AnalyticsData> => {
     // Calculate challenge completion data
     const challengeStats = challenges.reduce((acc: any, challenge: any) => {
       const challengeSubmissions = submissions.filter(s => 
-        s.challenge_id === challenge.id && s.status === 'COMPLETED'
+        s.challenge_id === challenge.id && s.status === 'APPROVED'
       )
       const completionRate = challengeSubmissions.length > 0 
         ? (challengeSubmissions.filter(s => s.score && s.score >= 70).length / challengeSubmissions.length) * 100
@@ -229,9 +229,8 @@ const loadAnalyticsData = async (timeRange: string): Promise<AnalyticsData> => {
 
     // Calculate hourly engagement
     const engagementByTimeData = []
-    for (let hour = 0; hour < 24; hour += 2) {
-      const currentHourMessages = messages.filter(m => {
-        const messageHour = new Date(m.created_at).getHours()
+    for (let hour = 0; hour < 24; hour += 2) {      const currentHourMessages = messages.filter(m => {
+        const messageHour = new Date(m.created_at || Date.now()).getHours()
         return messageHour === hour
       }).length
 
@@ -280,19 +279,18 @@ const loadAnalyticsData = async (timeRange: string): Promise<AnalyticsData> => {
     })) || []
 
     // Calculate quick stats
-    const activeUsers = users.filter(u => {
-      const lastActive = new Date(u.last_active)
+    const activeUsers = users.filter(u => {      const lastActive = new Date(u.last_active || Date.now())
       return (now.getTime() - lastActive.getTime()) < (7 * 24 * 60 * 60 * 1000) // Active in last 7 days
     }).length
 
-    const completedSubmissions = submissions.filter(s => s.status === 'COMPLETED').length
+    const completedSubmissions = submissions.filter(s => s.status === 'APPROVED').length
     const averageScore = submissions.length > 0
       ? submissions.reduce((sum, s) => sum + (s.score || 0), 0) / submissions.length
       : 0
 
     const thisMonthStart = startOfMonth(now)
     const newUsersThisMonth = users.filter(u => 
-      new Date(u.joined_at) >= thisMonthStart
+      new Date(u.joined_at || Date.now()) >= thisMonthStart
     ).length
 
     return {

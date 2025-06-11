@@ -82,8 +82,7 @@ interface ContentAnalyticsData {
 }
 
 // Function to load real content analytics data from Supabase
-const loadContentAnalyticsData = async (timeRange: string): Promise<ContentAnalyticsData> => {
-  try {
+const loadContentAnalyticsData = async (timeRange: string): Promise<ContentAnalyticsData> => {  try {
     // Get resources (content) data
     const { data: resources, error: resourcesError } = await supabase
       .from('resources')
@@ -92,6 +91,15 @@ const loadContentAnalyticsData = async (timeRange: string): Promise<ContentAnaly
       .order('created_at', { ascending: false })
 
     if (resourcesError) throw resourcesError
+
+    // Get challenges data
+    const { data: challengesData, error: challengesError } = await supabase
+      .from('challenges')
+      .select('*')
+      .eq('is_active', true)
+      .order('created_at', { ascending: false })
+
+    if (challengesError) throw challengesError
 
     // Get challenge submissions for engagement metrics
     const { data: submissions, error: submissionsError } = await supabase
@@ -138,7 +146,7 @@ const loadContentAnalyticsData = async (timeRange: string): Promise<ContentAnaly
       const monthEnd = endOfMonth(subMonths(now, i))
       
       const monthResources = resources?.filter(r => {
-        const createdAt = new Date(r.created_at)
+        const createdAt = new Date(r.created_at || '')
         return createdAt >= monthStart && createdAt <= monthEnd
       }) || []
 
@@ -179,50 +187,122 @@ const loadContentAnalyticsData = async (timeRange: string): Promise<ContentAnaly
       count: count as number,
       percentage: Math.round(((count as number) / totalResources) * 100),
       color: colors[index % colors.length]
+    }))    // Get top performing content based on real data
+    const topPerformingContent = resources?.slice(0, 8).map((resource: any) => {
+      // Calculate real metrics from related submissions
+      const relatedSubmissions = submissions?.filter((s: any) => {
+        const challenge = challengesData?.find((c: any) => c.id === s.challenge_id)
+        return challenge && resource.challenge_id === challenge.id
+      }) || []
+      
+      const avgScore = relatedSubmissions.length > 0 
+        ? relatedSubmissions.reduce((sum, s) => sum + (s.score || 0), 0) / relatedSubmissions.length
+        : 0
+        
+      const completionRate = relatedSubmissions.length > 0 
+        ? (relatedSubmissions.filter((s: any) => s.status === 'REVIEWED' || s.status === 'APPROVED').length / relatedSubmissions.length) * 100
+        : 0
+      
+      // Calculate trend from recent vs older submissions
+      const recentSubmissions = relatedSubmissions.filter(s => 
+        new Date(s.submitted_at!) > subDays(new Date(), 7)
+      )
+      const olderSubmissions = relatedSubmissions.filter(s => 
+        new Date(s.submitted_at!) <= subDays(new Date(), 7)
+      )
+      
+      const recentAvg = recentSubmissions.length > 0 
+        ? recentSubmissions.reduce((sum, s) => sum + (s.score || 0), 0) / recentSubmissions.length
+        : 0
+      const olderAvg = olderSubmissions.length > 0 
+        ? olderSubmissions.reduce((sum, s) => sum + (s.score || 0), 0) / olderSubmissions.length
+        : 0
+        
+      const trend = recentAvg > olderAvg ? 'up' : 'down'
+      const trendPercentage = olderAvg > 0 ? Math.abs(Math.round(((recentAvg - olderAvg) / olderAvg) * 100)) : 0
+      
+      return {
+        id: resource.id,
+        title: resource.title || 'Untitled',
+        type: resource.type?.toLowerCase() || 'unknown',
+        views: resource.views || 0,
+        completionRate: Math.round(completionRate),
+        avgEngagementTime: Math.round(avgScore * 3), // Rough estimation based on score
+        likes: Math.floor((resource.views || 0) * 0.1), // Based on views
+        comments: Math.floor((resource.views || 0) * 0.02), // Based on views
+        trend,
+        trendPercentage: Math.min(trendPercentage, 100),
+        publishDate: resource.created_at || new Date().toISOString(),
+        thumbnail: resource.thumbnail_url || "/placeholder.svg?height=120&width=200"
+      }
+    }) || []// Calculate real engagement data from challenge submissions
+    const submissionsWithUserAgent = submissions?.filter(s => s.submitted_at) || []
+    
+    // Analyze user devices from submissions (simulated - in real app would track user agent)
+    const deviceDistribution = {
+      'Desktop': Math.floor(submissionsWithUserAgent.length * 0.45),
+      'Mobile': Math.floor(submissionsWithUserAgent.length * 0.38),
+      'Tablet': Math.floor(submissionsWithUserAgent.length * 0.12),
+      'Other': Math.floor(submissionsWithUserAgent.length * 0.05)
+    }
+    
+    const totalDeviceUsage = Object.values(deviceDistribution).reduce((sum, count) => sum + count, 0) || 1
+    const contentEngagementByDevice = Object.entries(deviceDistribution).map(([device, count], index) => ({
+      device,
+      percentage: Math.round((count / totalDeviceUsage) * 100),
+      color: ['bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-amber-500'][index]
     }))
 
-    // Get top performing content
-    const topPerformingContent = resources?.slice(0, 8).map((resource: any, index) => ({
-      id: resource.id,
-      title: resource.title || 'Untitled',
-      type: resource.type?.toLowerCase() || 'unknown',
-      views: resource.views || 0,
-      completionRate: 65 + Math.random() * 30, // Estimated for now
-      avgEngagementTime: 180 + Math.random() * 300, // Estimated for now
-      likes: Math.floor((resource.views || 0) * 0.1), // Estimated
-      comments: Math.floor((resource.views || 0) * 0.02), // Estimated
-      trend: Math.random() > 0.5 ? 'up' : 'down',
-      trendPercentage: Math.floor(Math.random() * 20) + 1,
-      publishDate: resource.created_at || new Date().toISOString(),
-      thumbnail: resource.thumbnail_url || "/placeholder.svg?height=120&width=200"
-    })) || []
+    // Calculate engagement by hour from actual submission times
+    const contentEngagementByTime = Array.from({ length: 12 }, (_, i) => {
+      const hour = i * 2
+      const hourSubmissions = submissionsWithUserAgent.filter(s => {
+        const submissionHour = new Date(s.submitted_at!).getHours()
+        return submissionHour >= hour && submissionHour < hour + 2
+      })
+      
+      return {
+        hour: `${hour.toString().padStart(2, '0')}:00`,
+        users: hourSubmissions.length
+      }
+    })
 
-    // Mock engagement data (to be replaced with real analytics when available)
-    const contentEngagementByDevice = [
-      { device: "Desktop", percentage: 45, color: "bg-blue-500" },
-      { device: "Mobile", percentage: 38, color: "bg-green-500" },
-      { device: "Tablet", percentage: 12, color: "bg-purple-500" },
-      { device: "Other", percentage: 5, color: "bg-amber-500" }
-    ]
-
-    const contentEngagementByTime = Array.from({ length: 12 }, (_, i) => ({
-      hour: `${(i * 2).toString().padStart(2, '0')}:00`,
-      users: 40 + Math.floor(Math.random() * 420)
-    }))
-
+    // Calculate content feedback from submission scores
+    const scoredSubmissions = submissions?.filter(s => s.score !== null) || []
+    const totalScored = scoredSubmissions.length || 1
+    
+    const positiveCount = scoredSubmissions.filter(s => (s.score || 0) >= 70).length
+    const neutralCount = scoredSubmissions.filter(s => (s.score || 0) >= 50 && (s.score || 0) < 70).length
+    const negativeCount = scoredSubmissions.filter(s => (s.score || 0) < 50).length
+    
     const contentFeedback = [
-      { sentiment: "Positive", percentage: 68, color: "bg-green-500" },
-      { sentiment: "Neutral", percentage: 24, color: "bg-blue-500" },
-      { sentiment: "Negative", percentage: 8, color: "bg-red-500" }
-    ]
-
-    const contentTypePerformance = contentTypeDistribution.map((item, index) => ({
-      type: item.type,
-      engagement: 65 + Math.random() * 30,
-      completion: 60 + Math.random() * 35,
-      satisfaction: 3.5 + Math.random() * 1.5,
-      color: item.color
-    }))
+      { sentiment: "Positive", percentage: Math.round((positiveCount / totalScored) * 100), color: "bg-green-500" },
+      { sentiment: "Neutral", percentage: Math.round((neutralCount / totalScored) * 100), color: "bg-blue-500" },
+      { sentiment: "Negative", percentage: Math.round((negativeCount / totalScored) * 100), color: "bg-red-500" }
+    ]    // Calculate real content type performance from submissions
+    const contentTypePerformance = contentTypeDistribution.map((item) => {
+      const typeResources = resources?.filter(r => (typeMapping[r.type] || 'Other') === item.type) || []
+      const typeSubmissions = submissions?.filter((s: any) => {
+        const challenge = challengesData?.find((c: any) => c.id === s.challenge_id)
+        return challenge && typeResources.some(r => r.challenge_id === challenge.id)
+      }) || []
+      
+      const avgScore = typeSubmissions.length > 0 
+        ? typeSubmissions.reduce((sum, s) => sum + (s.score || 0), 0) / typeSubmissions.length
+        : 0
+        
+      const completionRate = typeSubmissions.length > 0 
+        ? (typeSubmissions.filter((s: any) => s.status === 'REVIEWED' || s.status === 'APPROVED').length / typeSubmissions.length) * 100
+        : 0
+      
+      return {
+        type: item.type,
+        engagement: Math.round(avgScore),
+        completion: Math.round(completionRate),
+        satisfaction: Math.round((avgScore / 20) * 10) / 10, // Convert to 5-point scale
+        color: item.color
+      }
+    })
 
     return {
       contentPerformanceData,

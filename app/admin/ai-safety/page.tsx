@@ -47,6 +47,7 @@ import {
 } from "lucide-react"
 
 import { dbHelpers } from "@/lib/supabase"
+import { toast } from "@/hooks/use-toast"
 
 // Types
 type SafetyRule = {
@@ -89,172 +90,7 @@ type SafetyMetric = {
   target: number
 }
 
-// Mock data
-const mockSafetyRules: SafetyRule[] = [
-  {
-    id: "rule-1",
-    name: "Harmful Content Filter",
-    description: "Detects and blocks content that could be harmful to users",
-    severity: "high",
-    enabled: true,
-    threshold: 75,
-    category: "harmful",
-    createdAt: "2023-11-15T10:30:00Z",
-    lastUpdated: "2024-04-10T14:22:00Z",
-  },
-  {
-    id: "rule-2",
-    name: "Personal Information Detection",
-    description: "Identifies and redacts personal information in user content",
-    severity: "critical",
-    enabled: true,
-    threshold: 85,
-    category: "personal",
-    createdAt: "2023-12-05T09:15:00Z",
-    lastUpdated: "2024-04-12T11:45:00Z",
-  },
-  {
-    id: "rule-3",
-    name: "Inappropriate Language Filter",
-    description: "Filters out profanity and inappropriate language",
-    severity: "medium",
-    enabled: true,
-    threshold: 65,
-    category: "content",
-    createdAt: "2024-01-20T16:40:00Z",
-    lastUpdated: "2024-04-05T09:30:00Z",
-  },
-  {
-    id: "rule-4",
-    name: "Spam Detection",
-    description: "Identifies and filters spam content",
-    severity: "low",
-    enabled: false,
-    threshold: 60,
-    category: "behavior",
-    createdAt: "2024-02-10T13:20:00Z",
-    lastUpdated: "2024-03-28T15:10:00Z",
-  },
-  {
-    id: "rule-5",
-    name: "Toxic Behavior Detection",
-    description: "Identifies toxic behavior patterns in user interactions",
-    severity: "high",
-    enabled: true,
-    threshold: 70,
-    category: "behavior",
-    createdAt: "2024-01-05T11:30:00Z",
-    lastUpdated: "2024-04-15T10:20:00Z",
-  },
-]
-
-const mockFlaggedContent: FlaggedContent[] = [
-  {
-    id: "flag-1",
-    content: "This content was flagged for potentially harmful language...",
-    userId: "user-123",
-    userName: "JohnDoe",
-    timestamp: "2024-04-18T09:45:00Z",
-    rule: "Harmful Content Filter",
-    severity: "high",
-    status: "pending",
-    score: 82,
-  },
-  {
-    id: "flag-2",
-    content: "This submission contained personal information that was automatically redacted...",
-    userId: "user-456",
-    userName: "JaneSmith",
-    timestamp: "2024-04-17T14:30:00Z",
-    rule: "Personal Information Detection",
-    severity: "critical",
-    status: "reviewed",
-    score: 91,
-  },
-  {
-    id: "flag-3",
-    content: "This message contained inappropriate language that was filtered...",
-    userId: "user-789",
-    userName: "MikeJohnson",
-    timestamp: "2024-04-16T11:20:00Z",
-    rule: "Inappropriate Language Filter",
-    severity: "medium",
-    status: "approved",
-    score: 68,
-  },
-  {
-    id: "flag-4",
-    content: "This content was identified as potential spam...",
-    userId: "user-101",
-    userName: "SarahWilliams",
-    timestamp: "2024-04-15T16:50:00Z",
-    rule: "Spam Detection",
-    severity: "low",
-    status: "rejected",
-    score: 62,
-  },
-  {
-    id: "flag-5",
-    content: "This interaction was flagged for toxic behavior patterns...",
-    userId: "user-202",
-    userName: "DavidBrown",
-    timestamp: "2024-04-14T10:15:00Z",
-    rule: "Toxic Behavior Detection",
-    severity: "high",
-    status: "pending",
-    score: 76,
-  },
-]
-
-const mockBannedTerms: BannedTerm[] = [
-  {
-    id: "term-1",
-    term: "badword1",
-    category: "Profanity",
-    replacement: "****",
-    addedBy: "Admin",
-    addedAt: "2024-03-10T09:30:00Z",
-  },
-  {
-    id: "term-2",
-    term: "badword2",
-    category: "Hate Speech",
-    replacement: "****",
-    addedBy: "Moderator",
-    addedAt: "2024-03-15T14:20:00Z",
-  },
-  {
-    id: "term-3",
-    term: "badphrase1",
-    category: "Harassment",
-    replacement: "******",
-    addedBy: "Admin",
-    addedAt: "2024-03-20T11:45:00Z",
-  },
-  {
-    id: "term-4",
-    term: "inappropriateterm1",
-    category: "Inappropriate",
-    replacement: "***************",
-    addedBy: "System",
-    addedAt: "2024-03-25T16:10:00Z",
-  },
-  {
-    id: "term-5",
-    term: "sensitiveinfo",
-    category: "Personal Information",
-    replacement: "[redacted]",
-    addedBy: "Admin",
-    addedAt: "2024-04-01T10:30:00Z",
-  },
-]
-
-const mockSafetyMetrics: SafetyMetric[] = [
-  { name: "Content Safety Score", value: 92, change: 3, target: 95 },
-  { name: "Flagged Content Rate", value: 2.4, change: -0.8, target: 2.0 },
-  { name: "Response Time (min)", value: 4.2, change: -1.5, target: 3.0 },
-  { name: "False Positive Rate", value: 3.1, change: -0.5, target: 2.5 },
-]
+// Removed mock data - now using real Supabase data
 
 export default function AISafetyPage() {
   const [safetyRules, setSafetyRules] = useState<SafetyRule[]>([])
@@ -273,7 +109,6 @@ export default function AISafetyPage() {
   useEffect(() => {
     loadSafetyData()
   }, [])
-
   const loadSafetyData = async () => {
     try {
       setIsLoading(true)
@@ -284,12 +119,56 @@ export default function AISafetyPage() {
         dbHelpers.getAISafetyMetrics(),
       ])
       
-      setSafetyRules(rulesData)
-      setFlaggedContent(flaggedData)
-      setBannedTerms(bannedData)
-      setSafetyMetrics(metricsData)
+      // Transform the data to match expected types
+      setSafetyRules((rulesData || []).map(rule => ({
+        id: rule.id,
+        name: rule.name,
+        description: rule.description || '',
+        severity: rule.severity as "low" | "medium" | "high" | "critical",
+        enabled: rule.enabled ?? false,
+        threshold: rule.threshold || 0,
+        category: rule.category as "content" | "behavior" | "personal" | "harmful",
+        createdAt: rule.createdAt || '',
+        lastUpdated: rule.lastUpdated || ''
+      })))
+
+      // Transform flagged content data
+      setFlaggedContent((flaggedData || []).map(item => ({
+        id: item.id,
+        content: item.content || '',
+        userId: item.user?.id || '',
+        userName: item.user?.name || 'Unknown User',
+        timestamp: item.flagged_at || '',
+        rule: item.reason || 'Unknown Rule',
+        severity: 'medium' as "low" | "medium" | "high" | "critical",
+        status: (item.status || 'pending') as "pending" | "reviewed" | "approved" | "rejected",
+        score: 0
+      })))
+
+      // Transform banned terms data
+      setBannedTerms((bannedData || []).map(term => ({
+        id: term.id,
+        term: term.term,
+        category: term.category || '',
+        replacement: term.replacement || undefined,
+        addedBy: term.addedBy || 'System',
+        addedAt: term.addedAt || ''
+      })))
+
+      setSafetyMetrics(metricsData || [])
     } catch (error) {
       console.error('Error loading safety data:', error)
+      toast({
+        title: "Error Loading Data",
+        description: "Failed to load AI safety data. Please check your database connection.",
+        variant: "destructive",
+      })
+      
+      // Set empty arrays to avoid UI issues
+      setSafetyRules([])
+      setFlaggedContent([])
+      setBannedTerms([])
+      setSafetyMetrics([])
     } finally {
       setIsLoading(false)
     }
@@ -302,7 +181,6 @@ export default function AISafetyPage() {
       item.userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.rule.toLowerCase().includes(searchQuery.toLowerCase()),
   )
-
   // Toggle rule enabled state
   const toggleRuleEnabled = async (ruleId: string) => {
     try {
@@ -311,12 +189,20 @@ export default function AISafetyPage() {
         const updatedRule = { ...rule, enabled: !rule.enabled }
         await dbHelpers.updateAISafetyRule(ruleId, updatedRule)
         setSafetyRules(safetyRules.map((r) => (r.id === ruleId ? updatedRule : r)))
+        toast({
+          title: "Rule Updated",
+          description: `Safety rule has been ${updatedRule.enabled ? 'enabled' : 'disabled'}.`,
+        })
       }
     } catch (error) {
       console.error('Error toggling rule:', error)
+      toast({
+        title: "Error",
+        description: "Failed to update safety rule. Please try again.",
+        variant: "destructive",
+      })
     }
   }
-
   // Update rule threshold
   const updateRuleThreshold = async (ruleId: string, value: number[]) => {
     try {
@@ -328,38 +214,76 @@ export default function AISafetyPage() {
       }
     } catch (error) {
       console.error('Error updating rule threshold:', error)
+      toast({
+        title: "Error",
+        description: "Failed to update rule threshold. Please try again.",
+        variant: "destructive",
+      })
     }
   }
-
   // Add new banned term
   const addBannedTerm = async (term: string, category: string, replacement: string) => {
     try {
       const result = await dbHelpers.createBannedTerm({ term, category, replacement })
       if (result.data) {
-        setBannedTerms([...bannedTerms, result.data as BannedTerm])
+        // Transform the returned data to match expected type
+        const newTerm: BannedTerm = {
+          id: result.data.id,
+          term: result.data.term,
+          category: result.data.category || '',
+          replacement: undefined, // Not available in database schema
+          addedBy: 'Admin', // Default value since it's not in database response
+          addedAt: result.data.created_at || new Date().toISOString()
+        }
+        setBannedTerms([...bannedTerms, newTerm])
+        toast({
+          title: "Success",
+          description: "Banned term added successfully.",
+        })
       }
     } catch (error) {
       console.error('Error adding banned term:', error)
+      toast({
+        title: "Error",
+        description: "Failed to add banned term. Please try again.",
+        variant: "destructive",
+      })
     }
   }
-
   // Remove banned term
   const removeBannedTerm = async (termId: string) => {
     try {
       await dbHelpers.deleteBannedTerm(termId)
       setBannedTerms(bannedTerms.filter((term) => term.id !== termId))
+      toast({
+        title: "Success",
+        description: "Banned term removed successfully.",
+      })
     } catch (error) {
       console.error('Error removing banned term:', error)
+      toast({
+        title: "Error",
+        description: "Failed to remove banned term. Please try again.",
+        variant: "destructive",
+      })
     }
   }
-
   // Update flagged content status
   const updateContentStatus = async (contentId: string, status: "pending" | "reviewed" | "approved" | "rejected") => {
     try {
       await dbHelpers.updateFlaggedContentStatus(contentId, status)
       setFlaggedContent(flaggedContent.map((item) => (item.id === contentId ? { ...item, status } : item)))
+      toast({
+        title: "Status Updated",
+        description: `Content status changed to ${status}.`,
+      })
     } catch (error) {
       console.error('Error updating content status:', error)
+      toast({
+        title: "Error",
+        description: "Failed to update content status. Please try again.",
+        variant: "destructive",
+      })
     }
   }
 
@@ -368,28 +292,113 @@ export default function AISafetyPage() {
     setIsLoading(true)
 
     try {
-      // In a real implementation, this would call your AI safety API
-      // For now, simulate the test with actual safety rules from the database
-      await new Promise(resolve => setTimeout(resolve, 1500))
+      // Real implementation: test content against actual safety rules
+      const enabledRules = safetyRules.filter(rule => rule.enabled)
+      const triggeredRules: any[] = []
+      let overallSafetyScore = 100
+      let hasFlags = false
       
-      const mockTestResults = {
-        overallSafetyScore: 78,
-        flagged: true,
-        triggeredRules: safetyRules.filter(rule => rule.enabled && Math.random() > 0.5).slice(0, 2).map(rule => ({
-          ruleName: rule.name,
-          confidence: Math.floor(Math.random() * 40) + 60,
-          severity: rule.severity,
-        })),
-        suggestedActions: [
-          "Review and modify content to remove inappropriate language",
-          "Remove or redact any personal information",
-        ],
-        modifiedContent: testContent.replace(/badword1|badword2/gi, "****"),
+      // Test against each enabled rule
+      for (const rule of enabledRules) {
+        let confidence = 0
+        let triggered = false
+        
+        // Simple keyword-based testing (in production, this would use AI)
+        const testText = testContent.toLowerCase()
+        
+        if (rule.name.toLowerCase().includes('inappropriate') || rule.name.toLowerCase().includes('content filter')) {
+          // Check for common inappropriate keywords
+          const inappropriateWords = ['badword1', 'badword2', 'inappropriate', 'offensive']
+          const foundWords = inappropriateWords.filter(word => testText.includes(word))
+          if (foundWords.length > 0) {
+            triggered = true
+            confidence = Math.min(95, 60 + (foundWords.length * 15))
+          }
+        }
+        
+        if (rule.name.toLowerCase().includes('academic') || rule.name.toLowerCase().includes('integrity')) {
+          // Check for potential plagiarism indicators
+          if (testText.includes('copied') || testText.includes('generated') || testText.length < 50) {
+            triggered = true
+            confidence = Math.min(90, 70 + Math.random() * 20)
+          }
+        }
+        
+        if (rule.name.toLowerCase().includes('educational') || rule.name.toLowerCase().includes('validation')) {
+          // Check educational appropriateness
+          if (!testText.includes('learn') && !testText.includes('study') && !testText.includes('english')) {
+            triggered = true
+            confidence = Math.min(85, 50 + Math.random() * 30)
+          }
+        }
+        
+        if (triggered) {
+          hasFlags = true
+          overallSafetyScore -= (confidence * 0.3) // Reduce score based on confidence
+          triggeredRules.push({
+            ruleName: rule.name,
+            confidence: Math.round(confidence),
+            severity: rule.severity,
+          })
+        }
+      }
+      
+      // Ensure score doesn't go below 0
+      overallSafetyScore = Math.max(0, Math.round(overallSafetyScore))
+      
+      // Generate appropriate suggestions based on triggered rules
+      const suggestedActions: string[] = []
+      if (triggeredRules.some(r => r.ruleName.toLowerCase().includes('inappropriate'))) {
+        suggestedActions.push("Review and modify content to remove inappropriate language")
+      }
+      if (triggeredRules.some(r => r.ruleName.toLowerCase().includes('academic'))) {
+        suggestedActions.push("Verify content originality and academic integrity")
+      }
+      if (triggeredRules.some(r => r.ruleName.toLowerCase().includes('educational'))) {
+        suggestedActions.push("Ensure content aligns with educational objectives")
+      }
+      if (suggestedActions.length === 0 && hasFlags) {
+        suggestedActions.push("Review content for compliance with platform guidelines")
+      }
+      
+      // Create modified content by censoring flagged terms
+      let modifiedContent = testContent
+      if (hasFlags) {
+        modifiedContent = testContent.replace(/badword1|badword2|inappropriate|offensive/gi, "****")
+      }
+      
+      const testResults = {
+        overallSafetyScore,
+        flagged: hasFlags,
+        triggeredRules,
+        suggestedActions,
+        modifiedContent,
       }
 
-      setTestResults(mockTestResults)
+      setTestResults(testResults)
+      
+      // Log the safety test in the database
+      if (hasFlags) {
+        await dbHelpers.createFlaggedContent({
+          content_type: 'text',
+          content_id: `test_${Date.now()}`,
+          reason: triggeredRules.map(r => r.ruleName).join(', '),
+          flagged_by: 'AI_SAFETY_SYSTEM',
+          details: {
+            content: testContent,
+            severity: triggeredRules.some(r => r.severity === 'HIGH') ? 'HIGH' : 'MEDIUM',
+            triggeredRules
+          }
+        })
+      }
+      
     } catch (error) {
       console.error('Error testing content safety:', error)
+      toast({
+        title: "Error",
+        description: "Failed to test content safety. Please try again.",
+        variant: "destructive",
+      })
     } finally {
       setIsLoading(false)
     }
@@ -688,69 +697,430 @@ export default function AISafetyPage() {
                       </DialogFooter>
                     </DialogContent>
                   </Dialog>
+                </div>              </CardHeader>
+              <CardContent>
+                <div className="space-y-6">
+                  {isLoading ? (
+                    // Loading skeleton
+                    Array.from({ length: 3 }).map((_, index) => (
+                      <div key={index} className="border rounded-lg p-4 space-y-3">
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center gap-2">
+                            <div className="h-6 w-40 bg-muted animate-pulse rounded" />
+                            <div className="h-6 w-16 bg-muted animate-pulse rounded" />
+                            <div className="h-6 w-20 bg-muted animate-pulse rounded" />
+                          </div>
+                          <div className="h-6 w-16 bg-muted animate-pulse rounded" />
+                        </div>
+                        <div className="h-4 w-full bg-muted animate-pulse rounded" />
+                        <div className="flex justify-between items-center">
+                          <div className="h-4 w-32 bg-muted animate-pulse rounded" />
+                          <div className="h-4 w-32 bg-muted animate-pulse rounded" />
+                        </div>
+                      </div>
+                    ))
+                  ) : safetyRules.length === 0 ? (
+                    // Empty state
+                    <div className="flex flex-col items-center justify-center py-12 text-center">
+                      <Shield className="h-12 w-12 text-muted-foreground mb-4" />
+                      <h3 className="text-lg font-medium mb-2">No Safety Rules Found</h3>
+                      <p className="text-muted-foreground mb-4">                      Get started by adding your first AI safety rule to protect your users.
+                      </p>
+                      <Button className="gap-2">
+                        <Plus className="h-4 w-4" />
+                        Add First Rule
+                      </Button>
+                    </div>
+                  ) : (
+                    // Actual data
+                    safetyRules.map((rule, index) => (
+                      <motion.div
+                        key={rule.id}
+                        variants={itemVariants}
+                        className="border rounded-lg p-4 transition-all hover:shadow-md"
+                      >
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                          <div className="space-y-1 flex-1">
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-medium">{rule.name}</h3>
+                              <Badge
+                                variant={
+                                  rule.severity === "critical"
+                                    ? "destructive"
+                                    : rule.severity === "high"
+                                      ? "destructive"
+                                      : rule.severity === "medium"
+                                        ? "outline"
+                                        : "secondary"
+                                }
+                              >
+                                {rule.severity}
+                              </Badge>
+                              <Badge variant="outline">{rule.category}</Badge>
+                            </div>
+                            <p className="text-sm text-muted-foreground">{rule.description}</p>
+                          </div>
+                          <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-2">
+                              <Label htmlFor={`threshold-${rule.id}`} className="text-sm">
+                                Threshold: {rule.threshold}%
+                              </Label>
+                              <Slider
+                                id={`threshold-${rule.id}`}
+                                value={[rule.threshold]}
+                                onValueChange={(value) => updateRuleThreshold(rule.id, value)}
+                                max={100}
+                                step={1}
+                                className="w-32"
+                              />
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Label htmlFor={`enabled-${rule.id}`} className="text-sm">
+                                Enabled
+                              </Label>
+                              <Switch
+                                id={`enabled-${rule.id}`}
+                                checked={rule.enabled}
+                                onCheckedChange={() => toggleRuleEnabled(rule.id)}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                        <div className="mt-4 text-xs text-muted-foreground flex justify-between">
+                          <span>Created: {new Date(rule.createdAt).toLocaleDateString()}</span>
+                          <span>Last updated: {new Date(rule.lastUpdated).toLocaleDateString()}</span>
+                        </div>
+                      </motion.div>
+                    ))
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </TabsContent>
+
+        {/* Flagged Content Tab */}
+        <TabsContent value="content" className="space-y-6">
+          <motion.div variants={containerVariants} initial="hidden" animate="visible">
+            <Card>
+              <CardHeader>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div>
+                    <CardTitle>Flagged Content Review</CardTitle>
+                    <CardDescription>Review and moderate content flagged by the AI safety system</CardDescription>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="relative">
+                      <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Search flagged content..."
+                        className="pl-8 w-64"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                      />
+                    </div>
+                    <Button variant="outline" size="sm" onClick={loadSafetyData}>
+                      <RefreshCw className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="space-y-6">
-                  {safetyRules.map((rule, index) => (
-                    <motion.div
-                      key={rule.id}
-                      variants={itemVariants}
-                      className="border rounded-lg p-4 transition-all hover:shadow-md"
-                    >
-                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                        <div className="space-y-1 flex-1">
-                          <div className="flex items-center gap-2">
-                            <h3 className="font-medium">{rule.name}</h3>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Content</TableHead>
+                      <TableHead>User</TableHead>
+                      <TableHead>Rule Triggered</TableHead>
+                      <TableHead>Severity</TableHead>
+                      <TableHead>Score</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredFlaggedContent.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center py-8">
+                          <div className="flex flex-col items-center gap-2">
+                            <MessageSquare className="h-8 w-8 text-muted-foreground" />
+                            <p className="text-muted-foreground">No flagged content found</p>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredFlaggedContent.map((item) => (
+                        <TableRow key={item.id}>
+                          <TableCell className="max-w-xs">
+                            <div className="truncate">{item.content}</div>
+                          </TableCell>
+                          <TableCell>
+                            <div>
+                              <p className="font-medium">{item.userName}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {new Date(item.timestamp).toLocaleString()}
+                              </p>
+                            </div>
+                          </TableCell>
+                          <TableCell>{item.rule}</TableCell>
+                          <TableCell>
                             <Badge
                               variant={
-                                rule.severity === "critical"
+                                item.severity === "critical"
                                   ? "destructive"
-                                  : rule.severity === "high"
+                                  : item.severity === "high"
                                     ? "destructive"
-                                    : rule.severity === "medium"
+                                    : item.severity === "medium"
                                       ? "outline"
                                       : "secondary"
                               }
                             >
-                              {rule.severity}
+                              {item.severity}
                             </Badge>
-                            <Badge variant="outline">{rule.category}</Badge>
-                          </div>
-                          <p className="text-sm text-muted-foreground">{rule.description}</p>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Progress value={item.score} className="h-2 w-16" />
+                              <span className="text-sm font-medium">{item.score}%</span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Select
+                              value={item.status}
+                              onValueChange={(value) => updateContentStatus(item.id, value as any)}
+                            >
+                              <SelectTrigger className="w-[110px]">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="pending">Pending</SelectItem>
+                                <SelectItem value="reviewed">Reviewed</SelectItem>
+                                <SelectItem value="approved">Approved</SelectItem>
+                                <SelectItem value="rejected">Rejected</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Button variant="ghost" size="icon">
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Dialog>
+                                <DialogTrigger asChild>
+                                  <Button variant="ghost" size="icon">
+                                    <MessageSquare className="h-4 w-4" />
+                                  </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                  <DialogHeader>
+                                    <DialogTitle>Send Feedback to User</DialogTitle>
+                                    <DialogDescription>
+                                      Provide feedback about why this content was flagged
+                                    </DialogDescription>
+                                  </DialogHeader>
+                                  <div className="space-y-4 py-4">
+                                    <div className="space-y-2">
+                                      <Label>Flagged Content</Label>
+                                      <div className="p-3 bg-muted rounded-md text-sm">{item.content}</div>
+                                    </div>
+                                    <div className="space-y-2">
+                                      <Label htmlFor="feedback">Feedback Message</Label>
+                                      <Textarea
+                                        id="feedback"
+                                        placeholder="Explain why this content was flagged and how it can be improved..."
+                                      />
+                                    </div>
+                                  </div>
+                                  <DialogFooter>
+                                    <Button type="submit">Send Feedback</Button>
+                                  </DialogFooter>
+                                </DialogContent>
+                              </Dialog>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </motion.div>        </TabsContent>
+
+        {/* Safety Rules Tab */}
+        <TabsContent value="rules" className="space-y-6">
+          <motion.div variants={containerVariants} initial="hidden" animate="visible">
+            <Card>
+              <CardHeader>
+                <div className="flex justify-between items-center">
+                  <div>
+                    <CardTitle>Safety Rules Configuration</CardTitle>
+                    <CardDescription>Configure and manage AI safety rules and thresholds</CardDescription>
+                  </div>
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button size="sm" className="gap-1">
+                        <Plus className="h-4 w-4" />
+                        Add Rule
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Add New Safety Rule</DialogTitle>
+                        <DialogDescription>
+                          Create a new safety rule to detect and handle potentially harmful content
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="grid gap-4 py-4">
+                        <div className="grid gap-2">
+                          <Label htmlFor="rule-name">Rule Name</Label>
+                          <Input id="rule-name" placeholder="e.g., Sensitive Information Detection" />
                         </div>
-                        <div className="flex items-center gap-4">
-                          <div className="flex items-center gap-2">
-                            <Label htmlFor={`threshold-${rule.id}`} className="text-sm">
-                              Threshold: {rule.threshold}%
-                            </Label>
-                            <Slider
-                              id={`threshold-${rule.id}`}
-                              value={[rule.threshold]}
-                              onValueChange={(value) => updateRuleThreshold(rule.id, value)}
-                              max={100}
-                              step={1}
-                              className="w-32"
-                            />
+                        <div className="grid gap-2">
+                          <Label htmlFor="rule-description">Description</Label>
+                          <Textarea
+                            id="rule-description"
+                            placeholder="Describe what this rule detects and how it works"
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="grid gap-2">
+                            <Label htmlFor="rule-category">Category</Label>
+                            <Select defaultValue="content">
+                              <SelectTrigger id="rule-category">
+                                <SelectValue placeholder="Select category" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="content">Content</SelectItem>
+                                <SelectItem value="behavior">Behavior</SelectItem>
+                                <SelectItem value="personal">Personal Info</SelectItem>
+                                <SelectItem value="harmful">Harmful</SelectItem>
+                              </SelectContent>
+                            </Select>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <Label htmlFor={`enabled-${rule.id}`} className="text-sm">
-                              Enabled
-                            </Label>
-                            <Switch
-                              id={`enabled-${rule.id}`}
-                              checked={rule.enabled}
-                              onCheckedChange={() => toggleRuleEnabled(rule.id)}
-                            />
+                          <div className="grid gap-2">
+                            <Label htmlFor="rule-severity">Severity</Label>
+                            <Select defaultValue="medium">
+                              <SelectTrigger id="rule-severity">
+                                <SelectValue placeholder="Select severity" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="low">Low</SelectItem>
+                                <SelectItem value="medium">Medium</SelectItem>
+                                <SelectItem value="high">High</SelectItem>
+                                <SelectItem value="critical">Critical</SelectItem>
+                              </SelectContent>
+                            </Select>
                           </div>
+                        </div>
+                        <div className="grid gap-2">
+                          <Label htmlFor="rule-threshold">Threshold (75%)</Label>
+                          <Slider defaultValue={[75]} max={100} step={1} />
                         </div>
                       </div>
-                      <div className="mt-4 text-xs text-muted-foreground flex justify-between">
-                        <span>Created: {new Date(rule.createdAt).toLocaleDateString()}</span>
-                        <span>Last updated: {new Date(rule.lastUpdated).toLocaleDateString()}</span>
+                      <DialogFooter>
+                        <Button type="submit">Save Rule</Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-6">
+                  {isLoading ? (
+                    // Loading skeleton
+                    Array.from({ length: 3 }).map((_, index) => (
+                      <div key={index} className="border rounded-lg p-4 space-y-3">
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center gap-2">
+                            <div className="h-6 w-40 bg-muted animate-pulse rounded" />
+                            <div className="h-6 w-16 bg-muted animate-pulse rounded" />
+                            <div className="h-6 w-20 bg-muted animate-pulse rounded" />
+                          </div>
+                          <div className="h-6 w-16 bg-muted animate-pulse rounded" />
+                        </div>
+                        <div className="h-4 w-full bg-muted animate-pulse rounded" />
+                        <div className="flex justify-between items-center">
+                          <div className="h-4 w-32 bg-muted animate-pulse rounded" />
+                          <div className="h-4 w-32 bg-muted animate-pulse rounded" />
+                        </div>
                       </div>
-                    </motion.div>
-                  ))}
+                    ))
+                  ) : safetyRules.length === 0 ? (
+                    // Empty state
+                    <div className="flex flex-col items-center justify-center py-12 text-center">
+                      <Shield className="h-12 w-12 text-muted-foreground mb-4" />
+                      <h3 className="text-lg font-medium mb-2">No Safety Rules Found</h3>
+                      <p className="text-muted-foreground mb-4">
+                        Get started by adding your first AI safety rule to protect your users.
+                      </p>
+                      <Button className="gap-2">
+                        <Plus className="h-4 w-4" />
+                        Add First Rule
+                      </Button>
+                    </div>
+                  ) : (
+                    // Actual data
+                    safetyRules.map((rule, index) => (
+                      <motion.div
+                        key={rule.id}
+                        variants={itemVariants}
+                        className="border rounded-lg p-4 transition-all hover:shadow-md"
+                      >
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                          <div className="space-y-1 flex-1">
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-medium">{rule.name}</h3>
+                              <Badge
+                                variant={
+                                  rule.severity === "critical"
+                                    ? "destructive"
+                                    : rule.severity === "high"
+                                      ? "destructive"
+                                      : rule.severity === "medium"
+                                        ? "outline"
+                                        : "secondary"
+                                }
+                              >
+                                {rule.severity}
+                              </Badge>
+                              <Badge variant="outline">{rule.category}</Badge>
+                            </div>
+                            <p className="text-sm text-muted-foreground">{rule.description}</p>
+                          </div>
+                          <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-2">
+                              <Label htmlFor={`threshold-${rule.id}`} className="text-sm">
+                                Threshold: {rule.threshold}%
+                              </Label>
+                              <Slider
+                                id={`threshold-${rule.id}`}
+                                value={[rule.threshold]}
+                                onValueChange={(value) => updateRuleThreshold(rule.id, value)}
+                                max={100}
+                                step={1}
+                                className="w-32"
+                              />
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Label htmlFor={`enabled-${rule.id}`} className="text-sm">
+                                Enabled
+                              </Label>
+                              <Switch
+                                id={`enabled-${rule.id}`}
+                                checked={rule.enabled}
+                                onCheckedChange={() => toggleRuleEnabled(rule.id)}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                        <div className="mt-4 text-xs text-muted-foreground flex justify-between">
+                          <span>Created: {new Date(rule.createdAt).toLocaleDateString()}</span>
+                          <span>Last updated: {new Date(rule.lastUpdated).toLocaleDateString()}</span>
+                        </div>
+                      </motion.div>
+                    ))
+                  )}
                 </div>
               </CardContent>
               <CardFooter className="flex justify-between">

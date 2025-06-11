@@ -1,6 +1,8 @@
 "use server"
 
 import { load } from "cheerio"
+import { supabaseServer } from "@/lib/supabase-server"
+import type { Database } from "@/lib/database.types"
 
 // Types for our video data
 export type VideoData = {
@@ -15,35 +17,13 @@ export type VideoData = {
   topics?: string[]
 }
 
-// Modify the caching mechanism to be more persistent
-// Replace the simple variables with a more robust approach
-
-// Instead of simple variables, let's use a more structured approach
-// Replace these lines at the top of the file:
-// let cachedVideo: VideoData | null = null
-// let lastFetchDate: string | null = null
-
-// With this more structured cache object:
-type VideoCache = {
-  video: VideoData | null
-  date: string | null
-  timestamp: number
-}
-
-// Global cache that persists between requests
-let globalVideoCache: VideoCache = {
-  video: null,
-  date: null,
-  timestamp: 0,
-}
-
-// Admin selected video that takes precedence
-let adminSelectedVideo: VideoData | null = null
-
-// Function to get today's date as a string
+// Function to get today's date as a string (YYYY-MM-DD format)
 const getTodayDate = () => {
   const today = new Date()
-  return `${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`
+  const year = today.getFullYear()
+  const month = String(today.getMonth() + 1).padStart(2, '0')
+  const day = String(today.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
 }
 
 // Fallback videos to use when scraping fails
@@ -108,12 +88,11 @@ export async function fetchRandomYoutubeVideo(
     // cachedVideo = videoData
     // lastFetchDate = today
 
-    return videoData
-  } catch (error) {
+    return videoData  } catch (error) {
     console.error("Error fetching random YouTube video:", error)
 
     // Use a fallback video when scraping fails
-    return getFallbackVideo(minDuration, maxDuration, preferredTopics)
+    return getFallbackVideo()
   }
 }
 
@@ -428,33 +407,11 @@ function extractTopics(title: string, description: string): string[] {
 }
 
 // Function to get a fallback video
-function getFallbackVideo(minDuration: number, maxDuration: number, preferredTopics: string[] = []): VideoData {
+function getFallbackVideo(): VideoData {
   console.log("Using fallback video")
 
-  // Filter fallback videos by duration
-  let eligibleVideos = fallbackVideos.filter((video) => video.duration >= minDuration && video.duration <= maxDuration)
-
-  // If no videos match the duration criteria, use all fallback videos
-  if (eligibleVideos.length === 0) {
-    eligibleVideos = fallbackVideos
-  }
-
-  // If preferred topics are provided, try to find a matching video
-  if (preferredTopics.length > 0) {
-    const topicMatchedVideos = eligibleVideos.filter((video) =>
-      video.topics?.some((topic) =>
-        preferredTopics.some((preferred) => topic.toLowerCase().includes(preferred.toLowerCase())),
-      ),
-    )
-
-    // If we found videos matching the preferred topics, use those
-    if (topicMatchedVideos.length > 0) {
-      eligibleVideos = topicMatchedVideos
-    }
-  }
-
   // Select a random fallback video
-  const fallback = eligibleVideos[Math.floor(Math.random() * eligibleVideos.length)]
+  const fallback = fallbackVideos[Math.floor(Math.random() * fallbackVideos.length)]
 
   // Create video data object from fallback
   return {
@@ -512,84 +469,144 @@ This is a simulated transcript for the video. In a real implementation, you woul
 //   console.log("Admin selected video set:", adminSelectedVideo?.id)
 // }
 
-// Modify the getTodayVideo function to ensure it only changes when admin approves
-export async function getTodayVideo(
-  adminMinDuration = 60,
-  adminMaxDuration = 2700,
-  adminTopics: string[] = [],
-): Promise<VideoData> {
-  // Get today's date
+// New Supabase-only implementation for getTodayVideo
+export async function getTodayVideo(): Promise<VideoData> {
   const today = getTodayDate()
-  const now = Date.now()
-
-  // 1. Always prioritize admin selection if available
-  if (adminSelectedVideo) {
-    console.log("Using admin selected video:", adminSelectedVideo.id)
-    return adminSelectedVideo
-  }
-
-  // 2. Check if we have a valid cached video for today
-  if (globalVideoCache.video && globalVideoCache.date === today) {
-    console.log("Using cached video for today:", globalVideoCache.video.id)
-    return globalVideoCache.video
-  }
-
-  // 3. If we reach here, we need a new video for today
-  console.log("Fetching new random video for today")
-
-  try {
-    const video = await fetchRandomYoutubeVideo(adminMinDuration, adminMaxDuration, adminTopics)
-
-    // Update the cache with the new video
-    globalVideoCache = {
-      video,
-      date: today,
-      timestamp: now,
+  
+  try {    console.log(`🔍 Checking Supabase for today's video (${today})...`)    // 1. Check Supabase for today's video
+    const { data, error } = await supabaseServer
+      .from('daily_videos')
+      .select('*')
+      .eq('date', today)
+      .single()
+      
+    if (data && !error) {
+      const video = data as any // Type casting to bypass TypeScript issues temporarily
+      console.log("✅ Video loaded from Supabase:", video.id)
+      return {
+        id: video.id,
+        title: video.title,
+        description: video.description || "Educational video",
+        thumbnailUrl: video.thumbnail_url || `https://img.youtube.com/vi/${video.id}/hqdefault.jpg`,
+        videoUrl: video.video_url,
+        embedUrl: video.embed_url || `https://www.youtube.com/embed/${video.id}`,
+        duration: video.duration || 300,
+        transcript: "Transcript will be extracted when needed",
+        topics: video.topics || []
+      }
     }
-
-    return video
+    
+    console.log("⚠️ No video found in Supabase for today, fetching new...")
+    
+    // 2. Fetch new video only if not exists in database
+    const videoData = await fetchRandomYoutubeVideo()
+    
+    // 3. Save to Supabase immediately
+    const { error: insertError } = await supabaseServer
+      .from('daily_videos')
+      .upsert({
+        id: videoData.id,
+        title: videoData.title,
+        description: videoData.description,
+        video_url: videoData.videoUrl,
+        thumbnail_url: videoData.thumbnailUrl,
+        embed_url: videoData.embedUrl,
+        duration: videoData.duration,
+        topics: videoData.topics,
+        date: today,
+        created_at: new Date().toISOString()
+      })
+    
+    if (insertError) {
+      console.error("❌ Error saving video to Supabase:", insertError)
+    } else {
+      console.log("✅ New video saved to Supabase:", videoData.id)
+    }
+    
+    return videoData
+    
   } catch (error) {
-    console.error("Error fetching random video:", error)
-
-    // If we have any cached video (even from a previous day), use it as fallback
-    if (globalVideoCache.video) {
-      console.log("Using previously cached video as fallback")
-      return globalVideoCache.video
-    }
-
+    console.error("❌ Error in getTodayVideo:", error)
+    
     // Last resort: use a fallback video
-    return getFallbackVideo(adminMinDuration, adminMaxDuration, adminTopics)
+    console.log("🔄 Using fallback video...")
+    return getFallbackVideo()
   }
 }
 
-// Add a function to check if the video should be refreshed (for debugging)
+// Update admin video management functions for Supabase
+export async function setAdminSelectedVideo(videoData: VideoData | null): Promise<void> {
+  const today = getTodayDate()
+  
+  if (videoData) {
+    try {
+      // Save admin-selected video to Supabase
+      const { error } = await supabaseServer
+        .from('daily_videos')
+        .upsert({
+          id: videoData.id,
+          title: videoData.title,
+          description: videoData.description,
+          video_url: videoData.videoUrl,
+          thumbnail_url: videoData.thumbnailUrl,
+          embed_url: videoData.embedUrl,
+          duration: videoData.duration,
+          topics: videoData.topics,
+          date: today,
+          created_at: new Date().toISOString()
+        })
+      
+      if (error) {
+        console.error("❌ Error saving admin video to Supabase:", error)
+        throw error
+      }
+      
+      console.log("✅ Admin selected video saved to Supabase:", videoData.id)
+    } catch (error) {
+      console.error("❌ Failed to save admin video:", error)
+      throw error
+    }
+  } else {
+    try {
+      // Clear today's video from Supabase
+      const { error } = await supabaseServer
+        .from('daily_videos')
+        .delete()
+        .eq('date', today)
+      
+      if (error) {
+        console.error("❌ Error clearing video from Supabase:", error)
+        throw error
+      }
+      
+      console.log("✅ Admin video cleared from Supabase")
+    } catch (error) {
+      console.error("❌ Failed to clear admin video:", error)
+      throw error
+    }
+  }
+}
+
+// Add helper function for debugging
 export async function shouldRefreshVideo(): Promise<boolean> {
   const today = getTodayDate()
-  return globalVideoCache.date !== today
-}
-
-// Update the setAdminSelectedVideo function to also update the cache
-export async function setAdminSelectedVideo(videoData: VideoData | null): Promise<void> {
-  adminSelectedVideo = videoData
-
-  if (videoData) {
-    // Also update the cache to ensure consistency
-    globalVideoCache = {
-      video: videoData,
-      date: getTodayDate(),
-      timestamp: Date.now(),
-    }
-    console.log("Admin selected video set and cached:", videoData.id)
-  } else {
-    console.log("Admin selected video cleared")
+  
+  try {
+    const { data } = await supabaseServer
+      .from('daily_videos')
+      .select('date')
+      .eq('date', today)
+      .single()
+      
+    return !data // Return true if no video exists for today
+  } catch {
+    return true // Refresh if there's an error
   }
 }
 
 // Add a function to manually reset the cached video (for testing)
 export async function resetCachedVideo(): Promise<void> {
-  // cachedVideo = null
-  // lastFetchDate = null
-  console.log("Cached video has been reset")
+  console.log("Note: No cache to reset - using Supabase only")
 }
 
 // Thêm hàm để trích xuất video từ URL YouTube

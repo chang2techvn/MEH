@@ -1,10 +1,12 @@
 "use client"
 
+import React, { memo, useCallback, useMemo } from "react"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { BookOpen, Clock } from "lucide-react"
 import { getDifficultyBadgeColor, getDifficultyDisplayName } from "@/app/utils/challenge-classifier"
+import OptimizedImage from "@/components/optimized-image"
 
 interface ChallengeCardProps {
   id: string
@@ -16,7 +18,7 @@ interface ChallengeCardProps {
   onStart: (id: string) => void
 }
 
-export default function ChallengeCard({
+const ChallengeCard = memo(function ChallengeCard({
   id,
   title,
   description,
@@ -25,48 +27,67 @@ export default function ChallengeCard({
   difficulty,
   onStart,
 }: ChallengeCardProps) {
-  // Format duration from seconds to minutes:seconds
-  const formatDuration = (seconds: number) => {
-    const minutes = Math.floor(seconds / 60)
-    const remainingSeconds = seconds % 60
+  // Memoize formatted duration to avoid recalculation
+  const formattedDuration = useMemo(() => {
+    const minutes = Math.floor(duration / 60)
+    const remainingSeconds = duration % 60
     return `${minutes}:${remainingSeconds.toString().padStart(2, "0")} minutes`
-  }
+  }, [duration])
+
+  // Memoize truncated description
+  const truncatedDescription = useMemo(() => {
+    return description.length > 100 ? `${description.substring(0, 100)}...` : description
+  }, [description])
+
+  // Memoize difficulty badge color to avoid repeated function calls
+  const difficultyBadgeColor = useMemo(() => getDifficultyBadgeColor(difficulty), [difficulty])
+  const difficultyDisplayName = useMemo(() => getDifficultyDisplayName(difficulty), [difficulty])
+
+  // Memoize click handler to prevent unnecessary re-renders
+  const handleStart = useCallback(() => {
+    onStart(id)
+  }, [onStart, id])
 
   return (
     <Card>
-      <CardContent className="p-0">
-        <div className="aspect-video bg-muted relative overflow-hidden">
+      <CardContent className="p-0">        <div className="aspect-video bg-muted relative overflow-hidden">
           {thumbnailUrl ? (
-            <img
-              src={thumbnailUrl || "/placeholder.svg"}
+            <OptimizedImage
+              src={thumbnailUrl}
               alt={title}
-              className="absolute inset-0 w-full h-full object-cover"
+              width={400}
+              height={225}
+              className="w-full h-full"
+              fallbackSrc="/placeholder.svg"
+              lazyBoundary="300px"
+              fetchPriority="auto"
             />
           ) : (
             <div className="absolute inset-0 flex items-center justify-center">
               <BookOpen className="h-12 w-12 text-muted-foreground/50" />
             </div>
-          )}
-          <div className="absolute top-2 right-2">
-            <Badge className={getDifficultyBadgeColor(difficulty)}>{getDifficultyDisplayName(difficulty)}</Badge>
+          )}<div className="absolute top-2 right-2">
+            <Badge className={difficultyBadgeColor}>{difficultyDisplayName}</Badge>
           </div>
         </div>
         <div className="p-4">
           <h3 className="font-bold text-lg mb-1">{title}</h3>
           <p className="text-sm text-muted-foreground mb-3">
-            {description.length > 100 ? `${description.substring(0, 100)}...` : description}
+            {truncatedDescription}
           </p>
           <div className="flex items-center gap-2 text-sm">
             <Clock className="h-4 w-4 text-muted-foreground" />
-            <span>{formatDuration(duration)}</span>
+            <span>{formattedDuration}</span>
           </div>
         </div>
       </CardContent>
       <CardFooter className="px-4 py-3 border-t">
-        <Button className="w-full" onClick={() => onStart(id)}>
+        <Button className="w-full" onClick={handleStart}>
           Start Challenge
         </Button>
       </CardFooter>
     </Card>
   )
-}
+})
+
+export default ChallengeCard

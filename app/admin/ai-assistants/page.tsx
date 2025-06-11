@@ -17,6 +17,7 @@ import {
   ChevronRight,
 } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
+import { dbHelpers } from "@/lib/supabase"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -43,119 +44,24 @@ interface Assistant {
   id: string
   name: string
   description: string
-  avatar: string
+  avatar: string | null
   model: string
-  isActive: boolean
-  createdAt: Date
-  updatedAt: Date
-  systemPrompt: string
-  capabilities: string[]
-  category: string
-  usage?: {
-    conversations: number
-    messages: number
-    tokensConsumed: number
-  }
+  is_active: boolean | null
+  created_at: string | null
+  updated_at: string | null
+  system_prompt: string
+  capabilities: string[] | null
+  category: string | null
+  conversation_count: number | null
+  message_count: number | null
+  token_consumption: number | null
+  created_by: string | null
+  creator?: {
+    id: string
+    name: string | null
+    email: string
+  } | null
 }
-
-// Sample data for assistants
-const sampleAssistants: Assistant[] = [
-  {
-    id: "assistant1",
-    name: "English Tutor",
-    description: "Helps with grammar, vocabulary, and language learning",
-    avatar: "/placeholder.svg?height=80&width=80",
-    model: "GPT-4o",
-    isActive: true,
-    createdAt: new Date(2023, 5, 15),
-    updatedAt: new Date(2023, 9, 10),
-    systemPrompt:
-      "You are an English language tutor. Help users improve their English skills through conversation, grammar correction, and vocabulary building.",
-    capabilities: ["grammar", "vocabulary", "conversation"],
-    category: "education",
-    usage: {
-      conversations: 1250,
-      messages: 15780,
-      tokensConsumed: 3200000,
-    },
-  },
-  {
-    id: "assistant2",
-    name: "Pronunciation Coach",
-    description: "Provides feedback on pronunciation and speaking",
-    avatar: "/placeholder.svg?height=80&width=80",
-    model: "Gemini Pro",
-    isActive: true,
-    createdAt: new Date(2023, 6, 20),
-    updatedAt: new Date(2023, 8, 5),
-    systemPrompt:
-      "You are a pronunciation coach. Help users improve their English pronunciation by providing feedback, tips, and exercises.",
-    capabilities: ["pronunciation", "speaking", "feedback"],
-    category: "education",
-    usage: {
-      conversations: 890,
-      messages: 10250,
-      tokensConsumed: 1800000,
-    },
-  },
-  {
-    id: "assistant3",
-    name: "Writing Assistant",
-    description: "Helps with essay writing and composition",
-    avatar: "/placeholder.svg?height=80&width=80",
-    model: "Claude 3",
-    isActive: false,
-    createdAt: new Date(2023, 7, 10),
-    updatedAt: new Date(2023, 7, 10),
-    systemPrompt:
-      "You are a writing assistant. Help users improve their writing skills by providing feedback on essays, compositions, and other written work.",
-    capabilities: ["writing", "grammar", "style"],
-    category: "education",
-    usage: {
-      conversations: 520,
-      messages: 6800,
-      tokensConsumed: 950000,
-    },
-  },
-  {
-    id: "assistant4",
-    name: "Conversation Partner",
-    description: "Practice everyday conversations in English",
-    avatar: "/placeholder.svg?height=80&width=80",
-    model: "GPT-3.5 Turbo",
-    isActive: true,
-    createdAt: new Date(2023, 8, 5),
-    updatedAt: new Date(2023, 10, 15),
-    systemPrompt:
-      "You are a conversation partner. Engage users in natural English conversations on various topics to help them practice their speaking and listening skills.",
-    capabilities: ["conversation", "roleplay", "vocabulary"],
-    category: "practice",
-    usage: {
-      conversations: 1750,
-      messages: 21500,
-      tokensConsumed: 2800000,
-    },
-  },
-  {
-    id: "assistant5",
-    name: "Test Preparation",
-    description: "Helps prepare for IELTS, TOEFL, and other exams",
-    avatar: "/placeholder.svg?height=80&width=80",
-    model: "GPT-4o",
-    isActive: true,
-    createdAt: new Date(2023, 9, 1),
-    updatedAt: new Date(2023, 11, 20),
-    systemPrompt:
-      "You are a test preparation assistant. Help users prepare for English proficiency exams like IELTS, TOEFL, and Cambridge exams with practice questions, tips, and strategies.",
-    capabilities: ["test-prep", "practice-questions", "strategies"],
-    category: "education",
-    usage: {
-      conversations: 980,
-      messages: 12500,
-      tokensConsumed: 2100000,
-    },
-  },
-]
 
 // AI model options
 const modelOptions = [
@@ -193,7 +99,9 @@ const capabilityOptions = [
 ]
 
 // Format date for display
-const formatDate = (date: Date) => {
+const formatDate = (dateString: string | null) => {
+  if (!dateString) return 'N/A'
+  const date = new Date(dateString)
   return new Intl.DateTimeFormat("en-US", {
     year: "numeric",
     month: "short",
@@ -217,8 +125,7 @@ const item = {
   show: { opacity: 1, y: 0 },
 }
 
-export default function AIAssistantsPage() {
-  const [assistants, setAssistants] = useState<Assistant[]>([])
+export default function AIAssistantsPage() {  const [assistants, setAssistants] = useState<Assistant[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
   const [activeTab, setActiveTab] = useState("all")
@@ -249,19 +156,26 @@ export default function AIAssistantsPage() {
     description?: string
     systemPrompt?: string
   }>({})
-
-  // Load sample data
+  // Load assistants from database
   useEffect(() => {
-    // Simulate API fetch
-    const loadData = async () => {
+    const loadAssistants = async () => {
       setIsLoading(true)
-      // Simulate network delay
-      await new Promise((resolve) => setTimeout(resolve, 1200))
-      setAssistants(sampleAssistants)
-      setIsLoading(false)
+      try {
+        const data = await dbHelpers.getAIAssistants()
+        setAssistants(data || [])
+      } catch (error) {
+        console.error('Error loading assistants:', error)
+        toast({
+          title: "Error loading assistants",
+          description: "Failed to load AI assistants from database",
+          variant: "destructive",
+        })
+      } finally {
+        setIsLoading(false)
+      }
     }
 
-    loadData()
+    loadAssistants()
   }, [])
 
   // Handle sorting
@@ -273,7 +187,6 @@ export default function AIAssistantsPage() {
       setSortDirection("asc")
     }
   }
-
   // Apply sorting and filtering
   const filteredAndSortedAssistants = assistants
     .filter((assistant) => {
@@ -282,21 +195,22 @@ export default function AIAssistantsPage() {
         assistant.description.toLowerCase().includes(searchQuery.toLowerCase())
       const matchesTab =
         activeTab === "all" ||
-        (activeTab === "active" && assistant.isActive) ||
-        (activeTab === "inactive" && !assistant.isActive) ||
+        (activeTab === "active" && assistant.is_active) ||
+        (activeTab === "inactive" && !assistant.is_active) ||
         activeTab === assistant.category
       return matchesSearch && matchesTab
-    })
-    .sort((a, b) => {
+    })    .sort((a, b) => {
       const fieldA = a[sortField]
       const fieldB = b[sortField]
 
       if (typeof fieldA === "string" && typeof fieldB === "string") {
+        // Handle date strings for created_at and updated_at
+        if (sortField === "created_at" || sortField === "updated_at") {
+          const dateA = new Date(fieldA)
+          const dateB = new Date(fieldB)
+          return sortDirection === "asc" ? dateA.getTime() - dateB.getTime() : dateB.getTime() - dateA.getTime()
+        }
         return sortDirection === "asc" ? fieldA.localeCompare(fieldB) : fieldB.localeCompare(fieldA)
-      }
-
-      if (fieldA instanceof Date && fieldB instanceof Date) {
-        return sortDirection === "asc" ? fieldA.getTime() - fieldB.getTime() : fieldB.getTime() - fieldA.getTime()
       }
 
       if (typeof fieldA === "boolean" && typeof fieldB === "boolean") {
@@ -339,17 +253,16 @@ export default function AIAssistantsPage() {
     setFormIsActive(true)
     setFormErrors({})
   }
-
   // Open edit dialog and populate form
   const handleEditClick = (assistant: Assistant) => {
     setSelectedAssistant(assistant)
     setFormName(assistant.name)
     setFormDescription(assistant.description)
     setFormModel(assistant.model.toLowerCase().replace(/\s+/g, "-"))
-    setFormSystemPrompt(assistant.systemPrompt)
-    setFormCapabilities(assistant.capabilities)
-    setFormCategory(assistant.category)
-    setFormIsActive(assistant.isActive)
+    setFormSystemPrompt(assistant.system_prompt)
+    setFormCapabilities(assistant.capabilities || [])
+    setFormCategory(assistant.category || "education")
+    setFormIsActive(assistant.is_active ?? true)
     setShowEditDialog(true)
   }
 
@@ -364,20 +277,38 @@ export default function AIAssistantsPage() {
     setSelectedAssistant(assistant)
     setShowDeleteDialog(true)
   }
-
   // Toggle assistant active status
-  const handleToggleActive = (id: string, currentStatus: boolean) => {
-    setAssistants((prev) =>
-      prev.map((assistant) =>
-        assistant.id === id ? { ...assistant, isActive: !currentStatus, updatedAt: new Date() } : assistant,
-      ),
-    )
+  const handleToggleActive = async (id: string, currentStatus: boolean | null) => {
+    const newStatus = !currentStatus
 
-    toast({
-      title: `Assistant ${currentStatus ? "deactivated" : "activated"}`,
-      description: `The assistant has been ${currentStatus ? "deactivated" : "activated"} successfully.`,
-      variant: currentStatus ? "destructive" : "default",
-    })
+    try {
+      const { data, error } = await dbHelpers.toggleAIAssistantStatus(id, newStatus)
+
+      if (error) {
+        throw error
+      }
+
+      if (data) {
+        setAssistants((prev) =>
+          prev.map((assistant) =>
+            assistant.id === id ? data : assistant
+          )
+        )
+
+        toast({
+          title: `Assistant ${currentStatus ? "deactivated" : "activated"}`,
+          description: `The assistant has been ${currentStatus ? "deactivated" : "activated"} successfully.`,
+          variant: currentStatus ? "destructive" : "default",
+        })
+      }
+    } catch (error) {
+      console.error('Error toggling assistant status:', error)
+      toast({
+        title: "Error updating status",
+        description: "Failed to update the assistant status. Please try again.",
+        variant: "destructive",
+      })
+    }
   }
 
   // Validate form
@@ -404,99 +335,113 @@ export default function AIAssistantsPage() {
 
     setFormErrors(errors)
     return Object.keys(errors).length === 0
-  }
-
-  // Handle adding a new assistant
-  const handleAddAssistant = () => {
+  }  // Handle adding a new assistant
+  const handleAddAssistant = async () => {
     if (!validateForm()) {
       return
     }
 
     setIsLoading(true)
 
-    // Simulate API call
-    setTimeout(() => {
-      const newAssistant: Assistant = {
-        id: `assistant${Date.now()}`,
+    try {
+      const { data, error } = await dbHelpers.createAIAssistant({
         name: formName,
         description: formDescription,
-        avatar: "/placeholder.svg?height=80&width=80",
-        model: modelOptions.find((option) => option.value === formModel)?.label || formModel,
-        isActive: formIsActive,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        systemPrompt: formSystemPrompt,
+        model: formModel,
+        system_prompt: formSystemPrompt,
         capabilities: formCapabilities,
         category: formCategory,
-        usage: {
-          conversations: 0,
-          messages: 0,
-          tokensConsumed: 0,
-        },
+        is_active: formIsActive,
+        created_by: "admin", // Default user for AI assistant creation
+      })
+
+      if (error) {
+        throw error
       }
 
-      setAssistants((prev) => [...prev, newAssistant])
-      setIsLoading(false)
-      setShowAddDialog(false)
-      resetForm()
+      if (data) {
+        setAssistants((prev) => [...prev, data])
+        setShowAddDialog(false)
+        resetForm()
 
+        toast({
+          title: "Assistant created",
+          description: "Your new AI assistant has been created successfully",
+        })
+      }
+    } catch (error) {
+      console.error('Error creating assistant:', error)
       toast({
-        title: "Assistant created",
-        description: "Your new AI assistant has been created successfully",
+        title: "Error creating assistant",
+        description: "Failed to create the AI assistant. Please try again.",
+        variant: "destructive",
       })
-    }, 800)
+    } finally {
+      setIsLoading(false)
+    }
   }
-
   // Handle editing an assistant
-  const handleEditAssistant = () => {
+  const handleEditAssistant = async () => {
     if (!selectedAssistant || !validateForm()) {
       return
     }
 
     setIsLoading(true)
 
-    // Simulate API call
-    setTimeout(() => {
-      setAssistants((prev) =>
-        prev.map((assistant) =>
-          assistant.id === selectedAssistant.id
-            ? {
-                ...assistant,
-                name: formName,
-                description: formDescription,
-                model: modelOptions.find((option) => option.value === formModel)?.label || formModel,
-                systemPrompt: formSystemPrompt,
-                capabilities: formCapabilities,
-                category: formCategory,
-                isActive: formIsActive,
-                updatedAt: new Date(),
-              }
-            : assistant,
-        ),
-      )
-
-      setIsLoading(false)
-      setShowEditDialog(false)
-      resetForm()
-
-      toast({
-        title: "Assistant updated",
-        description: "The AI assistant has been updated successfully",
+    try {
+      const { data, error } = await dbHelpers.updateAIAssistant(selectedAssistant.id, {
+        name: formName,
+        description: formDescription,
+        model: formModel,
+        system_prompt: formSystemPrompt,
+        capabilities: formCapabilities,
+        category: formCategory,
+        is_active: formIsActive,
       })
-    }, 800)
-  }
 
+      if (error) {
+        throw error
+      }
+
+      if (data) {
+        setAssistants((prev) =>
+          prev.map((assistant) =>
+            assistant.id === selectedAssistant.id ? data : assistant
+          )
+        )
+        setShowEditDialog(false)
+        resetForm()
+
+        toast({
+          title: "Assistant updated",
+          description: "The AI assistant has been updated successfully",
+        })
+      }
+    } catch (error) {
+      console.error('Error updating assistant:', error)
+      toast({
+        title: "Error updating assistant",
+        description: "Failed to update the AI assistant. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
   // Handle deleting an assistant
-  const handleDeleteAssistant = () => {
+  const handleDeleteAssistant = async () => {
     if (!selectedAssistant) return
 
     setIsLoading(true)
 
-    // Simulate API call
-    setTimeout(() => {
-      setAssistants((prev) => prev.filter((assistant) => assistant.id !== selectedAssistant.id))
+    try {
+      const { error } = await dbHelpers.deleteAIAssistant(selectedAssistant.id)
 
-      setIsLoading(false)
+      if (error) {
+        throw error
+      }
+
+      setAssistants((prev) => prev.filter((assistant) => assistant.id !== selectedAssistant.id))
       setShowDeleteDialog(false)
 
       toast({
@@ -504,7 +449,16 @@ export default function AIAssistantsPage() {
         description: "The AI assistant has been deleted successfully",
         variant: "destructive",
       })
-    }, 800)
+    } catch (error) {
+      console.error('Error deleting assistant:', error)
+      toast({
+        title: "Error deleting assistant",
+        description: "Failed to delete the AI assistant. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   // Copy system prompt to clipboard
@@ -634,12 +588,11 @@ export default function AIAssistantsPage() {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm">
-                  <ArrowUpDown className="h-4 w-4 mr-1" />
-                  Sort by
+                  <ArrowUpDown className="h-4 w-4 mr-1" />                  Sort by
                   {sortField === "name" && " Name"}
-                  {sortField === "createdAt" && " Date"}
+                  {sortField === "created_at" && " Date"}
                   {sortField === "model" && " Model"}
-                  {sortField === "isActive" && " Status"}
+                  {sortField === "is_active" && " Status"}
                   <span className="ml-1">({sortDirection === "asc" ? "A-Z" : "Z-A"})</span>
                 </Button>
               </DropdownMenuTrigger>
@@ -647,18 +600,17 @@ export default function AIAssistantsPage() {
                 <DropdownMenuItem onClick={() => handleSort("name")}>
                   Name
                   {sortField === "name" && <span className="ml-auto">{sortDirection === "asc" ? "↑" : "↓"}</span>}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleSort("createdAt")}>
+                </DropdownMenuItem>                <DropdownMenuItem onClick={() => handleSort("created_at")}>
                   Date created
-                  {sortField === "createdAt" && <span className="ml-auto">{sortDirection === "asc" ? "↑" : "↓"}</span>}
+                  {sortField === "created_at" && <span className="ml-auto">{sortDirection === "asc" ? "↑" : "↓"}</span>}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => handleSort("model")}>
                   Model
                   {sortField === "model" && <span className="ml-auto">{sortDirection === "asc" ? "↑" : "↓"}</span>}
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleSort("isActive")}>
+                <DropdownMenuItem onClick={() => handleSort("is_active")}>
                   Status
-                  {sortField === "isActive" && <span className="ml-auto">{sortDirection === "asc" ? "↑" : "↓"}</span>}
+                  {sortField === "is_active" && <span className="ml-auto">{sortDirection === "asc" ? "↑" : "↓"}</span>}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -725,12 +677,11 @@ export default function AIAssistantsPage() {
                   transition={{ type: "spring", stiffness: 300 }}
                 >
                   <Card
-                    className="h-full flex flex-col hover:shadow-lg transition-shadow duration-300 overflow-hidden border-t-4 relative"
-                    style={{
-                      borderTopColor: assistant.isActive ? "hsl(var(--neo-mint))" : "hsl(var(--muted-foreground))",
+                    className="h-full flex flex-col hover:shadow-lg transition-shadow duration-300 overflow-hidden border-t-4 relative"                    style={{
+                      borderTopColor: assistant.is_active ? "hsl(var(--neo-mint))" : "hsl(var(--muted-foreground))",
                     }}
                   >
-                    {!assistant.isActive && (
+                    {!assistant.is_active && (
                       <div className="absolute top-2 right-2">
                         <Badge variant="outline" className="bg-gray-100 dark:bg-gray-800 text-gray-500">
                           Inactive
@@ -765,44 +716,39 @@ export default function AIAssistantsPage() {
                     <CardContent className="py-2 flex-grow">
                       <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-2 mb-3">
                         {assistant.description}
-                      </p>
-                      <div className="flex flex-wrap gap-1 mt-2">
-                        {assistant.capabilities.slice(0, 3).map((cap) => (
+                      </p>                      <div className="flex flex-wrap gap-1 mt-2">
+                        {(assistant.capabilities || []).slice(0, 3).map((cap) => (
                           <Badge key={cap} variant="outline" className="text-xs">
                             {cap}
                           </Badge>
                         ))}
-                        {assistant.capabilities.length > 3 && (
+                        {(assistant.capabilities || []).length > 3 && (
                           <Badge variant="outline" className="text-xs">
-                            +{assistant.capabilities.length - 3} more
+                            +{(assistant.capabilities || []).length - 3} more
                           </Badge>
                         )}
-                      </div>
-
-                      <div className="mt-4 text-xs text-gray-500 dark:text-gray-400">
+                      </div>                      <div className="mt-4 text-xs text-gray-500 dark:text-gray-400">
                         <div className="flex items-center justify-between mb-1">
                           <span>Created:</span>
-                          <span>{formatDate(assistant.createdAt)}</span>
+                          <span>{formatDate(assistant.created_at)}</span>
                         </div>
                         <div className="flex items-center justify-between">
                           <span>Last updated:</span>
-                          <span>{formatDate(assistant.updatedAt)}</span>
+                          <span>{formatDate(assistant.updated_at)}</span>
                         </div>
                       </div>
                     </CardContent>
                     <CardFooter className="pt-4 pb-3 flex justify-between items-center">
                       <TooltipProvider>
                         <Tooltip>
-                          <TooltipTrigger asChild>
-                            <div className="flex items-center">
+                          <TooltipTrigger asChild>                            <div className="flex items-center">
                               <Switch
-                                checked={assistant.isActive}
-                                onCheckedChange={() => handleToggleActive(assistant.id, assistant.isActive)}
+                                checked={assistant.is_active ?? false}
+                                onCheckedChange={() => handleToggleActive(assistant.id, assistant.is_active)}
                               />
                             </div>
-                          </TooltipTrigger>
-                          <TooltipContent side="bottom">
-                            {assistant.isActive ? "Deactivate" : "Activate"} assistant
+                          </TooltipTrigger>                          <TooltipContent side="bottom">
+                            {assistant.is_active ? "Deactivate" : "Activate"} assistant
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
@@ -1264,9 +1210,8 @@ export default function AIAssistantsPage() {
                     <div>
                       <DialogTitle className="text-xl">{selectedAssistant.name}</DialogTitle>
                       <div className="flex items-center mt-1 space-x-2">
-                        <Badge variant="secondary">{selectedAssistant.model}</Badge>
-                        <Badge variant={selectedAssistant.isActive ? "default" : "destructive"}>
-                          {selectedAssistant.isActive ? "Active" : "Inactive"}
+                        <Badge variant="secondary">{selectedAssistant.model}</Badge>                        <Badge variant={selectedAssistant.is_active ? "default" : "destructive"}>
+                          {selectedAssistant.is_active ? "Active" : "Inactive"}
                         </Badge>
                       </div>
                     </div>
@@ -1296,75 +1241,68 @@ export default function AIAssistantsPage() {
                       {categoryOptions.find((c) => c.value === selectedAssistant.category)?.label ||
                         selectedAssistant.category}
                     </p>
-                  </div>
-                  <div>
+                  </div>                  <div>
                     <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Created</h3>
-                    <p className="text-sm">{formatDate(selectedAssistant.createdAt)}</p>
+                    <p className="text-sm">{formatDate(selectedAssistant.created_at)}</p>
                   </div>
                   <div>
                     <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Last Updated</h3>
-                    <p className="text-sm">{formatDate(selectedAssistant.updatedAt)}</p>
+                    <p className="text-sm">{formatDate(selectedAssistant.updated_at)}</p>
                   </div>
                 </div>
 
                 <div>
                   <div className="flex items-center justify-between mb-1">
-                    <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">System Prompt</h3>
-                    <Button
+                    <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">System Prompt</h3>                    <Button
                       variant="ghost"
                       size="sm"
                       className="h-8 px-2 text-xs"
-                      onClick={() => handleCopyPrompt(selectedAssistant.systemPrompt)}
+                      onClick={() => handleCopyPrompt(selectedAssistant.system_prompt)}
                     >
                       <Copy className="h-3 w-3 mr-1" />
                       Copy
                     </Button>
                   </div>
                   <div className="rounded-md bg-muted p-3 text-sm font-mono whitespace-pre-wrap">
-                    {selectedAssistant.systemPrompt}
+                    {selectedAssistant.system_prompt}
                   </div>
                 </div>
 
                 <div>
-                  <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Capabilities</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedAssistant.capabilities.map((capability) => (
+                  <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Capabilities</h3>                  <div className="flex flex-wrap gap-2">
+                    {(selectedAssistant.capabilities || []).map((capability) => (
                       <Badge key={capability} variant="outline">
                         {capability}
                       </Badge>
                     ))}
                   </div>
-                </div>
-
-                {selectedAssistant.usage && (
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Usage Statistics</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                      <Card>
-                        <CardContent className="p-4 text-center">
-                          <p className="text-sm text-gray-500 dark:text-gray-400">Conversations</p>
-                          <p className="text-2xl font-bold mt-1">
-                            {selectedAssistant.usage.conversations.toLocaleString()}
-                          </p>
-                        </CardContent>
-                      </Card>
-                      <Card>
-                        <CardContent className="p-4 text-center">
-                          <p className="text-sm text-gray-500 dark:text-gray-400">Messages</p>
-                          <p className="text-2xl font-bold mt-1">{selectedAssistant.usage.messages.toLocaleString()}</p>
-                        </CardContent>
-                      </Card>
-                      <Card>
-                        <CardContent className="p-4 text-center">
-                          <p className="text-sm text-gray-500 dark:text-gray-400">Tokens</p>
-                          <p className="text-2xl font-bold mt-1">
-                            {(selectedAssistant.usage.tokensConsumed / 1000).toFixed(1)}K
-                          </p>
-                        </CardContent>
-                      </Card>
-                    </div>
+                </div>                <div>
+                  <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Usage Statistics</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <Card>
+                      <CardContent className="p-4 text-center">
+                        <p className="text-sm text-gray-500 dark:text-gray-400">Conversations</p>
+                        <p className="text-2xl font-bold mt-1">
+                          {(selectedAssistant.conversation_count || 0).toLocaleString()}
+                        </p>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4 text-center">
+                        <p className="text-sm text-gray-500 dark:text-gray-400">Messages</p>
+                        <p className="text-2xl font-bold mt-1">{(selectedAssistant.message_count || 0).toLocaleString()}</p>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4 text-center">
+                        <p className="text-sm text-gray-500 dark:text-gray-400">Tokens</p>
+                        <p className="text-2xl font-bold mt-1">
+                          {((selectedAssistant.token_consumption || 0) / 1000).toFixed(1)}K
+                        </p>
+                      </CardContent>
+                    </Card>
                   </div>
-                )}
+                </div>
               </div>
 
               <DialogFooter>

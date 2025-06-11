@@ -22,8 +22,8 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { toast } from "@/hooks/use-toast"
-import { supabase } from "@/lib/supabase"
-import { Database } from "@/types/database.types"
+import { supabase, dbHelpers } from "@/lib/supabase"
+import { Database } from "@/lib/database.types"
 import {
   AlertCircle,
   Check,
@@ -64,11 +64,28 @@ type AIModelRow = Database['public']['Tables']['ai_models']['Row']
 interface ApiKey extends ApiKeyRow {
   key?: string // For display purposes, we'll mask the actual key
   isDefault?: boolean
+  // Display fields (transformed from database fields)
+  name: string // from key_name
+  provider: string // from service_name  
+  usage_count: number // from current_usage
+  rate_limit: number | null // from usage_limit
+  last_used: string | null // from updated_at
 }
 
-interface AIModel extends AIModelRow {
+interface AIModelConfiguration {
   strengths?: string[]
   apiEndpoint?: string
+  [key: string]: any
+}
+
+interface AIModel extends Omit<AIModelRow, 'configuration'> {
+  strengths?: string[]
+  apiEndpoint?: string
+  configuration?: AIModelConfiguration
+  // Display fields (some may not exist in database schema)
+  description?: string // Added for UI display
+  max_tokens?: number // Added for UI display  
+  cost_per_token?: number // Transformed from cost_per_request
 }
 
 interface UsageData {
@@ -122,9 +139,12 @@ export default function AISettingsPage() {
 
   // Load data from Supabase
   useEffect(() => {
-    loadApiKeys()
-    loadAiModels()
-    loadUsageData()
+    const loadData = async () => {
+      await loadApiKeys()
+      await loadAiModels()
+      await loadUsageData()
+    }
+    loadData()
   }, [])
 
   const loadApiKeys = async () => {
@@ -132,19 +152,20 @@ export default function AISettingsPage() {
       const { data, error } = await supabase
         .from('api_keys')
         .select('*')
-        .order('createdAt', { ascending: false })
+        .order('created_at', { ascending: false })
 
       if (error) throw error
 
       // Transform data and mask keys for security
       const transformedKeys: ApiKey[] = data.map(key => ({
         ...key,
-        key: `${key.keyHash.substring(0, 8)}...${key.keyHash.substring(key.keyHash.length - 8)}`,
-        isDefault: false, // We'll need to implement default key logic
-        createdAt: key.createdAt,
-        lastUsed: key.lastUsed,
-        expiresAt: key.expiresAt,
-        usageLimit: key.rateLimit
+        name: key.key_name,
+        provider: key.service_name,
+        key: `${key.encrypted_key.substring(0, 8)}...${key.encrypted_key.substring(key.encrypted_key.length - 8)}`,
+        is_default: false, // We'll need to implement default key logic
+        usage_count: key.current_usage || 0,
+        rate_limit: key.usage_limit,
+        last_used: key.updated_at
       }))
 
       setApiKeys(transformedKeys)
@@ -163,18 +184,18 @@ export default function AISettingsPage() {
       const { data, error } = await supabase
         .from('ai_models')
         .select('*')
-        .order('createdAt', { ascending: false })
+        .order('created_at', { ascending: false })
 
       if (error) throw error
 
       // Transform data to match our interface
       const transformedModels: AIModel[] = data.map(model => ({
         ...model,
-        contextLength: model.maxTokens || 4096,
-        costPer1kTokens: model.costPerToken || 0.001,
-        isEnabled: model.isActive,
-        strengths: [], // We'll need to implement strengths logic
-        capabilities: model.capabilities || ['text']
+        configuration: model.configuration ? model.configuration as AIModelConfiguration : undefined,
+        // Add display fields that may not exist in database
+        description: `${model.name} - ${model.provider} AI model with advanced capabilities`,
+        max_tokens: 4096, // Default value since not in schema
+        cost_per_token: model.cost_per_request ? model.cost_per_request / 1000 : 0.001 // Convert per-request to per-token
       }))
 
       setAiModels(transformedModels)
@@ -190,42 +211,87 @@ export default function AISettingsPage() {
     }
   }
 
-  const loadUsageData = () => {
-    // For now, we'll generate sample usage data until we implement real usage tracking
-    setUsageData(generateUsageData())
+  const loadUsageData = async () => {
+    try {
+      // Load real usage data from database
+      const data = await generateRealUsageData()
+      setUsageData(data)
+    } catch (error) {
+      console.error('Error loading usage data:', error)
+      // Fallback to empty data or basic structure
+      setUsageData([])
+    }
   }
 
-  // Sample usage data
-  const generateUsageData = () => {
+  // Generate usage data based on real database activity
+  const generateRealUsageData = async (): Promise<UsageData[]> => {
     const data: UsageData[] = []
     const now = new Date()
     const days = timeRange === "7d" ? 7 : timeRange === "30d" ? 30 : 90
 
-    for (let i = 0; i < days; i++) {
-      const date = new Date(now)
-      date.setDate(date.getDate() - i)
-      const dateStr = date.toISOString().split("T")[0]
+    try {
+      // Get real submission data to calculate API usage
+      const submissions = await dbHelpers.getChallengeSubmissions()
+      
+      for (let i = 0; i < days; i++) {
+        const date = new Date(now)
+        date.setDate(date.getDate() - i)
+        const dateStr = date.toISOString().split("T")[0]
+        const nextDateStr = new Date(date.getTime() + 24 * 60 * 60 * 1000).toISOString().split("T")[0]
 
-      // Generate random but somewhat realistic data
-      const baseRequests = Math.floor(Math.random() * 100) + 50
-      const dayOfWeek = date.getDay()
-      // Less usage on weekends
-      const multiplier = dayOfWeek === 0 || dayOfWeek === 6 ? 0.6 : 1
-      const requests = Math.floor(baseRequests * multiplier)
-      const tokensPerRequest = Math.floor(Math.random() * 1000) + 500
-      const tokens = requests * tokensPerRequest
-      const cost = tokens * 0.00002
+        // Count submissions for this day (proxy for API requests)
+        const daySubmissions = submissions.filter((sub: any) => {
+          const subDate = new Date(sub.created_at).toISOString().split("T")[0]
+          return subDate === dateStr
+        })
 
-      data.push({
-        date: dateStr,
-        requests,
-        tokens,
-        cost,
-      })
+        // Each submission might use multiple API calls (evaluation, feedback, etc.)
+        const requests = daySubmissions.length * 3 // Estimate 3 API calls per submission
+        
+        // Calculate tokens based on content complexity
+        const totalContentLength = daySubmissions.reduce((sum: number, sub: any) => {
+          return sum + (sub.content?.length || 0)
+        }, 0)
+        
+        // Rough estimation: 4 characters per token, plus overhead
+        const inputTokens = Math.floor(totalContentLength / 4)
+        const outputTokens = Math.floor(inputTokens * 0.5) // Response is typically shorter
+        const tokens = inputTokens + outputTokens
+
+        // Cost calculation (rough estimate based on GPT-4 pricing)
+        const inputCost = inputTokens * 0.00003 // $0.03 per 1K tokens
+        const outputCost = outputTokens * 0.00006 // $0.06 per 1K tokens
+        const cost = inputCost + outputCost
+
+        data.push({
+          date: dateStr,
+          requests: Math.max(requests, 0),
+          tokens: Math.max(tokens, 0),
+          cost: Math.max(cost, 0),
+        })
+      }
+
+      // Sort by date ascending
+      return data.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+    } catch (error) {
+      console.error('Error generating usage data:', error)
+      
+      // Fallback to minimal realistic data if database fails
+      for (let i = 0; i < days; i++) {
+        const date = new Date(now)
+        date.setDate(date.getDate() - i)
+        const dateStr = date.toISOString().split("T")[0]
+
+        data.push({
+          date: dateStr,
+          requests: 0,
+          tokens: 0,
+          cost: 0,
+        })
+      }
+      
+      return data.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
     }
-
-    // Sort by date ascending
-    return data.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
   }
 
   // Data loading is now handled by individual functions called in useEffect above
@@ -268,13 +334,13 @@ export default function AISettingsPage() {
       const { data, error } = await supabase
         .from('api_keys')
         .insert({
-          name: newKeyName,
-          provider: newKeyProvider,
-          keyHash: keyHash,
-          isActive: true,
-          usageCount: 0,
-          rateLimit: newKeyUsageLimit ? Number.parseInt(newKeyUsageLimit) : null,
-          expiresAt: null,
+          key_name: newKeyName,
+          service_name: newKeyProvider,
+          encrypted_key: keyHash,
+          is_active: true,
+          current_usage: 0,
+          usage_limit: newKeyUsageLimit ? Number.parseInt(newKeyUsageLimit) : null,
+          expires_at: null,
         })
         .select()
         .single()
@@ -286,12 +352,13 @@ export default function AISettingsPage() {
       // Transform the new key for display
       const newKey: ApiKey = {
         ...data,
+        name: data.key_name,
+        provider: data.service_name,
         key: `${keyHash.substring(0, 8)}...${keyHash.substring(keyHash.length - 8)}`,
-        isDefault: apiKeys.length === 0,
-        usageLimit: data.rateLimit,
-        createdAt: data.createdAt,
-        lastUsed: data.lastUsed,
-        expiresAt: data.expiresAt,
+        is_default: apiKeys.length === 0,
+        usage_count: data.current_usage || 0,
+        rate_limit: data.usage_limit,
+        last_used: data.updated_at
       }
 
       setApiKeys([...apiKeys, newKey])
@@ -339,7 +406,7 @@ export default function AISettingsPage() {
 
       // Only update keyHash if a new key value is provided
       if (newKeyValue) {
-        updateData.keyHash = btoa(newKeyValue).substring(0, 32)
+        updateData.key_hash = btoa(newKeyValue).substring(0, 32)
       }
 
       const { data, error } = await supabase
@@ -358,9 +425,9 @@ export default function AISettingsPage() {
           return {
             ...key,
             name: newKeyName,
-            key: newKeyValue ? `${updateData.keyHash.substring(0, 8)}...${updateData.keyHash.substring(updateData.keyHash.length - 8)}` : key.key,
+            key: newKeyValue ? `${updateData.key_hash.substring(0, 8)}...${updateData.key_hash.substring(updateData.key_hash.length - 8)}` : key.key,
             provider: newKeyProvider,
-            usageLimit: data.rateLimit,
+            rate_limit: data.rate_limit,
           }
         }
         return key
@@ -417,7 +484,7 @@ export default function AISettingsPage() {
         // Update the new default key in database
         await supabase
           .from('api_keys')
-          .update({ isDefault: true })
+          .update({ is_default: true })
           .eq('id', updatedKeys[0].id)
       }
 
@@ -449,13 +516,13 @@ export default function AISettingsPage() {
       // First, set all keys to non-default
       await supabase
         .from('api_keys')
-        .update({ isDefault: false })
+        .update({ is_default: false })
         .neq('id', keyId)
 
       // Then set the selected key as default
       const { error } = await supabase
         .from('api_keys')
-        .update({ isDefault: true })
+        .update({ is_default: true })
         .eq('id', keyId)
 
       if (error) {
@@ -465,7 +532,7 @@ export default function AISettingsPage() {
       // Update local state
       const updatedKeys = apiKeys.map((key) => ({
         ...key,
-        isDefault: key.id === keyId,
+        is_default: key.id === keyId,
       }))
 
       setApiKeys(updatedKeys)
@@ -494,7 +561,7 @@ export default function AISettingsPage() {
       // Update in Supabase
       const { error } = await supabase
         .from('api_keys')
-        .update({ isActive: newStatus })
+        .update({ is_active: newStatus })
         .eq('id', keyId)
 
       if (error) {
@@ -506,7 +573,7 @@ export default function AISettingsPage() {
         if (key.id === keyId) {
           return {
             ...key,
-            isActive: newStatus,
+            is_active: newStatus,
           }
         }
         return key
@@ -548,13 +615,13 @@ export default function AISettingsPage() {
       const { data, error } = await supabase
         .from('ai_models')
         .insert({
+          model_id: `${newModelProvider}-${newModelName.toLowerCase().replace(/\s+/g, '-')}`,
           name: newModelName,
           provider: newModelProvider,
-          description: newModelDescription,
           capabilities: newModelCapabilities,
-          isActive: true,
-          maxTokens: Number.parseInt(newModelContextLength),
-          costPerToken: Number.parseFloat(newModelCost),
+          is_active: true,
+          rate_limit: 1000, // Default rate limit
+          cost_per_request: Number.parseFloat(newModelCost) * 1000, // Convert per-token to per-request
           configuration: {
             strengths: newModelStrengths,
             apiEndpoint: newModelEndpoint || undefined,
@@ -570,20 +637,20 @@ export default function AISettingsPage() {
       // Create new model object for local state
       const newModel: AIModel = {
         id: data.id,
+        model_id: data.model_id,
         name: data.name,
         provider: data.provider,
         description: data.description,
         capabilities: data.capabilities,
-        isActive: data.isActive,
-        maxTokens: data.maxTokens,
-        costPerToken: data.costPerToken,
-        modelId: data.modelId,
-        version: data.version,
-        createdAt: data.createdAt,
-        updatedAt: data.updatedAt,
-        configuration: data.configuration,
-        strengths: data.configuration?.strengths || [],
-        apiEndpoint: data.configuration?.apiEndpoint,
+        is_active: data.is_active,
+        cost_per_request: data.cost_per_request,
+        rate_limit: data.rate_limit,
+        created_at: data.created_at,
+        updated_at: data.updated_at,
+        configuration: data.configuration as AIModelConfiguration | undefined,
+        // Add computed display fields
+        max_tokens: Number.parseInt(newModelContextLength),
+        cost_per_token: data.cost_per_request ? data.cost_per_request / 1000 : Number.parseFloat(newModelCost),
       }
 
       setAiModels([...aiModels, newModel])
@@ -690,7 +757,7 @@ export default function AISettingsPage() {
       // Update in Supabase
       const { error } = await supabase
         .from('ai_models')
-        .update({ isActive: newStatus })
+        .update({ is_active: newStatus })
         .eq('id', modelId)
 
       if (error) {
@@ -770,8 +837,8 @@ export default function AISettingsPage() {
         const { error } = await supabase
           .from('api_keys')
           .update({
-            lastUsed: new Date().toISOString(),
-            usageCount: (key.usageCount || 0) + 1,
+            last_used: new Date().toISOString(),
+            usageCount: (key.usage_count || 0) + 1,
           })
           .eq('id', key.id)
 
@@ -783,8 +850,8 @@ export default function AISettingsPage() {
             if (k.id === key.id) {
               return {
                 ...k,
-                lastUsed: new Date().toISOString(),
-                usageCount: (k.usageCount || 0) + 1,
+                last_used: new Date().toISOString(),
+                usageCount: (k.usage_count || 0) + 1,
               }
             }
             return k
@@ -1195,7 +1262,7 @@ export default function AISettingsPage() {
                                         Default
                                       </Badge>
                                     )}
-                                    {!key.isActive && (
+                                    {!key.is_active && (
                                       <Badge
                                         variant="outline"
                                         className="bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400"
@@ -1217,7 +1284,7 @@ export default function AISettingsPage() {
                                         variant="outline"
                                         size="sm"
                                         onClick={() => handleTestApiKey(key)}
-                                        disabled={testingKey === key.id || !key.isActive}
+                                        disabled={testingKey === key.id || !key.is_active}
                                       >
                                         {testingKey === key.id ? (
                                           <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -1274,10 +1341,10 @@ export default function AISettingsPage() {
                               </div>
                               <div className="flex items-center gap-2">
                                 <Switch
-                                  checked={key.isActive}
+                                  checked={key.is_active || false}
                                   onCheckedChange={(checked) => handleToggleKeyActive(key.id, checked)}
                                 />
-                                <span className="text-sm">{key.isActive ? "Active" : "Inactive"}</span>
+                                <span className="text-sm">{key.is_active ? "Active" : "Inactive"}</span>
                               </div>
                             </div>
 
@@ -1295,30 +1362,30 @@ export default function AISettingsPage() {
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                       <div className="space-y-1">
                                         <p className="text-xs text-muted-foreground">Created</p>
-                                        <p className="text-sm">{formatDate(key.createdAt)}</p>
+                                        <p className="text-sm">{formatDate(key.created_at)}</p>
                                       </div>
                                       <div className="space-y-1">
                                         <p className="text-xs text-muted-foreground">Last Used</p>
-                                        <p className="text-sm">{formatDate(key.lastUsed)}</p>
+                                        <p className="text-sm">{formatDate(key.last_used)}</p>
                                       </div>
                                       <div className="space-y-1">
                                         <p className="text-xs text-muted-foreground">Expires</p>
-                                        <p className="text-sm">{key.expiresAt ? formatDate(key.expiresAt) : "Never"}</p>
+                                        <p className="text-sm">{key.expires_at ? formatDate(key.expires_at) : "Never"}</p>
                                       </div>
                                     </div>                                      <div className="space-y-2">
                                         <div className="flex items-center justify-between">
                                           <p className="text-xs text-muted-foreground">Usage</p>
                                           <p className="text-xs">
-                                            {key.usageCount} / {key.rateLimit || "∞"}
+                                            {key.usage_count} / {key.rate_limit || "∞"}
                                           </p>
                                         </div>
-                                        {key.rateLimit && (
-                                          <Progress value={(key.usageCount / key.rateLimit) * 100} className="h-1.5" />
+                                        {key.rate_limit && (
+                                          <Progress value={((key.usage_count || 0) / key.rate_limit) * 100} className="h-1.5" />
                                         )}
                                     </div>
 
                                     <div className="flex flex-wrap gap-2">
-                                      {!key.isDefault && key.isActive && (
+                                      {!key.isDefault && key.is_active && (
                                         <Button variant="outline" size="sm" onClick={() => handleSetDefaultKey(key.id)}>
                                           <Star className="h-4 w-4 mr-2" />
                                           Set as Default
@@ -1331,7 +1398,7 @@ export default function AISettingsPage() {
                                           setSelectedKey(key)
                                           setNewKeyName(key.name)
                                           setNewKeyProvider(key.provider as "openai" | "gemini" | "anthropic" | "mistral" | "cohere" | "custom")
-                                          setNewKeyUsageLimit(key.rateLimit ? key.rateLimit.toString() : "")
+                                          setNewKeyUsageLimit(key.rate_limit ? key.rate_limit.toString() : "")
                                           setShowEditKeyDialog(true)
                                         }}
                                       >
@@ -1459,7 +1526,7 @@ export default function AISettingsPage() {
                           key={model.id}
                           variants={itemVariants}
                           className={`rounded-lg border ${
-                            model.isActive ? "" : "bg-gray-50 dark:bg-gray-900/50 opacity-75"
+                            model.is_active ? "" : "bg-gray-50 dark:bg-gray-900/50 opacity-75"
                           } hover:shadow-md transition-all duration-300`}
                         >
                           <div className="p-4">
@@ -1475,7 +1542,7 @@ export default function AISettingsPage() {
                                 <h3 className="font-medium">{model.name}</h3>
                               </div>
                               <Switch
-                                checked={model.isActive}
+                                checked={model.is_active || false}
                                 onCheckedChange={(checked) => handleToggleModelEnabled(model.id, checked)}
                               />
                             </div>
@@ -1492,12 +1559,12 @@ export default function AISettingsPage() {
                               <div>
                                 <span className="block">Context Length</span>
                                 <span className="font-medium text-foreground">
-                                  {formatNumber(model.maxTokens || 0)} tokens
+                                  {formatNumber(model.max_tokens || 0)} tokens
                                 </span>
                               </div>
                               <div>
                                 <span className="block">Cost per 1K tokens</span>
-                                <span className="font-medium text-foreground">${model.costPerToken?.toFixed(6)}</span>
+                                <span className="font-medium text-foreground">${model.cost_per_token?.toFixed(6)}</span>
                               </div>
                             </div>
 
@@ -1506,7 +1573,7 @@ export default function AISettingsPage() {
                                 <AccordionTrigger className="py-2 text-sm">Strengths & Capabilities</AccordionTrigger>
                                 <AccordionContent>
                                   <ul className="text-xs space-y-1 text-muted-foreground">
-                                    {model.strengths?.map((strength, i) => (
+                                    {model.configuration?.strengths?.map((strength: string, i: number) => (
                                       <li key={i} className="flex items-start gap-2">
                                         <Check className="h-3 w-3 mt-0.5 text-green-500" />
                                         <span>{strength}</span>
@@ -1528,10 +1595,10 @@ export default function AISettingsPage() {
                                   setNewModelProvider(model.provider as any)
                                   setNewModelDescription(model.description || "")
                                   setNewModelCapabilities(model.capabilities || ["text"])
-                                  setNewModelContextLength(model.maxTokens?.toString() || "4096")
-                                  setNewModelCost(model.costPerToken?.toString() || "0.001")
-                                  setNewModelStrengths(model.strengths || [])
-                                  setNewModelEndpoint(model.apiEndpoint || "")
+                                  setNewModelContextLength(model.max_tokens?.toString() || "4096")
+                                  setNewModelCost(model.cost_per_token?.toString() || "0.001")
+                                  setNewModelStrengths(model.configuration?.strengths || [])
+                                  setNewModelEndpoint(model.configuration?.apiEndpoint || "")
                                   setShowEditModelDialog(true)
                                 }}
                               >

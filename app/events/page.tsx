@@ -11,172 +11,133 @@ import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
+import { useToast } from "@/hooks/use-toast"
+import { dbHelpers } from "@/lib/supabase"
 import SEOMeta from "@/components/seo-meta"
 
+// Helper function to determine event badge based on date
+const getEventBadge = (startTime: string): "today" | "tomorrow" | "upcoming" | "past" => {
+  const eventDate = new Date(startTime)
+  const now = new Date()
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000)
+  const eventDateOnly = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate())
+
+  if (eventDate < now) return "past"
+  if (eventDateOnly.getTime() === today.getTime()) return "today"
+  if (eventDateOnly.getTime() === tomorrow.getTime()) return "tomorrow"
+  return "upcoming"
+}
+
+// Helper function to check if event is online
+const isEventOnline = (location: string): boolean => {
+  return location.toLowerCase().includes('online') || 
+         location.toLowerCase().includes('zoom') || 
+         location.toLowerCase().includes('discord') || 
+         location.toLowerCase().includes('virtual')
+}
+
+// Helper function to format event date
+const formatEventDate = (startTime: string): { date: string, time: string } => {
+  const eventDate = new Date(startTime)
+  const date = eventDate.toLocaleDateString('en-US', { 
+    month: 'short', 
+    day: 'numeric', 
+    year: 'numeric' 
+  })
+  const time = eventDate.toLocaleTimeString('en-US', { 
+    hour: 'numeric', 
+    minute: '2-digit',
+    hour12: true,
+    timeZoneName: 'short'
+  })
+  return { date, time }
+}
+
 interface Event {
-  id: number
+  id: string
   title: string
-  date: string
-  time: string
-  location: string
   description: string
-  attendees: number
+  startTime: string
+  endTime: string
+  location: string
+  eventType: string
+  maxAttendees?: number
+  attendeeCount: number
   organizer: {
-    name: string
-    image: string
+    id: string
+    name: string | null
+    avatar?: string
   }
-  badge: "today" | "tomorrow" | "upcoming" | "past"
-  category: "speaking" | "writing" | "grammar" | "vocabulary" | "pronunciation" | "exam-prep"
-  isOnline: boolean
+  isPublic: boolean
+  tags: string[]
+  createdAt: string
 }
 
 export default function EventsPage() {
   const router = useRouter()
+  const { toast } = useToast()
   const [loading, setLoading] = useState(true)
   const [events, setEvents] = useState<Event[]>([])
+  const [pastEvents, setPastEvents] = useState<Event[]>([])
   const [activeTab, setActiveTab] = useState("upcoming")
   const [searchQuery, setSearchQuery] = useState("")
 
   useEffect(() => {
-    // Simulate loading data
-    const timer = setTimeout(() => {
-      setEvents(generateMockEvents())
-      setLoading(false)
-    }, 1000)
-
-    return () => clearTimeout(timer)
+    loadEvents()
   }, [])
 
-  const generateMockEvents = (): Event[] => {
-    return [
-      {
-        id: 1,
-        title: "Pronunciation Workshop",
-        date: "May 22, 2025",
-        time: "8:00 PM GMT",
-        location: "Online (Zoom)",
-        description:
-          "Master the pronunciation of difficult English sounds with our expert phonetics instructor. This interactive workshop will focus on the most challenging sounds for non-native speakers.",
-        attendees: 45,
-        organizer: {
-          name: "Sarah Chen",
-          image: "/placeholder.svg?height=40&width=40",
-        },
-        badge: "today",
-        category: "pronunciation",
-        isOnline: true,
-      },
-      {
-        id: 2,
-        title: "Speaking Practice Meetup",
-        date: "May 23, 2025",
-        time: "6:30 PM GMT",
-        location: "Online (Discord)",
-        description:
-          "Join our weekly speaking practice session where you can practice English conversation in small groups. All levels welcome!",
-        attendees: 32,
-        organizer: {
-          name: "John Wilson",
-          image: "/placeholder.svg?height=40&width=40",
-        },
-        badge: "tomorrow",
-        category: "speaking",
-        isOnline: true,
-      },
-      {
-        id: 3,
-        title: "IELTS Writing Workshop",
-        date: "May 25, 2025",
-        time: "7:00 PM GMT",
-        location: "Online (Zoom)",
-        description:
-          "Prepare for the IELTS writing section with our experienced instructor. Learn effective strategies for Task 1 and Task 2 essays.",
-        attendees: 28,
-        organizer: {
-          name: "Lisa Wong",
-          image: "/placeholder.svg?height=40&width=40",
-        },
-        badge: "upcoming",
-        category: "writing",
-        isOnline: true,
-      },
-      {
-        id: 4,
-        title: "Grammar Masterclass",
-        date: "May 28, 2025",
-        time: "5:00 PM GMT",
-        location: "Central Library, Room 204",
-        description:
-          "An in-depth look at advanced English grammar concepts. Perfect for intermediate and advanced learners looking to refine their grammar skills.",
-        attendees: 18,
-        organizer: {
-          name: "David Kim",
-          image: "/placeholder.svg?height=40&width=40",
-        },
-        badge: "upcoming",
-        category: "grammar",
-        isOnline: false,
-      },
-      {
-        id: 5,
-        title: "Business English Networking",
-        date: "June 2, 2025",
-        time: "7:30 PM GMT",
-        location: "Downtown Conference Center",
-        description:
-          "Network with professionals while practicing your business English skills. Great opportunity to expand your professional vocabulary and connections.",
-        attendees: 40,
-        organizer: {
-          name: "Emma Thompson",
-          image: "/placeholder.svg?height=40&width=40",
-        },
-        badge: "upcoming",
-        category: "speaking",
-        isOnline: false,
-      },
-      {
-        id: 6,
-        title: "Vocabulary Building Workshop",
-        date: "June 5, 2025",
-        time: "6:00 PM GMT",
-        location: "Online (Zoom)",
-        description:
-          "Expand your English vocabulary with effective memorization techniques and practice exercises. Focus on academic and professional vocabulary.",
-        attendees: 25,
-        organizer: {
-          name: "Carlos Rodriguez",
-          image: "/placeholder.svg?height=40&width=40",
-        },
-        badge: "upcoming",
-        category: "vocabulary",
-        isOnline: true,
-      },
-      {
-        id: 7,
-        title: "TOEFL Preparation Seminar",
-        date: "May 15, 2025",
-        time: "7:00 PM GMT",
-        location: "Online (Zoom)",
-        description:
-          "Comprehensive overview of the TOEFL exam with strategies for each section. Includes practice materials and Q&A with experienced instructors.",
-        attendees: 52,
-        organizer: {
-          name: "Mike Johnson",
-          image: "/placeholder.svg?height=40&width=40",
-        },
-        badge: "past",
-        category: "exam-prep",
-        isOnline: true,
-      },
-    ]
+  const loadEvents = async () => {    try {
+      setLoading(true)
+      const [upcomingEventsResult, pastEventsResult] = await Promise.all([
+        dbHelpers.getEvents(50),
+        dbHelpers.getPastEvents(50)
+      ])
+      
+      const upcomingEvents = upcomingEventsResult.data || []
+      const pastEventsData = pastEventsResult.data || []
+      
+      const transformedUpcomingEvents = upcomingEvents.map(event => ({
+        ...event,
+        organizer: event.organizer ? {
+          id: event.organizer.id,
+          name: event.organizer.name,
+          avatar: event.organizer.avatar || undefined
+        } : { id: '', name: 'Unknown', avatar: undefined },
+        isPublic: event.isPublic ?? true,
+        createdAt: event.createdAt || new Date().toISOString()
+      }))
+        const transformedPastEvents = pastEventsData.map(event => ({
+        ...event,
+        organizer: event.organizer ? {
+          id: event.organizer.id,
+          name: event.organizer.name,
+          avatar: event.organizer.avatar || undefined
+        } : { id: '', name: 'Unknown', avatar: undefined },
+        isPublic: event.isPublic ?? true,
+        createdAt: event.createdAt || new Date().toISOString()
+      }))
+      
+      setEvents(transformedUpcomingEvents)
+      setPastEvents(transformedPastEvents)
+    } catch (error) {
+      console.error('Error loading events:', error)
+      toast({
+        title: "Error",
+        description: "Failed to load events. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const filteredEvents = events.filter((event) => {
+  const allEvents = activeTab === "past" ? pastEvents : events
+  
+  const filteredEvents = allEvents.filter((event) => {
     // Filter by tab
-    if (activeTab === "upcoming" && event.badge === "past") return false
-    if (activeTab === "past" && event.badge !== "past") return false
-    if (activeTab === "online" && !event.isOnline) return false
-    if (activeTab === "in-person" && event.isOnline) return false
+    if (activeTab === "online" && !isEventOnline(event.location)) return false
+    if (activeTab === "in-person" && isEventOnline(event.location)) return false
 
     // Filter by search query
     if (searchQuery) {
@@ -185,7 +146,7 @@ export default function EventsPage() {
         event.title.toLowerCase().includes(query) ||
         event.description.toLowerCase().includes(query) ||
         event.location.toLowerCase().includes(query) ||
-        event.category.toLowerCase().includes(query)
+        event.eventType.toLowerCase().includes(query)
       )
     }
 
@@ -294,6 +255,10 @@ export default function EventsPage() {
 }
 
 function EventCard({ event }: { event: Event }) {
+  const { date, time } = formatEventDate(event.startTime)
+  const badge = getEventBadge(event.startTime)
+  const isOnline = isEventOnline(event.location)
+  
   return (
     <Card className="overflow-hidden hover:shadow-md transition-shadow cursor-pointer">
       <div className="p-4 sm:p-6">
@@ -301,8 +266,8 @@ function EventCard({ event }: { event: Event }) {
           {/* Date Box */}
           <div className="flex-shrink-0 w-full sm:w-auto">
             <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-3 text-center w-full sm:w-24">
-              <p className="text-sm text-gray-500 dark:text-gray-400">{event.date.split(",")[0]}</p>
-              <p className="text-2xl font-bold">{event.date.split(" ")[1]}</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{date.split(" ")[0]}</p>
+              <p className="text-2xl font-bold">{date.split(" ")[1]}</p>
             </div>
           </div>
 
@@ -312,32 +277,32 @@ function EventCard({ event }: { event: Event }) {
               <div>
                 <Badge
                   className={`mb-2 ${
-                    event.badge === "today"
+                    badge === "today"
                       ? "bg-green-500"
-                      : event.badge === "tomorrow"
+                      : badge === "tomorrow"
                         ? "bg-blue-500"
-                        : event.badge === "past"
+                        : badge === "past"
                           ? "bg-gray-500"
                           : "bg-purple-500"
                   } text-white border-0`}
                 >
-                  {event.badge === "today"
+                  {badge === "today"
                     ? "Today"
-                    : event.badge === "tomorrow"
+                    : badge === "tomorrow"
                       ? "Tomorrow"
-                      : event.badge === "past"
+                      : badge === "past"
                         ? "Past"
                         : "Upcoming"}
                 </Badge>
                 <Badge className="ml-2 mb-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-0">
-                  {event.category.replace("-", " ").replace(/\b\w/g, (l) => l.toUpperCase())}
+                  {event.eventType.replace("-", " ").replace(/\b\w/g, (l: string) => l.toUpperCase())}
                 </Badge>
               </div>
               <Badge
                 variant="outline"
-                className={event.isOnline ? "border-green-500 text-green-600 dark:text-green-400" : ""}
+                className={isOnline ? "border-green-500 text-green-600 dark:text-green-400" : ""}
               >
-                {event.isOnline ? "Online" : "In-Person"}
+                {isOnline ? "Online" : "In-Person"}
               </Badge>
             </div>
 
@@ -348,7 +313,7 @@ function EventCard({ event }: { event: Event }) {
             <div className="flex flex-col sm:flex-row sm:items-center gap-3 text-sm text-gray-500 dark:text-gray-400">
               <div className="flex items-center">
                 <Clock className="h-4 w-4 mr-1.5" />
-                <span>{event.time}</span>
+                <span>{time}</span>
               </div>
 
               <div className="hidden sm:block h-1 w-1 rounded-full bg-gray-300 dark:bg-gray-600" />
@@ -362,19 +327,18 @@ function EventCard({ event }: { event: Event }) {
 
               <div className="flex items-center">
                 <Users className="h-4 w-4 mr-1.5" />
-                <span>{event.attendees} attending</span>
+                <span>{event.attendeeCount} attending</span>
               </div>
             </div>
 
             <Separator className="my-4" />
 
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Avatar className="h-6 w-6">
-                  <AvatarImage src={event.organizer.image || "/placeholder.svg"} />
-                  <AvatarFallback>{event.organizer.name.substring(0, 2)}</AvatarFallback>
+              <div className="flex items-center gap-2">                <Avatar className="h-6 w-6">
+                  <AvatarImage src={event.organizer.avatar || "/placeholder.svg"} />
+                  <AvatarFallback>{(event.organizer.name || "U").substring(0, 2)}</AvatarFallback>
                 </Avatar>
-                <span className="text-sm">Organized by {event.organizer.name}</span>
+                <span className="text-sm">Organized by {event.organizer.name || "Unknown"}</span>
               </div>
 
               <Button size="sm">Join</Button>

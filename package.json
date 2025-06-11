@@ -9,7 +9,10 @@
     "lint": "next lint",
     "analyze": "ANALYZE=true next build",
     "analyze:win": "set ANALYZE=true && next build",
-    "test:perf": "tsx scripts/test-performance-metrics.ts"
+    "test:perf": "tsx scripts/test-performance-metrics.ts",
+    "test:video-refresh": "bash scripts/test-video-refresh.sh",
+    "setup:video-cron": "bash scripts/setup-video-refresh-cron.sh",
+    "setup:video-windows": "powershell -ExecutionPolicy Bypass -File scripts/setup-video-refresh-windows.ps1"
   },
   "dependencies": {
     "@emotion/is-prop-valid": "latest",
@@ -55,7 +58,6 @@
     "@tiptap/react": "latest",
     "@tiptap/starter-kit": "latest",
     "@tremor/react": "latest",
-    "autoprefixer": "^10.4.20",
     "bcryptjs": "^3.0.2",
     "cheerio": "latest",
     "class-variance-authority": "^0.7.1",
@@ -107,6 +109,7 @@
     "@types/react-helmet": "^6.1.11",
     "@types/react-window": "^1.8.8",
     "@types/react-window-infinite-loader": "^1.0.9",
+    "autoprefixer": "^10.4.20",
     "critters": "^0.0.25",
     "cross-env": "^7.0.3",
     "css-minimizer-webpack-plugin": "^7.0.2",

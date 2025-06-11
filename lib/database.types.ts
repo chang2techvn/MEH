@@ -36,36 +36,36 @@ export type Database = {
     Tables: {
       achievements: {
         Row: {
-          badge_url: string | null
+          badge_type: string | null
           created_at: string | null
           criteria: Json | null
           description: string | null
-          icon: string | null
+          icon_url: string | null
           id: string
           is_active: boolean | null
-          points_reward: number | null
+          points: number | null
           title: string
         }
         Insert: {
-          badge_url?: string | null
+          badge_type?: string | null
           created_at?: string | null
           criteria?: Json | null
           description?: string | null
-          icon?: string | null
+          icon_url?: string | null
           id?: string
           is_active?: boolean | null
-          points_reward?: number | null
+          points?: number | null
           title: string
         }
         Update: {
-          badge_url?: string | null
+          badge_type?: string | null
           created_at?: string | null
           criteria?: Json | null
           description?: string | null
-          icon?: string | null
+          icon_url?: string | null
           id?: string
           is_active?: boolean | null
-          points_reward?: number | null
+          points?: number | null
           title?: string
         }
         Relationships: []
@@ -78,8 +78,8 @@ export type Database = {
           details: Json | null
           id: string
           ip_address: unknown | null
-          resource_id: string | null
-          resource_type: string | null
+          target_id: string | null
+          target_type: string | null
           user_agent: string | null
         }
         Insert: {
@@ -89,8 +89,8 @@ export type Database = {
           details?: Json | null
           id?: string
           ip_address?: unknown | null
-          resource_id?: string | null
-          resource_type?: string | null
+          target_id?: string | null
+          target_type?: string | null
           user_agent?: string | null
         }
         Update: {
@@ -100,8 +100,8 @@ export type Database = {
           details?: Json | null
           id?: string
           ip_address?: unknown | null
-          resource_id?: string | null
-          resource_type?: string | null
+          target_id?: string | null
+          target_type?: string | null
           user_agent?: string | null
         }
         Relationships: [
@@ -114,78 +114,134 @@ export type Database = {
           },
         ]
       }
+      ai_assistants: {
+        Row: {
+          avatar: string | null
+          capabilities: string[] | null
+          category: string | null
+          conversation_count: number | null
+          created_at: string | null
+          created_by: string | null
+          description: string
+          id: string
+          is_active: boolean | null
+          message_count: number | null
+          model: string
+          name: string
+          system_prompt: string
+          token_consumption: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          avatar?: string | null
+          capabilities?: string[] | null
+          category?: string | null
+          conversation_count?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          description: string
+          id?: string
+          is_active?: boolean | null
+          message_count?: number | null
+          model: string
+          name: string
+          system_prompt: string
+          token_consumption?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          avatar?: string | null
+          capabilities?: string[] | null
+          category?: string | null
+          conversation_count?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string
+          id?: string
+          is_active?: boolean | null
+          message_count?: number | null
+          model?: string
+          name?: string
+          system_prompt?: string
+          token_consumption?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_assistants_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_models: {
         Row: {
           capabilities: string[] | null
-          configuration: Json | null
-          cost_per_token: number | null
+          cost_per_request: number | null
           created_at: string | null
-          description: string | null
           id: string
           is_active: boolean | null
-          max_tokens: number | null
+          model_id: string
           name: string
           provider: string
+          rate_limit: number | null
           updated_at: string | null
         }
         Insert: {
           capabilities?: string[] | null
-          configuration?: Json | null
-          cost_per_token?: number | null
+          cost_per_request?: number | null
           created_at?: string | null
-          description?: string | null
           id?: string
           is_active?: boolean | null
-          max_tokens?: number | null
+          model_id: string
           name: string
           provider: string
+          rate_limit?: number | null
           updated_at?: string | null
         }
         Update: {
           capabilities?: string[] | null
-          configuration?: Json | null
-          cost_per_token?: number | null
+          cost_per_request?: number | null
           created_at?: string | null
-          description?: string | null
           id?: string
           is_active?: boolean | null
-          max_tokens?: number | null
+          model_id?: string
           name?: string
           provider?: string
+          rate_limit?: number | null
           updated_at?: string | null
         }
         Relationships: []
       }
       ai_safety_rules: {
         Row: {
-          configuration: Json
           created_at: string | null
-          description: string | null
           id: string
           is_active: boolean | null
-          name: string
+          rule_config: Json
+          rule_name: string
           rule_type: string
           severity: string | null
           updated_at: string | null
         }
         Insert: {
-          configuration?: Json
           created_at?: string | null
-          description?: string | null
           id?: string
           is_active?: boolean | null
-          name: string
+          rule_config: Json
+          rule_name: string
           rule_type: string
           severity?: string | null
           updated_at?: string | null
         }
         Update: {
-          configuration?: Json
           created_at?: string | null
-          description?: string | null
           id?: string
           is_active?: boolean | null
-          name?: string
+          rule_config?: Json
+          rule_name?: string
           rule_type?: string
           severity?: string | null
           updated_at?: string | null
@@ -195,73 +251,67 @@ export type Database = {
       api_keys: {
         Row: {
           created_at: string | null
+          current_usage: number | null
+          encrypted_key: string
           expires_at: string | null
           id: string
           is_active: boolean | null
-          is_default: boolean | null
-          key_hash: string
-          last_used: string | null
-          name: string
-          provider: string
-          rate_limit: number | null
+          key_name: string
+          service_name: string
           updated_at: string | null
-          usage_count: number | null
+          usage_limit: number | null
         }
         Insert: {
           created_at?: string | null
+          current_usage?: number | null
+          encrypted_key: string
           expires_at?: string | null
           id?: string
           is_active?: boolean | null
-          is_default?: boolean | null
-          key_hash: string
-          last_used?: string | null
-          name: string
-          provider: string
-          rate_limit?: number | null
+          key_name: string
+          service_name: string
           updated_at?: string | null
-          usage_count?: number | null
+          usage_limit?: number | null
         }
         Update: {
           created_at?: string | null
+          current_usage?: number | null
+          encrypted_key?: string
           expires_at?: string | null
           id?: string
           is_active?: boolean | null
-          is_default?: boolean | null
-          key_hash?: string
-          last_used?: string | null
-          name?: string
-          provider?: string
-          rate_limit?: number | null
+          key_name?: string
+          service_name?: string
           updated_at?: string | null
-          usage_count?: number | null
+          usage_limit?: number | null
         }
         Relationships: []
       }
       banned_terms: {
         Row: {
-          action: string | null
-          category: string | null
+          category: string
           created_at: string | null
           id: string
           is_active: boolean | null
+          language: string | null
           severity: string | null
           term: string
         }
         Insert: {
-          action?: string | null
-          category?: string | null
+          category: string
           created_at?: string | null
           id?: string
           is_active?: boolean | null
+          language?: string | null
           severity?: string | null
           term: string
         }
         Update: {
-          action?: string | null
-          category?: string | null
+          category?: string
           created_at?: string | null
           id?: string
           is_active?: boolean | null
+          language?: string | null
           severity?: string | null
           term?: string
         }
@@ -269,54 +319,36 @@ export type Database = {
       }
       challenge_submissions: {
         Row: {
-          ai_evaluation: Json | null
+          ai_feedback: Json | null
           challenge_id: string | null
-          content: string | null
-          created_at: string | null
-          feedback: string | null
-          file_url: string | null
           id: string
-          reviewed_at: string | null
-          reviewed_by: string | null
-          score: number | null
-          status: Database["public"]["Enums"]["submission_status"] | null
-          submission_type: Database["public"]["Enums"]["challenge_type"] | null
+          is_correct: boolean | null
+          points_earned: number | null
           submitted_at: string | null
-          updated_at: string | null
+          time_taken: number | null
+          user_answer: Json | null
           user_id: string | null
         }
         Insert: {
-          ai_evaluation?: Json | null
+          ai_feedback?: Json | null
           challenge_id?: string | null
-          content?: string | null
-          created_at?: string | null
-          feedback?: string | null
-          file_url?: string | null
           id?: string
-          reviewed_at?: string | null
-          reviewed_by?: string | null
-          score?: number | null
-          status?: Database["public"]["Enums"]["submission_status"] | null
-          submission_type?: Database["public"]["Enums"]["challenge_type"] | null
+          is_correct?: boolean | null
+          points_earned?: number | null
           submitted_at?: string | null
-          updated_at?: string | null
+          time_taken?: number | null
+          user_answer?: Json | null
           user_id?: string | null
         }
         Update: {
-          ai_evaluation?: Json | null
+          ai_feedback?: Json | null
           challenge_id?: string | null
-          content?: string | null
-          created_at?: string | null
-          feedback?: string | null
-          file_url?: string | null
           id?: string
-          reviewed_at?: string | null
-          reviewed_by?: string | null
-          score?: number | null
-          status?: Database["public"]["Enums"]["submission_status"] | null
-          submission_type?: Database["public"]["Enums"]["challenge_type"] | null
+          is_correct?: boolean | null
+          points_earned?: number | null
           submitted_at?: string | null
-          updated_at?: string | null
+          time_taken?: number | null
+          user_answer?: Json | null
           user_id?: string | null
         }
         Relationships: [
@@ -325,13 +357,6 @@ export type Database = {
             columns: ["challenge_id"]
             isOneToOne: false
             referencedRelation: "challenges"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "challenge_submissions_reviewed_by_fkey"
-            columns: ["reviewed_by"]
-            isOneToOne: false
-            referencedRelation: "users"
             referencedColumns: ["id"]
           },
           {
@@ -345,85 +370,55 @@ export type Database = {
       }
       challenges: {
         Row: {
-          category: Database["public"]["Enums"]["challenge_category"]
+          challenge_type: string
+          content: Json | null
+          correct_answer: Json | null
           created_at: string | null
           created_by: string | null
-          daily_batch: string | null
           description: string | null
-          difficulty: Database["public"]["Enums"]["difficulty_level"]
-          end_date: string | null
-          evaluation_criteria: Json | null
-          expires_at: string | null
+          difficulty_level: string | null
           id: string
-          instructions: string | null
           is_active: boolean | null
-          is_auto_generated: boolean | null
-          is_public: boolean | null
           learning_path_id: string | null
-          max_attempts: number | null
+          order_index: number | null
           points: number | null
-          resources: Json | null
-          start_date: string | null
-          tags: string[] | null
           time_limit: number | null
           title: string
-          type: Database["public"]["Enums"]["challenge_type"]
           updated_at: string | null
-          video_id: string | null
         }
         Insert: {
-          category: Database["public"]["Enums"]["challenge_category"]
+          challenge_type: string
+          content?: Json | null
+          correct_answer?: Json | null
           created_at?: string | null
           created_by?: string | null
-          daily_batch?: string | null
           description?: string | null
-          difficulty: Database["public"]["Enums"]["difficulty_level"]
-          end_date?: string | null
-          evaluation_criteria?: Json | null
-          expires_at?: string | null
+          difficulty_level?: string | null
           id?: string
-          instructions?: string | null
           is_active?: boolean | null
-          is_auto_generated?: boolean | null
-          is_public?: boolean | null
           learning_path_id?: string | null
-          max_attempts?: number | null
+          order_index?: number | null
           points?: number | null
-          resources?: Json | null
-          start_date?: string | null
-          tags?: string[] | null
           time_limit?: number | null
           title: string
-          type: Database["public"]["Enums"]["challenge_type"]
           updated_at?: string | null
-          video_id?: string | null
         }
         Update: {
-          category?: Database["public"]["Enums"]["challenge_category"]
+          challenge_type?: string
+          content?: Json | null
+          correct_answer?: Json | null
           created_at?: string | null
           created_by?: string | null
-          daily_batch?: string | null
           description?: string | null
-          difficulty?: Database["public"]["Enums"]["difficulty_level"]
-          end_date?: string | null
-          evaluation_criteria?: Json | null
-          expires_at?: string | null
+          difficulty_level?: string | null
           id?: string
-          instructions?: string | null
           is_active?: boolean | null
-          is_auto_generated?: boolean | null
-          is_public?: boolean | null
           learning_path_id?: string | null
-          max_attempts?: number | null
+          order_index?: number | null
           points?: number | null
-          resources?: Json | null
-          start_date?: string | null
-          tags?: string[] | null
           time_limit?: number | null
           title?: string
-          type?: Database["public"]["Enums"]["challenge_type"]
           updated_at?: string | null
-          video_id?: string | null
         }
         Relationships: [
           {
@@ -497,55 +492,272 @@ export type Database = {
           },
         ]
       }
+      conversation_messages: {
+        Row: {
+          content: string
+          conversation_id: string
+          created_at: string | null
+          edited_at: string | null
+          id: string
+          is_deleted: boolean | null
+          media_url: string | null
+          message_type: string | null
+          sender_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          content: string
+          conversation_id: string
+          created_at?: string | null
+          edited_at?: string | null
+          id?: string
+          is_deleted?: boolean | null
+          media_url?: string | null
+          message_type?: string | null
+          sender_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          content?: string
+          conversation_id?: string
+          created_at?: string | null
+          edited_at?: string | null
+          id?: string
+          is_deleted?: boolean | null
+          media_url?: string | null
+          message_type?: string | null
+          sender_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversation_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversation_messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      conversation_participants: {
+        Row: {
+          conversation_id: string
+          id: string
+          joined_at: string | null
+          last_read_at: string | null
+          role: string | null
+          user_id: string
+        }
+        Insert: {
+          conversation_id: string
+          id?: string
+          joined_at?: string | null
+          last_read_at?: string | null
+          role?: string | null
+          user_id: string
+        }
+        Update: {
+          conversation_id?: string
+          id?: string
+          joined_at?: string | null
+          last_read_at?: string | null
+          role?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversation_participants_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversation_participants_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      conversations: {
+        Row: {
+          created_at: string | null
+          id: string
+          last_message_at: string | null
+          status: string | null
+          title: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          last_message_at?: string | null
+          status?: string | null
+          title?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          last_message_at?: string | null
+          status?: string | null
+          title?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      daily_challenges: {
+        Row: {
+          created_at: string | null
+          date: string
+          description: string | null
+          difficulty: string
+          duration: number | null
+          embed_url: string | null
+          featured: boolean | null
+          id: string
+          thumbnail_url: string | null
+          title: string
+          topics: string[] | null
+          updated_at: string | null
+          video_url: string
+        }
+        Insert: {
+          created_at?: string | null
+          date: string
+          description?: string | null
+          difficulty: string
+          duration?: number | null
+          embed_url?: string | null
+          featured?: boolean | null
+          id: string
+          thumbnail_url?: string | null
+          title: string
+          topics?: string[] | null
+          updated_at?: string | null
+          video_url: string
+        }
+        Update: {
+          created_at?: string | null
+          date?: string
+          description?: string | null
+          difficulty?: string
+          duration?: number | null
+          embed_url?: string | null
+          featured?: boolean | null
+          id?: string
+          thumbnail_url?: string | null
+          title?: string
+          topics?: string[] | null
+          updated_at?: string | null
+          video_url?: string
+        }
+        Relationships: []
+      }
+      daily_videos: {
+        Row: {
+          created_at: string | null
+          date: string
+          description: string | null
+          duration: number | null
+          embed_url: string | null
+          id: string
+          thumbnail_url: string | null
+          title: string
+          topics: string[] | null
+          updated_at: string | null
+          video_url: string
+        }
+        Insert: {
+          created_at?: string | null
+          date: string
+          description?: string | null
+          duration?: number | null
+          embed_url?: string | null
+          id: string
+          thumbnail_url?: string | null
+          title: string
+          topics?: string[] | null
+          updated_at?: string | null
+          video_url: string
+        }
+        Update: {
+          created_at?: string | null
+          date?: string
+          description?: string | null
+          duration?: number | null
+          embed_url?: string | null
+          id?: string
+          thumbnail_url?: string | null
+          title?: string
+          topics?: string[] | null
+          updated_at?: string | null
+          video_url?: string
+        }
+        Relationships: []
+      }
       evaluation_logs: {
         Row: {
-          cost: number | null
+          ai_model: string | null
+          ai_response: Json | null
+          challenge_id: string | null
+          confidence_score: number | null
           created_at: string | null
           evaluation_type: string
-          feedback: string | null
           id: string
-          input_data: Json
-          model_id: string | null
-          output_data: Json
+          input_text: string | null
           processing_time: number | null
-          score: number | null
-          tokens_used: number | null
+          submission_id: string | null
           user_id: string | null
         }
         Insert: {
-          cost?: number | null
+          ai_model?: string | null
+          ai_response?: Json | null
+          challenge_id?: string | null
+          confidence_score?: number | null
           created_at?: string | null
           evaluation_type: string
-          feedback?: string | null
           id?: string
-          input_data: Json
-          model_id?: string | null
-          output_data: Json
+          input_text?: string | null
           processing_time?: number | null
-          score?: number | null
-          tokens_used?: number | null
+          submission_id?: string | null
           user_id?: string | null
         }
         Update: {
-          cost?: number | null
+          ai_model?: string | null
+          ai_response?: Json | null
+          challenge_id?: string | null
+          confidence_score?: number | null
           created_at?: string | null
           evaluation_type?: string
-          feedback?: string | null
           id?: string
-          input_data?: Json
-          model_id?: string | null
-          output_data?: Json
+          input_text?: string | null
           processing_time?: number | null
-          score?: number | null
-          tokens_used?: number | null
+          submission_id?: string | null
           user_id?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "evaluation_logs_model_id_fkey"
-            columns: ["model_id"]
+            foreignKeyName: "evaluation_logs_challenge_id_fkey"
+            columns: ["challenge_id"]
             isOneToOne: false
-            referencedRelation: "ai_models"
+            referencedRelation: "challenges"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evaluation_logs_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "challenge_submissions"
             referencedColumns: ["id"]
           },
           {
@@ -598,7 +810,7 @@ export type Database = {
           created_at: string | null
           created_by: string | null
           description: string | null
-          difficulty: Database["public"]["Enums"]["difficulty_level"]
+          difficulty_level: string | null
           estimated_duration: number | null
           id: string
           is_active: boolean | null
@@ -609,7 +821,7 @@ export type Database = {
           created_at?: string | null
           created_by?: string | null
           description?: string | null
-          difficulty: Database["public"]["Enums"]["difficulty_level"]
+          difficulty_level?: string | null
           estimated_duration?: number | null
           id?: string
           is_active?: boolean | null
@@ -620,7 +832,7 @@ export type Database = {
           created_at?: string | null
           created_by?: string | null
           description?: string | null
-          difficulty?: Database["public"]["Enums"]["difficulty_level"]
+          difficulty_level?: string | null
           estimated_duration?: number | null
           id?: string
           is_active?: boolean | null
@@ -689,38 +901,35 @@ export type Database = {
           created_at: string | null
           id: string
           is_read: boolean | null
-          media_urls: string[] | null
-          read_at: string | null
-          recipient_id: string | null
+          media_url: string | null
+          message_type: string | null
+          receiver_id: string | null
           sender_id: string | null
-          subject: string | null
         }
         Insert: {
           content: string
           created_at?: string | null
           id?: string
           is_read?: boolean | null
-          media_urls?: string[] | null
-          read_at?: string | null
-          recipient_id?: string | null
+          media_url?: string | null
+          message_type?: string | null
+          receiver_id?: string | null
           sender_id?: string | null
-          subject?: string | null
         }
         Update: {
           content?: string
           created_at?: string | null
           id?: string
           is_read?: boolean | null
-          media_urls?: string[] | null
-          read_at?: string | null
-          recipient_id?: string | null
+          media_url?: string | null
+          message_type?: string | null
+          receiver_id?: string | null
           sender_id?: string | null
-          subject?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "messages_recipient_id_fkey"
-            columns: ["recipient_id"]
+            foreignKeyName: "messages_receiver_id_fkey"
+            columns: ["receiver_id"]
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
@@ -734,6 +943,87 @@ export type Database = {
           },
         ]
       }
+      notification_deliveries: {
+        Row: {
+          clicked_at: string | null
+          created_at: string | null
+          delivered_at: string | null
+          delivery_status: string | null
+          id: string
+          notification_id: string | null
+          opened_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          clicked_at?: string | null
+          created_at?: string | null
+          delivered_at?: string | null
+          delivery_status?: string | null
+          id?: string
+          notification_id?: string | null
+          opened_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          clicked_at?: string | null
+          created_at?: string | null
+          delivered_at?: string | null
+          delivery_status?: string | null
+          id?: string
+          notification_id?: string | null
+          opened_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_deliveries_notification_id_fkey"
+            columns: ["notification_id"]
+            isOneToOne: false
+            referencedRelation: "notifications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_deliveries_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notification_templates: {
+        Row: {
+          content: string
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          notification_type: string
+          subject: string
+          updated_at: string | null
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          notification_type: string
+          subject: string
+          updated_at?: string | null
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          notification_type?: string
+          subject?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           created_at: string | null
@@ -741,8 +1031,8 @@ export type Database = {
           id: string
           is_read: boolean | null
           message: string
+          notification_type: string
           title: string
-          type: string
           user_id: string | null
         }
         Insert: {
@@ -751,8 +1041,8 @@ export type Database = {
           id?: string
           is_read?: boolean | null
           message: string
+          notification_type: string
           title: string
-          type: string
           user_id?: string | null
         }
         Update: {
@@ -761,8 +1051,8 @@ export type Database = {
           id?: string
           is_read?: boolean | null
           message?: string
+          notification_type?: string
           title?: string
-          type?: string
           user_id?: string | null
         }
         Relationships: [
@@ -777,61 +1067,48 @@ export type Database = {
       }
       posts: {
         Row: {
-          challenge_id: string | null
           comments_count: number | null
           content: string
           created_at: string | null
           id: string
-          is_featured: boolean | null
           is_public: boolean | null
           likes_count: number | null
-          media_urls: string[] | null
+          media_url: string | null
+          post_type: string | null
           tags: string[] | null
           title: string | null
           updated_at: string | null
           user_id: string | null
-          views_count: number | null
         }
         Insert: {
-          challenge_id?: string | null
           comments_count?: number | null
           content: string
           created_at?: string | null
           id?: string
-          is_featured?: boolean | null
           is_public?: boolean | null
           likes_count?: number | null
-          media_urls?: string[] | null
+          media_url?: string | null
+          post_type?: string | null
           tags?: string[] | null
           title?: string | null
           updated_at?: string | null
           user_id?: string | null
-          views_count?: number | null
         }
         Update: {
-          challenge_id?: string | null
           comments_count?: number | null
           content?: string
           created_at?: string | null
           id?: string
-          is_featured?: boolean | null
           is_public?: boolean | null
           likes_count?: number | null
-          media_urls?: string[] | null
+          media_url?: string | null
+          post_type?: string | null
           tags?: string[] | null
           title?: string | null
           updated_at?: string | null
           user_id?: string | null
-          views_count?: number | null
         }
         Relationships: [
-          {
-            foreignKeyName: "posts_challenge_id_fkey"
-            columns: ["challenge_id"]
-            isOneToOne: false
-            referencedRelation: "challenges"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "posts_user_id_fkey"
             columns: ["user_id"]
@@ -843,50 +1120,46 @@ export type Database = {
       }
       profiles: {
         Row: {
-          address: string | null
+          avatar_url: string | null
+          bio: string | null
           created_at: string | null
-          date_of_birth: string | null
-          gender: string | null
+          full_name: string | null
           id: string
-          interests: string[] | null
-          language_level: Database["public"]["Enums"]["difficulty_level"] | null
-          learning_goals: string[] | null
-          phone: string | null
+          native_language: string | null
+          proficiency_level: string | null
+          target_language: string | null
           timezone: string | null
           updated_at: string | null
           user_id: string | null
+          username: string | null
         }
         Insert: {
-          address?: string | null
+          avatar_url?: string | null
+          bio?: string | null
           created_at?: string | null
-          date_of_birth?: string | null
-          gender?: string | null
+          full_name?: string | null
           id?: string
-          interests?: string[] | null
-          language_level?:
-            | Database["public"]["Enums"]["difficulty_level"]
-            | null
-          learning_goals?: string[] | null
-          phone?: string | null
+          native_language?: string | null
+          proficiency_level?: string | null
+          target_language?: string | null
           timezone?: string | null
           updated_at?: string | null
           user_id?: string | null
+          username?: string | null
         }
         Update: {
-          address?: string | null
+          avatar_url?: string | null
+          bio?: string | null
           created_at?: string | null
-          date_of_birth?: string | null
-          gender?: string | null
+          full_name?: string | null
           id?: string
-          interests?: string[] | null
-          language_level?:
-            | Database["public"]["Enums"]["difficulty_level"]
-            | null
-          learning_goals?: string[] | null
-          phone?: string | null
+          native_language?: string | null
+          proficiency_level?: string | null
+          target_language?: string | null
           timezone?: string | null
           updated_at?: string | null
           user_id?: string | null
+          username?: string | null
         }
         Relationships: [
           {
@@ -900,73 +1173,34 @@ export type Database = {
       }
       resources: {
         Row: {
-          category: string | null
+          alt_text: string | null
           challenge_id: string | null
-          content: string | null
           created_at: string | null
-          description: string | null
-          difficulty: Database["public"]["Enums"]["difficulty_level"] | null
-          downloads: number | null
           duration: number | null
           file_size: number | null
-          file_url: string | null
           id: string
-          is_active: boolean | null
-          is_public: boolean | null
-          metadata: Json | null
-          tags: string[] | null
-          thumbnail_url: string | null
-          title: string
-          type: Database["public"]["Enums"]["resource_type"]
-          updated_at: string | null
-          uploaded_by: string | null
-          views: number | null
+          resource_type: string
+          url: string
         }
         Insert: {
-          category?: string | null
+          alt_text?: string | null
           challenge_id?: string | null
-          content?: string | null
           created_at?: string | null
-          description?: string | null
-          difficulty?: Database["public"]["Enums"]["difficulty_level"] | null
-          downloads?: number | null
           duration?: number | null
           file_size?: number | null
-          file_url?: string | null
           id?: string
-          is_active?: boolean | null
-          is_public?: boolean | null
-          metadata?: Json | null
-          tags?: string[] | null
-          thumbnail_url?: string | null
-          title: string
-          type: Database["public"]["Enums"]["resource_type"]
-          updated_at?: string | null
-          uploaded_by?: string | null
-          views?: number | null
+          resource_type: string
+          url: string
         }
         Update: {
-          category?: string | null
+          alt_text?: string | null
           challenge_id?: string | null
-          content?: string | null
           created_at?: string | null
-          description?: string | null
-          difficulty?: Database["public"]["Enums"]["difficulty_level"] | null
-          downloads?: number | null
           duration?: number | null
           file_size?: number | null
-          file_url?: string | null
           id?: string
-          is_active?: boolean | null
-          is_public?: boolean | null
-          metadata?: Json | null
-          tags?: string[] | null
-          thumbnail_url?: string | null
-          title?: string
-          type?: Database["public"]["Enums"]["resource_type"]
-          updated_at?: string | null
-          uploaded_by?: string | null
-          views?: number | null
+          resource_type?: string
+          url?: string
         }
         Relationships: [
           {
@@ -976,46 +1210,92 @@ export type Database = {
             referencedRelation: "challenges"
             referencedColumns: ["id"]
           },
+        ]
+      }
+      scheduled_messages: {
+        Row: {
+          created_at: string | null
+          id: string
+          message_type: string
+          recipient_count: number | null
+          recipient_filter: Json | null
+          recurring_pattern: string | null
+          scheduled_for: string
+          sent_at: string | null
+          status: string | null
+          template_id: string | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          message_type: string
+          recipient_count?: number | null
+          recipient_filter?: Json | null
+          recurring_pattern?: string | null
+          scheduled_for: string
+          sent_at?: string | null
+          status?: string | null
+          template_id?: string | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          message_type?: string
+          recipient_count?: number | null
+          recipient_filter?: Json | null
+          recurring_pattern?: string | null
+          scheduled_for?: string
+          sent_at?: string | null
+          status?: string | null
+          template_id?: string | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
           {
-            foreignKeyName: "resources_uploaded_by_fkey"
-            columns: ["uploaded_by"]
+            foreignKeyName: "scheduled_messages_template_id_fkey"
+            columns: ["template_id"]
             isOneToOne: false
-            referencedRelation: "users"
+            referencedRelation: "notification_templates"
             referencedColumns: ["id"]
           },
         ]
       }
       scoring_templates: {
         Row: {
+          challenge_type: string
           created_at: string | null
           created_by: string | null
           criteria: Json
-          description: string | null
           id: string
-          is_active: boolean | null
-          max_score: number | null
+          is_default: boolean | null
+          max_points: number | null
           name: string
           updated_at: string | null
         }
         Insert: {
+          challenge_type: string
           created_at?: string | null
           created_by?: string | null
-          criteria?: Json
-          description?: string | null
+          criteria: Json
           id?: string
-          is_active?: boolean | null
-          max_score?: number | null
+          is_default?: boolean | null
+          max_points?: number | null
           name: string
           updated_at?: string | null
         }
         Update: {
+          challenge_type?: string
           created_at?: string | null
           created_by?: string | null
           criteria?: Json
-          description?: string | null
           id?: string
-          is_active?: boolean | null
-          max_score?: number | null
+          is_default?: boolean | null
+          max_points?: number | null
           name?: string
           updated_at?: string | null
         }
@@ -1067,54 +1347,45 @@ export type Database = {
       }
       user_progress: {
         Row: {
-          attempts_count: number | null
-          best_score: number | null
-          challenge_id: string | null
-          completed_at: string | null
-          completion_percentage: number | null
+          completed_challenges: number | null
           created_at: string | null
+          current_challenge_id: string | null
           id: string
-          is_completed: boolean | null
-          last_attempt_at: string | null
+          last_accessed: string | null
           learning_path_id: string | null
-          time_spent: number | null
+          progress_percentage: number | null
+          total_challenges: number | null
           updated_at: string | null
           user_id: string | null
         }
         Insert: {
-          attempts_count?: number | null
-          best_score?: number | null
-          challenge_id?: string | null
-          completed_at?: string | null
-          completion_percentage?: number | null
+          completed_challenges?: number | null
           created_at?: string | null
+          current_challenge_id?: string | null
           id?: string
-          is_completed?: boolean | null
-          last_attempt_at?: string | null
+          last_accessed?: string | null
           learning_path_id?: string | null
-          time_spent?: number | null
+          progress_percentage?: number | null
+          total_challenges?: number | null
           updated_at?: string | null
           user_id?: string | null
         }
         Update: {
-          attempts_count?: number | null
-          best_score?: number | null
-          challenge_id?: string | null
-          completed_at?: string | null
-          completion_percentage?: number | null
+          completed_challenges?: number | null
           created_at?: string | null
+          current_challenge_id?: string | null
           id?: string
-          is_completed?: boolean | null
-          last_attempt_at?: string | null
+          last_accessed?: string | null
           learning_path_id?: string | null
-          time_spent?: number | null
+          progress_percentage?: number | null
+          total_challenges?: number | null
           updated_at?: string | null
           user_id?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "user_progress_challenge_id_fkey"
-            columns: ["challenge_id"]
+            foreignKeyName: "user_progress_current_challenge_id_fkey"
+            columns: ["current_challenge_id"]
             isOneToOne: false
             referencedRelation: "challenges"
             referencedColumns: ["id"]
@@ -1147,12 +1418,13 @@ export type Database = {
           is_active: boolean | null
           joined_at: string | null
           last_active: string | null
+          last_login: string | null
           level: number | null
           major: string | null
-          name: string
+          name: string | null
           points: number | null
           preferences: Json | null
-          role: Database["public"]["Enums"]["user_role"] | null
+          role: string | null
           streak_days: number | null
           student_id: string | null
           updated_at: string | null
@@ -1168,12 +1440,13 @@ export type Database = {
           is_active?: boolean | null
           joined_at?: string | null
           last_active?: string | null
+          last_login?: string | null
           level?: number | null
           major?: string | null
-          name: string
+          name?: string | null
           points?: number | null
           preferences?: Json | null
-          role?: Database["public"]["Enums"]["user_role"] | null
+          role?: string | null
           streak_days?: number | null
           student_id?: string | null
           updated_at?: string | null
@@ -1189,12 +1462,13 @@ export type Database = {
           is_active?: boolean | null
           joined_at?: string | null
           last_active?: string | null
+          last_login?: string | null
           level?: number | null
           major?: string | null
-          name?: string
+          name?: string | null
           points?: number | null
           preferences?: Json | null
-          role?: Database["public"]["Enums"]["user_role"] | null
+          role?: string | null
           streak_days?: number | null
           student_id?: string | null
           updated_at?: string | null
@@ -1206,32 +1480,25 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      decrement_post_comments: {
+        Args: { post_id: string }
+        Returns: undefined
+      }
+      decrement_post_likes: {
+        Args: { post_id: string }
+        Returns: undefined
+      }
+      increment_post_comments: {
+        Args: { post_id: string }
+        Returns: undefined
+      }
+      increment_post_likes: {
+        Args: { post_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
-      challenge_category:
-        | "LISTENING"
-        | "SPEAKING"
-        | "READING"
-        | "WRITING"
-        | "GRAMMAR"
-        | "VOCABULARY"
-      challenge_type:
-        | "VIDEO_SUBMISSION"
-        | "AUDIO_SUBMISSION"
-        | "TEXT_SUBMISSION"
-        | "QUIZ"
-        | "INTERACTIVE"
-      difficulty_level: "BEGINNER" | "INTERMEDIATE" | "ADVANCED"
-      resource_type:
-        | "VIDEO"
-        | "AUDIO"
-        | "PDF"
-        | "QUIZ"
-        | "INTERACTIVE"
-        | "ARTICLE"
-      submission_status: "PENDING" | "REVIEWED" | "APPROVED" | "REJECTED"
-      user_role: "STUDENT" | "TEACHER" | "ADMIN" | "MODERATOR" | "MEMBER"
+      [_ in never]: never
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1349,34 +1616,7 @@ export const Constants = {
     Enums: {},
   },
   public: {
-    Enums: {
-      challenge_category: [
-        "LISTENING",
-        "SPEAKING",
-        "READING",
-        "WRITING",
-        "GRAMMAR",
-        "VOCABULARY",
-      ],
-      challenge_type: [
-        "VIDEO_SUBMISSION",
-        "AUDIO_SUBMISSION",
-        "TEXT_SUBMISSION",
-        "QUIZ",
-        "INTERACTIVE",
-      ],
-      difficulty_level: ["BEGINNER", "INTERMEDIATE", "ADVANCED"],
-      resource_type: [
-        "VIDEO",
-        "AUDIO",
-        "PDF",
-        "QUIZ",
-        "INTERACTIVE",
-        "ARTICLE",
-      ],
-      submission_status: ["PENDING", "REVIEWED", "APPROVED", "REJECTED"],
-      user_role: ["STUDENT", "TEACHER", "ADMIN", "MODERATOR", "MEMBER"],
-    },
+    Enums: {},
   },
 } as const
 

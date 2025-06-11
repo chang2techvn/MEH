@@ -159,8 +159,25 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
 
       // Update user state with database data if successful
-      if (data) {
-        setUser(data)
+      if (data) {        setUser({
+          id: data.id,
+          email: data.email,
+          name: data.name || undefined,
+          avatar: data.avatar || undefined,
+          role: data.role || undefined,
+          studentId: data.student_id || undefined,
+          major: data.major || undefined,
+          academicYear: data.academic_year || undefined,
+          bio: data.bio || undefined,
+          points: data.points || undefined,
+          level: data.level || undefined,
+          experiencePoints: data.experience_points || undefined,
+          streakDays: data.streak_days || undefined,
+          lastActive: data.last_active ? new Date(data.last_active) : undefined,
+          joinedAt: data.created_at ? new Date(data.created_at) : undefined,
+          isActive: data.is_active || undefined,
+          preferences: data.preferences || undefined
+        })
         return data
       }
       return null
