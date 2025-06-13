@@ -58,6 +58,7 @@
     "@tiptap/react": "latest",
     "@tiptap/starter-kit": "latest",
     "@tremor/react": "latest",
+    "@types/node-cron": "^3.0.11",
     "bcryptjs": "^3.0.2",
     "cheerio": "latest",
     "class-variance-authority": "^0.7.1",
@@ -73,6 +74,8 @@
     "lucide-react": "^0.454.0",
     "next": "15.2.4",
     "next-themes": "latest",
+    "node-cron": "^4.1.0",
+    "node-fetch": "^3.3.2",
     "os": "latest",
     "path": "latest",
     "react": "^19",
@@ -97,8 +100,9 @@
     "workbox-routing": "latest",
     "workbox-strategies": "latest",
     "xlsx": "latest",
-    "youtube-transcript": "^1.2.1",
+    "youtube-transcript": "1.0.6",
     "youtube-transcript-js-api": "^1.4.2",
+    "youtubei.js": "^14.0.0",
     "zod": "latest"
   },
   "devDependencies": {

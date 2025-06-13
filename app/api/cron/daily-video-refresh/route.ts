@@ -52,13 +52,69 @@ export async function POST(request: NextRequest) {
 
       if (existingVideo) {
         console.log('📺 Video already exists for today')
-        results.video = { existing: true, videoId: existingVideo.id }
-      } else {
+        results.video = { existing: true, videoId: existingVideo.id }      } else {
+        console.log('🎯 Fetching new video with transcript...')
         const newVideo = await fetchRandomYoutubeVideo(
           120,  // min 2 minutes
           1800, // max 30 minutes
           ["english learning", "education", "ted talk", "communication", "business", "technology"]
         )
+
+        // Extract transcript using Gemini AI
+        console.log(`🎬 Extracting transcript for video: ${newVideo.id}`)
+        let transcript = newVideo.transcript
+        
+        if (!transcript || transcript === "Transcript unavailable" || transcript.length < 100) {
+          try {
+            const { GoogleGenerativeAI } = await import('@google/generative-ai')
+            
+            if (process.env.GEMINI_API_KEY) {
+              const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
+              const model = genAI.getGenerativeModel({ 
+                model: "gemini-1.5-flash" // Use flash to save quota
+              })
+
+              const youtubeUrl = `https://www.youtube.com/watch?v=${newVideo.id}`
+              console.log(`🤖 Using Gemini AI to extract transcript`)
+
+              const result = await model.generateContent([
+                {
+                  fileData: {
+                    mimeType: "video/*",
+                    fileUri: youtubeUrl
+                  }
+                },
+                `Please provide the COMPLETE and ACCURATE transcript of this YouTube video.
+
+REQUIREMENTS:
+- Extract 100% of all spoken words from the entire video
+- Include every single word that is spoken  
+- Format as clean paragraphs with proper punctuation
+- Do NOT summarize or paraphrase - give exact spoken words
+- If there are multiple speakers, indicate speaker changes
+
+Please transcribe the ENTIRE audio content word-for-word:`
+              ])
+
+              const response = await result.response
+              const geminiTranscript = response.text()
+              
+              if (geminiTranscript && geminiTranscript.length > 50) {
+                transcript = geminiTranscript.trim()
+                console.log(`✅ Gemini AI transcript extracted: ${transcript.length} characters`)
+              } else {
+                console.log(`⚠️ Gemini AI returned short transcript, using fallback`)
+                transcript = `Educational content about ${newVideo.title}. ${newVideo.description}`
+              }
+            } else {
+              console.log(`⚠️ No GEMINI_API_KEY, using fallback transcript`)
+              transcript = `Educational content about ${newVideo.title}. ${newVideo.description}`
+            }
+          } catch (error) {
+            console.error("❌ Gemini AI transcript failed:", error)
+            transcript = `Educational content about ${newVideo.title}. ${newVideo.description}`
+          }
+        }
 
         const { error } = await supabaseServer
           .from('daily_videos')
@@ -71,6 +127,7 @@ export async function POST(request: NextRequest) {
             embed_url: newVideo.embedUrl,
             duration: newVideo.duration,
             topics: newVideo.topics,
+            transcript: transcript, // Save transcript to database
             date: today,
             created_at: new Date().toISOString()
           })
@@ -83,7 +140,8 @@ export async function POST(request: NextRequest) {
           videoTitle: newVideo.title,
           videoUrl: newVideo.videoUrl
         }
-        console.log('✅ New video saved for homepage')
+        console.log('✅ New video saved for homepage with transcript')
+        console.log(`📝 Transcript length: ${transcript.length} characters`)
       }
     } catch (videoError) {
       console.error('❌ Error refreshing video:', videoError)

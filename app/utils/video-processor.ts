@@ -1,309 +1,395 @@
-"use server"
-import { mkdir } from "fs/promises"
-import path from "path"
-import os from "os"
-import { YoutubeTranscript } from 'youtube-transcript'
+import { YoutubeTranscript } from 'youtube-transcript';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
-// This is a server-side utility for processing videos
-// In a real implementation, you would use a proper video processing service
+// Initialize Gemini AI
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
-export async function downloadAndTrimYouTubeVideo(
-  videoId: string,
-  maxDuration: number,
-  outputFileName: string,
-): Promise<string> {
+export interface TranscriptItem {
+  text: string;
+  duration: number;
+  offset: number;
+}
+
+export interface VideoInfo {
+  videoId: string;
+  title: string;
+  duration: string;
+  transcript: string;
+  transcriptItems: TranscriptItem[];
+  hasRealTranscript: boolean;
+}
+
+export async function extractVideoTranscript(videoId: string): Promise<VideoInfo> {
+  console.log(`🎬 Extracting transcript for video: ${videoId}`);
+  
   try {
-    // In a real implementation, you would:
-    // 1. Use a proper YouTube downloader like ytdl-core
-    // 2. Use FFmpeg installed on the server to process the video
-    // 3. Upload the processed video to a storage service like S3 or Vercel Blob
-
-    // For this example, we'll simulate the process
-    console.log(`Simulating download and processing of YouTube video: ${videoId}`)
-    console.log(`Trimming to ${maxDuration} seconds`)
-
-    // Create a temporary directory for processing
-    const tempDir = path.join(os.tmpdir(), "video-processing")
-    await mkdir(tempDir, { recursive: true })
-
-    // Simulate downloading the video
-    const downloadedPath = path.join(tempDir, `${videoId}.mp4`)
-
-    // Simulate processing with FFmpeg (in a real implementation, you would use actual FFmpeg commands)
-    const outputPath = path.join(tempDir, outputFileName)
-
-    // Return the path to the processed video
-    // In a real implementation, you would upload this to a storage service and return the URL
-    return `/videos/${outputFileName}`
+    // Try to get real transcript using the updated API
+    console.log(`🔍 Attempting to fetch real transcript for video: ${videoId}`);
+    
+    const transcriptResult = await fetchRealTranscript(videoId);
+    
+    if (transcriptResult.success && transcriptResult.transcript && transcriptResult.transcript.length > 0) {
+      console.log(`✅ Successfully extracted real transcript for video ${videoId}`);
+      console.log(`📊 Transcript length: ${transcriptResult.transcript.length} characters`);
+      
+      return {
+        videoId,
+        title: `Video ${videoId}`,
+        duration: "Unknown",
+        transcript: transcriptResult.transcript,
+        transcriptItems: transcriptResult.items || [],
+        hasRealTranscript: true
+      };
+    } else {
+      console.log(`❌ No real transcript found for video ${videoId}, using simulated content`);
+      return generateSimulatedTranscript(videoId);
+    }
+    
   } catch (error) {
-    console.error("Error processing YouTube video:", error)
-    throw new Error("Failed to process YouTube video")
+    console.error(`❌ Error extracting transcript for video ${videoId}:`, error);
+    return generateSimulatedTranscript(videoId);
   }
 }
 
-// Function to extract captions/transcript from a YouTube video
+async function fetchRealTranscript(videoId: string): Promise<{
+  success: boolean;
+  transcript: string;
+  items: TranscriptItem[];
+}> {
+  try {
+    // First try Gemini AI with YouTube URL for REAL transcript
+    console.log(`🤖 Trying Gemini AI for REAL transcript extraction for video: ${videoId}`);
+    const geminiResult = await tryGeminiTranscript(videoId);
+    
+    if (geminiResult.success) {
+      console.log(`✅ Gemini AI extracted REAL transcript!`);
+      return geminiResult;
+    }
+
+    // Fallback to traditional YouTube transcript
+    console.log(`🔍 Falling back to YouTube transcript API for video: ${videoId}`);
+    const youtubeResult = await tryYouTubeTranscript(videoId);
+    
+    if (youtubeResult.success) {
+      console.log(`✅ YouTube transcript found!`);
+      return youtubeResult;
+    }
+
+    // If no real transcript found, return failure
+    console.log(`❌ No real transcript found for video ${videoId}`);
+    return {
+      success: false,
+      transcript: '',
+      items: []
+    };
+    
+  } catch (error) {
+    console.error('❌ Error in fetchRealTranscript:', error);
+    return { success: false, transcript: '', items: [] };
+  }
+}
+
+async function tryYouTubeTranscript(videoId: string): Promise<{
+  success: boolean;
+  transcript: string;
+  items: TranscriptItem[];
+}> {
+  try {
+    // Try different language configurations
+    const languagesToTry = [
+      undefined, // Auto-detect
+      'en',      // English
+      'en-US',   // US English
+      'en-GB',   // British English
+      'auto',    // Auto-generated
+    ];    for (const lang of languagesToTry) {
+      try {
+        console.log(`🌐 Trying language: ${lang || 'auto-detect'}`);
+        
+        // Prepare config object
+        const config = lang ? { lang: lang } : {};
+        const transcriptData = await YoutubeTranscript.fetchTranscript(videoId, config);
+
+        if (transcriptData && transcriptData.length > 0) {
+          console.log(`✅ Found transcript in ${lang || 'auto-detect'} with ${transcriptData.length} items`);
+          
+          const transcript = transcriptData
+            .map(item => item.text)
+            .join(' ')
+            .replace(/\[.*?\]/g, '') // Remove [Music], [Applause], etc.
+            .replace(/\s+/g, ' ')    // Normalize whitespace
+            .trim();
+
+          const items: TranscriptItem[] = transcriptData.map(item => ({
+            text: item.text,
+            duration: item.duration || 0,
+            offset: item.offset || 0
+          }));
+
+          return {
+            success: true,
+            transcript,
+            items
+          };
+        } else {
+          console.log(`❌ No transcript found in ${lang || 'auto-detect'}`);
+        }
+      } catch (langError) {
+        const errorMessage = langError instanceof Error ? langError.message : String(langError);
+        console.log(`❌ Failed to fetch transcript in ${lang || 'auto-detect'}:`, errorMessage);
+        continue;
+      }
+    }
+
+    // If no transcript found with any language, try without language specification
+    console.log('🌍 Trying without specific language...');
+    const fallbackTranscript = await YoutubeTranscript.fetchTranscript(videoId);
+    
+    if (fallbackTranscript && fallbackTranscript.length > 0) {
+      console.log(`✅ Found fallback transcript with ${fallbackTranscript.length} items`);
+      
+      const transcript = fallbackTranscript
+        .map(item => item.text)
+        .join(' ')
+        .replace(/\[.*?\]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+      const items: TranscriptItem[] = fallbackTranscript.map(item => ({
+        text: item.text,
+        duration: item.duration || 0,
+        offset: item.offset || 0
+      }));
+
+      return {
+        success: true,
+        transcript,
+        items
+      };
+    }
+
+    return { success: false, transcript: '', items: [] };
+    
+  } catch (error) {
+    console.error('❌ Error in fetchRealTranscript:', error);
+    return { success: false, transcript: '', items: [] };  }
+}
+
+async function tryGeminiTranscript(videoId: string): Promise<{
+  success: boolean;
+  transcript: string;
+  items: TranscriptItem[];
+}> {
+  try {
+    if (!process.env.GEMINI_API_KEY) {
+      console.log(`❌ No Gemini API key found`);
+      return { success: false, transcript: '', items: [] };
+    }    // Use gemini-1.5-flash for video understanding with YouTube URL
+    const model = genAI.getGenerativeModel({ 
+      model: "gemini-1.5-flash",
+      generationConfig: {
+        temperature: 0.1, // Low temperature for more accurate transcription
+        maxOutputTokens: 8192,
+      }
+    });
+    
+    // Use YouTube URL directly with fileData as per documentation
+    const youtubeUrl = `https://www.youtube.com/watch?v=${videoId}`;
+    
+    console.log(`🤖 Requesting REAL transcript from Gemini for: ${youtubeUrl}`);    // Create content using the proper format from the documentation
+    const prompt = `Please transcribe this YouTube video completely and accurately. 
+Extract ALL spoken words exactly as they are said in the video.
+Provide the transcript as a continuous paragraph format.
+Do not summarize, do not add commentary, just transcribe what is actually spoken.
+Video URL: ${youtubeUrl}`;
+    
+    console.log(`🤖 Sending video transcription request to Gemini AI...`);
+    const result = await model.generateContent([
+      {
+        fileData: {
+          mimeType: "video/*", 
+          fileUri: youtubeUrl
+        }
+      },
+      prompt
+    ]);
+    
+    const response = await result.response;
+    const text = response.text();
+    
+    console.log(`🤖 Gemini response received: ${text.length} characters`);
+    console.log(`🤖 Preview: "${text.substring(0, 200)}..."`);
+
+    // Check if Gemini couldn't access the video
+    if (text.includes('CANNOT_ACCESS_VIDEO') || 
+        text.includes('cannot access') || 
+        text.includes('unable to access') ||
+        text.includes('I cannot') ||
+        text.includes('I don\'t have') ||
+        text.includes('I can\'t access') ||
+        text.includes('I\'m unable to') ||
+        text.includes('I am unable to') ||
+        text.length < 100) {
+      console.log(`❌ Gemini cannot access this YouTube video or provided insufficient content`);
+      return { success: false, transcript: '', items: [] };
+    }
+
+    // Clean the transcript text while preserving actual content
+    let cleanTranscript = text
+      .replace(/```[\s\S]*?```/g, '') // Remove code blocks
+      .replace(/^[\s]*Transcript:[\s]*/i, '') // Remove "Transcript:" prefix
+      .replace(/\[Music\]/gi, '')
+      .replace(/\[Applause\]/gi, '')
+      .replace(/\[Laughter\]/gi, '')
+      .replace(/\[Sound effects?\]/gi, '')
+      .replace(/\[Background music\]/gi, '')
+      .replace(/\s+/g, ' ') // Normalize whitespace
+      .trim();
+
+    // Validate we have substantial, real content
+    if (cleanTranscript.length > 100 && !cleanTranscript.toLowerCase().includes('i cannot') && !cleanTranscript.toLowerCase().includes('unable to access')) {
+      
+      // Create transcript items by splitting into meaningful chunks (sentences/phrases)
+      const sentences = cleanTranscript
+        .split(/(?<=[.!?])\s+/)
+        .filter((s: string) => s.trim().length > 0);
+      
+      const items: TranscriptItem[] = sentences.map((sentence: string, index: number) => ({
+        text: sentence.trim(),
+        duration: Math.max(2, Math.min(8, sentence.length / 15)), // Dynamic duration based on length
+        offset: index * 4 // Approximate timing
+      }));
+
+      console.log(`✅ Successfully extracted REAL transcript from Gemini!`);
+      console.log(`📊 Content: ${cleanTranscript.length} chars, ${items.length} segments`);
+      
+      return {
+        success: true,
+        transcript: cleanTranscript,
+        items
+      };
+    }
+
+    console.log(`❌ Gemini transcript validation failed - length: ${cleanTranscript.length}`);
+    return { success: false, transcript: '', items: [] };
+    
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.log(`❌ Gemini AI transcription error:`, errorMessage);
+    return { success: false, transcript: '', items: [] };
+  }
+}
+
+function generateSimulatedTranscript(videoId: string): VideoInfo {
+  console.log(`\n=== SIMULATED VIDEO TRANSCRIPT FOR ${videoId} ===`);
+  
+  const topics = [
+    {
+      topic: "CLIMATE CHANGE",
+      content: "Climate change represents one of the most pressing challenges of our time. The Earth's climate system is warming at an unprecedented rate due to human activities, particularly the emission of greenhouse gases like carbon dioxide and methane. Scientific evidence shows that global temperatures have risen by approximately 1.1 degrees Celsius since pre-industrial times. This warming is causing dramatic changes in weather patterns, including more frequent extreme weather events such as hurricanes, droughts, and floods. The Arctic ice sheets are melting at alarming rates, contributing to rising sea levels that threaten coastal communities worldwide. To address this crisis, we need immediate action on multiple fronts: transitioning to renewable energy sources, improving energy efficiency, protecting and restoring forests, and implementing carbon pricing mechanisms. Individual actions also matter - from reducing energy consumption to choosing sustainable transportation options. The Paris Agreement represents a global commitment to limiting warming to well below 2 degrees Celsius, but achieving this goal requires unprecedented cooperation and rapid transformation of our energy systems."
+    },
+    {
+      topic: "TECHNOLOGY AND SOCIETY",
+      content: "The rapid advancement of technology is reshaping every aspect of our daily lives, from how we communicate and work to how we learn and entertain ourselves. Artificial intelligence and machine learning are becoming increasingly sophisticated, enabling computers to perform tasks that were once thought to be exclusively human. Social media platforms have connected billions of people across the globe, creating new opportunities for collaboration and cultural exchange, but also raising concerns about privacy, misinformation, and mental health. The rise of remote work and digital nomadism has challenged traditional notions of workplace and geography. Meanwhile, emerging technologies like virtual reality, blockchain, and quantum computing promise to unlock new possibilities we can barely imagine. However, with these advances come important questions about digital equity, cybersecurity, and the ethical implications of increasingly powerful technologies. As we navigate this digital transformation, it's crucial that we develop policies and practices that harness technology's benefits while mitigating its risks."
+    },
+    {
+      topic: "SUSTAINABLE LIVING",
+      content: "Sustainable living involves making conscious choices to reduce our environmental impact while maintaining a high quality of life. This approach encompasses various aspects of daily life, including energy consumption, transportation, food choices, and waste management. Simple changes like using energy-efficient appliances, choosing renewable energy sources, and improving home insulation can significantly reduce our carbon footprint. Transportation choices also play a crucial role - walking, cycling, using public transport, or driving electric vehicles can substantially lower emissions. Our food system has a major environmental impact, so choosing locally-sourced, seasonal, and plant-based foods can make a real difference. Reducing waste through the principles of reduce, reuse, and recycle helps minimize our consumption of natural resources. Water conservation through efficient fixtures and mindful usage protects this precious resource. Supporting businesses that prioritize sustainability creates market demand for environmentally responsible practices. Sustainable living isn't about perfection, but about making thoughtful choices that collectively contribute to a healthier planet for future generations."
+    }
+  ];
+
+  const randomTopic = topics[Math.floor(Math.random() * topics.length)];
+  const transcript = randomTopic.content;
+  
+  console.log(`Topic: ${randomTopic.topic}`);
+  console.log(`Content Length: ${transcript.length} characters`);
+  console.log(`\n--- TRANSCRIPT CONTENT ---`);
+  console.log(transcript);
+  console.log(`\n=== END TRANSCRIPT ===\n`);
+
+  // Create simulated transcript items
+  const words = transcript.split(' ');
+  const items: TranscriptItem[] = [];
+  let currentOffset = 0;
+  
+  for (let i = 0; i < words.length; i += 5) {
+    const chunk = words.slice(i, i + 5).join(' ');
+    items.push({
+      text: chunk,
+      duration: 3000, // 3 seconds per chunk
+      offset: currentOffset
+    });
+    currentOffset += 3000;
+  }
+
+  return {
+    videoId,
+    title: `Video ${videoId} - ${randomTopic.topic}`,
+    duration: `${Math.floor(currentOffset / 60000)}:${String(Math.floor((currentOffset % 60000) / 1000)).padStart(2, '0')}`,
+    transcript,
+    transcriptItems: items,
+    hasRealTranscript: false
+  };
+}
+
+export async function processVideoForChallenge(videoId: string): Promise<VideoInfo> {
+  try {
+    const videoInfo = await extractVideoTranscript(videoId);
+    
+    if (!videoInfo.transcript || videoInfo.transcript.length < 100) {
+      console.log(`⚠️ Transcript too short for video ${videoId}, regenerating...`);
+      return generateSimulatedTranscript(videoId);
+    }
+    
+    return videoInfo;
+    
+  } catch (error) {
+    console.error(`❌ Error processing video ${videoId}:`, error);
+    return generateSimulatedTranscript(videoId);
+  }
+}
+
+// Compatibility functions for existing imports
 export async function extractYouTubeTranscript(videoId: string): Promise<string> {
   try {
-    console.log(`Extracting transcript for video: ${videoId}`)
-
-    try {
-      // Try to get the real transcript from YouTube
-      console.log(`🔍 Attempting to fetch real transcript for video: ${videoId}`)
-      
-      // Try different language options
-      const languages = ['en', 'en-US', 'en-GB']
-      let transcript = null
-      
-      for (const lang of languages) {
-        try {
-          console.log(`🌐 Trying language: ${lang}`)
-          transcript = await YoutubeTranscript.fetchTranscript(videoId, { lang })
-          if (transcript && transcript.length > 0) {
-            console.log(`✅ Found transcript in ${lang}`)
-            break
-          }
-        } catch (langError) {
-          console.log(`❌ No transcript found in ${lang}`)
-          continue
-        }
-      }
-      
-      // If no specific language worked, try without language specification
-      if (!transcript || transcript.length === 0) {
-        console.log(`🌍 Trying without specific language...`)
-        try {
-          transcript = await YoutubeTranscript.fetchTranscript(videoId)
-        } catch (generalError) {
-          console.log(`❌ No transcript found without language specification`)
-        }
-      }
-      
-      console.log(`📊 Transcript fetch result:`, {
-        transcriptFound: !!transcript,
-        transcriptLength: transcript?.length || 0,
-        firstItem: transcript?.[0] || null
-      })
-      
-      if (transcript && transcript.length > 0) {
-        // Combine all transcript segments into a single string
-        const fullTranscript = transcript
-          .map((item: any) => item.text)
-          .join(' ')
-          .replace(/\s+/g, ' ') // Clean up multiple spaces
-          .trim()
-
-        // Print transcript to terminal for testing
-        console.log(`\n=== ✅ REAL VIDEO TRANSCRIPT FOR ${videoId} ===`)
-        console.log(`Content Length: ${fullTranscript.length} characters`)
-        console.log(`\n--- TRANSCRIPT CONTENT ---`)
-        console.log(fullTranscript.substring(0, 1000) + (fullTranscript.length > 1000 ? '...' : '')) // Show first 1000 chars
-        console.log(`\n=== END REAL TRANSCRIPT ===\n`)
-
-        return fullTranscript
-      } else {
-        console.warn(`❌ No transcript data found for video ${videoId}`)
-      }
-    } catch (transcriptError) {
-      console.error(`❌ Failed to get real transcript for ${videoId}:`, {
-        error: transcriptError instanceof Error ? transcriptError.message : 'Unknown error',
-        stack: transcriptError instanceof Error ? transcriptError.stack : undefined
-      })
-      
-      // Fallback to simulated transcript
-      console.log("🔄 Falling back to simulated transcript...")
-    }
-
-    // Fallback: Generate a detailed simulated transcript based on the video ID
-    const topics = [
-      {
-        name: "climate change",
-        transcript: `Climate change represents one of the most pressing challenges of our time. The Earth's climate system is warming at an unprecedented rate due to human activities, particularly the emission of greenhouse gases like carbon dioxide and methane. Scientific evidence shows that global temperatures have risen by approximately 1.1 degrees Celsius since pre-industrial times. This warming is causing dramatic changes in weather patterns, including more frequent extreme weather events such as hurricanes, droughts, and floods. The Arctic ice sheets are melting at alarming rates, contributing to rising sea levels that threaten coastal communities worldwide. To address this crisis, we need immediate action on multiple fronts: transitioning to renewable energy sources, improving energy efficiency, protecting and restoring forests, and implementing carbon pricing mechanisms. Individual actions also matter - from reducing energy consumption to choosing sustainable transportation options. The Paris Agreement represents a global commitment to limiting warming to well below 2 degrees Celsius, but achieving this goal requires unprecedented cooperation and rapid transformation of our energy systems.`
-      },
-      {
-        name: "artificial intelligence",
-        transcript: `Artificial Intelligence, or AI, is revolutionizing nearly every aspect of our lives and work. At its core, AI involves creating computer systems that can perform tasks typically requiring human intelligence, such as learning, reasoning, problem-solving, and decision-making. Machine learning, a subset of AI, enables computers to learn and improve from experience without being explicitly programmed for every task. Deep learning, inspired by the human brain's neural networks, has led to breakthrough applications in image recognition, natural language processing, and autonomous systems. Today, AI powers recommendation systems on streaming platforms, enables voice assistants like Siri and Alexa, and drives autonomous vehicles. In healthcare, AI helps diagnose diseases more accurately and develop new treatments. However, the rapid advancement of AI also raises important ethical considerations about job displacement, privacy, bias in algorithms, and the need for responsible development. As AI becomes more sophisticated, it's crucial that we develop frameworks for ensuring these technologies benefit all of humanity while mitigating potential risks.`
-      },
-      {
-        name: "sustainable development",
-        transcript: `Sustainable development is about meeting the needs of the present without compromising the ability of future generations to meet their own needs. This concept encompasses three interconnected pillars: economic growth, social inclusion, and environmental protection. The United Nations' 17 Sustainable Development Goals provide a comprehensive framework for addressing global challenges including poverty, inequality, climate change, environmental degradation, peace, and justice. Achieving sustainability requires a fundamental shift in how we produce and consume goods, manage natural resources, and structure our economies. Circular economy principles, which emphasize reducing waste and reusing materials, are becoming increasingly important. Renewable energy technologies like solar and wind power are now cost-competitive with fossil fuels in many regions. Sustainable agriculture practices can feed growing populations while protecting biodiversity and soil health. Cities play a crucial role, as they consume 78% of global energy and produce 60% of greenhouse gas emissions. Smart urban planning, green buildings, and sustainable transportation systems are essential for creating livable, resilient communities. Education and awareness are also vital for empowering individuals and communities to make sustainable choices.`
-      }
-    ]
-
-    // Use the video ID to deterministically select a topic
-    const topicIndex = videoId.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0) % topics.length
-    const selectedTopic = topics[topicIndex]
-
-    // Print simulated transcript to terminal for testing
-    console.log(`\n=== SIMULATED VIDEO TRANSCRIPT FOR ${videoId} ===`)
-    console.log(`Topic: ${selectedTopic.name.toUpperCase()}`)
-    console.log(`Content Length: ${selectedTopic.transcript.length} characters`)
-    console.log(`\n--- TRANSCRIPT CONTENT ---`)
-    console.log(selectedTopic.transcript)
-    console.log(`\n=== END TRANSCRIPT ===\n`)
-
-    return selectedTopic.transcript
+    const videoInfo = await extractVideoTranscript(videoId);
+    return videoInfo.transcript;
   } catch (error) {
-    console.error("Error extracting YouTube transcript:", error)
-    return "Transcript unavailable"
+    console.error(`Error extracting YouTube transcript for ${videoId}:`, error);
+    return '';
   }
 }
 
-// Function to extract captions/transcript from a YouTube video up to a specific duration
-export async function extractYouTubeTranscriptForDuration(videoId: string, maxDurationSeconds: number): Promise<string> {
-  console.log(`Extracting transcript for video: ${videoId} (max duration: ${maxDurationSeconds}s)`)
-
-  // Try to get the real transcript from YouTube
-  console.log(`🔍 Attempting to fetch real transcript for video: ${videoId}`)
-  
-  // Try different language options
-  const languages = ['en', 'en-US', 'en-GB']
-  let transcript = null
-  
-  for (const lang of languages) {
-    try {
-      console.log(`🌐 Trying language: ${lang}`)
-      transcript = await YoutubeTranscript.fetchTranscript(videoId, { lang })
-      if (transcript && transcript.length > 0) {
-        console.log(`✅ Found transcript in ${lang}`)
-        break
-      }
-    } catch (langError) {
-      console.log(`❌ No transcript found in ${lang}`)
-      continue
+export async function extractYouTubeTranscriptForDuration(videoId: string, maxDuration?: number): Promise<{
+  transcript: string;
+  duration: number;
+  items: TranscriptItem[];
+}> {
+  try {
+    const videoInfo = await extractVideoTranscript(videoId);
+    let transcript = videoInfo.transcript;
+    let items = videoInfo.transcriptItems;
+    
+    // If maxDuration is specified, limit the transcript
+    if (maxDuration && videoInfo.transcriptItems.length > 0) {
+      const filteredItems = videoInfo.transcriptItems.filter(item => item.offset < maxDuration * 1000);
+      transcript = filteredItems.map(item => item.text).join(' ');
+      items = filteredItems;
     }
+    
+    const totalDuration = items.length > 0 ? Math.max(...items.map(item => item.offset + item.duration)) : 0;
+    
+    return {
+      transcript,
+      duration: Math.floor(totalDuration / 1000), // Convert to seconds
+      items
+    };
+  } catch (error) {
+    console.error(`Error extracting YouTube transcript with duration for ${videoId}:`, error);
+    return {
+      transcript: '',
+      duration: 0,
+      items: []
+    };
   }
-  
-  // If no specific language worked, try without language specification
-  if (!transcript || transcript.length === 0) {
-    console.log(`🌍 Trying without specific language...`)
-    try {
-      transcript = await YoutubeTranscript.fetchTranscript(videoId)
-    } catch (generalError) {
-      console.log(`❌ No transcript found without language specification`)
-    }
-  }
-    console.log(`📊 Transcript fetch result:`, {
-    transcriptFound: !!transcript,
-    transcriptLength: transcript?.length || 0,
-    firstItem: transcript?.[0] || null
-  })
-  
-  // If no real transcript found, fallback to simulated transcript
-  if (!transcript || transcript.length === 0) {
-    console.log(`⚠️ No real transcript found, falling back to simulated content...`)
-    
-    // Get simulated transcript from the main function
-    const fullSimulatedTranscript = await extractYouTubeTranscript(videoId)
-    
-    if (fullSimulatedTranscript === "Transcript unavailable") {
-      const errorMessage = `❌ Failed to extract transcript for video ${videoId}. No transcript available for the required watch time of ${maxDurationSeconds} seconds.`
-      console.error(errorMessage)
-      throw new Error(errorMessage)
-    }
-    
-    // For simulated transcript, estimate word timing and return appropriate portion
-    const words = fullSimulatedTranscript.split(' ')
-    const avgWordsPerSecond = 2.5 // Average speaking rate
-    const maxWords = Math.ceil(maxDurationSeconds * avgWordsPerSecond)
-    const limitedSimulatedTranscript = words.slice(0, maxWords).join(' ')
-    
-    console.log(`✅ Using simulated transcript: ${limitedSimulatedTranscript.length} characters (estimated ${maxDurationSeconds}s)`)
-    console.log(`\n=== SIMULATED LIMITED TRANSCRIPT FOR ${videoId} (${maxDurationSeconds}s) ===`)
-    console.log(limitedSimulatedTranscript.substring(0, 500) + (limitedSimulatedTranscript.length > 500 ? '...' : ''))
-    console.log(`=== END SIMULATED LIMITED TRANSCRIPT ===\n`)
-    
-    return limitedSimulatedTranscript
-  }
-  // Filter transcript segments that fall within the specified duration
-  let cumulativeTime = 0
-  const filteredTranscript: any[] = []
-  
-  console.log(`🔍 Processing ${transcript.length} transcript segments for ${maxDurationSeconds}s limit`)
-  
-  for (let i = 0; i < transcript.length; i++) {
-    const item = transcript[i]
-    
-    // Calculate segment duration more reliably
-    let segmentDuration = 0
-    
-    if (typeof item.duration === 'number' && item.duration > 0) {
-      segmentDuration = item.duration
-    } else if (typeof item.duration === 'string' && parseFloat(item.duration) > 0) {
-      segmentDuration = parseFloat(item.duration)
-    } else if (item.offset !== undefined && i < transcript.length - 1) {
-      // Use offset difference for duration calculation
-      const currentOffset = (item.offset || 0) / 1000
-      const nextOffset = (transcript[i + 1].offset || 0) / 1000
-      segmentDuration = Math.max(0.1, nextOffset - currentOffset) // Minimum 0.1s per segment
-    } else {
-      // Default segment duration if no other info available
-      segmentDuration = 2.0 // Assume 2 seconds per segment as default
-    }
-    
-    // Include segment if we haven't exceeded the time limit
-    if (cumulativeTime < maxDurationSeconds) {
-      filteredTranscript.push(item)
-      console.log(`📝 Segment ${i}: "${item.text?.substring(0, 50)}..." (${segmentDuration}s) - Total: ${cumulativeTime}s`)
-    }
-    
-    cumulativeTime += segmentDuration
-    
-    // Stop if we've exceeded the time limit significantly
-    if (cumulativeTime > maxDurationSeconds + 5) {
-      break
-    }
-  }
-  console.log(`⏰ Filtering result: ${filteredTranscript.length} segments from ${transcript.length} total, estimated time=${cumulativeTime.toFixed(1)}s (limit=${maxDurationSeconds}s)`)
-  
-  // If no segments found, use a more lenient approach
-  if (filteredTranscript.length === 0) {
-    console.log(`⚠️ No segments found with time filtering, using first few segments as fallback`)
-    // Take at least the first 3 segments or 10% of total, whichever is larger
-    const fallbackCount = Math.max(3, Math.ceil(transcript.length * 0.1))
-    for (let i = 0; i < Math.min(fallbackCount, transcript.length); i++) {
-      filteredTranscript.push(transcript[i])
-    }
-    console.log(`📄 Fallback: Using first ${filteredTranscript.length} segments`)
-  }
-  // Combine filtered transcript segments into a single string
-  const limitedTranscript = filteredTranscript
-    .map((item: any) => item.text || '')
-    .filter(text => text.trim().length > 0)
-    .join(' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-
-  // Check if the limited transcript has meaningful content
-  if (!limitedTranscript || limitedTranscript.length < 5) {
-    console.log(`⚠️ Very short transcript content (${limitedTranscript.length} chars), using more segments`)
-    
-    // If content is too short, take more segments
-    const extraSegments = Math.min(10, transcript.length)
-    const expandedTranscript = transcript
-      .slice(0, extraSegments)
-      .map((item: any) => item.text || '')
-      .filter(text => text.trim().length > 0)
-      .join(' ')
-      .replace(/\s+/g, ' ')
-      .trim()
-    
-    if (expandedTranscript.length < 5) {
-      const errorMessage = `❌ Video ${videoId} has insufficient transcript content. Total available: ${expandedTranscript.length} characters.`
-      console.error(errorMessage)
-      throw new Error(errorMessage)
-    }
-    
-    console.log(`✅ Using expanded transcript: ${expandedTranscript.length} characters from ${extraSegments} segments`)
-    return expandedTranscript
-  }
-
-  // Print limited transcript to terminal for testing
-  console.log(`\n=== ✅ LIMITED REAL VIDEO TRANSCRIPT FOR ${videoId} (${maxDurationSeconds}s) ===`)
-  console.log(`Content Length: ${limitedTranscript.length} characters`)
-  console.log(`Segments Used: ${filteredTranscript.length}/${transcript.length}`)
-  console.log(`\n--- LIMITED TRANSCRIPT CONTENT ---`)
-  console.log(limitedTranscript.substring(0, 1000) + (limitedTranscript.length > 1000 ? '...' : ''))
-  console.log(`\n=== END LIMITED TRANSCRIPT ===\n`)
-
-  return limitedTranscript
 }

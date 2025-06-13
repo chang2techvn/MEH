@@ -40,13 +40,12 @@ export async function compareVideoContentWithUserContent(
 
     // Extract only the portion of the video transcript corresponding to the minimum watch time
     const videoTranscript = await extractYouTubeTranscriptForDuration(videoId, minWatchTimeSeconds)
-    
-    // Print detailed comparison info to terminal
-    console.log(`Video Transcript Length (limited): ${videoTranscript.length} characters`)
+      // Print detailed comparison info to terminal
+    console.log(`Video Transcript Length (limited): ${videoTranscript.transcript.length} characters`)
     console.log(`\n📝 --- USER CONTENT ---`)
     console.log(userContent)
     console.log(`\n📺 --- LIMITED VIDEO TRANSCRIPT (${minWatchTimeSeconds}s) ---`)
-    console.log(videoTranscript.substring(0, 2000) + (videoTranscript.length > 2000 ? '...' : ''))
+    console.log(videoTranscript.transcript.substring(0, 2000) + (videoTranscript.transcript.length > 2000 ? '...' : ''))
     console.log(`\n⚖️ --- STARTING COMPARISON PROCESS ---`)
       // Get API key from environment
     const apiKey = process.env.GEMINI_API_KEY
@@ -198,7 +197,7 @@ export async function getContentImprovementSuggestions(
     const prompt = `
       Based on the original video transcript (limited to ${minWatchTimeSeconds} seconds that user was required to watch) and the user's content, provide 3-5 specific suggestions for improvement:
       
-      Original (First ${minWatchTimeSeconds} seconds only): ${videoTranscript.substring(0, 500)}...
+      Original (First ${minWatchTimeSeconds} seconds only): ${videoTranscript.transcript.substring(0, 500)}...
       User Content: ${userContent}
         Focus on what specific information or concepts are missing and how to improve understanding.
       Return as a JSON array of strings.

@@ -674,6 +674,7 @@ export type Database = {
           thumbnail_url: string | null
           title: string
           topics: string[] | null
+          transcript: string | null
           updated_at: string | null
           video_url: string
         }
@@ -687,6 +688,7 @@ export type Database = {
           thumbnail_url?: string | null
           title: string
           topics?: string[] | null
+          transcript?: string | null
           updated_at?: string | null
           video_url: string
         }
@@ -700,6 +702,7 @@ export type Database = {
           thumbnail_url?: string | null
           title?: string
           topics?: string[] | null
+          transcript?: string | null
           updated_at?: string | null
           video_url?: string
         }

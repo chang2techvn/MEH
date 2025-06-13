@@ -427,36 +427,127 @@ function getFallbackVideo(): VideoData {
   }
 }
 
-// Function to extract transcript from YouTube video
-async function extractTranscript(videoId: string): Promise<string> {
+// Function to generate fallback transcript when Gemini AI fails
+function generateFallbackTranscript(videoId: string): string {
+  console.log(`⚠️ Generating fallback transcript for video: ${videoId}`)
+  return `[Transcript extraction failed for video ${videoId}. This video requires manual transcript review.]`
+}
+
+// Function to extract transcript from YouTube video using Gemini AI
+async function extractTranscript(videoId: string, duration?: number): Promise<string> {
+  console.log(`🎬 Extracting transcript for video: ${videoId}`)
+  
+  // Check duration to save quota (skip very long videos)
+  if (duration && duration > 1800) { // > 30 minutes
+    console.log(`⚠️ Video too long (${duration}s), skipping Gemini AI to save quota`)
+    return "" // Return empty string instead of fallback
+  }
+  
   try {
-    // In a real implementation, you would use a proper API or library to extract transcripts
-    // For this example, we'll create a simulated transcript based on the video ID
-
-    // Fetch the video page to extract some content for our simulated transcript
-    const response = await fetch(`https://www.youtube.com/watch?v=${videoId}`, {
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
-      },
-    })
-
-    const html = await response.text()
-    const $ = load(html)
-
-    // Extract title and description
-    const title = $('meta[property="og:title"]').attr("content") || "Unknown Title"
-    const description = $('meta[property="og:description"]').attr("content") || "No description available"
-
-    // Create a simulated transcript using the title and description
-    return `Title: ${title}
-
-${description}
-
-This is a simulated transcript for the video. In a real implementation, you would extract the actual transcript from the YouTube video using YouTube's transcript API or a third-party service.`
+    // Only use Gemini AI for real transcript
+    const geminiTranscript = await tryGeminiTranscript(videoId)
+    if (geminiTranscript && geminiTranscript.length > 100) {
+      console.log(`✅ Gemini AI transcript extracted: ${geminiTranscript.length} characters`)
+      return geminiTranscript
+    }
+    
+    console.log(`⚠️ Gemini AI failed - returning empty transcript`)
+    return "" // Return empty string if Gemini fails
+    
   } catch (error) {
     console.error("Error extracting transcript:", error)
-    return "Transcript unavailable"
+    return "" // Return empty string on error
+  }
+}
+
+// Function to extract real transcript using Gemini AI
+async function tryGeminiTranscript(videoId: string): Promise<string | null> {
+  const { GoogleGenerativeAI } = await import('@google/generative-ai')
+  
+  if (!process.env.GEMINI_API_KEY) {
+    console.log('⚠️ No GEMINI_API_KEY found')
+    return null
+  }
+
+  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
+  const model = genAI.getGenerativeModel({ 
+    model: "gemini-1.5-flash" // Use flash model to save quota
+  })
+
+  const youtubeUrl = `https://www.youtube.com/watch?v=${videoId}`
+  console.log(`🤖 Requesting transcript from Gemini AI for: ${youtubeUrl}`)
+
+  try {
+    // Add delay to avoid rate limiting
+    await new Promise(resolve => setTimeout(resolve, 3000)) // 3 second delay
+
+    const result = await model.generateContent([
+      {
+        fileData: {
+          mimeType: "video/*",
+          fileUri: youtubeUrl
+        }
+      },
+      `Please provide the COMPLETE and ACCURATE transcript of this YouTube video.
+
+REQUIREMENTS:
+- Extract 100% of all spoken words from the entire video
+- Include every single word that is spoken
+- Format as clean paragraphs with proper punctuation
+- Do NOT summarize or paraphrase - give exact spoken words
+- If there are multiple speakers, indicate speaker changes
+- Include any significant pauses or [music] annotations if relevant
+
+Please transcribe the ENTIRE audio content word-for-word:`
+    ])
+
+    const response = await result.response
+    const transcript = response.text()
+
+    if (transcript && transcript.length > 50) {
+      console.log(`✅ Gemini AI transcript success: ${transcript.length} characters`)
+      return transcript.trim()
+    }
+
+    console.log(`❌ Gemini AI returned empty or short transcript`)
+    return null
+  } catch (error: any) {
+    console.error(`❌ Gemini AI transcript failed:`, error)
+    
+    // Check if it's a rate limit error
+    if (error.message?.includes('429') || error.message?.includes('quota')) {
+      console.log('⏰ Rate limit hit, waiting 2 minutes before retry...')
+      const retryDelay = 120000 // 2 minutes
+      await new Promise(resolve => setTimeout(resolve, retryDelay))
+      
+      // One retry attempt with longer delay
+      try {
+        console.log('🔄 Retrying Gemini AI request after quota cooldown...')
+        await new Promise(resolve => setTimeout(resolve, 5000)) // Extra 5 second delay
+        
+        const retryResult = await model.generateContent([
+          {
+            fileData: {
+              mimeType: "video/*",
+              fileUri: youtubeUrl
+            }
+          },
+          `Please provide a complete transcript of this video. Include all spoken words:`
+        ])
+        
+        const retryResponse = await retryResult.response
+        const retryTranscript = retryResponse.text()
+        
+        if (retryTranscript && retryTranscript.length > 50) {
+          console.log(`✅ Gemini AI retry success: ${retryTranscript.length} characters`)
+          return retryTranscript.trim()
+        }
+      } catch (retryError) {
+        console.error('❌ Retry also failed:', retryError)
+      }
+    }
+    
+    return null
   }
 }
 
@@ -472,27 +563,28 @@ This is a simulated transcript for the video. In a real implementation, you woul
 // New Supabase-only implementation for getTodayVideo
 export async function getTodayVideo(): Promise<VideoData> {
   const today = getTodayDate()
-  
-  try {    console.log(`🔍 Checking Supabase for today's video (${today})...`)    // 1. Check Supabase for today's video
+    try {    
+    console.log(`🔍 Checking Supabase for today's video (${today})...`)    
+    
+    // 1. Check Supabase for today's video
     const { data, error } = await supabaseServer
       .from('daily_videos')
       .select('*')
       .eq('date', today)
       .single()
-      
+        
     if (data && !error) {
-      const video = data as any // Type casting to bypass TypeScript issues temporarily
-      console.log("✅ Video loaded from Supabase:", video.id)
+      console.log("✅ Video loaded from Supabase:", data.id)
       return {
-        id: video.id,
-        title: video.title,
-        description: video.description || "Educational video",
-        thumbnailUrl: video.thumbnail_url || `https://img.youtube.com/vi/${video.id}/hqdefault.jpg`,
-        videoUrl: video.video_url,
-        embedUrl: video.embed_url || `https://www.youtube.com/embed/${video.id}`,
-        duration: video.duration || 300,
-        transcript: "Transcript will be extracted when needed",
-        topics: video.topics || []
+        id: data.id,
+        title: data.title,
+        description: data.description || "Educational video",
+        thumbnailUrl: data.thumbnail_url || `https://img.youtube.com/vi/${data.id}/hqdefault.jpg`,
+        videoUrl: data.video_url,
+        embedUrl: data.embed_url || `https://www.youtube.com/embed/${data.id}`,
+        duration: data.duration || 300,
+        transcript: data.transcript || "", // Use saved transcript or empty string
+        topics: data.topics || []
       }
     }
     
@@ -501,7 +593,53 @@ export async function getTodayVideo(): Promise<VideoData> {
     // 2. Fetch new video only if not exists in database
     const videoData = await fetchRandomYoutubeVideo()
     
-    // 3. Save to Supabase immediately
+    // 3. Extract transcript using Gemini AI
+    console.log(`🎬 Extracting transcript for new video: ${videoData.id}`)
+    const transcript = await extractTranscript(videoData.id, videoData.duration)
+    
+    // 4. Only save video if we have a valid transcript (not empty)
+    if (!transcript || transcript.length < 100) {
+      console.log("⚠️ No valid transcript obtained, trying another video...")
+      
+      // Try up to 3 different videos to get one with transcript
+      for (let i = 0; i < 3; i++) {
+        console.log(`🔄 Attempt ${i + 1}/3: Trying another video...`)
+        const retryVideoData = await fetchRandomYoutubeVideo()
+        const retryTranscript = await extractTranscript(retryVideoData.id, retryVideoData.duration)
+        
+        if (retryTranscript && retryTranscript.length >= 100) {
+          console.log(`✅ Found video with transcript on attempt ${i + 1}`)
+          
+          // Save successful video with transcript
+          const { error: insertError } = await supabaseServer
+            .from('daily_videos')
+            .upsert({
+              id: retryVideoData.id,
+              title: retryVideoData.title,
+              description: retryVideoData.description,
+              video_url: retryVideoData.videoUrl,
+              thumbnail_url: retryVideoData.thumbnailUrl,
+              embed_url: retryVideoData.embedUrl,
+              duration: retryVideoData.duration,
+              topics: retryVideoData.topics,
+              transcript: retryTranscript,
+              date: today,
+              created_at: new Date().toISOString()
+            })
+          
+          if (!insertError) {
+            console.log("✅ New video with transcript saved to Supabase:", retryVideoData.id)
+            retryVideoData.transcript = retryTranscript
+            return retryVideoData
+          }
+        }
+      }
+      
+      console.log("❌ Could not find video with valid transcript after 3 attempts, using fallback")
+      return getFallbackVideo()
+    }
+    
+    // 5. Save video with transcript to Supabase
     const { error: insertError } = await supabaseServer
       .from('daily_videos')
       .upsert({
@@ -513,6 +651,7 @@ export async function getTodayVideo(): Promise<VideoData> {
         embed_url: videoData.embedUrl,
         duration: videoData.duration,
         topics: videoData.topics,
+        transcript: transcript,
         date: today,
         created_at: new Date().toISOString()
       })
@@ -520,8 +659,11 @@ export async function getTodayVideo(): Promise<VideoData> {
     if (insertError) {
       console.error("❌ Error saving video to Supabase:", insertError)
     } else {
-      console.log("✅ New video saved to Supabase:", videoData.id)
+      console.log("✅ New video saved to Supabase with transcript:", videoData.id)
     }
+    
+    // Update video data with transcript
+    videoData.transcript = transcript
     
     return videoData
     
