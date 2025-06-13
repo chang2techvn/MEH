@@ -38,28 +38,29 @@ export function PostAISubmission({
       <motion.div
         className="p-4 rounded-xl border border-white/20 dark:border-gray-800/20 bg-white/20 dark:bg-gray-800/20 backdrop-blur-sm"
         whileHover={{ boxShadow: "0 4px 20px rgba(0, 0, 0, 0.1)" }}
-      >
-        <div
+      >        <div
           className="prose dark:prose-invert prose-sm max-w-none"
           dangerouslySetInnerHTML={{ __html: submission.rewrittenContent }}
         />
       </motion.div>
 
-      <motion.div
-        className="rounded-xl overflow-hidden bg-white/20 dark:bg-gray-800/20 backdrop-blur-sm"
-        whileHover={{ boxShadow: "0 4px 20px rgba(0, 0, 0, 0.1)" }}
-      >
-        <div className="relative w-full" style={{ paddingBottom: "56.25%" }}>
-          <video
-            className="absolute top-0 left-0 w-full h-full object-contain"
-            controls
-            poster="/placeholder.svg?height=400&width=600"
-          >
-            <source src={submission.videoSubmission} type="video/mp4" />
-            Your browser does not support the video tag.
-          </video>
-        </div>
-      </motion.div>
+      {submission.videoSubmission && submission.videoSubmission.trim() !== "" && (
+        <motion.div
+          className="rounded-xl overflow-hidden bg-white/20 dark:bg-gray-800/20 backdrop-blur-sm"
+          whileHover={{ boxShadow: "0 4px 20px rgba(0, 0, 0, 0.1)" }}
+        >
+          <div className="relative w-full" style={{ paddingBottom: "56.25%" }}>
+            <video
+              className="absolute top-0 left-0 w-full h-full object-contain"
+              controls
+              poster="/placeholder.svg?height=400&width=600"
+            >
+              <source src={submission.videoSubmission} type="video/mp4" />
+              Your browser does not support the video tag.
+            </video>
+          </div>
+        </motion.div>
+      )}
 
       <AnimatePresence>
         {showEvaluation ? (

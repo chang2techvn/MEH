@@ -48,21 +48,27 @@ export async function compareVideoContentWithUserContent(
     console.log(`\n📺 --- LIMITED VIDEO TRANSCRIPT (${minWatchTimeSeconds}s) ---`)
     console.log(videoTranscript.substring(0, 2000) + (videoTranscript.length > 2000 ? '...' : ''))
     console.log(`\n⚖️ --- STARTING COMPARISON PROCESS ---`)
-    
-    // Check if API key exists
+      // Get API key from environment
     const apiKey = process.env.GEMINI_API_KEY
 
     if (!apiKey) {
-      console.log("No Gemini API key found, using improved mock comparison")
-      return getImprovedMockComparison(videoTranscript, userContent, threshold)
+      console.error("❌ GEMINI_API_KEY not found in environment variables!")
+      throw new Error("Gemini API key is required for content evaluation")
     }
 
+    console.log(`🔑 Gemini API Key found: ${apiKey.substring(0, 10)}...`)
+
     // Initialize Gemini AI with API key
-    const genAI = new GoogleGenerativeAI(apiKey)    // Create a detailed prompt for Gemini AI to compare the content
+    const genAI = new GoogleGenerativeAI(apiKey)    // Create a detailed and strict prompt for Gemini AI to evaluate content
     const prompt = `
-      You are an expert content evaluator. Compare a YouTube video transcript with a user's rewritten content to determine similarity and understanding.
+      You are an EXTREMELY STRICT content evaluator. Compare a YouTube video transcript with a user's rewritten content to determine similarity and understanding.
       
-      IMPORTANT NOTE: The transcript provided below represents only the portion of the video that the user was required to watch (based on admin-configured minimum watch time of ${minWatchTimeSeconds} seconds / ${Math.round(minWatchTimeSeconds / 60)} minutes). The user's content should be evaluated based on understanding of this specific portion only.
+      CRITICAL EVALUATION RULES:
+      1. Be VERY STRICT - most content should score between 0-30% unless it shows GENUINE understanding
+      2. Generic, vague statements should receive very low scores (0-20%)
+      3. Content that seems to be guessing or written without watching should score 0-15%
+      4. Only content with SPECIFIC details and concepts should score above 50%
+      5. 80%+ is reserved ONLY for exceptional understanding with detailed specifics
       
       ORIGINAL VIDEO TRANSCRIPT (First ${minWatchTimeSeconds} seconds only):
       """
@@ -74,47 +80,43 @@ export async function compareVideoContentWithUserContent(
       ${userContent}
       """
       
-      EVALUATION CRITERIA:
-      1. Content Understanding (40%): How well does the user understand the main concepts from the watched portion?
-      2. Key Information Coverage (30%): Are the important facts and details from the watched portion included?
-      3. Accuracy (20%): Is the information from the watched portion correctly represented?
-      4. Depth and Detail (10%): Does the content show comprehensive understanding of the watched portion?
+      STRICT SCORING GUIDELINES:
+      - 90-100: EXCEPTIONAL - Covers all main concepts with specific details, technical terms, and deep understanding
+      - 80-89: EXCELLENT - Covers most key concepts with good specificity and clear understanding  
+      - 70-79: GOOD - Shows solid understanding with some specific details and concepts
+      - 50-69: FAIR - Limited understanding, some relevant content but lacks specificity
+      - 30-49: POOR - Minimal understanding, mostly generic or vague statements
+      - 0-29: FAILING - No evidence of watching video, generic content, or completely irrelevant
       
-      SCORING GUIDELINES:
-      - 90-100: Excellent understanding, covers all main concepts from watched portion with accurate details
-      - 80-89: Good understanding, covers most key concepts from watched portion with minor gaps
-      - 70-79: Fair understanding, covers some concepts from watched portion but missing important elements
-      - 60-69: Basic understanding, limited coverage of main concepts from watched portion
-      - 0-59: Poor understanding, significant gaps or inaccuracies regarding the watched portion
+      AUTOMATIC PENALTY CRITERIA:
+      - Content under 50 words: Automatic score under 20%
+      - No specific terminology from video: Maximum 40%
+      - Generic statements only: Maximum 25%
+      - Appears to be random text or gibberish: 0-10%
+      - No clear connection to video content: 0-15%
       
-      BE STRICT IN EVALUATION: 
-      - Generic statements without specific details should score lower
-      - Vague or superficial content should not exceed 70%
-      - Only award 80%+ for content that demonstrates real understanding of specific concepts from the watched portion
-      - Do not penalize for missing information that appears after the ${minWatchTimeSeconds}-second mark
+      EVALUATION FOCUS:
+      1. Does the user demonstrate they actually watched the specific portion?
+      2. Are specific concepts, terms, or examples from the transcript mentioned?
+      3. Is the content substantive and detailed, not just generic statements?
+      4. Does it show comprehension beyond surface-level understanding?
       
-      Identify:
-      - Specific concepts that match between original (watched portion) and user content
-      - Important concepts from the watched portion missed by the user
-      - Correct points the user made about the watched portion
-      - Any incorrect or inaccurate statements about the watched portion
-      - Specific suggestions for improvement based on the watched portion
-        Format your response as a JSON object:
+      Format your response as a JSON object:
       {
         "similarityScore": number,
-        "feedback": "detailed explanation of the score",
-        "keyMatches": ["specific matching concepts"],
-        "suggestions": ["specific improvement suggestions"],
+        "feedback": "specific explanation of why this score was given",
+        "keyMatches": ["specific matching concepts found"],
+        "suggestions": ["concrete improvement suggestions"],
         "detailedAnalysis": {
-          "matchedConcepts": ["concepts correctly identified"],
+          "matchedConcepts": ["specific concepts correctly identified"],
           "missedConcepts": ["important concepts not mentioned"],
-          "correctPoints": ["accurate statements made"],
-          "incorrectPoints": ["inaccurate or misleading statements"],
+          "correctPoints": ["accurate specific statements made"],
+          "incorrectPoints": ["inaccurate or vague statements"],
           "wordCount": number,
           "keywordMatches": number
         }
       }
-    `    // Print the full prompt being sent to Gemini AI
+    `// Print the full prompt being sent to Gemini AI
     console.log(`\n🚀 === FULL PROMPT SENT TO GEMINI AI ===`)
     console.log(`Prompt Length: ${prompt.length} characters`)
     console.log(`\n--- START PROMPT ---`)
@@ -156,127 +158,16 @@ export async function compareVideoContentWithUserContent(
         console.log(`Keyword Matches: ${result.detailedAnalysis.keywordMatches}`)
         console.log(`🏁 === END COMPARISON ===\n`)
 
-        return result
-      }
+        return result      }
+      
+      throw new Error("Could not parse JSON response from Gemini AI")
     } catch (error) {
-      console.error("Error with Gemini API:", error)
-      return getImprovedMockComparison(videoTranscript, userContent, threshold)
+      console.error("❌ Error with Gemini API:", error)
+      throw new Error(`Gemini AI evaluation failed: ${error}`)
     }
-
-    // If JSON parsing fails, create a default comparison
-    return getImprovedMockComparison(videoTranscript, userContent, threshold)
   } catch (error) {
-    console.error("Error comparing content:", error)
-    return getImprovedMockComparison("", userContent, threshold)
-  }
-}
-
-// Improved mock comparison for when API is not available
-function getImprovedMockComparison(videoTranscript: string, userContent: string, threshold: number): ContentComparison {
-  // Analyze content more strictly
-  const userWords = userContent.toLowerCase().split(/\s+/).filter(word => word.length > 3)
-  const transcriptWords = videoTranscript.toLowerCase().split(/\s+/).filter(word => word.length > 3)
-  
-  // Calculate keyword matches
-  const keywordMatches = userWords.filter(word => 
-    transcriptWords.some(tWord => tWord.includes(word) || word.includes(tWord))
-  ).length
-  
-  const keywordMatchRatio = transcriptWords.length > 0 ? keywordMatches / transcriptWords.length : 0
-  
-  // Analyze content quality
-  const wordCount = userWords.length
-  const hasGoodStructure = userContent.includes('.') && userContent.includes(',')
-  const hasSpecificTerms = /\b(because|however|therefore|furthermore|moreover|specifically|particularly|especially)\b/i.test(userContent)
-  const hasTechnicalContent = keywordMatchRatio > 0.1
-  
-  // Stricter scoring logic
-  let mockScore = 30 // Lower base score
-  
-  // Word count scoring (max 15 points)
-  if (wordCount >= 50) mockScore += 5
-  if (wordCount >= 100) mockScore += 5
-  if (wordCount >= 150) mockScore += 5
-  
-  // Structure scoring (max 10 points)
-  if (hasGoodStructure) mockScore += 10
-  
-  // Content quality scoring (max 15 points)
-  if (hasSpecificTerms) mockScore += 10
-  if (hasTechnicalContent) mockScore += 5
-  
-  // Keyword matching scoring (max 30 points)
-  mockScore += Math.floor(keywordMatchRatio * 100 * 0.3)
-  
-  // Cap at realistic maximum
-  mockScore = Math.min(mockScore, 85)
-  
-  // Determine analysis details
-  const matchedConcepts = keywordMatches > 5 ? 
-    ["General topic understanding", "Some key terminology"] : 
-    ["Basic topic recognition"]
-    
-  const missedConcepts = mockScore < 70 ? 
-    ["Specific details", "Technical accuracy", "Comprehensive coverage", "Supporting examples"] :
-    mockScore < 80 ? 
-    ["Some technical details", "Additional examples"] :
-    ["Minor supplementary information"]
-    
-  const correctPoints = mockScore > 60 ? 
-    ["Basic understanding demonstrated", "Appropriate length"] : 
-    ["Attempted to address the topic"]
-    
-  const incorrectPoints = mockScore < 50 ? 
-    ["Insufficient detail", "Generic statements", "Limited understanding"] :
-    mockScore < 70 ?
-    ["Some vague statements", "Could be more specific"] :
-    []
-  
-  const isAboveThreshold = mockScore >= threshold
-  
-  console.log(`\n--- MOCK EVALUATION DETAILS ---`)
-  console.log(`Word Count: ${wordCount}`)
-  console.log(`Keyword Matches: ${keywordMatches}/${transcriptWords.length} (${(keywordMatchRatio * 100).toFixed(1)}%)`)
-  console.log(`Has Structure: ${hasGoodStructure}`)
-  console.log(`Has Specific Terms: ${hasSpecificTerms}`)
-  console.log(`Technical Content: ${hasTechnicalContent}`)
-  console.log(`Final Score: ${mockScore}%`)
-  console.log(`Above Threshold: ${isAboveThreshold}`)
-  
-  return {
-    similarityScore: mockScore,
-    isAboveThreshold,
-    feedback: isAboveThreshold 
-      ? `Good job! Your content demonstrates solid understanding with a similarity score of ${mockScore}%. You've captured the main concepts and shown good comprehension of the video content.`
-      : `Your content needs significant improvement. Current similarity score is ${mockScore}%, which is below the required ${threshold}%. The content appears too generic or lacks specific details from the video. Please watch the video again and focus on capturing specific concepts, examples, and technical details mentioned.`,
-    keyMatches: [
-      `${keywordMatches} keyword matches found`,
-      `${wordCount} words written`,
-      `Content structure: ${hasGoodStructure ? 'Good' : 'Needs improvement'}`
-    ],
-    suggestions: isAboveThreshold 
-      ? [
-          "Consider adding more specific examples from the video",
-          "Include technical terms and definitions mentioned",
-          "Expand on the implications and conclusions discussed"
-        ]
-      : [
-          "Watch the video multiple times and take detailed notes",
-          "Focus on specific terminology and concepts mentioned",
-          "Include concrete examples and facts from the video",
-          "Aim for at least 150-200 words with specific details",
-          "Use technical vocabulary from the video topic",
-          "Structure your content with clear connections to the original"
-        ],
-    detailedAnalysis: {
-      originalTranscript: videoTranscript,
-      matchedConcepts,
-      missedConcepts,
-      correctPoints,
-      incorrectPoints,
-      wordCount,
-      keywordMatches
-    }
+    console.error("❌ Error comparing content:", error)
+    throw new Error(`Content comparison failed: ${error}`)
   }
 }
 

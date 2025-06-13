@@ -14,22 +14,28 @@ export type ContentEvaluation = {
 }
 
 // Function to compare user content with original transcript
-export async function compareContent(originalTranscript: string, userContent: string): Promise<ContentEvaluation> {
-  try {
-    // Check if API key exists
+export async function compareContent(originalTranscript: string, userContent: string): Promise<ContentEvaluation> {  try {
+    // Get API key - required for evaluation
     const apiKey = process.env.GEMINI_API_KEY
 
     if (!apiKey) {
-      console.log("No Gemini API key found, returning mock evaluation")
-      return getMockEvaluation(userContent)
+      console.error("❌ GEMINI_API_KEY not found in environment variables!")
+      throw new Error("Gemini API key is required for content evaluation")
     }
 
     // Initialize Gemini AI with API key
     const genAI = new GoogleGenerativeAI(apiKey)
 
-    // Create a prompt for Gemini AI to evaluate the content
+    // Create a strict prompt for Gemini AI to evaluate the content
     const prompt = `
-      I need to evaluate a user's rewritten content based on an original video transcript.
+      You are a STRICT content evaluator. Evaluate a user's rewritten content based on an original video transcript.
+      
+      CRITICAL EVALUATION RULES:
+      1. Be VERY STRICT - content should score 0-30% unless it shows GENUINE understanding
+      2. Generic, vague statements should receive very low scores (0-20%)
+      3. Content that seems to be guessing should score 0-15%
+      4. Only content with SPECIFIC details should score above 50%
+      5. 80%+ is reserved ONLY for exceptional understanding
       
       Original Transcript:
       """
@@ -41,50 +47,52 @@ export async function compareContent(originalTranscript: string, userContent: st
       ${userContent}
       """
       
-      Please evaluate the user's content on the following criteria:
+      STRICT SCORING GUIDELINES:
+      - 90-100: EXCEPTIONAL - Covers all concepts with specific details and deep understanding
+      - 80-89: EXCELLENT - Covers most concepts with good specificity
+      - 70-79: GOOD - Shows solid understanding with some specific details
+      - 50-69: FAIR - Limited understanding, lacks specificity
+      - 30-49: POOR - Minimal understanding, mostly generic statements
+      - 0-29: FAILING - No evidence of understanding, generic or irrelevant content
+      
+      AUTOMATIC PENALTIES:
+      - Content under 50 words: Automatic score under 20%
+      - No specific terminology: Maximum 40%
+      - Generic statements only: Maximum 25%
+      
+      Evaluate on:
       1. Grammar and language usage (score out of 100)
-      2. Content accuracy and completeness (score out of 100)
+      2. Content accuracy and completeness (score out of 100) 
       3. Originality and creativity (score out of 100)
       
-      Provide specific strengths and weaknesses of the user's content.
-      Calculate an overall score out of 100 based on these criteria.
-
-      Format your response as a JSON object with the following structure:
+      Format your response as JSON:
       {
         "score": number,
-        "feedback": "string",
-        "strengths": ["string"],
-        "weaknesses": ["string"],
+        "feedback": "specific explanation of the score",
+        "strengths": ["specific strengths"],
+        "weaknesses": ["specific weaknesses"],
         "grammarScore": number,
         "contentScore": number,
         "originalityScore": number
       }
     `
 
-    try {
-      // Generate content using Gemini AI
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" })
-      const result = await model.generateContent(prompt)
-      const response = result.response
-      const text = response.text()
+    // Generate content using Gemini AI
+    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" })
+    const result = await model.generateContent(prompt)
+    const response = result.response
+    const text = response.text()
 
-      // Parse the JSON response
-      const jsonMatch = text.match(/```json\n([\s\S]*?)\n```/) || text.match(/({[\s\S]*})/)
-      if (jsonMatch && jsonMatch[1]) {
-        return JSON.parse(jsonMatch[1]) as ContentEvaluation
-      }
-    } catch (error) {
-      console.error("Error with Gemini API:", error)
-      return getMockEvaluation(userContent)
+    // Parse the JSON response
+    const jsonMatch = text.match(/```json\n([\s\S]*?)\n```/) || text.match(/({[\s\S]*})/)
+    if (jsonMatch && jsonMatch[1]) {
+      return JSON.parse(jsonMatch[1]) as ContentEvaluation
     }
-
-    // If JSON parsing fails, create a default evaluation
-    return getMockEvaluation(userContent)
+    
+    throw new Error("Could not parse JSON response from Gemini AI")
   } catch (error) {
-    console.error("Error evaluating content:", error)
-
-    // Return a mock evaluation in case of error
-    return getMockEvaluation(userContent)
+    console.error("❌ Error evaluating content:", error)
+    throw new Error(`Content evaluation failed: ${error}`)
   }
 }
 
@@ -94,20 +102,27 @@ export async function evaluateVideoPresentation(
   userVideoTranscript: string,
 ): Promise<ContentEvaluation> {
   try {
-    // Check if API key exists
+    // Get API key - required for evaluation
     const apiKey = process.env.GEMINI_API_KEY
 
     if (!apiKey) {
-      console.log("No Gemini API key found, returning mock evaluation")
-      return getMockVideoEvaluation()
+      console.error("❌ GEMINI_API_KEY not found in environment variables!")
+      throw new Error("Gemini API key is required for video presentation evaluation")
     }
 
     // Initialize Gemini AI with API key
     const genAI = new GoogleGenerativeAI(apiKey)
 
-    // Create a prompt for Gemini AI to evaluate the video presentation
+    // Create a strict prompt for Gemini AI to evaluate the video presentation
     const prompt = `
-      I need to evaluate a user's video presentation based on an original video transcript.
+      You are a STRICT video presentation evaluator. Evaluate a user's video presentation based on an original video transcript.
+      
+      CRITICAL EVALUATION RULES:
+      1. Be VERY STRICT - presentations should score 0-30% unless they show GENUINE skill
+      2. Poor pronunciation or delivery should receive low scores (0-20%)
+      3. Generic or copied content should score 0-15%
+      4. Only presentations with GOOD delivery and content should score above 50%
+      5. 80%+ is reserved ONLY for exceptional presentations
       
       Original Video Transcript:
       """
@@ -119,85 +134,51 @@ export async function evaluateVideoPresentation(
       ${userVideoTranscript}
       """
       
-      Please evaluate the user's presentation on the following criteria:
+      STRICT SCORING GUIDELINES:
+      - 90-100: EXCEPTIONAL - Excellent delivery, perfect content, engaging presentation
+      - 80-89: EXCELLENT - Good delivery, accurate content, clear presentation
+      - 70-79: GOOD - Decent delivery, mostly accurate content
+      - 50-69: FAIR - Basic delivery, some content issues
+      - 30-49: POOR - Poor delivery, significant content problems
+      - 0-29: FAILING - Very poor delivery, inaccurate or irrelevant content
+      
+      AUTOMATIC PENALTIES:
+      - Transcript under 100 words: Automatic score under 20%
+      - No clear structure: Maximum 40%
+      - Poor grammar/pronunciation: Maximum 30%
+      
+      Evaluate on:
       1. Pronunciation and fluency (score out of 100)
       2. Content accuracy and completeness (score out of 100)
       3. Presentation style and engagement (score out of 100)
       
-      Provide specific strengths and weaknesses of the user's presentation.
-      Calculate an overall score out of 100 based on these criteria.
-      
-      Format your response as a JSON object with the following structure:
+      Format your response as JSON:
       {
         "score": number,
-        "feedback": "string",
-        "strengths": ["string"],
-        "weaknesses": ["string"],
+        "feedback": "specific explanation of the score",
+        "strengths": ["specific strengths"],
+        "weaknesses": ["specific weaknesses"],
         "grammarScore": number,
         "contentScore": number,
         "originalityScore": number
       }
     `
 
-    try {
-      // Generate content using Gemini AI
-      const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" })
-      const result = await model.generateContent(prompt)
-      const response = result.response
-      const text = response.text()
+    // Generate content using Gemini AI
+    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" })
+    const result = await model.generateContent(prompt)
+    const response = result.response
+    const text = response.text()
 
-      // Parse the JSON response
-      const jsonMatch = text.match(/```json\n([\s\S]*?)\n```/) || text.match(/({[\s\S]*})/)
-      if (jsonMatch && jsonMatch[1]) {
-        return JSON.parse(jsonMatch[1]) as ContentEvaluation
-      }
-    } catch (error) {
-      console.error("Error with Gemini API:", error)
-      return getMockVideoEvaluation()
+    // Parse the JSON response
+    const jsonMatch = text.match(/```json\n([\s\S]*?)\n```/) || text.match(/({[\s\S]*})/)
+    if (jsonMatch && jsonMatch[1]) {
+      return JSON.parse(jsonMatch[1]) as ContentEvaluation
     }
-
-    // If JSON parsing fails, create a default evaluation
-    return getMockVideoEvaluation()
+    
+    throw new Error("Could not parse JSON response from Gemini AI")
   } catch (error) {
-    console.error("Error evaluating video presentation:", error)
-
-    // Return a mock evaluation in case of error
-    return getMockVideoEvaluation()
-  }
-}
-
-// Function to generate a mock content evaluation
-function getMockEvaluation(content: string): ContentEvaluation {
-  // Calculate a score based on content length to make it somewhat dynamic
-  const lengthScore = Math.min(Math.max(content.length / 20, 60), 95)
-  const randomVariation = Math.floor(Math.random() * 10) - 5 // -5 to +5
-
-  return {
-    score: Math.round(lengthScore + randomVariation),
-    feedback:
-      "Your content demonstrates good understanding of the key points from the video. You've used appropriate vocabulary and maintained good grammar throughout.",
-    strengths: [
-      "Clear organization of ideas",
-      "Good use of vocabulary",
-      "Accurate representation of the video content",
-    ],
-    weaknesses: ["Could include more specific examples", "Some sentences could be more concise"],
-    grammarScore: Math.round(lengthScore + Math.floor(Math.random() * 10) - 2),
-    contentScore: Math.round(lengthScore + Math.floor(Math.random() * 10) - 3),
-    originalityScore: Math.round(lengthScore + Math.floor(Math.random() * 10) - 4),
-  }
-}
-
-// Function to generate a mock video evaluation
-function getMockVideoEvaluation(): ContentEvaluation {
-  return {
-    score: 82,
-    feedback:
-      "Your video presentation shows confidence and good pronunciation. The pacing is appropriate and you maintain good eye contact.",
-    strengths: ["Clear pronunciation", "Good pacing", "Confident delivery"],
-    weaknesses: ["Occasional hesitation", "Could improve intonation for emphasis"],
-    grammarScore: 85,
-    contentScore: 80,
-    originalityScore: 82,
+    console.error("❌ Error evaluating video presentation:", error)
+    throw new Error(`Video presentation evaluation failed: ${error}`)
   }
 }

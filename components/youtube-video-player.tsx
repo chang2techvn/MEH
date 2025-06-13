@@ -11,8 +11,7 @@ export default function YouTubeVideoPlayer({
   title,
   requiredWatchTime = 180, // Default 3 minutes
   onWatchComplete,
-}: YouTubeVideoPlayerProps) {
-  const {
+}: YouTubeVideoPlayerProps) {  const {
     playerState,
     playerContainerRef,
     playbackRateMenuRef,
@@ -21,8 +20,11 @@ export default function YouTubeVideoPlayer({
     handleForward,
     handlePlaybackRateChange,
     handleFullscreen,
+    handleVolumeChange,
+    handleMuteToggle,
     reloadVideo,
     setShowPlaybackRateMenu,
+    setShowVolumeSlider,
   } = useYouTubePlayer(videoId, requiredWatchTime, onWatchComplete)
 
   return (
@@ -36,9 +38,7 @@ export default function YouTubeVideoPlayer({
           {/* YouTube player container */}
           <div className="w-full h-full">
             <div ref={playerContainerRef} className="w-full h-full" />
-          </div>
-
-          {/* Custom controls */}
+          </div>          {/* Custom controls */}
           <VideoControls
             playerState={playerState}
             requiredWatchTime={requiredWatchTime}
@@ -47,7 +47,10 @@ export default function YouTubeVideoPlayer({
             onForward={handleForward}
             onPlaybackRateChange={handlePlaybackRateChange}
             onFullscreen={handleFullscreen}
+            onVolumeChange={handleVolumeChange}
+            onMuteToggle={handleMuteToggle}
             onShowPlaybackRateMenuChange={setShowPlaybackRateMenu}
+            onShowVolumeSliderChange={setShowVolumeSlider}
             playbackRateMenuRef={playbackRateMenuRef}
           />
         </>

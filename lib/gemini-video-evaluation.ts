@@ -139,9 +139,7 @@ export async function evaluateVideoSubmission(
     if (!apiKey) {
       console.log("No Gemini API key found, returning mock evaluation")
       return generateMockVideoEvaluation()
-    }
-
-    const systemPrompt = `You are an expert English language instructor and communication coach specializing in comprehensive video evaluation for English learners. Your task is to evaluate video submissions across multiple dimensions to help users improve their English skills.
+    }    const systemPrompt = `You are an expert English language instructor and communication coach specializing in comprehensive video evaluation for English learners. Your task is to evaluate video submissions across multiple dimensions to help users improve their English skills.
 
 You evaluate videos on these specific criteria:
 
@@ -181,6 +179,15 @@ CAPTION QUALITY (12.5% weight):
 - Emotional appeal
 - Personal branding consistency
 
+IMPORTANT: When evaluating content that responds to an original video or lesson, pay special attention to:
+- How well the user understood and internalized the original content
+- Whether their response demonstrates genuine comprehension vs. superficial copying
+- The accuracy of their interpretation and explanation of key concepts
+- Their ability to explain topics in their own words while maintaining accuracy
+- Use of appropriate vocabulary and terminology from the original content
+
+Be STRICT but fair in your evaluation. Content that shows genuine understanding and good English skills should score well, while generic or inaccurate responses should receive lower scores.
+
 Provide scores from 0-100 for each criterion and comprehensive feedback. Be encouraging but honest, focusing on helping users improve their English communication skills.`
 
     const evaluationPrompt = `Please evaluate this English learning video submission comprehensively:
@@ -189,49 +196,86 @@ VIDEO DETAILS:
 - Video URL: ${videoUrl}
 - User Caption: "${caption}"
 ${transcript ? `- Video Transcript: "${transcript}"` : ""}
-${originalContent ? `- Original Content Reference: "${originalContent}"` : ""}
+${originalContent ? `
+
+ORIGINAL CONTENT CONTEXT:
+${originalContent}
+
+IMPORTANT: This user's video is responding to the original content above. Evaluate how well they:
+- Understood and internalized the original material
+- Demonstrated genuine comprehension vs. superficial copying
+- Accurately interpreted and explained key concepts
+- Used their own words while maintaining accuracy
+- Applied appropriate vocabulary and terminology from the original content
+
+Be STRICT but fair. Content showing genuine understanding and good English skills should score well, while generic or inaccurate responses should receive lower scores.` : ""}
 
 Please provide a detailed evaluation with:
 
 1. OVERALL ASSESSMENT (0-100 score)
+${originalContent ? `   - Consider comprehension of original content (30% weight)
+   - English language skills (40% weight)  
+   - Video presentation quality (30% weight)` : ""}
+
 2. SPEAKING & PRONUNCIATION scores (0-100 each):
    - Pronunciation accuracy
    - Intonation patterns
    - Stress placement
    - Linking sounds
+
 3. LANGUAGE USAGE scores (0-100 each):
    - Grammar accuracy
    - Verb tenses usage
-   - Vocabulary variety
-   - Collocations
+   - Vocabulary variety and appropriateness
+   - Natural collocations and phrases
+
 4. FLUENCY & DELIVERY scores (0-100 each):
-   - Speaking fluency
-   - Speaking speed
-   - Confidence level
+   - Speaking fluency and natural flow
+   - Speaking speed and rhythm
+   - Confidence level in delivery
+   - Clarity of expression
+
 5. VISUAL & PRESENTATION scores (0-100 each):
-   - Facial expressions
-   - Body language
-   - Eye contact
+   - Facial expressions and engagement
+   - Body language and gestures
+   - Eye contact with camera/audience
    - Audience interaction
+
 6. CAPTION QUALITY scores (0-100 each):
    - Spelling accuracy
-   - Grammar
-   - Vocabulary appropriateness
-   - Message clarity
+   - Grammar in written form
+   - Vocabulary appropriateness for social media
+   - Message clarity and coherence
    - Call-to-action effectiveness
-   - Hashtag usage
+   - Hashtag usage and relevance
    - SEO optimization
-   - Creativity
+   - Creativity and engagement
    - Emotional appeal
-   - Personal branding
+   - Personal branding consistency
 
-7. DETAILED FEEDBACK:
+${originalContent ? `7. CONTENT ACCURACY & COMPREHENSION scores (0-100 each):
+   - Understanding of original concepts
+   - Accuracy of interpretation
+   - Use of specific details from original content
+   - Ability to explain in own words
+   - Application of key terminology
+
+` : ""}7. DETAILED FEEDBACK:
    - Overall constructive feedback (2-3 sentences)
-   - Top 3-5 strengths
-   - Top 3-5 areas for improvement
+   - Top 3-5 strengths observed
+   - Top 3-5 specific areas for improvement
    - Category-specific feedback for each major area
+${originalContent ? `   - Specific feedback on content comprehension and accuracy` : ""}
 
-Format your response as a structured evaluation that helps the user understand their current level and specific steps to improve.`
+SCORING GUIDELINES:
+- 90-100: EXCEPTIONAL - Outstanding performance across all criteria
+- 80-89: EXCELLENT - Strong performance with minor areas for improvement
+- 70-79: GOOD - Solid performance with some notable strengths
+- 60-69: SATISFACTORY - Adequate performance with clear improvement areas
+- 50-59: NEEDS IMPROVEMENT - Basic performance requiring significant work
+- 0-49: UNSATISFACTORY - Major deficiencies requiring fundamental improvement
+
+Format your response as a structured evaluation that helps the user understand their current level and provides specific, actionable steps to improve.`
 
     const response = await generateGeminiResponse(evaluationPrompt, systemPrompt)
     

@@ -9,6 +9,11 @@ export interface YouTubePlayer {
   setPlaybackRate: (rate: number) => void
   getPlaybackRate: () => number
   getAvailablePlaybackRates: () => number[]
+  setVolume: (volume: number) => void
+  getVolume: () => number
+  mute: () => void
+  unMute: () => void
+  isMuted: () => boolean
   destroy: () => void
 }
 
@@ -51,4 +56,7 @@ export interface PlayerState {
   showPlaybackRateMenu: boolean
   currentTime: number
   duration: number
+  volume: number
+  isMuted: boolean
+  showVolumeSlider: boolean
 }

@@ -98,6 +98,7 @@
     "workbox-strategies": "latest",
     "xlsx": "latest",
     "youtube-transcript": "^1.2.1",
+    "youtube-transcript-js-api": "^1.4.2",
     "zod": "latest"
   },
   "devDependencies": {

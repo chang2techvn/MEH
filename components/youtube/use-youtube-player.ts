@@ -9,8 +9,7 @@ export function useYouTubePlayer(
   videoId: string,
   requiredWatchTime: number,
   onWatchComplete?: () => void
-) {
-  const [playerState, setPlayerState] = useState<PlayerState>({
+) {  const [playerState, setPlayerState] = useState<PlayerState>({
     loading: true,
     error: false,
     watchTime: 0,
@@ -20,6 +19,9 @@ export function useYouTubePlayer(
     showPlaybackRateMenu: false,
     currentTime: 0,
     duration: 0,
+    volume: 100,
+    isMuted: false,
+    showVolumeSlider: false,
   })
 
   const timerRef = useRef<NodeJS.Timeout | null>(null)
@@ -106,18 +108,21 @@ export function useYouTubePlayer(
       }
     }
   }, [initializePlayer])
-
   // ✅ Optimized time update
   const updateCurrentTime = useCallback(() => {
     if (playerRef.current && playerReadyRef.current) {
       try {
         const time = playerRef.current.getCurrentTime()
         const videoDuration = playerRef.current.getDuration()
+        const currentVolume = playerRef.current.getVolume()
+        const isMutedState = playerRef.current.isMuted()
         
         setPlayerState(prev => ({
           ...prev,
           currentTime: time,
-          duration: videoDuration > 0 && videoDuration !== prev.duration ? videoDuration : prev.duration
+          duration: videoDuration > 0 && videoDuration !== prev.duration ? videoDuration : prev.duration,
+          volume: currentVolume !== undefined ? currentVolume : prev.volume,
+          isMuted: isMutedState !== undefined ? isMutedState : prev.isMuted,
         }))
       } catch (err) {
         // Ignore errors during state updates
@@ -156,15 +161,24 @@ export function useYouTubePlayer(
 
     return () => clearInterval(timeUpdateInterval)
   }, [updateCurrentTime, playerState.isPlaying])
-
-  // ✅ Completion handling
+  // ✅ Completion handling with auto-pause
   useEffect(() => {
     if (playerState.watchTime >= requiredWatchTime && !playerState.completed) {
       setPlayerState(prev => ({ ...prev, completed: true }))
 
+      // 🚀 AUTO-PAUSE VIDEO when watch time requirement is met
+      if (playerRef.current && playerReadyRef.current && playerState.isPlaying) {
+        try {
+          playerRef.current.pauseVideo()
+          console.log(`✅ Video auto-paused after reaching required watch time of ${requiredWatchTime} seconds`)
+        } catch (err) {
+          console.error("Error auto-pausing video:", err)
+        }
+      }
+
       toast({
-        title: "Watch requirement completed!",
-        description: "You can now proceed to the next step.",
+        title: "🎉 Watch requirement completed!",
+        description: `You've watched ${requiredWatchTime} seconds. Video has been paused. You can now proceed to the next step.`,
         variant: "default",
       })
 
@@ -174,7 +188,7 @@ export function useYouTubePlayer(
         }, 0)
       }
     }
-  }, [playerState.watchTime, requiredWatchTime, playerState.completed, onWatchComplete])
+  }, [playerState.watchTime, requiredWatchTime, playerState.completed, playerState.isPlaying, onWatchComplete])
 
   // Player control functions
   const handlePlayPause = useCallback(() => {
@@ -228,7 +242,6 @@ export function useYouTubePlayer(
       console.error("Error changing playback rate:", err)
     }
   }, [])
-
   const handleFullscreen = useCallback(() => {
     if (!playerContainerRef.current) return
 
@@ -241,6 +254,43 @@ export function useYouTubePlayer(
     } catch (err) {
       console.error("Error toggling fullscreen:", err)
     }
+  }, [])
+
+  const handleVolumeChange = useCallback((volume: number) => {
+    if (!playerRef.current || !playerReadyRef.current) return
+
+    try {
+      playerRef.current.setVolume(volume)
+      setPlayerState(prev => ({ 
+        ...prev, 
+        volume: volume,
+        isMuted: volume === 0
+      }))
+    } catch (err) {
+      console.error("Error changing volume:", err)
+    }
+  }, [])
+
+  const handleMuteToggle = useCallback(() => {
+    if (!playerRef.current || !playerReadyRef.current) return
+
+    try {
+      if (playerState.isMuted) {
+        playerRef.current.unMute()
+        const volume = playerState.volume > 0 ? playerState.volume : 50
+        playerRef.current.setVolume(volume)
+        setPlayerState(prev => ({ ...prev, isMuted: false, volume }))
+      } else {
+        playerRef.current.mute()
+        setPlayerState(prev => ({ ...prev, isMuted: true }))
+      }
+    } catch (err) {
+      console.error("Error toggling mute:", err)
+    }
+  }, [playerState.isMuted, playerState.volume])
+
+  const setShowVolumeSlider = useCallback((show: boolean) => {
+    setPlayerState(prev => ({ ...prev, showVolumeSlider: show }))
   }, [])
 
   const reloadVideo = useCallback(() => {
@@ -261,7 +311,6 @@ export function useYouTubePlayer(
   const setShowPlaybackRateMenu = useCallback((show: boolean) => {
     setPlayerState(prev => ({ ...prev, showPlaybackRateMenu: show }))
   }, [])
-
   return {
     playerState,
     playerContainerRef,
@@ -271,7 +320,10 @@ export function useYouTubePlayer(
     handleForward,
     handlePlaybackRateChange,
     handleFullscreen,
+    handleVolumeChange,
+    handleMuteToggle,
     reloadVideo,
     setShowPlaybackRateMenu,
+    setShowVolumeSlider,
   }
 }

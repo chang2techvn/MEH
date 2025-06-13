@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -30,6 +30,7 @@ interface PostPreviewProps {
   onPublish: (evaluation?: VideoEvaluation) => Promise<void>
   isSubmitting?: boolean
   autoPublish?: boolean
+  preEvaluation?: VideoEvaluation | null
 }
 
 export default function PostPreview({
@@ -43,13 +44,21 @@ export default function PostPreview({
   onPublish,
   isSubmitting = false,
   autoPublish = false,
+  preEvaluation = null,
 }: PostPreviewProps) {
   const [saved, setSaved] = useState(false)
   const [isPublishing, setIsPublishing] = useState(false)
   const [showPublishDialog, setShowPublishDialog] = useState(false)
-  const [isEvaluating, setIsEvaluating] = useState(false)
-  const [evaluation, setEvaluation] = useState<VideoEvaluation | null>(null)
+  const [isEvaluating, setIsEvaluating] = useState(false)  
+  const [evaluation, setEvaluation] = useState<VideoEvaluation | null>(preEvaluation)
   const [showEvaluationDialog, setShowEvaluationDialog] = useState(false)
+
+  // Update evaluation when preEvaluation changes
+  useEffect(() => {
+    if (preEvaluation) {
+      setEvaluation(preEvaluation)
+    }
+  }, [preEvaluation])
 
   const handleSave = () => {
     setSaved(true)
@@ -64,24 +73,6 @@ export default function PostPreview({
       title: "Share link copied",
       description: "The link to your post has been copied to clipboard.",
     })
-  }
-
-  const handleAIEvaluation = async () => {
-    setIsEvaluating(true)
-    try {
-      const aiEvaluation = await evaluateSubmissionForPublish(videoUrl, content)
-      setEvaluation(aiEvaluation)
-      setShowEvaluationDialog(true)
-    } catch (error) {
-      console.error("Error during AI evaluation:", error)
-      toast({
-        title: "Evaluation unavailable",
-        description: "AI evaluation failed, but you can still proceed with publishing.",
-        variant: "destructive",
-      })
-    } finally {
-      setIsEvaluating(false)
-    }
   }
 
   const handlePublish = async () => {
@@ -189,26 +180,7 @@ export default function PostPreview({
                 Share
               </Button>
 
-              {/* AI Evaluation Button */}
-              <Button
-                onClick={handleAIEvaluation}
-                disabled={isEvaluating}
-                variant="outline"
-                className="flex items-center gap-2 border-blue-500/50 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950"
-              >
-                {isEvaluating ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Evaluating...
-                  </>
-                ) : (
-                  <>
-                    <Brain className="h-4 w-4" />
-                    {evaluation ? "View Evaluation" : "Get AI Evaluation"}
-                  </>
-                )}
-              </Button>
-
+              
               {!autoPublish && (
                 <Button
                   onClick={() => setShowPublishDialog(true)}
@@ -221,7 +193,7 @@ export default function PostPreview({
 
               <Button
                 onClick={handleSubmit}
-                disabled={isSubmitting || isEvaluating}
+                disabled={isSubmitting}
                 variant={autoPublish ? "default" : "outline"}
                 className={
                   autoPublish
@@ -229,15 +201,15 @@ export default function PostPreview({
                     : "ml-2"
                 }
               >
-                {isSubmitting || isEvaluating ? (
+                {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {autoPublish ? "Evaluating & Publishing..." : "Submitting..."}
+                    {autoPublish ? "Publishing..." : "Submitting..."}
                   </>
                 ) : autoPublish ? (
                   <>
                     <Send className="mr-2 h-4 w-4" />
-                    Submit & Publish with AI
+                    Submit & Publish
                   </>
                 ) : (
                   "Submit for Evaluation"
@@ -308,44 +280,7 @@ export default function PostPreview({
         </DialogContent>
       </Dialog>
 
-      {/* AI Evaluation Dialog */}
-      <Dialog open={showEvaluationDialog} onOpenChange={setShowEvaluationDialog}>
-        <DialogContent className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-white/20 dark:border-gray-800/20 sm:max-w-4xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Brain className="h-5 w-5 text-neo-mint" />
-              AI Video Evaluation Results
-            </DialogTitle>
-            <DialogDescription>
-              Comprehensive analysis of your video and caption quality
-            </DialogDescription>
-          </DialogHeader>
 
-          {evaluation && (
-            <div className="py-4">
-              <VideoEvaluationDisplay evaluation={evaluation} showFullDetails={true} />
-            </div>
-          )}
-
-          <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
-            <Button variant="outline" onClick={() => setShowEvaluationDialog(false)}>
-              Close
-            </Button>
-            {!autoPublish && (
-              <Button
-                onClick={() => {
-                  setShowEvaluationDialog(false)
-                  setShowPublishDialog(true)
-                }}
-                className="bg-gradient-to-r from-neo-mint to-purist-blue hover:from-neo-mint/90 hover:to-purist-blue/90 text-white border-0"
-              >
-                <Send className="mr-2 h-4 w-4" />
-                Proceed to Publish
-              </Button>
-            )}
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </>
   )
 }

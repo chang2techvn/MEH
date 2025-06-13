@@ -182,65 +182,119 @@ export async function extractYouTubeTranscriptForDuration(videoId: string, maxDu
       console.log(`❌ No transcript found without language specification`)
     }
   }
-  
-  console.log(`📊 Transcript fetch result:`, {
+    console.log(`📊 Transcript fetch result:`, {
     transcriptFound: !!transcript,
     transcriptLength: transcript?.length || 0,
     firstItem: transcript?.[0] || null
   })
   
-  // If no transcript found, throw error immediately
+  // If no real transcript found, fallback to simulated transcript
   if (!transcript || transcript.length === 0) {
-    const errorMessage = `❌ Failed to extract transcript for video ${videoId}. No transcript available for the required watch time of ${maxDurationSeconds} seconds.`
-    console.error(errorMessage)
-    throw new Error(errorMessage)
-  }
-
-  // Filter transcript segments that fall within the specified duration (by cumulative duration)
-  let totalTime = 0
-  const filteredTranscript: any[] = []
-  for (const item of transcript) {
-    // Prefer duration if available, fallback to offset difference if not
-    let duration = 0
-    if (typeof item.duration === 'number') {
-      duration = item.duration
-    } else if (typeof item.duration === 'string') {
-      duration = parseFloat(item.duration)
-    } else if (item.offset && transcript.length > 1) {
-      // Estimate duration as difference to next offset (if possible)
-      const idx = transcript.indexOf(item)
-      if (idx < transcript.length - 1) {
-        const nextOffset = transcript[idx + 1].offset ? transcript[idx + 1].offset / 1000 : 0
-        const thisOffset = item.offset ? item.offset / 1000 : 0
-        duration = Math.max(0, nextOffset - thisOffset)
-      }
+    console.log(`⚠️ No real transcript found, falling back to simulated content...`)
+    
+    // Get simulated transcript from the main function
+    const fullSimulatedTranscript = await extractYouTubeTranscript(videoId)
+    
+    if (fullSimulatedTranscript === "Transcript unavailable") {
+      const errorMessage = `❌ Failed to extract transcript for video ${videoId}. No transcript available for the required watch time of ${maxDurationSeconds} seconds.`
+      console.error(errorMessage)
+      throw new Error(errorMessage)
     }
-    if (totalTime + duration > maxDurationSeconds) break
-    filteredTranscript.push(item)
-    totalTime += duration
+    
+    // For simulated transcript, estimate word timing and return appropriate portion
+    const words = fullSimulatedTranscript.split(' ')
+    const avgWordsPerSecond = 2.5 // Average speaking rate
+    const maxWords = Math.ceil(maxDurationSeconds * avgWordsPerSecond)
+    const limitedSimulatedTranscript = words.slice(0, maxWords).join(' ')
+    
+    console.log(`✅ Using simulated transcript: ${limitedSimulatedTranscript.length} characters (estimated ${maxDurationSeconds}s)`)
+    console.log(`\n=== SIMULATED LIMITED TRANSCRIPT FOR ${videoId} (${maxDurationSeconds}s) ===`)
+    console.log(limitedSimulatedTranscript.substring(0, 500) + (limitedSimulatedTranscript.length > 500 ? '...' : ''))
+    console.log(`=== END SIMULATED LIMITED TRANSCRIPT ===\n`)
+    
+    return limitedSimulatedTranscript
   }
-
-  console.log(`⏰ Filtering transcript by cumulative duration: ${filteredTranscript.length} segments, totalTime=${totalTime}s (limit=${maxDurationSeconds}s)`)
+  // Filter transcript segments that fall within the specified duration
+  let cumulativeTime = 0
+  const filteredTranscript: any[] = []
   
-  // Check if we have any segments within the time limit
-  if (filteredTranscript.length === 0) {
-    const errorMessage = `❌ No transcript segments found within the required watch time of ${maxDurationSeconds} seconds for video ${videoId}.`
-    console.error(errorMessage)
-    throw new Error(errorMessage)
+  console.log(`🔍 Processing ${transcript.length} transcript segments for ${maxDurationSeconds}s limit`)
+  
+  for (let i = 0; i < transcript.length; i++) {
+    const item = transcript[i]
+    
+    // Calculate segment duration more reliably
+    let segmentDuration = 0
+    
+    if (typeof item.duration === 'number' && item.duration > 0) {
+      segmentDuration = item.duration
+    } else if (typeof item.duration === 'string' && parseFloat(item.duration) > 0) {
+      segmentDuration = parseFloat(item.duration)
+    } else if (item.offset !== undefined && i < transcript.length - 1) {
+      // Use offset difference for duration calculation
+      const currentOffset = (item.offset || 0) / 1000
+      const nextOffset = (transcript[i + 1].offset || 0) / 1000
+      segmentDuration = Math.max(0.1, nextOffset - currentOffset) // Minimum 0.1s per segment
+    } else {
+      // Default segment duration if no other info available
+      segmentDuration = 2.0 // Assume 2 seconds per segment as default
+    }
+    
+    // Include segment if we haven't exceeded the time limit
+    if (cumulativeTime < maxDurationSeconds) {
+      filteredTranscript.push(item)
+      console.log(`📝 Segment ${i}: "${item.text?.substring(0, 50)}..." (${segmentDuration}s) - Total: ${cumulativeTime}s`)
+    }
+    
+    cumulativeTime += segmentDuration
+    
+    // Stop if we've exceeded the time limit significantly
+    if (cumulativeTime > maxDurationSeconds + 5) {
+      break
+    }
   }
-
+  console.log(`⏰ Filtering result: ${filteredTranscript.length} segments from ${transcript.length} total, estimated time=${cumulativeTime.toFixed(1)}s (limit=${maxDurationSeconds}s)`)
+  
+  // If no segments found, use a more lenient approach
+  if (filteredTranscript.length === 0) {
+    console.log(`⚠️ No segments found with time filtering, using first few segments as fallback`)
+    // Take at least the first 3 segments or 10% of total, whichever is larger
+    const fallbackCount = Math.max(3, Math.ceil(transcript.length * 0.1))
+    for (let i = 0; i < Math.min(fallbackCount, transcript.length); i++) {
+      filteredTranscript.push(transcript[i])
+    }
+    console.log(`📄 Fallback: Using first ${filteredTranscript.length} segments`)
+  }
   // Combine filtered transcript segments into a single string
   const limitedTranscript = filteredTranscript
-    .map((item: any) => item.text)
+    .map((item: any) => item.text || '')
+    .filter(text => text.trim().length > 0)
     .join(' ')
     .replace(/\s+/g, ' ')
     .trim()
 
   // Check if the limited transcript has meaningful content
-  if (!limitedTranscript || limitedTranscript.length < 10) {
-    const errorMessage = `❌ Insufficient transcript content found within the required watch time of ${maxDurationSeconds} seconds for video ${videoId}.`
-    console.error(errorMessage)
-    throw new Error(errorMessage)
+  if (!limitedTranscript || limitedTranscript.length < 5) {
+    console.log(`⚠️ Very short transcript content (${limitedTranscript.length} chars), using more segments`)
+    
+    // If content is too short, take more segments
+    const extraSegments = Math.min(10, transcript.length)
+    const expandedTranscript = transcript
+      .slice(0, extraSegments)
+      .map((item: any) => item.text || '')
+      .filter(text => text.trim().length > 0)
+      .join(' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+    
+    if (expandedTranscript.length < 5) {
+      const errorMessage = `❌ Video ${videoId} has insufficient transcript content. Total available: ${expandedTranscript.length} characters.`
+      console.error(errorMessage)
+      throw new Error(errorMessage)
+    }
+    
+    console.log(`✅ Using expanded transcript: ${expandedTranscript.length} characters from ${extraSegments} segments`)
+    return expandedTranscript
   }
 
   // Print limited transcript to terminal for testing

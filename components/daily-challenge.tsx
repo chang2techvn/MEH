@@ -21,6 +21,7 @@ import { getVideoSettings } from "@/app/actions/admin-settings"
 import { compareVideoContentWithUserContent, type ContentComparison } from "@/app/actions/content-comparison"
 import { extractYouTubeTranscript } from "@/app/utils/video-processor"
 import { v4 as uuidv4 } from "uuid"
+import type { VideoEvaluation } from "@/lib/gemini-video-evaluation"
 
 interface DailyChallengeProps {
   userId: string
@@ -37,7 +38,7 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
   const [rewrittenContent, setRewrittenContent] = useState("")
   const [videoFile, setVideoFile] = useState<File | null>(null)
   const [videoPreviewUrl, setVideoPreviewUrl] = useState<string | null>(null)
-  const [submitting, setSubmitting] = useState(false)
+  const [submitting, setSubmitting] = useState(false)  
   const [error, setError] = useState<string | null>(null)
   const [videoWatched, setVideoWatched] = useState(false)
   const [retryCount, setRetryCount] = useState(0)
@@ -45,7 +46,12 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
   const [richTextContent, setRichTextContent] = useState("")
   const [publishedPostId, setPublishedPostId] = useState<string | null>(null)
   const [isPublished, setIsPublished] = useState(false)
-    // Refs for scrolling
+  
+  // Video evaluation state
+  const [videoEvaluation, setVideoEvaluation] = useState<VideoEvaluation | null>(null)
+  const [isEvaluating, setIsEvaluating] = useState(false)
+  
+  // Refs for scrolling
   const challengeHeaderRef = useRef<HTMLDivElement>(null)
   const rewriteContentRef = useRef<HTMLDivElement>(null)
   const comparisonResultsRef = useRef<HTMLDivElement>(null)
@@ -204,8 +210,7 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
             setIsComparingContent(false)
             return
           }
-        }
-      } else if (activeStep === 3) {
+        }      } else if (activeStep === 3) {
         // Validate rich text content and video
         if (richTextContent.trim().length < 100) {
           setError("Please write at least 100 characters for your blog post.")
@@ -214,6 +219,38 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
         if (!videoFile) {
           setError("Please upload a video before proceeding.")
           return
+        }
+          // Perform AI evaluation before proceeding to step 4
+        if (videoData && videoPreviewUrl) {
+          setIsEvaluating(true)
+          setError(null)
+          
+          try {
+            const { evaluateSubmissionForPublish } = await import("@/lib/gemini-video-evaluation")
+            
+            // Extract the original video's transcript for evaluation context
+            const originalTranscript = await extractYouTubeTranscript(videoData.id)
+            
+            // Create challenge context including original video info
+            const challengeContext = `Daily English Challenge - Original Video: "${videoData.title}" | Topic: ${videoData.topics?.join(', ') || 'General English Learning'} | User is responding to and creating content based on this original video.`
+            
+            // Evaluate with original video transcript as context and user's content as caption
+            const evaluation = await evaluateSubmissionForPublish(
+              videoPreviewUrl, 
+              richTextContent, 
+              originalTranscript, 
+              challengeContext
+            )
+            
+            setVideoEvaluation(evaluation)
+            console.log("✅ Video evaluation completed before step 4")
+          } catch (error) {
+            console.error("Error during AI evaluation:", error)
+            // Continue to next step even if evaluation fails
+            setVideoEvaluation(null)
+          } finally {
+            setIsEvaluating(false)
+          }
         }
       }
 
@@ -325,13 +362,26 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
     try {
       // Generate a unique ID for the post
       const postId = uuidv4()
-      setPublishedPostId(postId)
-
-      // Perform AI evaluation before publishing
+      setPublishedPostId(postId)      // Perform AI evaluation before publishing with original video context
       let videoEvaluation = null
       try {
         const { evaluateSubmissionForPublish } = await import("@/lib/gemini-video-evaluation")
-        videoEvaluation = await evaluateSubmissionForPublish(videoPreviewUrl, richTextContent)
+        
+        // Extract the original video's transcript for evaluation context
+        const originalTranscript = await extractYouTubeTranscript(videoData.id)
+        
+        // Create challenge context including original video info
+        const challengeContext = `Daily English Challenge - Original Video: "${videoData.title}" | Topic: ${videoData.topics?.join(', ') || 'General English Learning'} | User is responding to and creating content based on this original video.`
+        
+        // Evaluate with original video transcript as context and user's content as caption
+        videoEvaluation = await evaluateSubmissionForPublish(
+          videoPreviewUrl, 
+          richTextContent, 
+          originalTranscript, 
+          challengeContext
+        )
+        
+        console.log("✅ Video evaluation completed with original video context")
       } catch (error) {
         console.error("Error during AI evaluation:", error)
         // Continue with publishing even if evaluation fails
@@ -396,8 +446,7 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
   // Handle retry
   const handleRetry = () => {
     setRetryCount((prev) => prev + 1)
-  }
-  // Reset challenge
+  }  // Reset challenge
   const resetChallenge = () => {
     setRichTextContent("")
     setVideoFile(null)
@@ -410,6 +459,8 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
     setContentComparison(null)
     setIsComparingContent(false)
     setShowComparisonFeedback(false)
+    setVideoEvaluation(null)
+    setIsEvaluating(false)
     setRetryCount((prev) => prev + 1)
   }
 
@@ -579,8 +630,7 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ duration: 0.3 }}
                   className="md:w-full"
-                >
-                  <PostPreview
+                >                  <PostPreview
                     title={videoData?.title || "My Video Analysis"}
                     content={richTextContent}
                     videoUrl={videoPreviewUrl || ""}
@@ -594,6 +644,7 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
                     onPublish={handlePublish}
                     isSubmitting={submitting}
                     autoPublish={adminSettings.autoPublish}
+                    preEvaluation={videoEvaluation}
                   />
                 </motion.div>
               )}
@@ -789,18 +840,22 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
               <div className="flex gap-2">                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                   <Button
                     size="sm"
-                    onClick={handleNextStep}
-                    disabled={
+                    onClick={handleNextStep}                    disabled={
                       (activeStep === 1 && adminSettings.enforceWatchTime && !videoWatched) ||
                       isComparingContent ||
-                      (activeStep === 2 && showComparisonFeedback)
+                      (activeStep === 2 && showComparisonFeedback) ||
+                      isEvaluating
                     }
                     className="bg-gradient-to-r from-neo-mint to-purist-blue hover:from-neo-mint/90 hover:to-purist-blue/90 text-white border-0"
-                  >
-                    {isComparingContent ? (
+                  >                    {isComparingContent ? (
                       <>
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                         Analyzing...
+                      </>
+                    ) : isEvaluating ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Evaluating...
                       </>
                     ) : (
                       "Next Step"
