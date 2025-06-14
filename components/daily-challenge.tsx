@@ -126,7 +126,8 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
     fetchSettings()
   }, [])
   // Fetch today's video
-  useEffect(() => {    const fetchVideo = async () => {
+  useEffect(() => {
+    const fetchVideo = async () => {
       try {
         setLoading(true)
         setError(null)
@@ -134,18 +135,17 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
         const video = await getTodayVideo()
         console.log("Video fetched successfully:", video.id)
         setVideoData(video)
-        
-        // Log transcript info (already extracted and saved in database)
-        console.log("=== VIDEO TRANSCRIPT INFO ===")
-        if (video.transcript && video.transcript.length > 50) {
-          console.log("✅ Transcript available from database!")
+          // Check if video already has transcript from database
+        console.log("=== CHECKING VIDEO TRANSCRIPT ===")
+        if (video.transcript && video.transcript.length > 100) {
+          console.log("✅ Using transcript from database!")
           console.log(`📝 Transcript length: ${video.transcript.length} characters`)
-          console.log(`🎬 First 200 chars: ${video.transcript.substring(0, 200)}...`)
+          console.log(`📄 Transcript preview: ${video.transcript.substring(0, 200)}...`)
         } else {
-          console.log("⚠️ No transcript available or very short transcript")
-          console.log(`📝 Transcript: ${video.transcript}`)
+          console.log("⚠️ No transcript in database, would need to extract...")
+          console.log("📝 Transcript from database:", video.transcript || "null")
         }
-        console.log("=== END TRANSCRIPT INFO ===")
+        console.log("=== END TRANSCRIPT CHECK ===")
         
       } catch (err) {
         console.error("Error fetching video:", err)
@@ -224,11 +224,12 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
         if (videoData && videoPreviewUrl) {
           setIsEvaluating(true)
           setError(null)
-            try {
+          
+          try {
             const { evaluateSubmissionForPublish } = await import("@/lib/gemini-video-evaluation")
             
-            // Use transcript from database instead of extracting again
-            const originalTranscript = videoData.transcript || "Transcript not available"
+            // Extract the original video's transcript for evaluation context
+            const originalTranscript = await extractYouTubeTranscript(videoData.id)
             
             // Create challenge context including original video info
             const challengeContext = `Daily English Challenge - Original Video: "${videoData.title}" | Topic: ${videoData.topics?.join(', ') || 'General English Learning'} | User is responding to and creating content based on this original video.`
@@ -366,8 +367,8 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
       try {
         const { evaluateSubmissionForPublish } = await import("@/lib/gemini-video-evaluation")
         
-        // Use transcript from database instead of extracting again
-        const originalTranscript = videoData.transcript || "Transcript not available"
+        // Extract the original video's transcript for evaluation context
+        const originalTranscript = await extractYouTubeTranscript(videoData.id)
         
         // Create challenge context including original video info
         const challengeContext = `Daily English Challenge - Original Video: "${videoData.title}" | Topic: ${videoData.topics?.join(', ') || 'General English Learning'} | User is responding to and creating content based on this original video.`

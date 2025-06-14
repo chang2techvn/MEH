@@ -184,9 +184,9 @@ async function tryGeminiTranscript(videoId: string): Promise<{
     if (!process.env.GEMINI_API_KEY) {
       console.log(`❌ No Gemini API key found`);
       return { success: false, transcript: '', items: [] };
-    }    // Use gemini-1.5-flash for video understanding with YouTube URL
+    }    // Use gemini-2.0-flash for video understanding with YouTube URL
     const model = genAI.getGenerativeModel({ 
-      model: "gemini-1.5-flash",
+      model: "gemini-2.0-flash",
       generationConfig: {
         temperature: 0.1, // Low temperature for more accurate transcription
         maxOutputTokens: 8192,
