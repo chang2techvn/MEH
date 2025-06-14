@@ -1,4 +1,3 @@
-import { YoutubeTranscript } from 'youtube-transcript';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
 // Initialize Gemini AI
@@ -19,162 +18,154 @@ export interface VideoInfo {
   hasRealTranscript: boolean;
 }
 
-export async function extractVideoTranscript(videoId: string): Promise<VideoInfo> {
-  console.log(`🎬 Extracting transcript for video: ${videoId}`);
+export async function extractYouTubeTranscriptForDuration(
+  videoId: string, 
+  duration: number, 
+  maxWatchTimeSeconds: number = 300 // Default 5 minutes
+): Promise<VideoInfo> {
+  console.log(`🎬 Extracting LIMITED transcript for video: ${videoId} (max ${maxWatchTimeSeconds}s)`)
   
   try {
-    // Try to get real transcript using the updated API
-    console.log(`🔍 Attempting to fetch real transcript for video: ${videoId}`);
+    // Get full transcript first
+    const fullVideoInfo = await extractVideoTranscript(videoId)
     
-    const transcriptResult = await fetchRealTranscript(videoId);
+    if (!fullVideoInfo.hasRealTranscript || !fullVideoInfo.transcript) {
+      console.log(`❌ No real transcript available for video ${videoId}`)
+      return fullVideoInfo
+    }
+    
+    // Apply time limit to transcript
+    const limitedTranscript = applyTimeLimitToTranscript(
+      fullVideoInfo.transcript, 
+      fullVideoInfo.transcriptItems, 
+      maxWatchTimeSeconds
+    )
+    
+    console.log(`✅ Limited transcript extracted: ${limitedTranscript.length} characters (${maxWatchTimeSeconds}s limit)`)
+      return {
+      ...fullVideoInfo,
+      transcript: limitedTranscript,
+      duration: fullVideoInfo.duration // Keep original duration string
+    }
+    
+  } catch (error) {
+    console.error(`❌ Error extracting limited transcript for video ${videoId}:`, error)
+    return generateSimulatedTranscript(videoId)
+  }
+}
+
+// Helper function to apply time limit to transcript
+function applyTimeLimitToTranscript(
+  fullTranscript: string, 
+  transcriptItems: TranscriptItem[], 
+  maxSeconds: number
+): string {
+  if (!transcriptItems || transcriptItems.length === 0) {
+    // If no transcript items, estimate by character count
+    // Approximate: 150 words per minute, 5 characters per word = 750 characters per minute
+    const estimatedCharsPerSecond = 750 / 60 // ~12.5 chars per second
+    const maxChars = Math.floor(maxSeconds * estimatedCharsPerSecond)
+    return fullTranscript.substring(0, maxChars)
+  }
+  
+  // Use transcript items with timing
+  let limitedText = ''
+  let currentTime = 0
+  
+  for (const item of transcriptItems) {
+    if (currentTime >= maxSeconds) break
+    
+    // Add text if it's within time limit
+    if (item.offset <= maxSeconds * 1000) { // offset is in milliseconds
+      limitedText += item.text + ' '
+      currentTime = (item.offset + item.duration) / 1000 // Convert to seconds
+    }
+  }
+  
+  return limitedText.trim()
+}
+
+export async function extractVideoTranscript(
+  videoId: string, 
+  maxWatchTimeSeconds: number = 300 // Default 5 minutes
+): Promise<VideoInfo> {
+  console.log(`🎬 Extracting LIMITED transcript for video: ${videoId} (max ${maxWatchTimeSeconds}s)`);
+  
+  try {
+    // Try to get real transcript using Gemini AI with time limit
+    console.log(`🔍 Attempting to fetch LIMITED transcript for video: ${videoId}`);
+    
+    const transcriptResult = await fetchRealTranscript(videoId, maxWatchTimeSeconds);
     
     if (transcriptResult.success && transcriptResult.transcript && transcriptResult.transcript.length > 0) {
-      console.log(`✅ Successfully extracted real transcript for video ${videoId}`);
-      console.log(`📊 Transcript length: ${transcriptResult.transcript.length} characters`);
+      console.log(`✅ Successfully extracted LIMITED transcript for video ${videoId}`);
+      console.log(`📊 Limited transcript length: ${transcriptResult.transcript.length} characters`);
       
       return {
         videoId,
         title: `Video ${videoId}`,
-        duration: "Unknown",
+        duration: `${maxWatchTimeSeconds}s`, // Duration as limited time
         transcript: transcriptResult.transcript,
         transcriptItems: transcriptResult.items || [],
         hasRealTranscript: true
       };
     } else {
-      console.log(`❌ No real transcript found for video ${videoId}, using simulated content`);
+      console.log(`❌ No real limited transcript found for video ${videoId}, using simulated content`);
       return generateSimulatedTranscript(videoId);
     }
     
   } catch (error) {
-    console.error(`❌ Error extracting transcript for video ${videoId}:`, error);
+    console.error(`❌ Error extracting limited transcript for video ${videoId}:`, error);
     return generateSimulatedTranscript(videoId);
   }
 }
 
-async function fetchRealTranscript(videoId: string): Promise<{
+async function fetchRealTranscript(videoId: string, maxWatchTimeSeconds: number = 300): Promise<{
   success: boolean;
   transcript: string;
   items: TranscriptItem[];
 }> {
   try {
-    // First try Gemini AI with YouTube URL for REAL transcript
-    console.log(`🤖 Trying Gemini AI for REAL transcript extraction for video: ${videoId}`);
+    // Use ONLY Gemini AI for transcript extraction with time limit
+    console.log(`🤖 Using ONLY Gemini AI for LIMITED transcript extraction for video: ${videoId} (max ${maxWatchTimeSeconds}s)`);
+      // Get full transcript from Gemini AI first
     const geminiResult = await tryGeminiTranscript(videoId);
     
-    if (geminiResult.success) {
-      console.log(`✅ Gemini AI extracted REAL transcript!`);
-      return geminiResult;
-    }
-
-    // Fallback to traditional YouTube transcript
-    console.log(`🔍 Falling back to YouTube transcript API for video: ${videoId}`);
-    const youtubeResult = await tryYouTubeTranscript(videoId);
-    
-    if (youtubeResult.success) {
-      console.log(`✅ YouTube transcript found!`);
-      return youtubeResult;
-    }
-
-    // If no real transcript found, return failure
-    console.log(`❌ No real transcript found for video ${videoId}`);
-    return {
-      success: false,
-      transcript: '',
-      items: []
-    };
-    
-  } catch (error) {
-    console.error('❌ Error in fetchRealTranscript:', error);
-    return { success: false, transcript: '', items: [] };
-  }
-}
-
-async function tryYouTubeTranscript(videoId: string): Promise<{
-  success: boolean;
-  transcript: string;
-  items: TranscriptItem[];
-}> {
-  try {
-    // Try different language configurations
-    const languagesToTry = [
-      undefined, // Auto-detect
-      'en',      // English
-      'en-US',   // US English
-      'en-GB',   // British English
-      'auto',    // Auto-generated
-    ];    for (const lang of languagesToTry) {
-      try {
-        console.log(`🌐 Trying language: ${lang || 'auto-detect'}`);
-        
-        // Prepare config object
-        const config = lang ? { lang: lang } : {};
-        const transcriptData = await YoutubeTranscript.fetchTranscript(videoId, config);
-
-        if (transcriptData && transcriptData.length > 0) {
-          console.log(`✅ Found transcript in ${lang || 'auto-detect'} with ${transcriptData.length} items`);
-          
-          const transcript = transcriptData
-            .map(item => item.text)
-            .join(' ')
-            .replace(/\[.*?\]/g, '') // Remove [Music], [Applause], etc.
-            .replace(/\s+/g, ' ')    // Normalize whitespace
-            .trim();
-
-          const items: TranscriptItem[] = transcriptData.map(item => ({
-            text: item.text,
-            duration: item.duration || 0,
-            offset: item.offset || 0
-          }));
-
-          return {
-            success: true,
-            transcript,
-            items
-          };
-        } else {
-          console.log(`❌ No transcript found in ${lang || 'auto-detect'}`);
-        }
-      } catch (langError) {
-        const errorMessage = langError instanceof Error ? langError.message : String(langError);
-        console.log(`❌ Failed to fetch transcript in ${lang || 'auto-detect'}:`, errorMessage);
-        continue;
-      }
-    }
-
-    // If no transcript found with any language, try without language specification
-    console.log('🌍 Trying without specific language...');
-    const fallbackTranscript = await YoutubeTranscript.fetchTranscript(videoId);
-    
-    if (fallbackTranscript && fallbackTranscript.length > 0) {
-      console.log(`✅ Found fallback transcript with ${fallbackTranscript.length} items`);
+    if (geminiResult.success && geminiResult.transcript && geminiResult.transcript.length > 100) {
+      console.log(`✅ Full Gemini transcript received: ${geminiResult.transcript.length} characters`);
       
-      const transcript = fallbackTranscript
-        .map(item => item.text)
-        .join(' ')
-        .replace(/\[.*?\]/g, '')
-        .replace(/\s+/g, ' ')
-        .trim();
-
-      const items: TranscriptItem[] = fallbackTranscript.map(item => ({
-        text: item.text,
-        duration: item.duration || 0,
-        offset: item.offset || 0
-      }));
-
+      // Apply time limit to the full transcript
+      const limitedTranscript = applyTimeLimitToTranscript(
+        geminiResult.transcript, 
+        [], // No transcript items from Gemini
+        maxWatchTimeSeconds
+      );
+      
+      console.log(`✅ Applied time limit (${maxWatchTimeSeconds}s): ${limitedTranscript.length} characters`);
+      
       return {
         success: true,
-        transcript,
-        items
+        transcript: limitedTranscript,        items: [] // Gemini doesn't provide timing info
+      };
+    } else {
+      console.log(`❌ Gemini AI failed to extract transcript for video: ${videoId}`);
+      return {
+        success: false,
+        transcript: "",
+        items: []
       };
     }
-
-    return { success: false, transcript: '', items: [] };
     
   } catch (error) {
-    console.error('❌ Error in fetchRealTranscript:', error);
-    return { success: false, transcript: '', items: [] };  }
+    console.error(`❌ Error in fetchRealTranscript:`, error);
+    return {
+      success: false,
+      transcript: "",
+      items: []
+    };
+  }
 }
-
+    
 async function tryGeminiTranscript(videoId: string): Promise<{
   success: boolean;
   transcript: string;
@@ -360,36 +351,4 @@ export async function extractYouTubeTranscript(videoId: string): Promise<string>
   }
 }
 
-export async function extractYouTubeTranscriptForDuration(videoId: string, maxDuration?: number): Promise<{
-  transcript: string;
-  duration: number;
-  items: TranscriptItem[];
-}> {
-  try {
-    const videoInfo = await extractVideoTranscript(videoId);
-    let transcript = videoInfo.transcript;
-    let items = videoInfo.transcriptItems;
-    
-    // If maxDuration is specified, limit the transcript
-    if (maxDuration && videoInfo.transcriptItems.length > 0) {
-      const filteredItems = videoInfo.transcriptItems.filter(item => item.offset < maxDuration * 1000);
-      transcript = filteredItems.map(item => item.text).join(' ');
-      items = filteredItems;
-    }
-    
-    const totalDuration = items.length > 0 ? Math.max(...items.map(item => item.offset + item.duration)) : 0;
-    
-    return {
-      transcript,
-      duration: Math.floor(totalDuration / 1000), // Convert to seconds
-      items
-    };
-  } catch (error) {
-    console.error(`Error extracting YouTube transcript with duration for ${videoId}:`, error);
-    return {
-      transcript: '',
-      duration: 0,
-      items: []
-    };
-  }
-}
+

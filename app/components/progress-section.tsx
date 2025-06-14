@@ -31,18 +31,6 @@ export function ProgressSection({
       total: totalVideos,
       percentage: (videosCompleted / totalVideos) * 100
     },
-    {
-      label: "Writings Submitted",
-      current: writingsSubmitted,
-      total: totalWritings,
-      percentage: (writingsSubmitted / totalWritings) * 100
-    },
-    {
-      label: "Speaking Practice",
-      current: speakingPractice,
-      total: totalSpeaking,
-      percentage: (speakingPractice / totalSpeaking) * 100
-    }
   ]
 
   const dailyStreak = [1, 2, 3, 4, 5, 6, 7]

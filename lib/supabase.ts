@@ -955,13 +955,17 @@ export const dbHelpers = {
       .limit(limit)
     
     return { data: data || [], error }
-  },
-
-  async getLeaderboard(limit: number = 10) {
+  },  async getLeaderboard(limit: number = 10) {
     const { data, error } = await supabase
       .from('users')
-      .select('id, name, avatar, score, level')
-      .order('score', { ascending: false })
+      .select(`
+        id, 
+        points, 
+        level, 
+        streak_days,
+        profiles!inner(full_name, avatar_url)
+      `)
+      .order('points', { ascending: false })
       .limit(limit)
     
     return { data: data || [], error }

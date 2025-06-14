@@ -54,21 +54,6 @@ export default function LoginPage() {
     }
   }
 
-  const handleFacebookLogin = async () => {
-    try {
-      await loginWithFacebook()
-    } catch (error) {
-      console.error("Facebook login error:", error)
-    }
-  }
-
-  const handleGitHubLogin = async () => {
-    try {
-      await loginWithGitHub()
-    } catch (error) {
-      console.error("GitHub login error:", error)
-    }
-  }
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -198,35 +183,18 @@ export default function LoginPage() {
                     Or continue with
                   </span>
                 </div>
-              </div>
-
-              <div className="mt-6 grid grid-cols-3 gap-3">
+              </div>              
+              <div className="mt-6">
                 <Button
                   variant="outline"
-                  className="bg-white/20 dark:bg-gray-800/20 backdrop-blur-sm hover:bg-white/30 dark:hover:bg-gray-800/30"
+                  className="w-full bg-white/20 dark:bg-gray-800/20 backdrop-blur-sm hover:bg-white/30 dark:hover:bg-gray-800/30 border-dark/30 dark:border-gray-700/30"
                   onClick={handleGoogleLogin}
                   disabled={isLoading}
                 >
-                  <Google className="h-4 w-4" />
-                  <span className="sr-only">Google</span>
-                </Button>
-                <Button
-                  variant="outline"
-                  className="bg-white/20 dark:bg-gray-800/20 backdrop-blur-sm hover:bg-white/30 dark:hover:bg-gray-800/30"
-                  onClick={handleFacebookLogin}
-                  disabled={isLoading}
-                >
-                  <Facebook className="h-4 w-4" />
-                  <span className="sr-only">Facebook</span>
-                </Button>
-                <Button
-                  variant="outline"
-                  className="bg-white/20 dark:bg-gray-800/20 backdrop-blur-sm hover:bg-white/30 dark:hover:bg-gray-800/30"
-                  onClick={handleGitHubLogin}
-                  disabled={isLoading}
-                >
-                  <Github className="h-4 w-4" />
-                  <span className="sr-only">GitHub</span>
+                  <div className="flex items-center justify-center">
+                    <Google className="h-5 w-5 mr-2" />
+                    Google
+                  </div>
                 </Button>
               </div>
             </div>

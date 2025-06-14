@@ -4,9 +4,7 @@ import { motion } from "framer-motion"
 import { Suspense } from "react"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ProgressSection } from "./progress-section"
-import { UpcomingDeadlinesSection } from "./upcoming-deadlines-section"
 import { LeaderboardSection } from "./leaderboard-section"
-import { PracticeToolsSection } from "./practice-tools-section"
 import { useLeaderboard } from "@/app/hooks/use-leaderboard"
 
 interface SidebarProps {
@@ -57,24 +55,12 @@ export function Sidebar({ onPracticeToolClick, onViewLeaderboard }: SidebarProps
       </motion.div>
 
       <motion.div variants={item} layout>
-        <Suspense fallback={<Skeleton className="h-[300px] w-full rounded-xl" />}>
-          <UpcomingDeadlinesSection />
-        </Suspense>
-      </motion.div>
-
-      <motion.div variants={item} layout>
         <Suspense fallback={<Skeleton className="h-[350px] w-full rounded-xl" />}>
           <LeaderboardSection 
             users={leaderboardData} 
             loading={leaderboardLoading}
             onViewAll={onViewLeaderboard}
           />
-        </Suspense>
-      </motion.div>
-
-      <motion.div variants={item} layout>
-        <Suspense fallback={<Skeleton className="h-[250px] w-full rounded-xl" />}>
-          <PracticeToolsSection onToolClick={onPracticeToolClick} />
         </Suspense>
       </motion.div>
     </motion.div>

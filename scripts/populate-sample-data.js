@@ -103,16 +103,15 @@ async function cleanSampleData() {
  */
 async function insertUsers() {
     console.log('👤 Inserting users...');
-    
-    const users = [
-        { email: 'john.smith@university.edu', role: 'student', is_active: true, last_login: new Date(Date.now() - 2 * 60 * 60 * 1000) },
-        { email: 'maria.garcia@university.edu', role: 'student', is_active: true, last_login: new Date(Date.now() - 24 * 60 * 60 * 1000) },
-        { email: 'yuki.tanaka@university.edu', role: 'student', is_active: true, last_login: new Date(Date.now() - 30 * 60 * 1000) },
-        { email: 'ahmed.hassan@university.edu', role: 'student', is_active: true, last_login: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000) },
-        { email: 'david.johnson@university.edu', role: 'student', is_active: true, last_login: new Date(Date.now() - 60 * 60 * 1000) },
-        { email: 'sarah.wilson@university.edu', role: 'teacher', is_active: true, last_login: new Date(Date.now() - 5 * 60 * 60 * 1000) },
-        { email: 'michael.brown@university.edu', role: 'teacher', is_active: true, last_login: new Date(Date.now() - 12 * 60 * 60 * 1000) },
-        { email: 'admin@university.edu', role: 'admin', is_active: true, last_login: new Date(Date.now() - 60 * 60 * 1000) }
+      const users = [
+        { email: 'john.smith@university.edu', role: 'student', is_active: true, last_login: new Date(Date.now() - 2 * 60 * 60 * 1000), points: 850, level: 15, streak_days: 7 },
+        { email: 'maria.garcia@university.edu', role: 'student', is_active: true, last_login: new Date(Date.now() - 24 * 60 * 60 * 1000), points: 1250, level: 22, streak_days: 12 },
+        { email: 'yuki.tanaka@university.edu', role: 'student', is_active: true, last_login: new Date(Date.now() - 30 * 60 * 1000), points: 2100, level: 35, streak_days: 25 },
+        { email: 'ahmed.hassan@university.edu', role: 'student', is_active: true, last_login: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), points: 675, level: 12, streak_days: 3 },
+        { email: 'david.johnson@university.edu', role: 'student', is_active: true, last_login: new Date(Date.now() - 60 * 60 * 1000), points: 1820, level: 28, streak_days: 15 },
+        { email: 'sarah.wilson@university.edu', role: 'teacher', is_active: true, last_login: new Date(Date.now() - 5 * 60 * 60 * 1000), points: 3200, level: 50, streak_days: 45 },
+        { email: 'michael.brown@university.edu', role: 'teacher', is_active: true, last_login: new Date(Date.now() - 12 * 60 * 60 * 1000), points: 2800, level: 42, streak_days: 33 },
+        { email: 'admin@university.edu', role: 'admin', is_active: true, last_login: new Date(Date.now() - 60 * 60 * 1000), points: 5000, level: 99, streak_days: 100 }
     ];
 
     const { data, error } = await supabase

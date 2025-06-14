@@ -1,18 +1,20 @@
 "use client"
 
-import { Suspense, lazy } from "react"
+import { Suspense, lazy, useEffect, useState } from "react"
 import { Card } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Clock, Award } from "lucide-react"
+import { Clock } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
 import { type Challenge } from "../utils/challenge-constants"
-
+import { getVideoSettings } from "@/app/actions/admin-settings"
+const HeroSection = lazy(() => import("@/components/home/hero-section"))
 const AssignedTask = lazy(() => import("@/components/assigned-task"))
 
 interface CurrentChallengeSectionProps {
   currentChallenge: Challenge | null
   challengeLoading: boolean
 }
+
+
 
 const LoadingFallback = () => (
   <div className="space-y-4">
@@ -25,6 +27,28 @@ export function CurrentChallengeSection({
   currentChallenge, 
   challengeLoading 
 }: CurrentChallengeSectionProps) {
+  const [watchTimeText, setWatchTimeText] = useState("3-minute")
+
+  useEffect(() => {
+    const loadWatchTime = async () => {
+      try {
+        const settings = await getVideoSettings()
+        const minutes = Math.ceil(settings.minWatchTime / 60)
+        const seconds = settings.minWatchTime % 60
+        
+        if (seconds > 0) {
+          setWatchTimeText(`${minutes}m ${seconds}s`)
+        } else {
+          setWatchTimeText(`${minutes}-minute`)
+        }
+      } catch (error) {
+        console.error("Failed to load watch time:", error)
+        setWatchTimeText("3-minute") // fallback
+      }
+    }
+
+    loadWatchTime()
+  }, [])
   if (challengeLoading) {
     return (
       <Card className="neo-card p-6 bg-white/40 dark:bg-gray-900/40 backdrop-blur-xl border-none shadow-neo">
@@ -46,30 +70,24 @@ export function CurrentChallengeSection({
   }
 
   return (
-    <Card className="neo-card overflow-hidden bg-white/40 dark:bg-gray-900/40 backdrop-blur-xl border-none shadow-neo">
-      <div className="bg-gradient-to-r from-neo-mint to-purist-blue p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Award className="h-5 w-5 text-white" />
-            <h3 className="font-semibold text-white">Today's Challenge</h3>
-          </div>
-          <Badge variant="secondary" className="bg-white/20 text-white border-0">
-            {currentChallenge.difficulty}
-          </Badge>
-        </div>
-      </div>      <div className="p-6">
-        <Suspense fallback={<LoadingFallback />}>
-          <AssignedTask
-            title={currentChallenge.title}
-            description={currentChallenge.description}
-            videoUrl={currentChallenge.videoUrl}
-            dueDate={new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
-            userId="current-user"
-            username="You"
-            userImage="/placeholder.svg?height=40&width=40"
-          />
-        </Suspense>
-      </div>
-    </Card>
+
+    <Suspense fallback={<LoadingFallback />}>      <HeroSection
+        title="Your Current Challenge"
+        description={`Watch this ${watchTimeText} video about how technology is changing our daily lives and follow the 4-skill process.`}
+      >
+      <Suspense fallback={<LoadingFallback />}>
+        <AssignedTask
+          title={currentChallenge.title}
+          description={currentChallenge.description}
+          videoUrl={currentChallenge.videoUrl}
+          dueDate={new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
+          userId="current-user"
+          username="You"
+          userImage="/placeholder.svg?height=40&width=40"
+        />
+      </Suspense>
+      </HeroSection>
+    </Suspense>
+    
   )
 }
