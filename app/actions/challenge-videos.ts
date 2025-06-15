@@ -1,8 +1,8 @@
 "use server"
 
 import { fetchRandomYoutubeVideo, type VideoData } from "./youtube-video"
-import { classifyChallengeDifficulty } from "../utils/challenge-classifier"
-import { challengeTopics, type Challenge } from '../utils/challenge-constants'
+import { classifyChallengeDifficulty } from "@/utils/challenge-classifier"
+import { challengeTopics, type Challenge } from '@/utils/challenge-constants'
 import { supabaseServer } from "@/lib/supabase-server"
 import type { Database } from "@/lib/database.types"
 

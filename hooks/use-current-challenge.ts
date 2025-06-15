@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { getTodayVideo, type VideoData } from "@/app/actions/youtube-video"
-import { type Challenge } from "../utils/challenge-constants"
+import { type Challenge } from "@/utils/challenge-constants"
 
 // Helper function to convert VideoData to Challenge format
 function videoDataToChallenge(videoData: VideoData): Challenge {

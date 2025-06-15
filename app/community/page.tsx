@@ -68,10 +68,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import FeedPost from "@/components/feed-post"
-import FeedFilter from "@/components/feed-filter"
-import FeedEmptyState from "@/components/feed-empty-state"
-import SEOMeta from "@/components/seo-meta"
+import FeedPost from "@/components/feed/feed-post"
+import FeedFilter from "@/components/feed/feed-filter"
+import FeedEmptyState from "@/components/feed/feed-empty-state"
+import SEOMeta from "@/components/optimized/seo-meta"
 import type { VideoEvaluation } from "@/lib/gemini-video-evaluation"
 import { useMobile } from "@/hooks/use-mobile"
 import { Calendar } from "@/components/ui/calendar"

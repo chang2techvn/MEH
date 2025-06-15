@@ -2,9 +2,8 @@
 
 import { load } from "cheerio"
 import { supabaseServer } from "@/lib/supabase-server"
-import type { Database } from "@/lib/database.types"
 import { getVideoSettings } from "@/app/actions/admin-settings"
-import { extractYouTubeTranscriptForDuration } from "@/app/utils/video-processor"
+import { extractYouTubeTranscriptForDuration } from "@/utils/video-processor"
 
 // Types for our video data
 export type VideoData = {

@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Skeleton } from "@/components/ui/skeleton"
-import SEOMeta from "@/components/seo-meta"
+import SEOMeta from "@/components/optimized/seo-meta"
 
 interface LearningPath {
   id: number

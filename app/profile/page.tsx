@@ -24,7 +24,7 @@ import {
   Users,
   Video,
 } from "lucide-react"
-import FeedPost from "@/components/feed-post"
+import FeedPost from "@/components/feed/feed-post"
 import { Progress } from "@/components/ui/progress"
 import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/hooks/use-toast"

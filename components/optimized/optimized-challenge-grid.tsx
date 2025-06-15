@@ -1,13 +1,13 @@
 "use client"
 
 import React, { memo, useCallback, useMemo } from "react"
-import ChallengeCard from "@/components/challenge-card"
-import InfiniteScroll from "@/components/infinite-scroll"
-import VirtualScroll from "@/components/virtual-scroll"
-import LazyComponent from "@/components/lazy-component"
+import ChallengeCard from "@/components/challenge/challenge-card"
+import InfiniteScroll from "@/components/ui/infinite-scroll"
+import VirtualScroll from "@/components/ui/virtual-scroll"
+import LazyComponent from "@/components/optimized/lazy-component"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Challenge } from "@/app/utils/challenge-constants"
+import { Challenge } from "@/utils/challenge-constants"
 
 interface ChallengeGridProps {
   challenges: Challenge[]

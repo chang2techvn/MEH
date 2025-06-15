@@ -59,7 +59,6 @@ import {
 } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import AIEvaluationDisplay from "@/components/ai-evaluation-display"
 
 // Define types for our scoring criteria
 interface ScoringCriterion {
@@ -2391,7 +2390,7 @@ export default function AIScoringPage() {
           {testResult && (
             <div className="mt-6 border-t pt-6">
               <h3 className="text-lg font-medium mb-4">Evaluation Results</h3>
-              <AIEvaluationDisplay evaluation={testResult} title="Test Evaluation" />
+              {/* <AIEvaluationDisplay evaluation={testResult} title="Test Evaluation" /> */}
             </div>
           )}
         </DialogContent>

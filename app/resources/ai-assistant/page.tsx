@@ -1,7 +1,7 @@
 "use client"
 
-import { GeminiChatInterface } from "@/components/gemini-chat-interface"
-import PageHeader from "@/components/page-header"
+import { GeminiChatInterface } from "@/components/ai-helper/gemini-chat-interface"
+import PageHeader from "@/components/ui/page-header"
 
 export default function AIAssistantPage() {
   return (

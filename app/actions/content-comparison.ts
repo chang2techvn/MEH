@@ -1,7 +1,7 @@
 "use server"
 
 import { GoogleGenerativeAI } from "@google/generative-ai"
-import { extractYouTubeTranscript, extractYouTubeTranscriptForDuration } from "@/app/utils/video-processor"
+import { extractYouTubeTranscript, extractYouTubeTranscriptForDuration } from "@/utils/video-processor"
 import { getVideoSettings } from "@/app/actions/admin-settings"
 import { supabaseServer } from "@/lib/supabase-server"
 

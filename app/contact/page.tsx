@@ -11,9 +11,9 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import PageHeader from "@/components/page-header"
-import SiteFooter from "@/components/site-footer"
-import MainHeader from "@/components/main-header"
+import PageHeader from "@/components/ui/page-header"
+import SiteFooter from "@/components/ui/site-footer"
+import MainHeader from "@/components/ui/main-header"
 
 export default function ContactPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)

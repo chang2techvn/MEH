@@ -8,12 +8,12 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { MessageSquare, Search } from "lucide-react"
-import { formatNewPost } from "@/app/utils/post-helpers"
-import { useInfiniteScroll } from "../hooks/use-infinite-scroll"
+import { formatNewPost } from "@/utils/post-helpers"
+import { useInfiniteScroll } from "@/hooks/use-infinite-scroll"
 
-const FeedPost = lazy(() => import("@/components/feed-post"))
-const FeedFilter = lazy(() => import("@/components/feed-filter"))
-const FeedEmptyState = lazy(() => import("@/components/feed-empty-state"))
+const FeedPost = lazy(() => import("@/components/feed/feed-post"))
+const FeedFilter = lazy(() => import("@/components/feed/feed-filter"))
+const FeedEmptyState = lazy(() => import("@/components/feed/feed-empty-state"))
 
 interface FeedSectionProps {
   posts: any[]

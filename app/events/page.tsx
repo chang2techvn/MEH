@@ -13,7 +13,7 @@ import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useToast } from "@/hooks/use-toast"
 import { dbHelpers } from "@/lib/supabase"
-import SEOMeta from "@/components/seo-meta"
+import SEOMeta from "@/components/optimized/seo-meta"
 
 // Helper function to determine event badge based on date
 const getEventBadge = (startTime: string): "today" | "tomorrow" | "upcoming" | "past" => {

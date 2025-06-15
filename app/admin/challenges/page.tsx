@@ -21,9 +21,9 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { toast } from "@/hooks/use-toast"
 import { fetchAllChallenges } from "@/app/actions/challenge-videos"
-import { challengeTopics, type Challenge } from "@/app/utils/challenge-constants"
+import { challengeTopics, type Challenge } from "@/utils/challenge-constants"
 import { extractVideoFromUrl } from "@/app/actions/youtube-video"
-import { getDifficultyBadgeColor, getDifficultyDisplayName } from "@/app/utils/challenge-classifier"
+import { getDifficultyBadgeColor, getDifficultyDisplayName } from "@/utils/challenge-classifier"
 import { setStorageItem, getStorageItem, setStorageItemDebounced, cleanupStorage } from "@/lib/storage-utils"
 import {
   BookOpen,

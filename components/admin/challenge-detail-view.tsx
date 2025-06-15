@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { toast } from "@/hooks/use-toast"
-import { getDifficultyBadgeColor, getDifficultyDisplayName } from "@/app/utils/challenge-classifier"
+import { getDifficultyBadgeColor, getDifficultyDisplayName } from "@/utils/challenge-classifier"
 import {
   ArrowLeft,
   Clock,
@@ -23,8 +23,8 @@ import {
   MessageSquare,
   Tag,
 } from "lucide-react"
-import {type Challenge } from '@/app/utils/challenge-constants'
-import YoutubeVideoPlayer from "@/components/youtube-video-player"
+import {type Challenge } from '@/utils/challenge-constants'
+import YoutubeVideoPlayer from "@/components/youtube/youtube-video-player"
 import { ScrollArea } from "@/components/ui/scroll-area"
 
 interface ChallengeDetailViewProps {

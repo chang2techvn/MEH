@@ -5,8 +5,8 @@ import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { BookOpen, Clock } from "lucide-react"
-import { getDifficultyBadgeColor, getDifficultyDisplayName } from "@/app/utils/challenge-classifier"
-import OptimizedImage from "@/components/optimized-image"
+import { getDifficultyBadgeColor, getDifficultyDisplayName } from "@/utils/challenge-classifier"
+import OptimizedImage from "@/components/optimized/optimized-image"
 
 interface ChallengeCardProps {
   id: string

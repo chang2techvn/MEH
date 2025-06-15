@@ -4,10 +4,10 @@ import { Suspense, lazy, useEffect, useState } from "react"
 import { Card } from "@/components/ui/card"
 import { Clock } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
-import { type Challenge } from "../utils/challenge-constants"
+import { type Challenge } from "@/utils/challenge-constants"
 import { getVideoSettings } from "@/app/actions/admin-settings"
 const HeroSection = lazy(() => import("@/components/home/hero-section"))
-const AssignedTask = lazy(() => import("@/components/assigned-task"))
+const AssignedTask = lazy(() => import("@/components/home/assigned-task"))
 
 interface CurrentChallengeSectionProps {
   currentChallenge: Challenge | null

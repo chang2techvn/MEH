@@ -1,7 +1,7 @@
 "use server"
 
 import { supabaseServer } from "@/lib/supabase-server"
-import { Challenge } from '../utils/challenge-constants'
+import { Challenge } from '@/utils/challenge-constants'
 
 // Function to get today's date as batch identifier
 const getTodayBatch = () => {

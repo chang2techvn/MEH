@@ -5,7 +5,7 @@ import { Suspense } from "react"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ProgressSection } from "./progress-section"
 import { LeaderboardSection } from "./leaderboard-section"
-import { useLeaderboard } from "@/app/hooks/use-leaderboard"
+import { useLeaderboard } from "@/hooks/use-leaderboard"
 
 interface SidebarProps {
   onPracticeToolClick?: (tool: string) => void

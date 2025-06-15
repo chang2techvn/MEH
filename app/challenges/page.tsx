@@ -7,19 +7,19 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Filter, Search, Plus, Loader2, BookOpen } from "lucide-react"
-import AssignedTask from "@/components/assigned-task"
-import ChallengeCard from "@/components/challenge-card"
-import CreateChallengeModal from "@/components/create-challenge-modal"
+import AssignedTask from "@/components/home/assigned-task"
+import ChallengeCard from "@/components/challenge/challenge-card"
+import CreateChallengeModal from "@/components/challenge/create-challenge-modal"
 import { fetchAllChallenges, fetchCurrentChallenge} from "@/app/actions/challenge-videos"
-import { challengeTopics, type Challenge } from '../utils/challenge-constants'
+import { challengeTopics, type Challenge } from '@/utils/challenge-constants'
 import { toast } from "@/hooks/use-toast"
-import MainHeader from "@/components/main-header"
+import MainHeader from "@/components/ui/main-header"
 import { useDebounce } from "@/hooks/use-performance"
-import OptimizedChallengeGrid from "@/components/optimized-challenge-grid"
+import OptimizedChallengeGrid from "@/components/optimized/optimized-challenge-grid"
 
 // Add these imports at the top of the file
-import { AIChatBox } from "@/components/ai-chat-box"
-import { AIChatButton } from "@/components/ai-chat-button"
+import { AIChatBox } from "@/components/ai-helper/ai-chat-box"
+import { AIChatButton } from "@/components/ai-helper/ai-chat-button"
 
 export default function ChallengesPage() {  const [challenges, setChallenges] = useState<Challenge[]>([])
   const [dailyChallenges, setDailyChallenges] = useState<Challenge[]>([])

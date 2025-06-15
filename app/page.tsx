@@ -8,13 +8,13 @@ import { Button } from "@/components/ui/button"
 import { useMobile } from "@/hooks/use-mobile"
 
 // Lazy load components that aren't needed immediately
-const MainHeader = lazy(() => import("@/components/main-header"))
+const MainHeader = lazy(() => import("@/components/ui/main-header"))
 const AIChatButtonComponent = lazy(() =>
-  import("@/components/ai-chat-button").then((mod) => ({ default: mod.AIChatButton })),
+  import("@/components/ai-helper/ai-chat-button").then((mod) => ({ default: mod.AIChatButton })),
 )
-const MobileNavigation = lazy(() => import("@/app/components/mobile-navigation").then((mod) => ({ default: mod.MobileNavigation })))
-const MainContent = lazy(() => import("@/app/components/main-content").then((mod) => ({ default: mod.MainContent })))
-const Sidebar = lazy(() => import("@/app/components/sidebar").then((mod) => ({ default: mod.Sidebar })))
+const MobileNavigation = lazy(() => import("@/components/home/mobile-navigation").then((mod) => ({ default: mod.MobileNavigation })))
+const MainContent = lazy(() => import("@/components/home/main-content").then((mod) => ({ default: mod.MainContent })))
+const Sidebar = lazy(() => import("@/components/home/sidebar").then((mod) => ({ default: mod.Sidebar })))
 
 // Loading fallback component
 const LoadingFallback = () => <div className="animate-pulse bg-gray-200 dark:bg-gray-800 rounded-lg h-32 w-full"></div>

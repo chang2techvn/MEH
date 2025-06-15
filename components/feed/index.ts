@@ -1,5 +1,5 @@
 // Export all feed-related components and hooks
-export { default as FeedPost } from '../feed-post'
+export { default as FeedPost } from './feed-post'
 export { usePostInteractions } from './use-post-interactions'
 export { PostHeader } from './post-header'
 export { PostMedia } from './post-media'

@@ -7,10 +7,10 @@ import { BookOpen, Search, Menu } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { TooltipProvider } from "@/components/ui/tooltip"
-import ThemeToggle from "@/components/theme-toggle"
-import UserMenu from "@/components/user-menu"
-import MessageButton from "./messages/message-button"
-import NotificationsDropdown from "@/components/notifications-dropdown"
+import ThemeToggle from "@/components/ui/theme-toggle"
+import UserMenu from "@/components/ui/user-menu"
+import MessageButton from "@/components/messages/message-button"
+import NotificationsDropdown from "@/components/ui/notifications-dropdown"
 
 interface MainHeaderProps {
   mobileMenuOpen: boolean

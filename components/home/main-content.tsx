@@ -5,8 +5,8 @@ import { Suspense } from "react"
 import { Skeleton } from "@/components/ui/skeleton"
 import { CurrentChallengeSection } from "./current-challenge-section"
 import { FeedSection } from "./feed-section"
-import { useCurrentChallenge } from "@/app/hooks/use-current-challenge"
-import { useFeedData } from "@/app/hooks/use-feed-data"
+import { useCurrentChallenge } from "@/hooks/use-current-challenge"
+import { useFeedData } from "@/hooks/use-feed-data"
 
 interface MainContentProps {
   newPostAdded?: boolean

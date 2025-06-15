@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { BookOpen, X, Zap, Users, Award } from "lucide-react"
 
-const ThemeToggle = lazy(() => import("@/components/theme-toggle"))
+const ThemeToggle = lazy(() => import("@/components/ui/theme-toggle"))
 
 interface MobileNavigationProps {
   isOpen: boolean

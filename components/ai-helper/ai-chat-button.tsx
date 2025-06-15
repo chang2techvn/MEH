@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react"
 import { Bot } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { AIChatBox } from "@/components/ai-chat-box"
+import { AIChatBox } from "@/components/ai-helper/ai-chat-box"
 
 export function AIChatButton() {
   const [isOpen, setIsOpen] = useState(false)

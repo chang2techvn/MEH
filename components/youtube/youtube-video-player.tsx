@@ -1,10 +1,10 @@
 "use client"
 
-import { useYouTubePlayer } from "./youtube/use-youtube-player"
-import { VideoLoadingState } from "./youtube/video-loading-state"
-import { VideoErrorState } from "./youtube/video-error-state"
-import { VideoControls } from "./youtube/video-controls"
-import type { YouTubeVideoPlayerProps } from "./youtube/types"
+import { useYouTubePlayer } from "./use-youtube-player"
+import { VideoLoadingState } from "./video-loading-state"
+import { VideoErrorState } from "./video-error-state"
+import { VideoControls } from "./video-controls"
+import type { YouTubeVideoPlayerProps } from "./types"
 
 export default function YouTubeVideoPlayer({
   videoId,

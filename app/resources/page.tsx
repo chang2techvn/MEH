@@ -18,11 +18,11 @@ import {
   PenTool,
   GraduationCap,
 } from "lucide-react"
-import MainHeader from "@/components/main-header"
-import { AIChatBox } from "@/components/ai-chat-box"
-import { AIChatButton } from "@/components/ai-chat-button"
-import { GoogleAIStudioLink } from "@/components/google-ai-studio-link"
-import { GeminiIntegration } from "@/components/gemini-integration"
+import MainHeader from "@/components/ui/main-header"
+import { AIChatBox } from "@/components/ai-helper/ai-chat-box"
+import { AIChatButton } from "@/components/ai-helper/ai-chat-button"
+import { GoogleAIStudioLink } from "@/components/ai-helper/google-ai-studio-link"
+import { GeminiIntegration } from "@/components/ai-helper/gemini-integration"
 import { Badge } from "@/components/ui/badge"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 

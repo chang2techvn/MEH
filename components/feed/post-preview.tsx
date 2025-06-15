@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/dialog"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { evaluateSubmissionForPublish } from "@/lib/gemini-video-evaluation"
-import VideoEvaluationDisplay from "@/components/video-evaluation-display"
+import VideoEvaluationDisplay from "@/components/ai-evaluation-display/video-evaluation-display"
 import type { VideoEvaluation } from "@/lib/gemini-video-evaluation"
 
 interface PostPreviewProps {

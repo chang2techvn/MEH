@@ -27,7 +27,7 @@ import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Skeleton } from "@/components/ui/skeleton"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import SEOMeta from "@/components/seo-meta"
+import SEOMeta from "@/components/optimized/seo-meta"
 
 interface TrendingItem {
   id: number

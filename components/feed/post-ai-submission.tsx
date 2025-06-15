@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { Award } from "lucide-react"
-import VideoEvaluationDisplay from "@/components/video-evaluation-display"
+import VideoEvaluationDisplay from "@/components/ai-evaluation-display/video-evaluation-display"
 import type { UserSubmission } from "@/app/actions/user-submissions"
 import type { VideoEvaluation } from "@/lib/gemini-video-evaluation"
 

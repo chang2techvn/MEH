@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Eye, Save, Pencil, FileText, Loader2 } from "lucide-react"
-import RichTextEditor from "./rich-text-editor"
+import RichTextEditor from "../ui/rich-text-editor"
 import { toast } from "@/hooks/use-toast"
 
 interface ContentCreationStepProps {

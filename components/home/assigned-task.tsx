@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card"
 import { Clock, Film, Pencil, Video, CheckCircle2 } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import DailyChallenge from "./daily-challenge"
-import YouTubeVideoPlayer from "./youtube-video-player"
+import YouTubeVideoPlayer from "../youtube/youtube-video-player"
 
 interface AssignedTaskProps {
   title: string

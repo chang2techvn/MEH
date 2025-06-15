@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { TrendingUp } from "lucide-react"
-import { useUserProgress } from "@/app/hooks/use-user-progress"
+import { useUserProgress } from "@/hooks/use-user-progress"
 
 export function ProgressSection() {
   const { progressData, loading, error } = useUserProgress()

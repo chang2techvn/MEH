@@ -5,9 +5,9 @@ import { motion } from "framer-motion"
 import { Shield, Clock, User, Database, Globe, Lock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import PageHeader from "@/components/page-header"
-import SiteFooter from "@/components/site-footer"
-import MainHeader from "@/components/main-header"
+import PageHeader from "@/components/ui/page-header"
+import SiteFooter from "@/components/ui/site-footer"
+import MainHeader from "@/components/ui/main-header"
 
 export default function PrivacyPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
