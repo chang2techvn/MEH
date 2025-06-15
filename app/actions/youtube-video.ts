@@ -27,45 +27,6 @@ const getTodayDate = () => {
   return `${year}-${month}-${day}`
 }
 
-// Fallback videos to use when scraping fails
-const fallbackVideos = [
-  {
-    id: "J---aiyznGQ",
-    title: "Learn English with TED Talks",
-    description: "Improve your English skills with this educational TED Talk about language learning.",
-    duration: 240, // 4 minutes
-    topics: ["Education", "Language Learning", "Communication"],
-  },
-  {
-    id: "Ks-_Mh1QhMc",
-    title: "The Power of Body Language",
-    description: "Learn about the importance of non-verbal communication in this fascinating talk.",
-    duration: 300, // 5 minutes
-    topics: ["Communication", "Psychology", "Public Speaking"],
-  },
-  {
-    id: "RVmMeMcGc0I",
-    title: "Climate Change Explained",
-    description: "A comprehensive explanation of climate change and its effects on our planet.",
-    duration: 360, // 6 minutes
-    topics: ["Climate Change", "Environmental Conservation", "Science"],
-  },
-  {
-    id: "fLJsdqxnZb0",
-    title: "The Science of Learning",
-    description: "Discover how our brains process and retain information in this educational video.",
-    duration: 270, // 4.5 minutes
-    topics: ["Education", "Neuroscience", "Psychology"],
-  },
-  {
-    id: "UF8uR6Z6KLc",
-    title: "How to Speak Effectively",
-    description: "Learn the principles of effective public speaking and communication.",
-    duration: 330, // 5.5 minutes
-    topics: ["Communication", "Public Speaking", "Leadership"],
-  },
-]
-
 // Function to fetch random YouTube video
 export async function fetchRandomYoutubeVideo(
   minDuration = 60,
@@ -80,20 +41,17 @@ export async function fetchRandomYoutubeVideo(
 
   try {
     console.log(`Attempting to fetch a random YouTube video (${minDuration}-${maxDuration} seconds)...`)
-    console.log("Preferred topics:", preferredTopics.length > 0 ? preferredTopics.join(", ") : "Any")
-
-    // Try to scrape YouTube for videos
+    console.log("Preferred topics:", preferredTopics.length > 0 ? preferredTopics.join(", ") : "Any")    // Try to scrape YouTube for videos
     const videoData = await attemptYouTubeScraping(minDuration, maxDuration, preferredTopics)
 
     // Cache the video for today
     // cachedVideo = videoData
     // lastFetchDate = today
 
-    return videoData  } catch (error) {
+    return videoData
+  } catch (error) {
     console.error("Error fetching random YouTube video:", error)
-
-    // Use a fallback video when scraping fails
-    return getFallbackVideo()
+    throw error // Re-throw error instead of using fallback
   }
 }
 
@@ -406,35 +364,7 @@ function extractTopics(title: string, description: string): string[] {
   if (matchedTopics.length === 0) {
     return ["Education", "English Learning"]
   }
-
   return matchedTopics
-}
-
-// Function to get a fallback video
-function getFallbackVideo(): VideoData {
-  console.log("Using fallback video")
-
-  // Select a random fallback video
-  const fallback = fallbackVideos[Math.floor(Math.random() * fallbackVideos.length)]
-
-  // Create video data object from fallback
-  return {
-    id: fallback.id,
-    title: fallback.title,
-    description: fallback.description,
-    thumbnailUrl: `https://img.youtube.com/vi/${fallback.id}/hqdefault.jpg`,
-    videoUrl: `https://www.youtube.com/watch?v=${fallback.id}`,
-    embedUrl: `https://www.youtube.com/embed/${fallback.id}`,
-    duration: fallback.duration,
-    transcript: `This is a simulated transcript for "${fallback.title}". ${fallback.description}`,
-    topics: fallback.topics || ["Education", "English Learning"],
-  }
-}
-
-// Function to generate fallback transcript when Gemini AI fails
-function generateFallbackTranscript(videoId: string): string {
-  console.log(`⚠️ Generating fallback transcript for video: ${videoId}`)
-  return `[Transcript extraction failed for video ${videoId}. This video requires manual transcript review.]`
 }
 
 // Thêm biến để lưu trữ video được chọn bởi admin
@@ -449,17 +379,19 @@ function generateFallbackTranscript(videoId: string): string {
 // New Supabase-only implementation for getTodayVideo
 export async function getTodayVideo(): Promise<VideoData> {
   const today = getTodayDate()
-    try {    
+  
+  try {    
     console.log(`🔍 Checking Supabase for today's video (${today})...`)    
     
-    // 1. Check Supabase for today's video
+    // 1. Check Supabase for today's video first
     const { data, error } = await supabaseServer
       .from('daily_videos')
       .select('*')
       .eq('date', today)
       .single()
-          if (data && !error) {
-      console.log("✅ Video loaded from Supabase:", data.id)
+      
+    if (data && !error) {
+      console.log("✅ Video already exists for today, using saved video:", data.id)
       
       // Log transcript information
       if (data.transcript && data.transcript.length > 100) {
@@ -477,64 +409,68 @@ export async function getTodayVideo(): Promise<VideoData> {
         videoUrl: data.video_url,
         embedUrl: data.embed_url || `https://www.youtube.com/embed/${data.id}`,
         duration: data.duration || 300,
-        transcript: data.transcript || "", // Use saved transcript or empty string
+        transcript: data.transcript || "",
         topics: data.topics || []
       }
     }
     
     console.log("⚠️ No video found in Supabase for today, fetching new...")
-      // 2. Try to get video with transcript (up to 3 attempts)
-    for (let attempt = 1; attempt <= 3; attempt++) {
-      console.log(`🔄 Attempt ${attempt}/3: Fetching video...`)      
-      const videoData = await fetchRandomYoutubeVideo()
-      console.log(`🎬 Extracting transcript for video: ${videoData.id}`)
+      // 2. Keep trying to get videos with valid transcripts until we succeed
+    let attempts = 0
+    const maxAttempts = 10 // Increase max attempts to be more thorough
+    
+    while (attempts < maxAttempts) {
+      attempts++
+      console.log(`🔄 Attempt ${attempts}/${maxAttempts}: Fetching video...`)
       
-      // Get admin settings for time limit
-      const videoSettings = await getVideoSettings()
-      const maxWatchTimeSeconds = videoSettings.minWatchTime || 300 // Default 5 minutes
-      
-      console.log(`🎬 Using admin time limit: ${maxWatchTimeSeconds} seconds`)
-      const transcriptResult = await extractYouTubeTranscriptForDuration(videoData.id, videoData.duration, maxWatchTimeSeconds)
-      const transcript = transcriptResult.transcript
-      
-      // If we have a valid transcript, save to database and return
-      if (transcript && transcript.length >= 100) {
-        console.log(`✅ Found video with transcript: ${transcript.length} characters`)
+      try {
+        const videoData = await fetchRandomYoutubeVideo()
+        console.log(`🎬 Video fetched: ${videoData.id}`)
         
-        // Save successful video with transcript
-        const { error: insertError } = await supabaseServer
-          .from('daily_videos')
-          .upsert({
-            id: videoData.id,
-            title: videoData.title,
-            description: videoData.description,
-            video_url: videoData.videoUrl,
-            thumbnail_url: videoData.thumbnailUrl,
-            embed_url: videoData.embedUrl,
-            duration: videoData.duration,
-            topics: videoData.topics,
-            transcript: transcript,
-            date: today,
-            created_at: new Date().toISOString()
-          })
-        
-        if (!insertError) {
-          console.log("✅ New video with transcript saved to Supabase:", videoData.id)
-          return videoData
+        // Check if the fetched video already has a valid transcript
+        if (videoData.transcript && videoData.transcript.length >= 100) {
+          console.log(`✅ Found video with valid transcript: ${videoData.transcript.length} characters`)
+          
+          // Save successful video with transcript to database
+          const { error: insertError } = await supabaseServer
+            .from('daily_videos')
+            .upsert({
+              id: videoData.id,
+              title: videoData.title,
+              description: videoData.description,
+              video_url: videoData.videoUrl,
+              thumbnail_url: videoData.thumbnailUrl,
+              embed_url: videoData.embedUrl,
+              duration: videoData.duration,
+              topics: videoData.topics,
+              transcript: videoData.transcript,
+              date: today,
+              created_at: new Date().toISOString()
+            })
+          
+          if (!insertError) {
+            console.log("✅ New video with transcript saved to Supabase:", videoData.id)
+            return videoData
+          } else {
+            console.error("❌ Error saving video to Supabase:", insertError)
+            // Continue trying with other videos even if save fails
+          }
         } else {
-          console.error("❌ Error saving video to Supabase:", insertError)
+          console.log(`⚠️ No valid transcript for video ${videoData.id} (${videoData.transcript?.length || 0} chars), trying next video...`)
         }
-      } else {
-        console.log(`⚠️ No valid transcript for video ${videoData.id} (${transcript?.length || 0} chars), trying next...`)
+      } catch (error) {
+        console.error(`❌ Error with attempt ${attempts}:`, error)
+        // Continue to next attempt
       }
     }
     
-    console.log("❌ Could not find video with valid transcript after 3 attempts")
-    return getFallbackVideo()
+    // If we've exhausted all attempts, throw an error instead of using fallback
+    console.error(`❌ Could not find video with valid transcript after ${maxAttempts} attempts`)
+    throw new Error(`Failed to extract transcript from any video after ${maxAttempts} attempts. Please try again later.`)
     
   } catch (error) {
     console.error("❌ Error in getTodayVideo:", error)
-    return getFallbackVideo()
+    throw error // Re-throw the error instead of using fallback
   }
 }
 

@@ -67,7 +67,7 @@ export async function createCommunityPost(
       user_image: userImage,
       title: `Video Analysis - ${new Date().toLocaleDateString()}`,
       content,
-      post_type: aiEvaluation ? 'ai-submission' : (videoUrl ? 'video' : 'text'), // Set as ai-submission when there's AI evaluation
+      post_type: videoUrl ? 'video' : 'text', // Use 'video' for posts with video, 'text' for text-only
       media_url: videoUrl,
       original_video_id: originalVideoId,
       ai_evaluation: aiEvaluation ? JSON.stringify(aiEvaluation) : null,

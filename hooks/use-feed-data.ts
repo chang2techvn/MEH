@@ -85,8 +85,7 @@ export function useFeedData() {
           title: post.title,
           content: post.content,
           videoUrl: post.media_url,
-          youtubeVideoId: post.post_type === 'youtube' ? extractYouTubeId(post.media_url || '') : undefined,
-          mediaType: post.post_type === 'ai-submission' ? 'ai-submission' :
+          youtubeVideoId: post.post_type === 'youtube' ? extractYouTubeId(post.media_url || '') : undefined,          mediaType: post.ai_evaluation ? 'ai-submission' :
                     post.post_type === 'video' ? 'video' : 
                     post.post_type === 'youtube' ? 'youtube' : 
                     post.media_url ? 'image' : 'text',
