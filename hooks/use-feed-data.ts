@@ -66,17 +66,28 @@ export function useFeedData() {
       console.log('✅ Posts loaded successfully:', postsData?.length || 0)
 
       // Transform posts to match UI format
-      const transformedPosts = postsData?.map(post => {
-        console.log('📝 Transforming post:', post)
+      const transformedPosts = postsData?.map(post => {        console.log('📝 Transforming post:', post)
+        
+        // Parse AI evaluation if exists
+        let aiEvaluation = null;
+        if (post.ai_evaluation) {
+          try {
+            aiEvaluation = JSON.parse(post.ai_evaluation);
+          } catch (error) {
+            console.warn('Failed to parse AI evaluation:', error);
+          }
+        }
+        
         return {
           id: post.id,
-          username: post.users?.name || "Unknown User",
-          userImage: post.users?.avatar || "/placeholder.svg?height=40&width=40",
+          username: post.users?.name || post.username || "Unknown User",
+          userImage: post.users?.avatar || post.user_image || "/placeholder.svg?height=40&width=40",
           title: post.title,
           content: post.content,
           videoUrl: post.media_url,
           youtubeVideoId: post.post_type === 'youtube' ? extractYouTubeId(post.media_url || '') : undefined,
-          mediaType: post.post_type === 'video' ? 'video' : 
+          mediaType: post.post_type === 'ai-submission' ? 'ai-submission' :
+                    post.post_type === 'video' ? 'video' : 
                     post.post_type === 'youtube' ? 'youtube' : 
                     post.media_url ? 'image' : 'text',
           mediaUrl: post.media_url,
@@ -84,7 +95,14 @@ export function useFeedData() {
           likes: post.likes_count || 0,
           comments: post.comments_count || 0,
           createdAt: post.created_at,
-          timeAgo: formatTimeAgo(post.created_at)
+          timeAgo: formatTimeAgo(post.created_at),
+          videoEvaluation: aiEvaluation,
+          submission: aiEvaluation ? {
+            type: 'video_submission',
+            videoUrl: post.media_url,
+            content: post.content,
+            evaluation: aiEvaluation
+          } : undefined
         }
       }) || []
 
@@ -135,7 +153,36 @@ export function useFeedData() {
       }
 
       return false
-    })  }, [posts, activeFilters])  // Load initial posts when hook is first used
+    })  }, [posts, activeFilters])  
+
+  // Listen for new post events
+  useEffect(() => {
+    const handleNewPost = (event: CustomEvent) => {
+      console.log('🆕 New post event received:', event.detail)
+      const newPost = event.detail
+      
+      // Add the new post to the beginning of the posts array
+      setPosts(prev => [newPost, ...prev])
+      setNewPostAdded(true)
+      
+      // Reset the flag after a delay
+      setTimeout(() => setNewPostAdded(false), 3000)
+    }
+
+    // Listen for the custom event
+    if (typeof window !== 'undefined') {
+      window.addEventListener('newPostPublished', handleNewPost as EventListener)
+    }
+
+    // Cleanup
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('newPostPublished', handleNewPost as EventListener)
+      }
+    }
+  }, [])
+
+  // Load initial posts when hook is first used
   useEffect(() => {
     if (posts.length === 0 && !loading) {
       console.log('🏠 Loading initial posts for homepage...')

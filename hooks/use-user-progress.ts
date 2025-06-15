@@ -78,7 +78,7 @@ export function useUserProgress() {
           .from('challenge_submissions')
           .select(`
             challenge_id,
-            challenges(type)
+            challenges(challenge_type)
           `)
           .eq('user_id', user.id)
           .eq('is_correct', true)
@@ -87,42 +87,36 @@ export function useUserProgress() {
 
         if (submissionsError && submissionsError.code !== 'PGRST116') {
           throw submissionsError
-        }
-
-        // Count submissions by type
+        }        // Count submissions by challenge_type
         const videoSubmissions = submissions?.filter((s: any) => 
-          s.challenges?.type === 'video' || s.challenges?.type === 'speaking'
+          s.challenges?.challenge_type === 'video' || s.challenges?.challenge_type === 'speaking'
         ).length || 0
         
         const writingSubmissions = submissions?.filter((s: any) => 
-          s.challenges?.type === 'writing' || s.challenges?.type === 'text'
+          s.challenges?.challenge_type === 'writing' || s.challenges?.challenge_type === 'text'
         ).length || 0
 
         const speakingSubmissions = submissions?.filter((s: any) => 
-          s.challenges?.type === 'speaking' || s.challenges?.type === 'pronunciation'
-        ).length || 0
-
-        // Get total available challenges by type
+          s.challenges?.challenge_type === 'speaking' || s.challenges?.challenge_type === 'pronunciation'
+        ).length || 0        // Get total available challenges by challenge_type
         const { data: allChallenges, error: challengesError } = await supabase
           .from('challenges')
-          .select('type')
+          .select('challenge_type')
 
         console.log('All challenges:', allChallenges, 'Error:', challengesError)
 
         if (challengesError && challengesError.code !== 'PGRST116') {
           throw challengesError
-        }
-
-        const totalVideoChallenges = allChallenges?.filter(c => 
-          c.type === 'video' || c.type === 'speaking'
+        }        const totalVideoChallenges = allChallenges?.filter(c => 
+          c.challenge_type === 'video' || c.challenge_type === 'speaking'
         ).length || 20
 
         const totalWritingChallenges = allChallenges?.filter(c => 
-          c.type === 'writing' || c.type === 'text'
+          c.challenge_type === 'writing' || c.challenge_type === 'text'
         ).length || 20
 
         const totalSpeakingChallenges = allChallenges?.filter(c => 
-          c.type === 'speaking' || c.type === 'pronunciation'
+          c.challenge_type === 'speaking' || c.challenge_type === 'pronunciation'
         ).length || 20
 
         // Calculate totals from user_progress

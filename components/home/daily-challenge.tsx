@@ -17,11 +17,12 @@ import PostPreview from "../feed/post-preview"
 import PublishSuccess from "../ui/publish-success"
 import ContentComparisonFeedback from "../ai-evaluation-display/content-comparison-feedback"
 import { submitUserContent, publishSubmission } from "@/app/actions/user-submissions"
+import { createCommunityPost } from "@/app/actions/community-posts"
 import { getVideoSettings } from "@/app/actions/admin-settings"
 import { compareVideoContentWithUserContent, type ContentComparison } from "@/app/actions/content-comparison"
-import { extractYouTubeTranscript } from "@/utils/video-processor"
 import { v4 as uuidv4 } from "uuid"
 import type { VideoEvaluation } from "@/lib/gemini-video-evaluation"
+import { useAuth } from "@/contexts/auth-context"
 
 interface DailyChallengeProps {
   userId: string
@@ -31,6 +32,7 @@ interface DailyChallengeProps {
 }
 
 export default function DailyChallenge({ userId, username, userImage, onSubmissionComplete }: DailyChallengeProps) {
+  const { user } = useAuth() // Get authenticated user
   const [loading, setLoading] = useState(true)
   const [videoData, setVideoData] = useState<VideoData | null>(null)
   const [activeStep, setActiveStep] = useState(1)
@@ -350,90 +352,78 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
     } finally {
       setSubmitting(false)
     }
-  }
-  // Handle publishing to feed
+  }  // Handle publishing to feed
   const handlePublish = async () => {
+    // Check if user is authenticated
+    if (!user) {
+      setError("You must be logged in to submit and publish your content.")
+      return
+    }
+
     if (!videoData || !richTextContent || !videoPreviewUrl) {
       setError("Missing required content for publishing.")
       return
     }
 
+    // Check if we have AI evaluation from step 3
+    if (!videoEvaluation) {
+      setError("Please complete step 3 evaluation before publishing.")
+      return
+    }
+
     try {
+      setSubmitting(true)
+
       // Generate a unique ID for the post
       const postId = uuidv4()
-      setPublishedPostId(postId)      // Perform AI evaluation before publishing with original video context
-      let videoEvaluation = null
-      try {
-        const { evaluateSubmissionForPublish } = await import("@/lib/gemini-video-evaluation")
-        
-        // Extract the original video's transcript for evaluation context
-        const originalTranscript = await extractYouTubeTranscript(videoData.id)
-        
-        // Create challenge context including original video info
-        const challengeContext = `Daily English Challenge - Original Video: "${videoData.title}" | Topic: ${videoData.topics?.join(', ') || 'General English Learning'} | User is responding to and creating content based on this original video.`
-        
-        // Evaluate with original video transcript as context and user's content as caption
-        videoEvaluation = await evaluateSubmissionForPublish(
-          videoPreviewUrl, 
-          richTextContent, 
-          originalTranscript, 
-          challengeContext
-        )
-        
-        console.log("✅ Video evaluation completed with original video context")
-      } catch (error) {
-        console.error("Error during AI evaluation:", error)
-        // Continue with publishing even if evaluation fails
-      }
+      setPublishedPostId(postId)
 
-      // Create post data with all necessary information including evaluation
-      const postData = {
-        id: postId,
-        username,
-        userImage,
-        title: videoData.title,
-        content: richTextContent,
-        videoUrl: videoPreviewUrl,
-        videoEvaluation, // Include the comprehensive AI evaluation
-        createdAt: new Date().toISOString(), // Add timestamp
-        isNew: true, // Flag to identify new posts
-      }
-
-      console.log("Publishing post to feed:", postData)
-
-      // Save to localStorage to simulate backend storage
-      localStorage.setItem("newPost", JSON.stringify(postData))
-
-      // Dispatch a custom event to notify other components about the new post
+      console.log("Publishing post using stored AI evaluation:", videoEvaluation)      // Create community post using stored evaluation and authenticated user
+      await createCommunityPost(
+        user.id, // Use authenticated user ID
+        user.name || username,
+        user.avatar || userImage,
+        richTextContent,
+        videoPreviewUrl,
+        videoData.id,
+        videoEvaluation // Use evaluation from step 3
+      )      // Dispatch a custom event to notify other components about the new post
       if (typeof window !== "undefined") {
-        const event = new CustomEvent("newPostPublished", { detail: postData })
+        const event = new CustomEvent("newPostPublished", { 
+          detail: {
+            id: postId,
+            username: user.name || username,
+            userImage: user.avatar || userImage,
+            title: `Video Analysis - ${new Date().toLocaleDateString()}`,
+            content: richTextContent,
+            videoUrl: videoPreviewUrl,
+            mediaType: 'ai-submission',
+            mediaUrl: videoPreviewUrl,
+            likes: 0,
+            comments: 0,
+            createdAt: new Date().toISOString(),
+            timeAgo: 'Just now',
+            videoEvaluation: videoEvaluation,
+            submission: {
+              type: 'video_submission',
+              videoUrl: videoPreviewUrl,
+              content: richTextContent,
+              evaluation: videoEvaluation
+            },
+            isNew: true
+          }
+        })
         window.dispatchEvent(event)
-      }
-
-      try {
-        // Simulate API call to submit content
-        const submission = await submitUserContent(
-          userId,
-          username,
-          userImage,
-          videoData,
-          rewrittenContent,
-          videoPreviewUrl,
-          "Simulated video transcript",
-        )
-
-        // Simulate API call to publish to feed
-        await publishSubmission(submission.id)
-      } catch (error) {
-        console.error("Error with content evaluation:", error)
-        // Continue with publishing even if evaluation fails
-      }
+      }console.log("✅ Post published successfully to community feed")
 
       // Set published state
       setIsPublished(true)
     } catch (err) {
-      console.error("Error publishing to feed:", err)
-      throw new Error("Failed to publish to feed")
+      console.error("❌ Error publishing to feed:", err)
+      setError("Failed to publish to community feed. Please try again.")
+      throw err
+    } finally {
+      setSubmitting(false)
     }
   }
 
@@ -633,8 +623,9 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
                     title={videoData?.title || "My Video Analysis"}
                     content={richTextContent}
                     videoUrl={videoPreviewUrl || ""}
-                    username={username}
-                    userImage={userImage}
+                    username={user?.name || username}
+                    userImage={user?.avatar || userImage}
+                    isAuthenticated={!!user}
                     onBack={() => {
                       setActiveStep(3)
                       setProgress(75)

@@ -25,6 +25,7 @@ interface PostPreviewProps {
   videoUrl: string
   username: string
   userImage: string
+  isAuthenticated?: boolean
   onBack: () => void
   onSubmit: (evaluation?: VideoEvaluation) => void
   onPublish: (evaluation?: VideoEvaluation) => Promise<void>
@@ -39,6 +40,7 @@ export default function PostPreview({
   videoUrl,
   username,
   userImage,
+  isAuthenticated = false,
   onBack,
   onSubmit,
   onPublish,
@@ -74,28 +76,38 @@ export default function PostPreview({
       description: "The link to your post has been copied to clipboard.",
     })
   }
-
   const handlePublish = async () => {
+    // Check authentication first
+    if (!isAuthenticated) {
+      toast({
+        title: "Login Required",
+        description: "You must be logged in to publish posts to the community feed.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // Must have AI evaluation from step 3
+    if (!evaluation) {
+      toast({
+        title: "Evaluation Required",
+        description: "Please complete step 3 evaluation before publishing.",
+        variant: "destructive",
+      })
+      return
+    }
+
     try {
       setIsPublishing(true)
 
-      // Perform AI evaluation if not already done
-      let finalEvaluation = evaluation
-      if (!finalEvaluation) {
-        try {
-          finalEvaluation = await evaluateSubmissionForPublish(videoUrl, content)
-          setEvaluation(finalEvaluation)
-        } catch (error) {
-          console.error("Error during evaluation:", error)
-          // Continue with publishing even if evaluation fails
-        }
-      }
-
+      // Use existing evaluation from step 3 - no new evaluation needed
+      console.log("🚀 Publishing with existing evaluation:", evaluation)
+      
       try {
-        await onPublish(finalEvaluation || undefined)
+        await onPublish(evaluation)
       } catch (error) {
         console.error("Error during publishing:", error)
-        // Continue with success flow even if there was an error with the API
+        throw error // Re-throw to handle in outer catch
       }
 
       setShowPublishDialog(false)
@@ -113,26 +125,30 @@ export default function PostPreview({
       setIsPublishing(false)
     }
   }
-
   const handleSubmit = async () => {
-    if (autoPublish) {
-      // For auto-publish, perform evaluation and submit together
-      setIsEvaluating(true)
-      try {
-        const finalEvaluation = await evaluateSubmissionForPublish(videoUrl, content)
-        setEvaluation(finalEvaluation)
-        onSubmit(finalEvaluation)
-      } catch (error) {
-        console.error("Error during evaluation:", error)
-        // Continue with submission even if evaluation fails
-        onSubmit()
-      } finally {
-        setIsEvaluating(false)
-      }
-    } else {
-      // Otherwise, just submit without evaluation for now
-      onSubmit(evaluation || undefined)
+    // Check authentication for auto-publish mode
+    if (autoPublish && !isAuthenticated) {
+      toast({
+        title: "Login Required",
+        description: "You must be logged in to submit and publish content.",
+        variant: "destructive",
+      })
+      return
     }
+
+    // Must have AI evaluation from step 3 for auto-publish
+    if (autoPublish && !evaluation) {
+      toast({
+        title: "Evaluation Required",
+        description: "Please complete step 3 evaluation before submitting.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // Use existing evaluation from step 3 - no new evaluation needed
+    console.log("✅ Using evaluation from step 3:", evaluation)
+    onSubmit(evaluation || undefined)
   }
 
   return (
@@ -180,28 +196,42 @@ export default function PostPreview({
                 Share
               </Button>
 
-              
-              {!autoPublish && (
+                {!autoPublish && (
                 <Button
-                  onClick={() => setShowPublishDialog(true)}
-                  className="bg-gradient-to-r from-neo-mint to-purist-blue hover:from-neo-mint/90 hover:to-purist-blue/90 text-white border-0 flex items-center gap-2"
+                  onClick={() => {
+                    if (!isAuthenticated) {
+                      toast({
+                        title: "Login Required",
+                        description: "You must be logged in to publish posts to the community feed.",
+                        variant: "destructive",
+                      })
+                      return
+                    }
+                    setShowPublishDialog(true)
+                  }}
+                  disabled={!isAuthenticated}
+                  className="bg-gradient-to-r from-neo-mint to-purist-blue hover:from-neo-mint/90 hover:to-purist-blue/90 text-white border-0 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Send className="h-4 w-4" />
-                  Publish to Feed
+                  {isAuthenticated ? "Publish to Feed" : "Login to Publish"}
                 </Button>
-              )}
-
-              <Button
+              )}              <Button
                 onClick={handleSubmit}
-                disabled={isSubmitting}
+                disabled={isSubmitting || (autoPublish && !isAuthenticated) || (autoPublish && !evaluation)}
                 variant={autoPublish ? "default" : "outline"}
                 className={
                   autoPublish
-                    ? "bg-gradient-to-r from-neo-mint to-purist-blue hover:from-neo-mint/90 hover:to-purist-blue/90 text-white border-0 ml-2"
+                    ? "bg-gradient-to-r from-neo-mint to-purist-blue hover:from-neo-mint/90 hover:to-purist-blue/90 text-white border-0 ml-2 disabled:opacity-50 disabled:cursor-not-allowed"
                     : "ml-2"
                 }
-              >
-                {isSubmitting ? (
+                title={
+                  autoPublish && !isAuthenticated 
+                    ? "Login required to submit and publish"
+                    : autoPublish && !evaluation
+                    ? "Complete step 3 evaluation first"
+                    : ""
+                }
+              >                {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     {autoPublish ? "Publishing..." : "Submitting..."}
@@ -209,7 +239,11 @@ export default function PostPreview({
                 ) : autoPublish ? (
                   <>
                     <Send className="mr-2 h-4 w-4" />
-                    Submit & Publish
+                    {!isAuthenticated 
+                      ? "Login to Submit & Publish" 
+                      : !evaluation 
+                      ? "Complete Step 3 First"
+                      : "Submit & Publish"}
                   </>
                 ) : (
                   "Submit for Evaluation"

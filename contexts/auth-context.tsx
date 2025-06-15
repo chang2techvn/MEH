@@ -133,7 +133,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     return () => subscription.unsubscribe()
   }, [])
-
   // Helper function to create user in database
   const createUserInDatabase = async (supabaseUser: SupabaseUser) => {
     try {
@@ -144,38 +143,35 @@ export function AuthProvider({ children }: AuthProviderProps) {
           email: supabaseUser.email!,
           name: supabaseUser.user_metadata?.full_name || supabaseUser.email?.split('@')[0],
           avatar: supabaseUser.user_metadata?.avatar_url,
-          role: 'MEMBER',
-          isActive: true,
-          joinedAt: new Date().toISOString(),
-          lastActive: new Date().toISOString()
+          role: 'student', // Default role
+          is_active: true,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          last_login: new Date().toISOString()
         })
         .select()
         .single()
 
-      if (error) {
+      if (error && error.code !== '23505') { // 23505 is unique violation (user already exists)
         console.error('Error creating user in database:', error)
-        // Don't throw error, just log it
         return null
       }
 
       // Update user state with database data if successful
-      if (data) {        setUser({
+      if (data) {
+        setUser({
           id: data.id,
           email: data.email,
           name: data.name || undefined,
           avatar: data.avatar || undefined,
           role: data.role || undefined,
-          studentId: data.student_id || undefined,
-          major: data.major || undefined,
-          academicYear: data.academic_year || undefined,
+          isActive: data.is_active || true,
+          joinedAt: new Date(data.created_at || supabaseUser.created_at),          lastActive: new Date(data.last_login || new Date()),
           bio: data.bio || undefined,
           points: data.points || undefined,
           level: data.level || undefined,
           experiencePoints: data.experience_points || undefined,
           streakDays: data.streak_days || undefined,
-          lastActive: data.last_active ? new Date(data.last_active) : undefined,
-          joinedAt: data.created_at ? new Date(data.created_at) : undefined,
-          isActive: data.is_active || undefined,
           preferences: data.preferences || undefined
         })
         return data

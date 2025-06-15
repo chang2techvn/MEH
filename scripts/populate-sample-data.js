@@ -40,13 +40,118 @@ let notificationTemplateIds = {};
 let scheduledMessageIds = {};
 
 /**
+ * Create auth users using Supabase Admin API
+ */
+async function createAuthUsers() {
+    console.log('👤 Creating auth users...');
+    
+    const authUsers = [
+        {
+            email: 'admin@university.edu',
+            password: 'admin123456',
+            user_metadata: {
+                full_name: 'Dr. Sarah Admin',
+                avatar_url: 'https://avatar.iran.liara.run/public/1',
+                role: 'admin'
+            }
+        },
+        {
+            email: 'teacher1@university.edu', 
+            password: 'teacher123456',
+            user_metadata: {
+                full_name: 'Prof. Sarah Wilson',
+                avatar_url: 'https://avatar.iran.liara.run/public/2',
+                role: 'teacher'
+            }
+        },
+        {
+            email: 'teacher2@university.edu',
+            password: 'teacher123456', 
+            user_metadata: {
+                full_name: 'Prof. Michael Brown',
+                avatar_url: 'https://avatar.iran.liara.run/public/3',
+                role: 'teacher'
+            }
+        },
+        {
+            email: 'john.smith@university.edu',
+            password: 'student123456',
+            user_metadata: {
+                full_name: 'John Smith',
+                avatar_url: 'https://avatar.iran.liara.run/public/4',
+                role: 'student'
+            }
+        },
+        {
+            email: 'maria.garcia@university.edu',
+            password: 'student123456',
+            user_metadata: {
+                full_name: 'Maria Garcia', 
+                avatar_url: 'https://avatar.iran.liara.run/public/5',
+                role: 'student'
+            }
+        },
+        {
+            email: 'yuki.tanaka@university.edu',
+            password: 'student123456',
+            user_metadata: {
+                full_name: 'Yuki Tanaka',
+                avatar_url: 'https://avatar.iran.liara.run/public/6', 
+                role: 'student'
+            }
+        },
+        {
+            email: 'ahmed.hassan@university.edu',
+            password: 'student123456',
+            user_metadata: {
+                full_name: 'Ahmed Hassan',
+                avatar_url: 'https://avatar.iran.liara.run/public/7',
+                role: 'student'
+            }
+        },
+        {
+            email: 'david.johnson@university.edu',
+            password: 'student123456',
+            user_metadata: {
+                full_name: 'David Johnson',
+                avatar_url: 'https://avatar.iran.liara.run/public/8',
+                role: 'student'
+            }
+        }
+    ];
+
+    let createdCount = 0;
+    
+    for (const userData of authUsers) {
+        try {
+            const { data, error } = await supabase.auth.admin.createUser({
+                email: userData.email,
+                password: userData.password,
+                user_metadata: userData.user_metadata,
+                email_confirm: true
+            });
+
+            if (error) {
+                console.log(`⚠️  User ${userData.email} might already exist:`, error.message);
+            } else {
+                createdCount++;
+                console.log(`✅ Created auth user: ${userData.email}`);
+            }
+        } catch (error) {
+            console.log(`⚠️  Error creating user ${userData.email}:`, error.message);
+        }
+    }
+    
+    console.log(`✅ Created ${createdCount} auth users (${authUsers.length - createdCount} already existed)`);
+}
+
+/**
  * Clean existing sample data while preserving production users
  */
 async function cleanSampleData() {
-    console.log('🧹 Cleaning existing sample data...');
-      const tables = [
+    console.log('🧹 Cleaning existing sample data...');      const tables = [
         'notification_deliveries',
-        'scheduled_messages',
+        'scheduled_messages', 
         'conversation_messages',
         'conversation_participants',
         'conversations',
@@ -71,7 +176,11 @@ async function cleanSampleData() {
         'api_keys',
         'banned_terms',
         'notification_templates',
-        'admin_logs'
+        'admin_logs',
+        'achievements',
+        'daily_challenges',
+        'daily_videos',
+        'users'
     ];
 
     for (const table of tables) {
@@ -538,6 +647,8 @@ async function insertPosts() {
     const posts = [
         {
             user_id: userIds.john_smith,
+            username: 'John Smith',
+            user_image: 'https://avatar.iran.liara.run/public/4',
             title: 'My English Learning Journey',
             content: 'Started learning business English last month. The speaking challenges are really helping me gain confidence!',
             post_type: 'text',
@@ -545,10 +656,15 @@ async function insertPosts() {
             tags: ['learning', 'business-english', 'speaking'],
             is_public: true,
             likes_count: 5,
-            comments_count: 2
+            comments_count: 2,
+            original_video_id: null,
+            ai_evaluation: null,
+            score: null
         },
         {
             user_id: userIds.maria_garcia,
+            username: 'Maria Garcia',
+            user_image: 'https://avatar.iran.liara.run/public/5',
             title: 'Spanish to English Tips',
             content: 'As a native Spanish speaker, here are some tips that helped me with English pronunciation...',
             post_type: 'text',
@@ -556,10 +672,15 @@ async function insertPosts() {
             tags: ['spanish', 'pronunciation', 'tips'],
             is_public: true,
             likes_count: 12,
-            comments_count: 4
+            comments_count: 4,
+            original_video_id: null,
+            ai_evaluation: null,
+            score: null
         },
         {
             user_id: userIds.yuki_tanaka,
+            username: 'Yuki Tanaka',
+            user_image: 'https://avatar.iran.liara.run/public/6',
             title: 'TOEFL Preparation Progress',
             content: 'Halfway through the TOEFL course! The reading comprehension section is getting easier.',
             post_type: 'image',
@@ -567,10 +688,15 @@ async function insertPosts() {
             tags: ['toefl', 'reading', 'progress'],
             is_public: true,
             likes_count: 8,
-            comments_count: 3
+            comments_count: 3,
+            original_video_id: null,
+            ai_evaluation: null,
+            score: null
         },
         {
             user_id: userIds.sarah_wilson,
+            username: 'Prof. Sarah Wilson',
+            user_image: 'https://avatar.iran.liara.run/public/2',
             title: 'Teaching Grammar Effectively',
             content: 'New lesson plan for teaching present perfect tense. Interactive exercises work much better than traditional drills.',
             post_type: 'text',
@@ -578,7 +704,35 @@ async function insertPosts() {
             tags: ['teaching', 'grammar', 'methodology'],
             is_public: true,
             likes_count: 15,
-            comments_count: 6
+            comments_count: 6,
+            original_video_id: null,
+            ai_evaluation: null,
+            score: null
+        },
+        {
+            user_id: userIds.david_johnson,
+            username: 'David Johnson',
+            user_image: 'https://avatar.iran.liara.run/public/8',
+            title: 'Business English Challenge Response',
+            content: 'Here\'s my response to today\'s business presentation challenge. I talked about my favorite productivity app and how it helps in professional settings.',
+            post_type: 'video',
+            media_url: 'https://example.com/videos/david-business-presentation.mp4',
+            tags: ['business', 'presentation', 'challenge'],
+            is_public: true,
+            likes_count: 7,
+            comments_count: 2,
+            original_video_id: '2025-06-15',
+            ai_evaluation: JSON.stringify({
+                score: 85,
+                pronunciation: 78,
+                vocabulary: 90,
+                grammar: 82,
+                fluency: 88,
+                feedback: 'Great use of business vocabulary! Work on pronunciation of technical terms.',
+                strengths: ['Excellent vocabulary usage', 'Clear structure', 'Good confidence'],
+                improvements: ['Pronunciation clarity', 'Speaking pace', 'Use of transition phrases']
+            }),
+            score: 85
         }
     ];
 
@@ -1438,18 +1592,128 @@ async function insertNotificationDeliveries() {
 }
 
 /**
+ * Insert daily videos
+ */
+async function insertDailyVideos() {
+    console.log('📹 Inserting daily videos...');
+    
+    const dailyVideos = [
+        {
+            id: '2025-06-15',
+            title: 'Business English: Making Presentations',
+            description: 'Learn essential vocabulary and phrases for business presentations',
+            video_url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+            thumbnail_url: 'https://img.youtube.com/vi/dQw4w9WgXcQ/maxresdefault.jpg',
+            embed_url: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+            duration: 600,
+            topics: ['business', 'presentations', 'vocabulary'],
+            date: '2025-06-15',
+            transcript: 'Welcome to today\'s lesson on business presentations. Today we will learn about essential phrases that will help you deliver confident and effective presentations in English. First, let\'s start with opening phrases. When you begin your presentation, it\'s important to greet your audience and introduce yourself clearly...'
+        },
+        {
+            id: '2025-06-14',
+            title: 'English Conversation Skills',
+            description: 'Improve your daily conversation skills with common phrases and expressions',
+            video_url: 'https://www.youtube.com/watch?v=jNQXAC9IVRw',
+            thumbnail_url: 'https://img.youtube.com/vi/jNQXAC9IVRw/maxresdefault.jpg',
+            embed_url: 'https://www.youtube.com/embed/jNQXAC9IVRw',
+            duration: 480,
+            topics: ['conversation', 'daily-english', 'phrases'],
+            date: '2025-06-14',
+            transcript: 'Hello everyone! In today\'s lesson, we\'re going to focus on improving your English conversation skills. We\'ll learn some common phrases and expressions that you can use in everyday conversations. Let\'s start with greetings and small talk...'
+        },
+        {
+            id: '2025-06-13',
+            title: 'Grammar Focus: Present Perfect Tense',
+            description: 'Master the present perfect tense with clear explanations and examples',
+            video_url: 'https://www.youtube.com/watch?v=L_LUpnjgPso',
+            thumbnail_url: 'https://img.youtube.com/vi/L_LUpnjgPso/maxresdefault.jpg',
+            embed_url: 'https://www.youtube.com/embed/L_LUpnjgPso',
+            duration: 720,
+            topics: ['grammar', 'present-perfect', 'tenses'],
+            date: '2025-06-13',
+            transcript: 'Today we are going to study the present perfect tense. This is one of the most important tenses in English, and it can be a bit tricky for students. The present perfect tense is formed using have or has plus the past participle of the verb...'
+        }
+    ];
+
+    const { data, error } = await supabase
+        .from('daily_videos')
+        .insert(dailyVideos)
+        .select();
+
+    if (error) throw error;
+    console.log(`✅ Inserted ${data.length} daily videos`);
+}
+
+/**
+ * Insert daily challenges
+ */
+async function insertDailyChallenges() {
+    console.log('🎯 Inserting daily challenges...');
+    
+    const dailyChallenges = [
+        {
+            id: '2025-06-15-business',
+            title: 'Business Presentation Challenge',
+            description: 'Create a 2-minute presentation about your favorite product using business vocabulary',
+            video_url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+            thumbnail_url: 'https://img.youtube.com/vi/dQw4w9WgXcQ/maxresdefault.jpg',
+            embed_url: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+            duration: 600,
+            topics: ['business', 'presentations', 'vocabulary'],
+            difficulty: 'intermediate',
+            featured: true,
+            date: '2025-06-15'
+        },
+        {
+            id: '2025-06-14-conversation',
+            title: 'Daily Conversation Practice',
+            description: 'Record a conversation about your daily routine using phrases from the video',
+            video_url: 'https://www.youtube.com/watch?v=jNQXAC9IVRw',
+            thumbnail_url: 'https://img.youtube.com/vi/jNQXAC9IVRw/maxresdefault.jpg',
+            embed_url: 'https://www.youtube.com/embed/jNQXAC9IVRw',
+            duration: 480,
+            topics: ['conversation', 'daily-english', 'phrases'],
+            difficulty: 'beginner',
+            featured: false,
+            date: '2025-06-14'
+        },
+        {
+            id: '2025-06-13-grammar',
+            title: 'Present Perfect Writing Exercise',
+            description: 'Write a short paragraph about your experiences using present perfect tense',
+            video_url: 'https://www.youtube.com/watch?v=L_LUpnjgPso',
+            thumbnail_url: 'https://img.youtube.com/vi/L_LUpnjgPso/maxresdefault.jpg',
+            embed_url: 'https://www.youtube.com/embed/L_LUpnjgPso',
+            duration: 720,
+            topics: ['grammar', 'present-perfect', 'tenses'],
+            difficulty: 'intermediate',
+            featured: false,
+            date: '2025-06-13'
+        }
+    ];
+
+    const { data, error } = await supabase
+        .from('daily_challenges')
+        .insert(dailyChallenges)
+        .select();
+
+    if (error) throw error;
+    console.log(`✅ Inserted ${data.length} daily challenges`);
+}
+
+/**
  * Verify data population
  */
 async function verifyDataPopulation() {
-    console.log('🔍 Verifying data population...');
-      const tables = [
+    console.log('🔍 Verifying data population...');      const tables = [
         'users', 'profiles', 'learning_paths', 'challenges', 'resources',
         'user_progress', 'challenge_submissions', 'achievements', 'user_achievements',
         'posts', 'comments', 'likes', 'follows', 'notifications', 'messages',
         'ai_models', 'ai_assistants', 'ai_safety_rules', 'api_keys', 'banned_terms',
         'evaluation_logs', 'scoring_templates', 'admin_logs', 'conversations',
         'conversation_participants', 'conversation_messages', 'notification_templates',
-        'scheduled_messages', 'notification_deliveries'
+        'scheduled_messages', 'notification_deliveries', 'daily_videos', 'daily_challenges'
     ];
 
     const results = {};
@@ -1492,6 +1756,7 @@ async function main() {
         console.log(`📅 ${new Date().toISOString()}`);
         console.log('=' .repeat(60));
 
+        await createAuthUsers();
         await cleanSampleData();
         
         console.log('\n📝 INSERTING SAMPLE DATA:');
@@ -1526,11 +1791,12 @@ async function main() {
         await insertNotificationTemplates();
         await insertScheduledMessages();
         await insertNotificationDeliveries();
+        await insertDailyVideos();
+        await insertDailyChallenges();
         
         await verifyDataPopulation();
-        
-        console.log('\n🎉 SAMPLE DATA POPULATION COMPLETED SUCCESSFULLY!');
-        console.log('All 29 tables have been populated with comprehensive sample data.');
+          console.log('\n🎉 SAMPLE DATA POPULATION COMPLETED SUCCESSFULLY!');
+        console.log('All 31 tables have been populated with comprehensive sample data.');
         console.log('\nYou can now:');
         console.log('- Test the application with realistic data');
         console.log('- Explore all features and functionality'); 
