@@ -3,6 +3,8 @@
 import { load } from "cheerio"
 import { supabaseServer } from "@/lib/supabase-server"
 import type { Database } from "@/lib/database.types"
+import { getVideoSettings } from "@/app/actions/admin-settings"
+import { extractYouTubeTranscriptForDuration } from "@/app/utils/video-processor"
 
 // Types for our video data
 export type VideoData = {
@@ -324,10 +326,13 @@ async function getVideoDetails(videoId: string, minDuration: number, maxDuration
       } catch (error) {
         console.error("Error parsing duration:", error)
       }
-    }
-
-    // Extract transcript (simplified version)
-    const transcript = await extractTranscript(videoId)
+    }    // Extract transcript using admin settings for time limit
+    const videoSettings = await getVideoSettings()
+    const maxWatchTimeSeconds = videoSettings.minWatchTime || 300 // Default 5 minutes
+    
+    console.log(`🎬 Extracting transcript with admin time limit: ${maxWatchTimeSeconds} seconds`)
+    const transcriptResult = await extractYouTubeTranscriptForDuration(videoId, duration, maxWatchTimeSeconds)
+    const transcript = transcriptResult.transcript
 
     // Extract topics from title and description
     const topics = extractTopics(title, description)
@@ -433,112 +438,6 @@ function generateFallbackTranscript(videoId: string): string {
   return `[Transcript extraction failed for video ${videoId}. This video requires manual transcript review.]`
 }
 
-// Function to extract transcript from YouTube video using Gemini AI
-async function extractTranscript(videoId: string, duration?: number): Promise<string> {
-  console.log(`🎬 Extracting transcript for video: ${videoId}`)
-  
-  // Check duration to save quota (skip very long videos)
-  if (duration && duration > 1800) { // > 30 minutes
-    console.log(`⚠️ Video too long (${duration}s), skipping Gemini AI to save quota`)
-    return "" // Return empty string instead of fallback
-  }
-  
-  try {
-    // Only use Gemini AI for real transcript
-    const geminiTranscript = await tryGeminiTranscript(videoId)
-    if (geminiTranscript && geminiTranscript.length > 100) {
-      console.log(`✅ Gemini AI transcript extracted: ${geminiTranscript.length} characters`)
-      return geminiTranscript
-    }
-    
-    console.log(`⚠️ Gemini AI failed - returning empty transcript`)
-    return "" // Return empty string if Gemini fails
-    
-  } catch (error) {
-    console.error("Error extracting transcript:", error)
-    return "" // Return empty string on error
-  }
-}
-
-// Function to extract real transcript using Gemini AI
-async function tryGeminiTranscript(videoId: string): Promise<string | null> {
-  const { GoogleGenerativeAI } = await import('@google/generative-ai')
-  
-  if (!process.env.GEMINI_API_KEY) {
-    console.log('⚠️ No GEMINI_API_KEY found')
-    return null
-  }
-
-  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
-  const model = genAI.getGenerativeModel({ 
-    model: "gemini-2.0-flash" // Use flash model to save quota
-  })
-
-  const youtubeUrl = `https://www.youtube.com/watch?v=${videoId}`
-  console.log(`🤖 Requesting transcript from Gemini AI for: ${youtubeUrl}`)
-
-  try {
-    // Add delay to avoid rate limiting
-    await new Promise(resolve => setTimeout(resolve, 3000)) // 3 second delay
-
-    const result = await model.generateContent([
-      {
-        fileData: {
-          mimeType: "video/*",
-          fileUri: youtubeUrl
-        }
-      },
-      `Please provide the COMPLETE and ACCURATE transcript of this YouTube video.
-
-REQUIREMENTS:
-- Extract 100% of all spoken words from the entire video
-- Include every single word that is spoken
-- Format as clean paragraphs with proper punctuation
-- Do NOT summarize or paraphrase - give exact spoken words
-- If there are multiple speakers, indicate speaker changes
-- Include any significant pauses or [music] annotations if relevant
-
-Please transcribe the ENTIRE audio content word-for-word:`
-    ])
-
-    const response = await result.response
-    const transcript = response.text()
-
-    if (transcript && transcript.length > 50) {
-      console.log(`✅ Gemini AI transcript success: ${transcript.length} characters`)
-      return transcript.trim()    }
-
-    console.log(`❌ Gemini AI returned empty or short transcript`)
-    return null
-  } catch (error: any) {
-    console.error(`❌ Gemini AI transcript failed:`, error)
-    
-    // Check if it's a rate limit error
-    if (error.message?.includes('429') || error.message?.includes('quota')) {
-      console.log('⏰ Rate limit hit, using fallback transcript instead of retrying...')
-      return null // This will trigger fallback in extractTranscript
-    }
-    
-    // For other errors, return null to trigger video retry
-    return null
-  }
-}
-
-// Helper function to generate high-quality fallback transcript
-function generateHighQualityFallback(videoId: string, title: string): string {
-  const topics = [
-    'English language learning and communication skills',
-    'Professional development and career advancement', 
-    'Educational content and knowledge sharing',
-    'Technology and digital literacy',
-    'Personal growth and self-improvement'
-  ]
-  
-  const randomTopic = topics[Math.floor(Math.random() * topics.length)]
-  
-  return `This educational video titled "${title}" covers important concepts related to ${randomTopic}. The content is designed to help learners improve their understanding and practical application of the subject matter. This is a high-quality educational resource that provides valuable insights and learning opportunities for students and professionals alike.`
-}
-
 // Thêm biến để lưu trữ video được chọn bởi admin
 // let adminSelectedVideo: VideoData | null = null
 
@@ -587,12 +486,17 @@ export async function getTodayVideo(): Promise<VideoData> {
     console.log("⚠️ No video found in Supabase for today, fetching new...")
       // 2. Try to get video with transcript (up to 3 attempts)
     for (let attempt = 1; attempt <= 3; attempt++) {
-      console.log(`🔄 Attempt ${attempt}/3: Fetching video...`)
-      
+      console.log(`🔄 Attempt ${attempt}/3: Fetching video...`)      
       const videoData = await fetchRandomYoutubeVideo()
       console.log(`🎬 Extracting transcript for video: ${videoData.id}`)
       
-      const transcript = await extractTranscript(videoData.id, videoData.duration)
+      // Get admin settings for time limit
+      const videoSettings = await getVideoSettings()
+      const maxWatchTimeSeconds = videoSettings.minWatchTime || 300 // Default 5 minutes
+      
+      console.log(`🎬 Using admin time limit: ${maxWatchTimeSeconds} seconds`)
+      const transcriptResult = await extractYouTubeTranscriptForDuration(videoData.id, videoData.duration, maxWatchTimeSeconds)
+      const transcript = transcriptResult.transcript
       
       // If we have a valid transcript, save to database and return
       if (transcript && transcript.length >= 100) {

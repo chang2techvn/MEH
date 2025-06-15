@@ -135,11 +135,10 @@ export async function evaluateVideoSubmission(
   try {
     // Check if API key exists
     const apiKey = process.env.GEMINI_API_KEY
-    
-    if (!apiKey) {
-      console.log("No Gemini API key found, returning mock evaluation")
-      return generateMockVideoEvaluation()
-    }    const systemPrompt = `You are an expert English language instructor and communication coach specializing in comprehensive video evaluation for English learners. Your task is to evaluate video submissions across multiple dimensions to help users improve their English skills.
+      if (!apiKey) {
+      console.error("❌ No Gemini API key found")
+      throw new Error("Video evaluation service is not available. Please check API configuration.")
+    }const systemPrompt = `You are an expert English language instructor and communication coach specializing in comprehensive video evaluation for English learners. Your task is to evaluate video submissions across multiple dimensions to help users improve their English skills.
 
 You evaluate videos on these specific criteria:
 
@@ -277,15 +276,31 @@ SCORING GUIDELINES:
 
 Format your response as a structured evaluation that helps the user understand their current level and provides specific, actionable steps to improve.`
 
+    // Output prompts to terminal for debugging
+    console.log("\n" + "=".repeat(80))
+    console.log("🤖 GEMINI AI VIDEO EVALUATION - SYSTEM PROMPT")
+    console.log("=".repeat(80))
+    console.log(systemPrompt)
+    console.log("\n" + "=".repeat(80))
+    console.log("🎯 GEMINI AI VIDEO EVALUATION - EVALUATION PROMPT")
+    console.log("=".repeat(80))
+    console.log(evaluationPrompt)
+    console.log("=".repeat(80) + "\n")
+
     const response = await generateGeminiResponse(evaluationPrompt, systemPrompt)
+    
+    // Output AI response to terminal for debugging
+    console.log("\n" + "=".repeat(80))
+    console.log("🎯 GEMINI AI RESPONSE - VIDEO EVALUATION")
+    console.log("=".repeat(80))
+    console.log(response)
+    console.log("=".repeat(80) + "\n")
     
     // Parse the AI response and convert to structured format
     return parseVideoEvaluationResponse(response)
-    
-  } catch (error) {
-    console.error("Error evaluating video with Gemini AI:", error)
-    // Return mock evaluation as fallback
-    return generateMockVideoEvaluation()
+      } catch (error) {
+    console.error("❌ Error evaluating video with Gemini AI:", error)
+    throw new Error(`Video evaluation failed: ${error instanceof Error ? error.message : String(error)}`)
   }
 }
 
@@ -459,10 +474,9 @@ function parseVideoEvaluationResponse(response: string): VideoEvaluation {
         emotions: emotionsScore,
         personalBranding: personalBrandingScore
       }
-    }
-  } catch (error) {
-    console.error("Error parsing video evaluation response:", error)
-    return generateMockVideoEvaluation()
+    }  } catch (error) {
+    console.error("❌ Error parsing video evaluation response:", error)
+    throw new Error("Failed to parse AI evaluation response. Please try again later.")
   }
 }
 
@@ -538,181 +552,6 @@ function extractBulletPoints(text: string, keywords: string): string[] {
   return points.slice(0, 5) // Limit to 5 points
 }
 
-/**
- * Generate a realistic mock evaluation for testing/fallback
- */
-function generateMockVideoEvaluation(): VideoEvaluation {
-  // Generate realistic scores with some variation
-  const baseScore = 75 + Math.random() * 20 // 75-95 range
-    return {
-    score: Math.round(baseScore),
-    feedback: "Your video shows strong English communication skills with clear pronunciation and good grammar usage. Continue practicing to improve fluency and confidence in your delivery. Your caption is well-written and engaging for social media.",
-    overallFeedback: "Your video demonstrates solid English communication skills with clear articulation and good content structure. Continue practicing to enhance fluency and confidence.",
-    
-    // Individual component scores for backward compatibility
-    pronunciation: Math.round(baseScore + (Math.random() - 0.5) * 10),
-    intonation: Math.round(baseScore + (Math.random() - 0.5) * 8),
-    stress: Math.round(baseScore + (Math.random() - 0.5) * 12),
-    linkingSounds: Math.round(baseScore + (Math.random() - 0.5) * 15),
-    grammar: Math.round(baseScore + (Math.random() - 0.5) * 10),
-    tenses: Math.round(baseScore + (Math.random() - 0.5) * 8),
-    vocabulary: Math.round(baseScore + (Math.random() - 0.5) * 6),
-    collocations: Math.round(baseScore + (Math.random() - 0.5) * 12),
-    fluency: Math.round(baseScore + (Math.random() - 0.5) * 8),
-    speakingSpeed: Math.round(baseScore + (Math.random() - 0.5) * 10),
-    confidence: Math.round(baseScore + (Math.random() - 0.5) * 12),
-    facialExpressions: Math.round(baseScore + (Math.random() - 0.5) * 8),
-    bodyLanguage: Math.round(baseScore + (Math.random() - 0.5) * 10),
-    eyeContact: Math.round(baseScore + (Math.random() - 0.5) * 12),
-    audienceInteraction: Math.round(baseScore + (Math.random() - 0.5) * 15),
-    captionSpelling: Math.round(baseScore + (Math.random() - 0.5) * 5),
-    captionGrammar: Math.round(baseScore + (Math.random() - 0.5) * 8),
-    appropriateVocabulary: Math.round(baseScore + (Math.random() - 0.5) * 6),
-    clarity: Math.round(baseScore + (Math.random() - 0.5) * 8),
-    callToAction: Math.round(baseScore + (Math.random() - 0.5) * 15),
-    hashtags: Math.round(baseScore + (Math.random() - 0.5) * 12),
-    seoCaption: Math.round(baseScore + (Math.random() - 0.5) * 18),
-    creativity: Math.round(baseScore + (Math.random() - 0.5) * 10),
-    emotions: Math.round(baseScore + (Math.random() - 0.5) * 8),
-    personalBranding: Math.round(baseScore + (Math.random() - 0.5) * 12),
-    
-    // Speaking & Pronunciation
-    pronunciationScore: Math.round(baseScore + (Math.random() - 0.5) * 10),
-    intonationScore: Math.round(baseScore + (Math.random() - 0.5) * 8),
-    stressScore: Math.round(baseScore + (Math.random() - 0.5) * 12),
-    linkingSoundsScore: Math.round(baseScore + (Math.random() - 0.5) * 15),
-    
-    // Language Usage
-    grammarScore: Math.round(baseScore + (Math.random() - 0.5) * 10),
-    tensesScore: Math.round(baseScore + (Math.random() - 0.5) * 8),
-    vocabularyScore: Math.round(baseScore + (Math.random() - 0.5) * 6),
-    collocationScore: Math.round(baseScore + (Math.random() - 0.5) * 12),
-    
-    // Fluency & Delivery
-    fluencyScore: Math.round(baseScore + (Math.random() - 0.5) * 8),
-    speakingSpeedScore: Math.round(baseScore + (Math.random() - 0.5) * 10),
-    confidenceScore: Math.round(baseScore + (Math.random() - 0.5) * 12),
-    
-    // Visual & Presentation
-    facialExpressionsScore: Math.round(baseScore + (Math.random() - 0.5) * 8),
-    bodyLanguageScore: Math.round(baseScore + (Math.random() - 0.5) * 10),
-    eyeContactScore: Math.round(baseScore + (Math.random() - 0.5) * 12),
-    audienceInteractionScore: Math.round(baseScore + (Math.random() - 0.5) * 15),
-    
-    // Caption Quality
-    captionSpellingScore: Math.round(baseScore + (Math.random() - 0.5) * 5),
-    captionGrammarScore: Math.round(baseScore + (Math.random() - 0.5) * 8),
-    appropriateVocabularyScore: Math.round(baseScore + (Math.random() - 0.5) * 6),
-    clarityScore: Math.round(baseScore + (Math.random() - 0.5) * 8),
-    callToActionScore: Math.round(baseScore + (Math.random() - 0.5) * 15),
-    hashtagsScore: Math.round(baseScore + (Math.random() - 0.5) * 12),
-    seoScore: Math.round(baseScore + (Math.random() - 0.5) * 18),
-    creativityScore: Math.round(baseScore + (Math.random() - 0.5) * 10),
-    emotionsScore: Math.round(baseScore + (Math.random() - 0.5) * 8),
-    personalBrandingScore: Math.round(baseScore + (Math.random() - 0.5) * 12),
-    
-    strengths: [
-      "Clear pronunciation of most words",
-      "Good grammar structure in sentences",
-      "Natural speaking pace and rhythm",
-      "Engaging facial expressions",
-      "Well-structured caption content"
-    ],
-    
-    weaknesses: [
-      "Work on word stress placement",
-      "Practice linking sounds between words",
-      "Increase confidence in delivery",
-      "Add more strategic hashtags",
-      "Improve call-to-action effectiveness"
-    ],
-    
-    improvements: [
-      "Practice stress patterns with common word groups",
-      "Record yourself speaking to improve self-awareness",
-      "Join speaking practice groups for confidence building",
-      "Study successful social media captions for inspiration"
-    ],
-    
-    recommendations: [
-      "Focus on connected speech patterns",
-      "Use pronunciation apps for daily practice",
-      "Practice speaking with native speakers",
-      "Learn about social media marketing strategies"
-    ],
-    
-    // Category-specific feedback
-    speakingFeedback: "Your pronunciation shows good foundation with clear articulation. Focus on improving stress patterns and intonation for more natural speech.",
-    languageFeedback: "Strong vocabulary usage with generally accurate grammar. Work on natural collocations and complex tense usage.",
-    deliveryFeedback: "Good overall delivery with appropriate speaking speed. Building confidence will enhance your communication impact.",
-    visualFeedback: "Engaging visual presentation with good eye contact. More dynamic gestures could enhance audience connection.",
-    captionFeedback: "Well-written caption with clear message and good grammar. Consider more strategic hashtag usage and stronger call-to-action.",
-        speakingCategory: {
-        score: Math.round(baseScore + (Math.random() - 0.5) * 8),
-        overallScore: Math.round(baseScore + (Math.random() - 0.5) * 8),
-        feedback: "Your pronunciation shows good foundation with clear articulation. Focus on improving stress patterns and intonation for more natural speech.",
-        strengths: ["Clear consonant sounds", "Good vowel pronunciation"],
-        areas_to_improve: ["Word stress patterns", "Natural intonation"],
-        pronunciation: Math.round(baseScore + (Math.random() - 0.5) * 8),
-        intonation: Math.round(baseScore + (Math.random() - 0.5) * 6),
-        stress: Math.round(baseScore + (Math.random() - 0.5) * 12),
-        linkingSounds: Math.round(baseScore + (Math.random() - 0.5) * 15)
-      },
-      
-      languageCategory: {
-        score: Math.round(baseScore + (Math.random() - 0.5) * 6),
-        overallScore: Math.round(baseScore + (Math.random() - 0.5) * 6),
-        feedback: "Strong vocabulary usage with generally accurate grammar. Work on natural collocations and complex tense usage.",
-        strengths: ["Rich vocabulary", "Accurate basic grammar"],
-        areas_to_improve: ["Advanced grammar structures", "Natural word combinations"],
-        grammar: Math.round(baseScore + (Math.random() - 0.5) * 10),
-        tenses: Math.round(baseScore + (Math.random() - 0.5) * 8),
-        vocabulary: Math.round(baseScore + (Math.random() - 0.5) * 6),
-        collocations: Math.round(baseScore + (Math.random() - 0.5) * 12)
-      },
-      
-      deliveryCategory: {
-        score: Math.round(baseScore + (Math.random() - 0.5) * 10),
-        overallScore: Math.round(baseScore + (Math.random() - 0.5) * 10),
-        feedback: "Good overall delivery with appropriate speaking speed. Building confidence will enhance your communication impact.",
-        strengths: ["Natural pace", "Clear expression"],
-        areas_to_improve: ["Consistent confidence", "Smooth transitions"],
-        fluency: Math.round(baseScore + (Math.random() - 0.5) * 8),
-        speakingSpeed: Math.round(baseScore + (Math.random() - 0.5) * 10),
-        confidence: Math.round(baseScore + (Math.random() - 0.5) * 12)
-      },
-      
-      visualCategory: {
-        score: Math.round(baseScore + (Math.random() - 0.5) * 12),
-        overallScore: Math.round(baseScore + (Math.random() - 0.5) * 12),
-        feedback: "Engaging visual presentation with good eye contact. More dynamic gestures could enhance audience connection.",
-        strengths: ["Good eye contact", "Natural expressions"],
-        areas_to_improve: ["Dynamic body language", "Audience engagement techniques"],
-        facialExpressions: Math.round(baseScore + (Math.random() - 0.5) * 8),
-        bodyLanguage: Math.round(baseScore + (Math.random() - 0.5) * 10),
-        eyeContact: Math.round(baseScore + (Math.random() - 0.5) * 12),
-        audienceInteraction: Math.round(baseScore + (Math.random() - 0.5) * 15)
-      },
-      
-      captionCategory: {
-        score: Math.round(baseScore + (Math.random() - 0.5) * 8),
-        overallScore: Math.round(baseScore + (Math.random() - 0.5) * 8),
-        feedback: "Well-written caption with clear message and good grammar. Consider more strategic hashtag usage and stronger call-to-action.",
-        strengths: ["Clear writing", "Good grammar", "Appropriate tone"],
-        areas_to_improve: ["Strategic hashtags", "Compelling call-to-action", "SEO optimization"],
-        captionSpelling: Math.round(baseScore + (Math.random() - 0.5) * 5),
-        captionGrammar: Math.round(baseScore + (Math.random() - 0.5) * 8),
-        appropriateVocabulary: Math.round(baseScore + (Math.random() - 0.5) * 6),
-        clarity: Math.round(baseScore + (Math.random() - 0.5) * 8),
-        callToAction: Math.round(baseScore + (Math.random() - 0.5) * 15),
-        hashtags: Math.round(baseScore + (Math.random() - 0.5) * 12),
-        seoCaption: Math.round(baseScore + (Math.random() - 0.5) * 18),
-        creativity: Math.round(baseScore + (Math.random() - 0.5) * 10),
-        emotions: Math.round(baseScore + (Math.random() - 0.5) * 8),
-        personalBranding: Math.round(baseScore + (Math.random() - 0.5) * 12)
-      }
-  }
-}
 
 /**
  * Evaluate video and caption together for comprehensive assessment

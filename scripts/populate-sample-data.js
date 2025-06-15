@@ -331,13 +331,16 @@ async function insertResources() {
  */
 async function insertUserProgress() {
     console.log('📊 Inserting user progress...');
-    
-    const userProgress = [
+      const userProgress = [
         { user_id: userIds.john_smith, learning_path_id: learningPathIds.foundation, current_challenge_id: challengeIds.present_simple, completed_challenges: 1, total_challenges: 5, progress_percentage: 20.00, last_accessed: new Date(Date.now() - 2 * 60 * 60 * 1000) },
         { user_id: userIds.maria_garcia, learning_path_id: learningPathIds.foundation, current_challenge_id: challengeIds.greetings, completed_challenges: 0, total_challenges: 5, progress_percentage: 0.00, last_accessed: new Date(Date.now() - 24 * 60 * 60 * 1000) },
         { user_id: userIds.yuki_tanaka, learning_path_id: learningPathIds.toefl, current_challenge_id: challengeIds.toefl_reading, completed_challenges: 2, total_challenges: 8, progress_percentage: 25.00, last_accessed: new Date(Date.now() - 30 * 60 * 1000) },
         { user_id: userIds.ahmed_hassan, learning_path_id: learningPathIds.foundation, current_challenge_id: challengeIds.greetings, completed_challenges: 0, total_challenges: 5, progress_percentage: 0.00, last_accessed: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000) },
-        { user_id: userIds.david_johnson, learning_path_id: learningPathIds.business, current_challenge_id: challengeIds.business_vocab, completed_challenges: 3, total_challenges: 6, progress_percentage: 50.00, last_accessed: new Date(Date.now() - 60 * 60 * 1000) }
+        { user_id: userIds.david_johnson, learning_path_id: learningPathIds.business, current_challenge_id: challengeIds.business_vocab, completed_challenges: 3, total_challenges: 6, progress_percentage: 50.00, last_accessed: new Date(Date.now() - 60 * 60 * 1000) },
+        // Admin user progress data
+        { user_id: userIds.admin, learning_path_id: learningPathIds.foundation, current_challenge_id: challengeIds.pronunciation, completed_challenges: 5, total_challenges: 5, progress_percentage: 100.00, last_accessed: new Date(Date.now() - 30 * 60 * 1000) },
+        { user_id: userIds.admin, learning_path_id: learningPathIds.business, current_challenge_id: challengeIds.business_presentation, completed_challenges: 6, total_challenges: 6, progress_percentage: 100.00, last_accessed: new Date(Date.now() - 60 * 60 * 1000) },
+        { user_id: userIds.admin, learning_path_id: learningPathIds.conversation, current_challenge_id: challengeIds.debate, completed_challenges: 4, total_challenges: 4, progress_percentage: 100.00, last_accessed: new Date(Date.now() - 90 * 60 * 1000) }
     ];
 
     const { data, error } = await supabase
@@ -354,8 +357,7 @@ async function insertUserProgress() {
  */
 async function insertChallengeSubmissions() {
     console.log('📝 Inserting challenge submissions...');
-    
-    const submissions = [
+      const submissions = [
         {
             user_id: userIds.john_smith,
             challenge_id: challengeIds.greetings,
@@ -395,6 +397,67 @@ async function insertChallengeSubmissions() {
             time_taken: 800,
             ai_feedback: JSON.stringify({ score: 90, feedback: 'Strong vocabulary knowledge', areas_to_improve: ['work on remaining terms'] }),
             submitted_at: new Date(Date.now() - 60 * 60 * 1000)
+        },
+        // Admin user submissions - showing comprehensive progress
+        {
+            user_id: userIds.admin,
+            challenge_id: challengeIds.greetings,
+            user_answer: JSON.stringify({ video_url: 'https://example.com/admin-intro.mp4', transcript: 'Good morning! I am Dr. Sarah, platform administrator with extensive experience in educational technology...' }),
+            is_correct: true,
+            points_earned: 20,
+            time_taken: 600,
+            ai_feedback: JSON.stringify({ score: 98, feedback: 'Excellent fluency, perfect pronunciation, professional delivery', areas_to_improve: [] }),
+            submitted_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000)
+        },
+        {
+            user_id: userIds.admin,
+            challenge_id: challengeIds.present_simple,
+            user_answer: JSON.stringify({ essay: 'The present simple tense is fundamental in English grammar. It expresses habitual actions, general truths, and states of being...' }),
+            is_correct: true,
+            points_earned: 25,
+            time_taken: 480,
+            ai_feedback: JSON.stringify({ score: 96, feedback: 'Outstanding grammar knowledge and explanation skills', areas_to_improve: [] }),
+            submitted_at: new Date(Date.now() - 24 * 60 * 60 * 1000)
+        },
+        {
+            user_id: userIds.admin,
+            challenge_id: challengeIds.pronunciation,
+            user_answer: JSON.stringify({ audio_url: 'https://example.com/admin-pronunciation.mp3', transcript: 'Pronunciation practice with various phonetic challenges...' }),
+            is_correct: true,
+            points_earned: 30,
+            time_taken: 720,
+            ai_feedback: JSON.stringify({ score: 99, feedback: 'Perfect pronunciation, excellent phonetic accuracy', areas_to_improve: [] }),
+            submitted_at: new Date(Date.now() - 12 * 60 * 60 * 1000)
+        },
+        {
+            user_id: userIds.admin,
+            challenge_id: challengeIds.business_vocab,
+            user_answer: JSON.stringify({ vocabulary_test: 'Advanced business terminology mastery demonstration...' }),
+            is_correct: true,
+            points_earned: 35,
+            time_taken: 360,
+            ai_feedback: JSON.stringify({ score: 100, feedback: 'Exceptional vocabulary mastery, professional-level understanding', areas_to_improve: [] }),
+            submitted_at: new Date(Date.now() - 8 * 60 * 60 * 1000)
+        },
+        {
+            user_id: userIds.admin,
+            challenge_id: challengeIds.business_presentation,
+            user_answer: JSON.stringify({ presentation_url: 'https://example.com/admin-presentation.mp4', slides: 'Professional presentation on educational methodologies...' }),
+            is_correct: true,
+            points_earned: 40,
+            time_taken: 900,
+            ai_feedback: JSON.stringify({ score: 100, feedback: 'Masterful presentation skills, exemplary content organization', areas_to_improve: [] }),
+            submitted_at: new Date(Date.now() - 6 * 60 * 60 * 1000)
+        },
+        {
+            user_id: userIds.admin,
+            challenge_id: challengeIds.debate,
+            user_answer: JSON.stringify({ debate_video: 'https://example.com/admin-debate.mp4', arguments: 'Structured argumentation on educational technology benefits...' }),
+            is_correct: true,
+            points_earned: 45,
+            time_taken: 1200,
+            ai_feedback: JSON.stringify({ score: 100, feedback: 'Outstanding critical thinking and argumentation skills', areas_to_improve: [] }),
+            submitted_at: new Date(Date.now() - 4 * 60 * 60 * 1000)
         }
     ];
 
@@ -1459,7 +1522,8 @@ async function main() {
         await insertAIAssistants();
         await insertConversations();
         await insertConversationParticipants();
-        await insertConversationMessages();        await insertNotificationTemplates();
+        await insertConversationMessages();        
+        await insertNotificationTemplates();
         await insertScheduledMessages();
         await insertNotificationDeliveries();
         

@@ -3,6 +3,7 @@
 import { GoogleGenerativeAI } from "@google/generative-ai"
 import { extractYouTubeTranscript, extractYouTubeTranscriptForDuration } from "@/app/utils/video-processor"
 import { getVideoSettings } from "@/app/actions/admin-settings"
+import { supabaseServer } from "@/lib/supabase-server"
 
 // Types for content comparison
 export type ContentComparison = {
@@ -36,16 +37,39 @@ export async function compareVideoContentWithUserContent(
     console.log(`\n🔍 === CONTENT COMPARISON FOR VIDEO ${videoId} ===`)
     console.log(`Admin Min Watch Time: ${minWatchTimeSeconds} seconds (${Math.round(minWatchTimeSeconds / 60)} minutes)`)
     console.log(`User Content Length: ${userContent.length} characters`)
-    console.log(`Threshold: ${threshold}%`)
-
-    // Extract only the portion of the video transcript corresponding to the minimum watch time
-    const videoTranscript = await extractYouTubeTranscriptForDuration(videoId, minWatchTimeSeconds)
-      // Print detailed comparison info to terminal
-    console.log(`Video Transcript Length (limited): ${videoTranscript.transcript.length} characters`)
+    console.log(`Threshold: ${threshold}%`)    // Get video transcript from database (already limited by admin settings)
+    const { data: videoData, error } = await supabaseServer
+      .from('daily_videos')
+      .select('transcript, id, title')
+      .eq('id', videoId)
+      .single()
+      if (error || !videoData || !videoData.transcript) {
+      return {
+        similarityScore: 0,
+        isAboveThreshold: false,
+        feedback: `Video transcript not found in database for video ${videoId}`,
+        keyMatches: [],
+        suggestions: ["Please ensure the video has been processed and transcript is available"],
+        detailedAnalysis: {
+          originalTranscript: "",
+          matchedConcepts: [],
+          missedConcepts: [],
+          correctPoints: [],
+          incorrectPoints: [],
+          wordCount: 0,
+          keywordMatches: 0
+        }
+      }
+    }
+    
+    const videoTranscript = videoData.transcript
+    
+    // Print detailed comparison info to terminal
+    console.log(`Video Transcript Length (from database): ${videoTranscript.length} characters`)
     console.log(`\n📝 --- USER CONTENT ---`)
     console.log(userContent)
     console.log(`\n📺 --- LIMITED VIDEO TRANSCRIPT (${minWatchTimeSeconds}s) ---`)
-    console.log(videoTranscript.transcript.substring(0, 2000) + (videoTranscript.transcript.length > 2000 ? '...' : ''))
+    console.log(videoTranscript.substring(0, 2000) + (videoTranscript.length > 2000 ? '...' : ''))
     console.log(`\n⚖️ --- STARTING COMPARISON PROCESS ---`)
       // Get API key from environment
     const apiKey = process.env.GEMINI_API_KEY
@@ -179,9 +203,9 @@ export async function getContentImprovementSuggestions(
     // Get admin settings to use the same watch time limit
     const videoSettings = await getVideoSettings()
     const minWatchTimeSeconds = videoSettings.minWatchTime
-    
-    // Use the limited transcript just like in the main comparison function
-    const videoTranscript = await extractYouTubeTranscriptForDuration(videoId, minWatchTimeSeconds)
+      // Use the limited transcript just like in the main comparison function
+    const videoInfo = await extractYouTubeTranscriptForDuration(videoId, minWatchTimeSeconds)
+    const videoTranscript = videoInfo.transcript || ""
     const apiKey = process.env.GEMINI_API_KEY
 
     if (!apiKey) {
@@ -197,7 +221,7 @@ export async function getContentImprovementSuggestions(
     const prompt = `
       Based on the original video transcript (limited to ${minWatchTimeSeconds} seconds that user was required to watch) and the user's content, provide 3-5 specific suggestions for improvement:
       
-      Original (First ${minWatchTimeSeconds} seconds only): ${videoTranscript.transcript.substring(0, 500)}...
+      Original (First ${minWatchTimeSeconds} seconds only): ${videoTranscript.substring(0, 500)}...
       User Content: ${userContent}
         Focus on what specific information or concepts are missing and how to improve understanding.
       Return as a JSON array of strings.

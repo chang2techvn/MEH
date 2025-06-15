@@ -219,8 +219,7 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
         if (!videoFile) {
           setError("Please upload a video before proceeding.")
           return
-        }
-          // Perform AI evaluation before proceeding to step 4
+        }        // Perform AI evaluation before proceeding to step 4
         if (videoData && videoPreviewUrl) {
           setIsEvaluating(true)
           setError(null)
@@ -228,8 +227,8 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
           try {
             const { evaluateSubmissionForPublish } = await import("@/lib/gemini-video-evaluation")
             
-            // Extract the original video's transcript for evaluation context
-            const originalTranscript = await extractYouTubeTranscript(videoData.id)
+            // Use the transcript already saved in the database (limited by admin watch time)
+            const originalTranscript = videoData.transcript || ""
             
             // Create challenge context including original video info
             const challengeContext = `Daily English Challenge - Original Video: "${videoData.title}" | Topic: ${videoData.topics?.join(', ') || 'General English Learning'} | User is responding to and creating content based on this original video.`
@@ -247,8 +246,7 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
           } catch (error) {
             console.error("Error during AI evaluation:", error)
             // Continue to next step even if evaluation fails
-            setVideoEvaluation(null)
-          } finally {
+            setVideoEvaluation(null)          } finally {
             setIsEvaluating(false)
           }
         }
@@ -257,7 +255,8 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
       setActiveStep(activeStep + 1)
       setProgress(((activeStep + 1) / steps.length) * 100)
       setError(null)
-      setShowComparisonFeedback(false)    }
+      setShowComparisonFeedback(false)
+    }
   }
   // Handle content comparison feedback actions
   const handleComparisonRetry = async () => {

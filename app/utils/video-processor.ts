@@ -20,81 +20,13 @@ export interface VideoInfo {
 
 export async function extractYouTubeTranscriptForDuration(
   videoId: string, 
-  duration: number, 
+  videoDuration: number = 0, 
   maxWatchTimeSeconds: number = 300 // Default 5 minutes
 ): Promise<VideoInfo> {
   console.log(`🎬 Extracting LIMITED transcript for video: ${videoId} (max ${maxWatchTimeSeconds}s)`)
   
   try {
-    // Get full transcript first
-    const fullVideoInfo = await extractVideoTranscript(videoId)
-    
-    if (!fullVideoInfo.hasRealTranscript || !fullVideoInfo.transcript) {
-      console.log(`❌ No real transcript available for video ${videoId}`)
-      return fullVideoInfo
-    }
-    
-    // Apply time limit to transcript
-    const limitedTranscript = applyTimeLimitToTranscript(
-      fullVideoInfo.transcript, 
-      fullVideoInfo.transcriptItems, 
-      maxWatchTimeSeconds
-    )
-    
-    console.log(`✅ Limited transcript extracted: ${limitedTranscript.length} characters (${maxWatchTimeSeconds}s limit)`)
-      return {
-      ...fullVideoInfo,
-      transcript: limitedTranscript,
-      duration: fullVideoInfo.duration // Keep original duration string
-    }
-    
-  } catch (error) {
-    console.error(`❌ Error extracting limited transcript for video ${videoId}:`, error)
-    return generateSimulatedTranscript(videoId)
-  }
-}
-
-// Helper function to apply time limit to transcript
-function applyTimeLimitToTranscript(
-  fullTranscript: string, 
-  transcriptItems: TranscriptItem[], 
-  maxSeconds: number
-): string {
-  if (!transcriptItems || transcriptItems.length === 0) {
-    // If no transcript items, estimate by character count
-    // Approximate: 150 words per minute, 5 characters per word = 750 characters per minute
-    const estimatedCharsPerSecond = 750 / 60 // ~12.5 chars per second
-    const maxChars = Math.floor(maxSeconds * estimatedCharsPerSecond)
-    return fullTranscript.substring(0, maxChars)
-  }
-  
-  // Use transcript items with timing
-  let limitedText = ''
-  let currentTime = 0
-  
-  for (const item of transcriptItems) {
-    if (currentTime >= maxSeconds) break
-    
-    // Add text if it's within time limit
-    if (item.offset <= maxSeconds * 1000) { // offset is in milliseconds
-      limitedText += item.text + ' '
-      currentTime = (item.offset + item.duration) / 1000 // Convert to seconds
-    }
-  }
-  
-  return limitedText.trim()
-}
-
-export async function extractVideoTranscript(
-  videoId: string, 
-  maxWatchTimeSeconds: number = 300 // Default 5 minutes
-): Promise<VideoInfo> {
-  console.log(`🎬 Extracting LIMITED transcript for video: ${videoId} (max ${maxWatchTimeSeconds}s)`);
-  
-  try {
-    // Try to get real transcript using Gemini AI with time limit
-    console.log(`🔍 Attempting to fetch LIMITED transcript for video: ${videoId}`);
-    
+    // Get transcript using Gemini AI with time limit
     const transcriptResult = await fetchRealTranscript(videoId, maxWatchTimeSeconds);
     
     if (transcriptResult.success && transcriptResult.transcript && transcriptResult.transcript.length > 0) {
@@ -120,6 +52,10 @@ export async function extractVideoTranscript(
   }
 }
 
+
+
+
+
 async function fetchRealTranscript(videoId: string, maxWatchTimeSeconds: number = 300): Promise<{
   success: boolean;
   transcript: string;
@@ -128,24 +64,17 @@ async function fetchRealTranscript(videoId: string, maxWatchTimeSeconds: number 
   try {
     // Use ONLY Gemini AI for transcript extraction with time limit
     console.log(`🤖 Using ONLY Gemini AI for LIMITED transcript extraction for video: ${videoId} (max ${maxWatchTimeSeconds}s)`);
-      // Get full transcript from Gemini AI first
-    const geminiResult = await tryGeminiTranscript(videoId);
+    
+    // Get transcript from Gemini AI with time limit request
+    const geminiResult = await tryGeminiTranscript(videoId, maxWatchTimeSeconds);
     
     if (geminiResult.success && geminiResult.transcript && geminiResult.transcript.length > 100) {
-      console.log(`✅ Full Gemini transcript received: ${geminiResult.transcript.length} characters`);
-      
-      // Apply time limit to the full transcript
-      const limitedTranscript = applyTimeLimitToTranscript(
-        geminiResult.transcript, 
-        [], // No transcript items from Gemini
-        maxWatchTimeSeconds
-      );
-      
-      console.log(`✅ Applied time limit (${maxWatchTimeSeconds}s): ${limitedTranscript.length} characters`);
+      console.log(`✅ Limited Gemini transcript received: ${geminiResult.transcript.length} characters`);
       
       return {
         success: true,
-        transcript: limitedTranscript,        items: [] // Gemini doesn't provide timing info
+        transcript: geminiResult.transcript,
+        items: [] // Gemini doesn't provide timing info
       };
     } else {
       console.log(`❌ Gemini AI failed to extract transcript for video: ${videoId}`);
@@ -166,7 +95,7 @@ async function fetchRealTranscript(videoId: string, maxWatchTimeSeconds: number 
   }
 }
     
-async function tryGeminiTranscript(videoId: string): Promise<{
+async function tryGeminiTranscript(videoId: string, maxWatchTimeSeconds: number = 300): Promise<{
   success: boolean;
   transcript: string;
   items: TranscriptItem[];
@@ -175,7 +104,9 @@ async function tryGeminiTranscript(videoId: string): Promise<{
     if (!process.env.GEMINI_API_KEY) {
       console.log(`❌ No Gemini API key found`);
       return { success: false, transcript: '', items: [] };
-    }    // Use gemini-2.0-flash for video understanding with YouTube URL
+    }
+    
+    // Use gemini-2.0-flash for video understanding with YouTube URL
     const model = genAI.getGenerativeModel({ 
       model: "gemini-2.0-flash",
       generationConfig: {
@@ -187,14 +118,22 @@ async function tryGeminiTranscript(videoId: string): Promise<{
     // Use YouTube URL directly with fileData as per documentation
     const youtubeUrl = `https://www.youtube.com/watch?v=${videoId}`;
     
-    console.log(`🤖 Requesting REAL transcript from Gemini for: ${youtubeUrl}`);    // Create content using the proper format from the documentation
-    const prompt = `Please transcribe this YouTube video completely and accurately. 
-Extract ALL spoken words exactly as they are said in the video.
-Provide the transcript as a continuous paragraph format.
-Do not summarize, do not add commentary, just transcribe what is actually spoken.
-Video URL: ${youtubeUrl}`;
+    console.log(`🤖 Requesting LIMITED transcript from Gemini for: ${youtubeUrl} (${maxWatchTimeSeconds}s)`);
     
-    console.log(`🤖 Sending video transcription request to Gemini AI...`);
+    // Create content using the proper format with time limit
+    const prompt = `Please transcribe ONLY the first ${maxWatchTimeSeconds} seconds of this YouTube video.
+
+IMPORTANT REQUIREMENTS:
+- Extract spoken words from ONLY the first ${maxWatchTimeSeconds} seconds (${Math.floor(maxWatchTimeSeconds/60)} minutes ${maxWatchTimeSeconds%60} seconds)
+- Do NOT transcribe beyond ${maxWatchTimeSeconds} seconds
+- Provide the transcript exactly as spoken within this time limit
+- Format as continuous paragraphs with proper punctuation
+- Do not summarize, do not add commentary, just transcribe what is actually spoken in the first ${maxWatchTimeSeconds} seconds
+
+Video URL: ${youtubeUrl}
+Time limit: First ${maxWatchTimeSeconds} seconds only`;
+    
+    console.log(`🤖 Sending LIMITED video transcription request to Gemini AI...`);
     const result = await model.generateContent([
       {
         fileData: {
@@ -325,7 +264,7 @@ function generateSimulatedTranscript(videoId: string): VideoInfo {
 
 export async function processVideoForChallenge(videoId: string): Promise<VideoInfo> {
   try {
-    const videoInfo = await extractVideoTranscript(videoId);
+    const videoInfo = await extractYouTubeTranscriptForDuration(videoId, 0, 300);
     
     if (!videoInfo.transcript || videoInfo.transcript.length < 100) {
       console.log(`⚠️ Transcript too short for video ${videoId}, regenerating...`);
@@ -343,7 +282,7 @@ export async function processVideoForChallenge(videoId: string): Promise<VideoIn
 // Compatibility functions for existing imports
 export async function extractYouTubeTranscript(videoId: string): Promise<string> {
   try {
-    const videoInfo = await extractVideoTranscript(videoId);
+    const videoInfo = await extractYouTubeTranscriptForDuration(videoId, 0, 300);
     return videoInfo.transcript;
   } catch (error) {
     console.error(`Error extracting YouTube transcript for ${videoId}:`, error);
