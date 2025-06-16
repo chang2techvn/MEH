@@ -71,7 +71,8 @@ export function CurrentChallengeSection({
 
   return (
 
-    <Suspense fallback={<LoadingFallback />}>      <HeroSection
+    <Suspense fallback={<LoadingFallback />}>      
+    <HeroSection
         title="Your Current Challenge"
         description={`Watch this ${watchTimeText} video about how technology is changing our daily lives and follow the 4-skill process.`}
       >

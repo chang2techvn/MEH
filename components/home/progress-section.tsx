@@ -58,26 +58,7 @@ export function ProgressSection() {
     )
   }
 
-  const progressItems = [
-    {
-      label: "Videos Completed",
-      current: progressData.videosCompleted,
-      total: progressData.totalVideos,
-      percentage: progressData.totalVideos > 0 ? (progressData.videosCompleted / progressData.totalVideos) * 100 : 0
-    },
-    {
-      label: "Writings Submitted",
-      current: progressData.writingsSubmitted,
-      total: progressData.totalWritings,
-      percentage: progressData.totalWritings > 0 ? (progressData.writingsSubmitted / progressData.totalWritings) * 100 : 0
-    },
-    {
-      label: "Speaking Practice",
-      current: progressData.speakingPractice,
-      total: progressData.totalSpeaking,
-      percentage: progressData.totalSpeaking > 0 ? (progressData.speakingPractice / progressData.totalSpeaking) * 100 : 0
-    },
-  ]
+  const progressItems = []
 
   // Generate daily streak visualization
   const generateDailyStreak = () => {

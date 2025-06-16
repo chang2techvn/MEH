@@ -50,7 +50,8 @@ const ChallengeCard = memo(function ChallengeCard({
 
   return (
     <Card>
-      <CardContent className="p-0">        <div className="aspect-video bg-muted relative overflow-hidden">
+      <CardContent className="p-0">        
+        <div className="aspect-video bg-muted relative overflow-hidden">
           {thumbnailUrl ? (
             <OptimizedImage
               src={thumbnailUrl}

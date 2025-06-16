@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import * as cron from 'node-cron'
-import { getTodayVideo } from '@/app/actions/youtube-video'
 
 // Global variable to store cron job
 let dailyVideoJob: cron.ScheduledTask | null = null
@@ -33,26 +32,45 @@ function startDailyVideoScheduler() {
     if (dailyVideoJob) {
       dailyVideoJob.stop()
       dailyVideoJob.destroy()
-    }
-
-    // Schedule job to run at 23:59 every day
+    }    // Schedule job to run at 23:59 every day
     dailyVideoJob = cron.schedule('59 23 * * *', async () => {
-      console.log('🕐 Daily video scheduler triggered at 23:59')
+      console.log('🕐 Daily video & challenges scheduler triggered at 23:59')
       try {
-        await getTodayVideo()
-        console.log('✅ Daily video crawl completed successfully')
+        // Call the daily-video-refresh endpoint
+        const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+        const cronSecret = process.env.CRON_SECRET
+        
+        if (!cronSecret) {
+          console.error('❌ CRON_SECRET not found in environment')
+          return
+        }
+        
+        const response = await fetch(`${baseUrl}/api/cron/daily-video-refresh`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${cronSecret}`,
+            'Content-Type': 'application/json'
+          }
+        })
+        
+        if (response.ok) {
+          const data = await response.json()
+          console.log('✅ Daily video & challenges refresh completed successfully:', data.data)
+        } else {
+          const errorText = await response.text()
+          console.error('❌ Daily refresh failed:', response.status, errorText)
+        }
       } catch (error) {
-        console.error('❌ Daily video crawl failed:', error)
-      }    }, {
+        console.error('❌ Daily refresh failed:', error)
+      }
+    }, {
       timezone: "Asia/Ho_Chi_Minh" // Vietnam timezone
-    })
-
-    // Start the job
-    dailyVideoJob.start()
-
+    })    // Start the job
+    dailyVideoJob.start();
+    
     return NextResponse.json({
       success: true,
-      message: 'Daily video scheduler started successfully',
+      message: 'Daily video & challenges scheduler started successfully',
       schedule: '23:59 every day (Vietnam time)',
       status: 'running'
     })
@@ -96,18 +114,44 @@ function getDailyVideoSchedulerStatus() {
 
 async function runDailyVideoNow() {
   try {
-    console.log('🚀 Manual trigger: Running daily video crawl now...')
-    await getTodayVideo()
+    console.log('🚀 Manual trigger: Running daily video & challenges refresh now...')
     
-    return NextResponse.json({
-      success: true,
-      message: 'Daily video crawl completed successfully'
+    // Call the daily-video-refresh endpoint
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+    const cronSecret = process.env.CRON_SECRET
+    
+    if (!cronSecret) {
+      console.error('❌ CRON_SECRET not found in environment')
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 })
+    }
+    
+    const response = await fetch(`${baseUrl}/api/cron/daily-video-refresh`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${cronSecret}`,
+        'Content-Type': 'application/json'
+      }
     })
-
+    
+    if (response.ok) {
+      const data = await response.json()
+      return NextResponse.json({
+        success: true,
+        message: 'Daily video & challenges refresh completed successfully',
+        data: data.data
+      })
+    } else {
+      const errorText = await response.text()
+      return NextResponse.json({ 
+        error: 'Failed to run daily refresh',
+        details: `${response.status}: ${errorText}`
+      }, { status: 500 })
+    }
+    
   } catch (error) {
-    console.error('Error running daily video crawl:', error)
+    console.error('Error running daily refresh:', error)
     return NextResponse.json({ 
-      error: 'Failed to run daily video crawl',
+      error: 'Failed to run daily refresh',
       details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 })
   }
