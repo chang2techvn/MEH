@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import Link from "next/link"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
+import MainHeader from "@/components/ui/main-header"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -183,6 +184,7 @@ export default function CommunityPage() {
   const [isPostingContent, setIsPostingContent] = useState(false)
   const [showLeftSidebar, setShowLeftSidebar] = useState(false)
   const [showRightSidebar, setShowRightSidebar] = useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [activeStory, setActiveStory] = useState<number | null>(null)
   const [viewedStories, setViewedStories] = useState<number[]>([])
   const [showScrollToTop, setShowScrollToTop] = useState(false)
@@ -710,93 +712,8 @@ export default function CommunityPage() {
           "global community",
           "language exchange",
         ]}
-      />
-
-      <div className="flex min-h-screen flex-col bg-[#f0f2f5] dark:bg-gray-900">
-        {/* Facebook-style Header */}
-        <header className="sticky top-0 z-40 w-full bg-white dark:bg-gray-800 shadow-sm">
-          <div className="container mx-auto px-2 sm:px-4 h-14 flex items-center justify-between">
-            <div className="flex items-center gap-1 sm:gap-2">
-              <Button variant="ghost" size="icon" className="lg:hidden" onClick={toggleLeftSidebar}>
-                <Menu className="h-5 w-5" />
-              </Button>
-
-              <Link href="/" className="flex items-center gap-2">
-                <div className="relative">
-                  <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-neo-mint to-purist-blue blur-sm opacity-70"></div>
-                  <BookOpen className="relative h-5 sm:h-6 w-5 sm:w-6 text-neo-mint dark:text-purist-blue" />
-                </div>
-                <span className="hidden sm:inline-block text-lg sm:text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-neo-mint to-purist-blue">
-                  EnglishMastery
-                </span>
-              </Link>
-
-              <div className="relative ml-2 hidden md:block max-w-xs w-full">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  type="search"
-                  placeholder="Search EnglishMastery"
-                  className="pl-9 bg-gray-100 dark:bg-gray-700 border-none rounded-full"
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center gap-1 sm:gap-2">
-              <Button variant="ghost" size="icon" className="rounded-full" onClick={() => router.push("/")}>
-                <Home className="h-5 w-5" />
-              </Button>
-
-              <Button variant="ghost" size="icon" className="rounded-full" onClick={() => router.push("/messages")}>
-                <MessageSquare className="h-5 w-5" />
-              </Button>
-
-              <Button variant="ghost" size="icon" className="rounded-full relative">
-                <Bell className="h-5 w-5" />
-                <span className="absolute top-0 right-0 h-4 w-4 bg-red-500 rounded-full text-[10px] text-white flex items-center justify-center">
-                  3
-                </span>
-              </Button>
-
-              {/* Mobile toggle for right sidebar */}
-              <Button variant="ghost" size="icon" className="rounded-full lg:hidden" onClick={toggleRightSidebar}>
-                <Users className="h-5 w-5" />
-              </Button>
-
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="rounded-full">
-                    <Avatar className="h-8 w-8 border-2 border-white dark:border-gray-800">
-                      <AvatarFallback className="bg-gradient-to-br from-neo-mint to-purist-blue text-white">
-                        JD
-                      </AvatarFallback>
-                    </Avatar>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => router.push("/profile")}>
-                    <User className="mr-2 h-4 w-4" />
-                    <span>Profile</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => router.push("/settings")}>
-                    <Settings className="mr-2 h-4 w-4" />
-                    <span>Settings</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => router.push("/help")}>
-                    <HelpCircle className="mr-2 h-4 w-4" />
-                    <span>Help</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem>
-                    <LogOut className="mr-2 h-4 w-4" />
-                    <span>Log out</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          </div>
-        </header>
+      />      <div className="flex min-h-screen flex-col bg-[#f0f2f5] dark:bg-gray-900">
+        <MainHeader mobileMenuOpen={mobileMenuOpen} setMobileMenuOpen={setMobileMenuOpen} />
 
         {/* Mobile Search Bar */}
         <div className="md:hidden bg-white dark:bg-gray-800 px-4 py-2 shadow-sm">

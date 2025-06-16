@@ -699,90 +699,9 @@ export default function ResourcesPage() {
       </main>
 
       <footer className="border-t border-white/10 bg-black backdrop-blur-xl">
-        <div className="container py-8">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            <div>
-              <div className="flex items-center gap-2 mb-4">
-                <div className="relative">
-                  <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-neo-mint to-purist-blue blur-sm opacity-70"></div>
-                  <BookOpen className="relative h-6 w-6 text-neo-mint dark:text-purist-blue" />
-                </div>
-                <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-neo-mint to-purist-blue">
-                  EnglishMastery
-                </span>
-              </div>
-              <p className="text-sm text-gray-400">
-                Master English through our innovative 4-Skill Video Crucible methodology. Practice listening, speaking,
-                reading, and writing in an engaging community.
-              </p>
-            </div>
-            <div>
-              <h3 className="font-bold mb-4">Quick Links</h3>
-              <ul className="space-y-2 text-sm">
-                <li>
-                  <Link href="/" className="text-gray-400 hover:text-white transition-colors">
-                    Home
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/challenges" className="text-gray-400 hover:text-white transition-colors">
-                    Challenges
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/community" className="text-gray-400 hover:text-white transition-colors">
-                    Community
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/resources" className="text-gray-400 hover:text-white transition-colors">
-                    AI Learning Hub
-                  </Link>
-                </li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="font-bold mb-4">Support</h3>
-              <ul className="space-y-2 text-sm">
-                <li>
-                  <Link href="/help" className="text-gray-400 hover:text-white transition-colors">
-                    Help Center
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/contact" className="text-gray-400 hover:text-white transition-colors">
-                    Contact Us
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/faq" className="text-gray-400 hover:text-white transition-colors">
-                    FAQ
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/privacy" className="text-gray-400 hover:text-white transition-colors">
-                    Privacy Policy
-                  </Link>
-                </li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="font-bold mb-4">Subscribe</h3>
-              <p className="text-sm text-gray-400 mb-2">Get the latest updates and news</p>
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <Input placeholder="Your email" className="bg-gray-800/50 backdrop-blur-sm border-gray-700/50" />
-                </div>
-                <Button className="bg-gradient-to-r from-neo-mint to-purist-blue hover:from-neo-mint/90 hover:to-purist-blue/90 text-white border-0">
-                  Subscribe
-                </Button>
-              </div>
-            </div>
-          </div>
           <div className="border-t border-white/10 mt-8 pt-8 text-center text-sm text-gray-400">
             <p>© 2025 EnglishMastery. All rights reserved.</p>
           </div>
-        </div>
       </footer>
     </div>
   )

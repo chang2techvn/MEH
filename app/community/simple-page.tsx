@@ -29,7 +29,8 @@ export default function CommunityPage() {
           </p>
         </div>
 
-        <div className="max-w-4xl mx-auto">          <Suspense fallback={<LoadingFallback />}>
+        <div className="max-w-4xl mx-auto">          
+          <Suspense fallback={<LoadingFallback />}>
             <CommunityFeedSection />
           </Suspense>
         </div>
