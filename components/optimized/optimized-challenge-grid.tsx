@@ -34,11 +34,11 @@ const ChallengeItem = memo(function ChallengeItem({
   index: number
 }) {
   return (
-    <div className="p-2" style={{ height: '280px' }}>
+    <div className="p-2" style={{ height: '320px' }}>
       <LazyComponent
         threshold={0.1}
         rootMargin="200px"
-        fallbackMinHeight="280px"
+        fallbackMinHeight="320px"
       >
         <ChallengeCard
           key={challenge.id}
@@ -66,22 +66,23 @@ const ChallengeGrid = memo(function ChallengeGrid({
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
       {challenges.map((challenge, index) => (
-        <LazyComponent
-          key={challenge.id}
-          threshold={0.1}
-          rootMargin="200px"
-          fallbackMinHeight="280px"
-        >
-          <ChallengeCard
-            id={challenge.id}
-            title={challenge.title}
-            description={challenge.description}
-            thumbnailUrl={challenge.thumbnailUrl}
-            duration={challenge.duration}
-            difficulty={challenge.difficulty}
-            onStart={onStartChallenge}
-          />
-        </LazyComponent>
+        <div key={challenge.id} className="h-[320px]">
+          <LazyComponent
+            threshold={0.1}
+            rootMargin="200px"
+            fallbackMinHeight="320px"
+          >
+            <ChallengeCard
+              id={challenge.id}
+              title={challenge.title}
+              description={challenge.description}
+              thumbnailUrl={challenge.thumbnailUrl}
+              duration={challenge.duration}
+              difficulty={challenge.difficulty}
+              onStart={onStartChallenge}
+            />
+          </LazyComponent>
+        </div>
       ))}
     </div>
   )
@@ -122,13 +123,12 @@ export default memo(function OptimizedChallengeGrid({
       </CardContent>
     </Card>
   ), [emptyMessage, emptyAction, emptyActionLabel])
-
   // Loading state
   if (loading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {Array.from({ length: 8 }).map((_, index) => (
-          <div key={index} className="h-70 bg-gray-200 dark:bg-gray-800 animate-pulse rounded-lg" />
+          <div key={index} className="h-[320px] bg-gray-200 dark:bg-gray-800 animate-pulse rounded-lg" />
         ))}
       </div>
     )
@@ -138,13 +138,12 @@ export default memo(function OptimizedChallengeGrid({
   if (challenges.length === 0) {
     return EmptyState
   }
-
   // Virtual scroll for large lists
   if (useVirtualScroll && challenges.length > 20) {
     return (
       <VirtualScroll
         items={challenges}
-        itemHeight={280}
+        itemHeight={320}
         containerHeight={containerHeight}
         renderItem={renderChallengeItem}
         overscan={3}

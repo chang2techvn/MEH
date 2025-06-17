@@ -14,16 +14,10 @@ interface MobileNavigationProps {
 }
 
 export function MobileNavigation({ isOpen, onClose }: MobileNavigationProps) {
-  const navigationItems = [
-    {
+  const navigationItems = [    {
       href: "/",
       label: "Home",
       icon: BookOpen
-    },
-    {
-      href: "/challenges",
-      label: "Challenges", 
-      icon: Zap
     },
     {
       href: "/community",

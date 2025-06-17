@@ -10,12 +10,10 @@ export async function middleware(request: NextRequest) {
 
   // Refresh session if expired - required for Server Components
   const { data: { session } } = await supabase.auth.getSession()
-
   // Protected routes that require authentication
   const protectedRoutes = [
     '/profile',
     '/admin',
-    '/challenges/create',
     '/groups/create',
     '/messages'
   ]

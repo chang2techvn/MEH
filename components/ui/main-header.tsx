@@ -69,17 +69,9 @@ export default function MainHeader({ mobileMenuOpen, setMobileMenuOpen }: MainHe
             <Menu className="h-6 w-6" />
           </Button>
 
-          <nav className="hidden md:flex items-center gap-8">
-            <Link
+          <nav className="hidden md:flex items-center gap-8">            <Link
               href="/"
               className="text-sm font-medium text-neo-mint dark:text-purist-blue transition-colors hover:text-neo-mint/80 dark:hover:text-purist-blue/80 relative group"
-            >
-              <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-neo-mint to-purist-blue group-hover:w-full transition-all duration-300"></span>
-              Home
-            </Link>
-            <Link
-              href="/challenges"
-              className="text-sm font-medium transition-colors hover:text-neo-mint dark:hover:text-purist-blue relative group"
             >
               <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-neo-mint to-purist-blue group-hover:w-full transition-all duration-300"></span>
               Challenges

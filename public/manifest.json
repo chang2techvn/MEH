@@ -56,15 +56,7 @@
       "type": "image/png",
       "purpose": "any maskable"
     }
-  ],
-  "shortcuts": [
-    {
-      "name": "Challenges",
-      "short_name": "Challenges",
-      "description": "View your English learning challenges",
-      "url": "/challenges",
-      "icons": [{ "src": "/icons/challenges.png", "sizes": "192x192" }]
-    },
+  ],  "shortcuts": [
     {
       "name": "Community",
       "short_name": "Community",
@@ -74,13 +66,7 @@
     }
   ],
   "screenshots": [
-    {
-      "src": "/screenshots/home.png",
-      "sizes": "1280x720",
-      "type": "image/png"
-    },
-    {
-      "src": "/screenshots/challenges.png",
+    {      "src": "/screenshots/home.png",
       "sizes": "1280x720",
       "type": "image/png"
     }

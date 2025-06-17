@@ -47,11 +47,10 @@ const ChallengeCard = memo(function ChallengeCard({
   const handleStart = useCallback(() => {
     onStart(id)
   }, [onStart, id])
-
   return (
-    <Card>
-      <CardContent className="p-0">        
-        <div className="aspect-video bg-muted relative overflow-hidden">
+    <Card className="h-full min-h-[320px] flex flex-col">
+      <CardContent className="p-0 flex-1 flex flex-col">        
+        <div className="aspect-video bg-muted relative overflow-hidden flex-shrink-0">
           {thumbnailUrl ? (
             <OptimizedImage
               src={thumbnailUrl}
@@ -67,22 +66,25 @@ const ChallengeCard = memo(function ChallengeCard({
             <div className="absolute inset-0 flex items-center justify-center">
               <BookOpen className="h-12 w-12 text-muted-foreground/50" />
             </div>
-          )}<div className="absolute top-2 right-2">
+          )}
+          <div className="absolute top-2 right-2">
             <Badge className={difficultyBadgeColor}>{difficultyDisplayName}</Badge>
           </div>
         </div>
-        <div className="p-4">
-          <h3 className="font-bold text-lg mb-1">{title}</h3>
-          <p className="text-sm text-muted-foreground mb-3">
-            {truncatedDescription}
-          </p>
-          <div className="flex items-center gap-2 text-sm">
+        <div className="p-4 flex-1 flex flex-col justify-between">
+          <div className="flex-1">
+            <h3 className="font-bold text-lg mb-2 line-clamp-2 min-h-[3.5rem]">{title}</h3>
+            <p className="text-sm text-muted-foreground mb-3 line-clamp-3 min-h-[4rem]">
+              {truncatedDescription}
+            </p>
+          </div>
+          <div className="flex items-center gap-2 text-sm mt-auto">
             <Clock className="h-4 w-4 text-muted-foreground" />
             <span>{formattedDuration}</span>
           </div>
         </div>
       </CardContent>
-      <CardFooter className="px-4 py-3 border-t">
+      <CardFooter className="px-4 py-3 border-t mt-auto">
         <Button className="w-full" onClick={handleStart}>
           Start Challenge
         </Button>

@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { TrendingUp } from "lucide-react"
 import { useUserProgress } from "@/hooks/use-user-progress"
 
+
 export function ProgressSection() {
   const { progressData, loading, error } = useUserProgress()
 
@@ -58,7 +59,7 @@ export function ProgressSection() {
     )
   }
 
-  const progressItems = []
+
 
   // Generate daily streak visualization
   const generateDailyStreak = () => {
@@ -98,25 +99,6 @@ export function ProgressSection() {
           <Badge className="bg-gradient-to-r from-neo-mint to-purist-blue text-white border-0 shadow-glow-sm">
             Level {progressData.level}
           </Badge>
-        </div>
-
-        <div className="space-y-6">
-          {progressItems.map((item, index) => (
-            <div key={item.label}>
-              <div className="flex justify-between mb-2">
-                <span className="text-sm font-medium">{item.label}</span>
-                <span className="text-sm font-medium">{item.current}/{item.total}</span>
-              </div>
-              <div className="w-full h-3 bg-white/40 dark:bg-gray-800/40 rounded-full overflow-hidden p-0.5">
-                <motion.div
-                  className="h-full rounded-full bg-gradient-to-r from-neo-mint to-purist-blue"
-                  initial={{ width: 0 }}
-                  animate={{ width: `${Math.min(item.percentage, 100)}%` }}
-                  transition={{ duration: 0.5, ease: "easeOut", delay: index * 0.1 }}
-                />
-              </div>
-            </div>
-          ))}
         </div>
 
         <div className="mt-8 pt-6 border-t border-white/20 dark:border-gray-700/20">

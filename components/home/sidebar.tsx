@@ -12,16 +12,7 @@ interface SidebarProps {
   onViewLeaderboard?: () => void
 }
 
-const LoadingFallback = () => (
-  <div className="space-y-6">
-    <Skeleton className="h-400 w-full rounded-xl" />
-    <Skeleton className="h-300 w-full rounded-xl" />
-    <Skeleton className="h-350 w-full rounded-xl" />
-    <Skeleton className="h-250 w-full rounded-xl" />
-  </div>
-)
-
-export function Sidebar({ onPracticeToolClick, onViewLeaderboard }: SidebarProps) {
+export function Sidebar({onViewLeaderboard }: SidebarProps) {
   const { leaderboardData, leaderboardLoading } = useLeaderboard()
 
   const container = {

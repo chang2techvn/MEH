@@ -1,10 +1,10 @@
 "use client"
 
-import { useState, useEffect, Suspense, lazy } from "react"
-import Link from "next/link"
-import { BookOpen } from "lucide-react"
+import { useState, useEffect, Suspense, lazy, useCallback } from "react"
+import { Search, Plus, Sparkles } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+import { toast } from "@/hooks/use-toast"
 import { useMobile } from "@/hooks/use-mobile"
 
 // Lazy load components that aren't needed immediately
@@ -15,6 +15,7 @@ const AIChatButtonComponent = lazy(() =>
 const MobileNavigation = lazy(() => import("@/components/home/mobile-navigation").then((mod) => ({ default: mod.MobileNavigation })))
 const MainContent = lazy(() => import("@/components/home/main-content").then((mod) => ({ default: mod.MainContent })))
 const Sidebar = lazy(() => import("@/components/home/sidebar").then((mod) => ({ default: mod.Sidebar })))
+const ChallengeTabs = lazy(() => import("@/components/challenge/challenge-tabs"))
 
 // Loading fallback component
 const LoadingFallback = () => <div className="animate-pulse bg-gray-200 dark:bg-gray-800 rounded-lg h-32 w-full"></div>
@@ -23,7 +24,13 @@ export default function Home() {
   const [mounted, setMounted] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [newPostAdded, setNewPostAdded] = useState(false)
+  const [searchTerm, setSearchTerm] = useState("")
+  const [selectedChallenge, setSelectedChallenge] = useState(null)
   const isMobile = useMobile()
+  // Handle selected challenge change from ChallengeTabs
+  const handleSelectedChallengeChange = useCallback((challenge: any) => {
+    setSelectedChallenge(challenge)
+  }, [])
 
   // Hydration
   useEffect(() => {
@@ -72,24 +79,70 @@ export default function Home() {
         {/* Background decorations - optimized with contain property */}
         <div className="absolute top-20 left-10 w-64 h-64 rounded-full bg-neo-mint/10 dark:bg-purist-blue/10 blur-3xl -z-10 animate-blob contain-paint"></div>
         <div className="absolute bottom-20 right-10 w-64 h-64 rounded-full bg-cantaloupe/10 dark:bg-cassis/10 blur-3xl -z-10 animate-blob animation-delay-2000 contain-paint"></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full bg-mellow-yellow/5 dark:bg-mellow-yellow/5 blur-3xl -z-10 animate-blob animation-delay-4000 contain-paint"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full bg-mellow-yellow/5 dark:bg-mellow-yellow/5 blur-3xl -z-10 animate-blob animation-delay-4000 contain-paint"></div>        <div className="container py-8">
+          {/* Top section: Main Content + Sidebar */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            {/* Main Content */}
+            <Suspense fallback={<LoadingFallback />}>
+              <MainContent 
+                newPostAdded={newPostAdded}
+                setNewPostAdded={setNewPostAdded}
+              />
+            </Suspense>
 
-        <div className="container grid grid-cols-1 md:grid-cols-3 gap-6 py-8">
-          {/* Main Content */}
-          <Suspense fallback={<LoadingFallback />}>
-            <MainContent 
-              newPostAdded={newPostAdded}
-              setNewPostAdded={setNewPostAdded}
-            />
-          </Suspense>
-
-          {/* Sidebar */}
-          <Suspense fallback={<LoadingFallback />}>
-            <Sidebar 
-              onPracticeToolClick={handlePracticeToolClick}
-              onViewLeaderboard={handleViewLeaderboard}
-            />
-          </Suspense>
+            {/* Sidebar */}
+            <Suspense fallback={<LoadingFallback />}>
+              <Sidebar 
+                onPracticeToolClick={handlePracticeToolClick}
+                onViewLeaderboard={handleViewLeaderboard}
+              />
+            </Suspense>
+          </div>          {/* Challenge Tabs Section - Full width below Main Content + Sidebar */}          <div className="w-full">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">
+              <div>
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="relative">
+                    <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-neo-mint to-purist-blue blur-sm opacity-70"></div>
+                    <Sparkles className="relative h-5 w-5 text-neo-mint dark:text-purist-blue" />
+                  </div>
+                  <h2 className="text-xl font-bold">Practice Challenges</h2>
+                </div>
+                <p className="text-sm text-muted-foreground mb-4">Choose from various difficulty levels and topics to improve your English skills</p>
+              </div>
+                {/* Search Bar and Create Button */}
+              <div className="flex gap-2 w-full md:w-auto">
+                <div className="relative flex-1 md:flex-initial md:w-80">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    type="search"
+                    placeholder="Search challenges..."
+                    className="pl-8 w-full"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
+                <Button
+                  onClick={() => {
+                    toast({
+                      title: "Create Challenge",
+                      description: "Create functionality is available in the tabs below",
+                    })
+                  }}
+                  className="bg-gradient-to-r from-neo-mint to-purist-blue text-white"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create
+                </Button>
+              </div>
+            </div>
+            
+            <Suspense fallback={<LoadingFallback />}>
+              <ChallengeTabs
+                searchTerm={searchTerm}
+                onSelectedChallengeChange={handleSelectedChallengeChange}
+              />
+            </Suspense>
+          </div>
         </div>
       </main>
 
