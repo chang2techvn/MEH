@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { createContext, useContext, useEffect, useState } from "react"
+import { createContext, useContext, useEffect, useState, useMemo, useCallback } from "react"
 
 // Define theme colors with hex values
 export const themeColors = [
@@ -51,60 +51,56 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<ThemeSettings>(defaultTheme)
   const [isLoaded, setIsLoaded] = useState(false)
 
-  // Load theme from localStorage on initial render
-  useEffect(() => {
-    const savedTheme = localStorage.getItem("app-theme")
-    if (savedTheme) {
-      try {
-        const parsedTheme = JSON.parse(savedTheme)
-        setTheme(parsedTheme)
-        applyThemeColors(parsedTheme.primaryColor, parsedTheme.secondaryColor, parsedTheme.accentColor)
-        applyOtherSettings(parsedTheme)
-      } catch (error) {
-        console.error("Error parsing saved theme:", error)
-      }
+  // Memoize hex to HSL conversion function
+  const hexToHSL = useCallback((hex: string) => {
+    // Remove the # if present
+    hex = hex.replace(/^#/, "")
+
+    // Parse the hex values
+    const r = Number.parseInt(hex.substring(0, 2), 16) / 255
+    const g = Number.parseInt(hex.substring(2, 4), 16) / 255
+    const b = Number.parseInt(hex.substring(4, 6), 16) / 255
+
+    // Find the min and max values to calculate the lightness
+    const max = Math.max(r, g, b)
+    const min = Math.min(r, g, b)
+    let h = 0, // Initialize with default values
+      s = 0,
+      l = (max + min) / 2
+
+    if (max === min) {
+      // Achromatic
+      h = 0
+      s = 0
     } else {
-      // Apply default theme if no saved theme
-      applyThemeColors(defaultTheme.primaryColor, defaultTheme.secondaryColor, defaultTheme.accentColor)
-      applyOtherSettings(defaultTheme)
+      const d = max - min
+      s = l > 0.5 ? d / (2 - max - min) : d / (max + min)
+
+      switch (max) {
+        case r:
+          h = (g - b) / d + (g < b ? 6 : 0)
+          break
+        case g:
+          h = (b - r) / d + 2
+          break
+        case b:
+          h = (r - g) / d + 4
+          break
+      }
+
+      h /= 6
     }
-    setIsLoaded(true)
+
+    // Convert to degrees, percentage, percentage
+    h = Math.round(h * 360)
+    s = Math.round(s * 100)
+    l = Math.round(l * 100)
+
+    return { h, s, l }
   }, [])
 
-  // Save theme to localStorage whenever it changes
-  useEffect(() => {
-    if (isLoaded) {
-      localStorage.setItem("app-theme", JSON.stringify(theme))
-    }
-  }, [theme, isLoaded])
-
-  // Update theme settings
-  const updateTheme = (settings: Partial<ThemeSettings>) => {
-    const newTheme = { ...theme, ...settings }
-    setTheme(newTheme)
-
-    // Apply color changes if colors were updated
-    if (settings.primaryColor || settings.secondaryColor || settings.accentColor) {
-      applyThemeColors(
-        settings.primaryColor || theme.primaryColor,
-        settings.secondaryColor || theme.secondaryColor,
-        settings.accentColor || theme.accentColor,
-      )
-    }
-
-    // Apply other settings if they were updated
-    applyOtherSettings(newTheme)
-  }
-
-  // Reset theme to defaults
-  const resetTheme = () => {
-    setTheme(defaultTheme)
-    applyThemeColors(defaultTheme.primaryColor, defaultTheme.secondaryColor, defaultTheme.accentColor)
-    applyOtherSettings(defaultTheme)
-  }
-
-  // Apply theme colors to CSS variables
-  const applyThemeColors = (primary: string, secondary: string, accent: string) => {
+  // Memoize theme colors application
+  const applyThemeColors = useCallback((primary: string, secondary: string, accent: string) => {
     // Only run in browser environment
     if (typeof document === 'undefined') return;
     
@@ -133,10 +129,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       root.style.setProperty("--accent", `${hsl.h} ${hsl.s}% ${hsl.l}%`)
       root.style.setProperty("--cassis", `${hsl.h} ${hsl.s}% ${hsl.l}%`)
     }
-  }
+  }, [hexToHSL])
 
-  // Apply other theme settings
-  const applyOtherSettings = (settings: ThemeSettings) => {
+  // Memoize other settings application
+  const applyOtherSettings = useCallback((settings: ThemeSettings) => {
     // Only run in browser environment
     if (typeof document === 'undefined' || typeof window === 'undefined') return;
     
@@ -182,58 +178,74 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         document.documentElement.classList.remove("dark")
       }
     }
-  }
+  }, [])
 
-  // Convert hex to HSL
-  const hexToHSL = (hex: string) => {
-    // Remove the # if present
-    hex = hex.replace(/^#/, "")
-
-    // Parse the hex values
-    const r = Number.parseInt(hex.substring(0, 2), 16) / 255
-    const g = Number.parseInt(hex.substring(2, 4), 16) / 255
-    const b = Number.parseInt(hex.substring(4, 6), 16) / 255
-
-    // Find the min and max values to calculate the lightness
-    const max = Math.max(r, g, b)
-    const min = Math.min(r, g, b)
-    let h = 0, // Initialize with default values
-      s = 0,
-      l = (max + min) / 2
-
-    if (max === min) {
-      // Achromatic
-      h = 0
-      s = 0
-    } else {
-      const d = max - min
-      s = l > 0.5 ? d / (2 - max - min) : d / (max + min)
-
-      switch (max) {
-        case r:
-          h = (g - b) / d + (g < b ? 6 : 0)
-          break
-        case g:
-          h = (b - r) / d + 2
-          break
-        case b:
-          h = (r - g) / d + 4
-          break
+  // Load theme from localStorage on initial render
+  useEffect(() => {
+    const savedTheme = localStorage.getItem("app-theme")
+    if (savedTheme) {
+      try {
+        const parsedTheme = JSON.parse(savedTheme)
+        setTheme(parsedTheme)
+        applyThemeColors(parsedTheme.primaryColor, parsedTheme.secondaryColor, parsedTheme.accentColor)
+        applyOtherSettings(parsedTheme)
+      } catch (error) {
+        console.error("Error parsing saved theme:", error)
       }
+    } else {
+      // Apply default theme if no saved theme
+      applyThemeColors(defaultTheme.primaryColor, defaultTheme.secondaryColor, defaultTheme.accentColor)
+      applyOtherSettings(defaultTheme)
+    }
+    setIsLoaded(true)
+  }, [applyThemeColors, applyOtherSettings])
 
-      h /= 6
+  // Debounced save theme to localStorage
+  useEffect(() => {
+    if (!isLoaded) return
+    
+    const timeoutId = setTimeout(() => {
+      localStorage.setItem("app-theme", JSON.stringify(theme))
+    }, 100) // Debounce by 100ms
+
+    return () => clearTimeout(timeoutId)
+  }, [theme, isLoaded])
+
+  // Memoize update theme function
+  const updateTheme = useCallback((settings: Partial<ThemeSettings>) => {
+    const newTheme = { ...theme, ...settings }
+    setTheme(newTheme)
+
+    // Apply color changes if colors were updated
+    if (settings.primaryColor || settings.secondaryColor || settings.accentColor) {
+      applyThemeColors(
+        settings.primaryColor || theme.primaryColor,
+        settings.secondaryColor || theme.secondaryColor,
+        settings.accentColor || theme.accentColor,
+      )
     }
 
-    // Convert to degrees, percentage, percentage
-    h = Math.round(h * 360)
-    s = Math.round(s * 100)
-    l = Math.round(l * 100)
+    // Apply other settings if they were updated
+    applyOtherSettings(newTheme)
+  }, [theme, applyThemeColors, applyOtherSettings])
 
-    return { h, s, l }
-  }
+  // Memoize reset theme function
+  const resetTheme = useCallback(() => {
+    setTheme(defaultTheme)
+    applyThemeColors(defaultTheme.primaryColor, defaultTheme.secondaryColor, defaultTheme.accentColor)
+    applyOtherSettings(defaultTheme)
+  }, [applyThemeColors, applyOtherSettings])
+
+  // Memoize context value
+  const contextValue = useMemo(() => ({
+    theme,
+    updateTheme,
+    resetTheme,
+    applyThemeColors,
+  }), [theme, updateTheme, resetTheme, applyThemeColors])
 
   return (
-    <ThemeContext.Provider value={{ theme, updateTheme, resetTheme, applyThemeColors }}>
+    <ThemeContext.Provider value={contextValue}>
       {children}
     </ThemeContext.Provider>
   )

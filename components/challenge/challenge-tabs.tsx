@@ -19,64 +19,44 @@ export default function ChallengeTabs({
   onSelectedChallengeChange
 }: ChallengeTabsProps) {  const [challenges, setChallenges] = useState<Challenge[]>([])
   const [userChallenges, setUserChallenges] = useState<Challenge[]>([])
-  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("")
   const [activeTab, setActiveTab] = useState("all")
   const [loading, setLoading] = useState(true)
   const [createModalOpen, setCreateModalOpen] = useState(false)
-
-  // Debounced search to avoid excessive filtering
-  const debouncedSearch = useDebounce((term: string) => {
-    setDebouncedSearchTerm(term)
-  }, 300)
-
-  // Update debounced search term when search term changes
-  useEffect(() => {
-    debouncedSearch(searchTerm)
-  }, [searchTerm, debouncedSearch])
+  
+  // Debounced search term using hook
+  const debouncedSearchTerm = useDebounce(searchTerm, 300)
 
   // Debounced localStorage save function
-  const debouncedSaveToLocalStorage = useMemo(
-    () => debounce((key: string, data: any) => {
-      try {
-        // Only save essential data to localStorage
-        const essentialData = data.map((challenge: Challenge) => ({
-          id: challenge.id,
-          title: challenge.title,
-          description: challenge.description,
-          difficulty: challenge.difficulty,
-          duration: challenge.duration,
-          createdAt: challenge.createdAt,
-          thumbnailUrl: challenge.thumbnailUrl,
-          videoUrl: challenge.videoUrl,
-          // Skip large fields like topics array if not essential
-        }))
-        localStorage.setItem(key, JSON.stringify(essentialData))
-      } catch (error) {
-        console.error('Error saving to localStorage:', error)
-        // If localStorage is full, clear old data
-        if (error instanceof Error && error.name === 'QuotaExceededError') {
-          localStorage.removeItem('admin_challenges')
-          localStorage.removeItem('lastChallengeRefresh')
-          // Retry with smaller dataset
-          try {
-            localStorage.setItem(key, JSON.stringify(data.slice(0, 10)))
-          } catch (retryError) {
-            console.error('Failed to save even reduced data:', retryError)
-          }
+  const saveToLocalStorage = useCallback((key: string, data: any) => {
+    try {
+      // Only save essential data to localStorage
+      const essentialData = data.map((challenge: Challenge) => ({
+        id: challenge.id,
+        title: challenge.title,
+        description: challenge.description,
+        difficulty: challenge.difficulty,
+        duration: challenge.duration,
+        createdAt: challenge.createdAt,
+        thumbnailUrl: challenge.thumbnailUrl,
+        videoUrl: challenge.videoUrl,
+        // Skip large fields like topics array if not essential
+      }))
+      localStorage.setItem(key, JSON.stringify(essentialData))
+    } catch (error) {
+      console.error('Error saving to localStorage:', error)
+      // If localStorage is full, clear old data
+      if (error instanceof Error && error.name === 'QuotaExceededError') {
+        localStorage.removeItem('admin_challenges')
+        localStorage.removeItem('lastChallengeRefresh')
+        // Retry with smaller dataset
+        try {
+          localStorage.setItem(key, JSON.stringify(data.slice(0, 10)))
+        } catch (retryError) {
+          console.error('Failed to save even reduced data:', retryError)
         }
       }
-    }, 500),
-    []
-  )
-
-  // Add debounce function
-  function debounce<T extends (...args: any[]) => any>(func: T, wait: number): T {
-    let timeout: NodeJS.Timeout
-    return ((...args: any[]) => {
-      clearTimeout(timeout)
-      timeout = setTimeout(() => func.apply(null, args), wait)
-    }) as T
-  }
+    }
+  }, [])
 
   // Load challenges when component mounts
   const loadChallenges = useCallback(async () => {
@@ -155,10 +135,8 @@ export default function ChallengeTabs({
     const updatedAllChallenges = [newChallenge, ...challenges]
     
     setUserChallenges(updatedUserChallenges)
-    setChallenges(updatedAllChallenges)
-
-    // Debounced localStorage save to avoid blocking UI
-    debouncedSaveToLocalStorage('userChallenges', updatedUserChallenges)
+    setChallenges(updatedAllChallenges)    // Debounced localStorage save to avoid blocking UI
+    saveToLocalStorage('userChallenges', updatedUserChallenges)
 
     // Hiển thị thông báo thành công
     toast({
@@ -168,7 +146,7 @@ export default function ChallengeTabs({
     
     // Switch to user challenges tab to show the new challenge
     setActiveTab("user")
-  }, [userChallenges, challenges, debouncedSaveToLocalStorage])
+  }, [userChallenges, challenges, saveToLocalStorage])
 
   // Handle when user starts a challenge
   const handleStartChallenge = useCallback((id: string) => {

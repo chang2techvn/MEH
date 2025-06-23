@@ -27,10 +27,11 @@ import { Separator } from "@/components/ui/separator"
 import { Progress } from "@/components/ui/progress"
 import { toast } from "@/hooks/use-toast"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { useAuth } from "@/contexts/auth-context"
+import { useAuthActions, useAuthState } from "@/contexts/auth-context"
 
 export default function RegisterPage() {
-  const { register, loginWithGoogle, loginWithFacebook, loginWithGitHub, isLoading } = useAuth()
+  const { register, loginWithGoogle, loginWithFacebook, loginWithGitHub } = useAuthActions()
+  const { isLoading } = useAuthState()
   const [showPassword, setShowPassword] = useState(false)
   const [passwordStrength, setPasswordStrength] = useState(0)
   const [formData, setFormData] = useState({

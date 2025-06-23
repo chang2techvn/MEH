@@ -22,7 +22,7 @@ import { getVideoSettings } from "@/app/actions/admin-settings"
 import { compareVideoContentWithUserContent, type ContentComparison } from "@/app/actions/content-comparison"
 import { v4 as uuidv4 } from "uuid"
 import type { VideoEvaluation } from "@/lib/gemini-video-evaluation"
-import { useAuth } from "@/contexts/auth-context"
+import { useAuthState } from "@/contexts/auth-context"
 
 interface DailyChallengeProps {
   userId: string
@@ -32,7 +32,7 @@ interface DailyChallengeProps {
 }
 
 export default function DailyChallenge({ userId, username, userImage, onSubmissionComplete }: DailyChallengeProps) {
-  const { user } = useAuth() // Get authenticated user
+  const { user } = useAuthState() // Get authenticated user
   const [loading, setLoading] = useState(true)
   const [videoData, setVideoData] = useState<VideoData | null>(null)
   const [activeStep, setActiveStep] = useState(1)

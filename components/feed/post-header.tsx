@@ -1,6 +1,5 @@
 "use client"
 
-import { motion } from "framer-motion"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -33,42 +32,37 @@ export function PostHeader({
   submission,
   saved,
   onSavedChange,
-}: PostHeaderProps) {
-  return (
+}: PostHeaderProps) {  return (
     <div className="flex items-start gap-4">
-      <motion.div whileHover={{ scale: 1.1 }} transition={{ type: "spring", stiffness: 400, damping: 10 }}>
-        <Avatar className="h-12 w-12 border-2 border-white dark:border-gray-800">
-          <Image
+      <div className="hover-scale-small">
+        <Avatar className="h-12 w-12 border-2 border-white dark:border-gray-800"><Image
             src={userImage || "/placeholder.svg"}
             alt={username}
             width={48}
             height={48}
             className="h-full w-full object-cover"
             loading="lazy"
+            placeholder="blur"
+            blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R//2Q=="
           />
           <AvatarFallback className="bg-gradient-to-br from-neo-mint to-purist-blue text-white">
             {username.substring(0, 2).toUpperCase()}
-          </AvatarFallback>
-        </Avatar>
-      </motion.div>
+          </AvatarFallback>        </Avatar>
+      </div>
       <div className="flex-1">
         <div className="flex items-center justify-between">
           <div>
             <p className="font-medium">{username}</p>
             <p className="text-xs text-muted-foreground">{timeAgo}</p>
-          </div>
-          {mediaType === "ai-submission" && submission && (
-            <motion.div
-              whileHover={{ scale: 1.05 }}
-              transition={{ type: "spring", stiffness: 400, damping: 10 }}
-            >
+          </div>          {mediaType === "ai-submission" && submission && (
+            <div className="hover-scale">
               <Badge className="bg-gradient-to-r from-neo-mint to-purist-blue text-white border-0">
                 <Award className="h-3 w-3 mr-1" />
-                <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
+                <span className="animate-fade-in">
                   Score: {submission.overallScore}
-                </motion.span>
+                </span>
               </Badge>
-            </motion.div>
+            </div>
           )}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

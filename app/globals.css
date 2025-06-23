@@ -1,3 +1,5 @@
+@import url("../styles/smart-animations.css");
+@import url("../styles/performance-animations.css");
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

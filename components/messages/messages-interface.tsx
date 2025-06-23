@@ -16,14 +16,8 @@ export default function MessagesInterface() {
   const isMobile = useMediaQuery("(max-width: 768px)")
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  // Use the chat context instead of local state
-  const {
-    conversations,
-    loading,
-    currentUser,
-    sendMessage,
-    loadConversations,
-  } = useChat()  // Load conversations on mount
+  // Use chat context (with backward compatibility for now)
+  const { conversations, loading, currentUser, sendMessage, loadConversations } = useChat()// Load conversations on mount
   useEffect(() => {
     loadConversations()
   }, [loadConversations])

@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
+import { createContext, useContext, useState, useEffect, useMemo, useCallback, type ReactNode } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "@/hooks/use-toast"
 import { supabase, dbHelpers } from "@/lib/supabase"
@@ -27,11 +27,14 @@ export interface User {
   preferences?: any
 }
 
-// Define auth context type
-interface AuthContextType {
+// Split contexts for better performance
+interface AuthStateContextType {
   user: User | null
   isLoading: boolean
   isAuthenticated: boolean
+}
+
+interface AuthActionsContextType {
   login: (email: string, password: string, remember?: boolean) => Promise<void>
   register: (name: string, email: string, password: string) => Promise<void>
   logout: () => Promise<void>
@@ -42,8 +45,9 @@ interface AuthContextType {
   loginWithGitHub: () => Promise<void>
 }
 
-// Create auth context
-const AuthContext = createContext<AuthContextType | undefined>(undefined)
+// Create separate contexts
+const AuthStateContext = createContext<AuthStateContextType | undefined>(undefined)
+const AuthActionsContext = createContext<AuthActionsContextType | undefined>(undefined)
 
 // Auth provider props
 interface AuthProviderProps {
@@ -181,11 +185,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
       console.error('Error creating user:', error)
       // Don't throw error, just log it
       return null
-    }
-  }
+    }  }
 
   // Login function
-  const login = async (email: string, password: string, remember = false) => {
+  const login = useCallback(async (email: string, password: string, remember = false) => {
     setIsLoading(true)
 
     try {
@@ -214,12 +217,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
       })
       throw error
     } finally {
-      setIsLoading(false)
-    }
-  }
+      setIsLoading(false)    }
+  }, [router])
 
   // Register function
-  const register = async (name: string, email: string, password: string) => {
+  const register = useCallback(async (name: string, email: string, password: string) => {
     setIsLoading(true)
 
     try {
@@ -256,14 +258,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
         description: error.message || "An unknown error occurred",
         variant: "destructive",
       })
-      throw error
-    } finally {
+      throw error    } finally {
       setIsLoading(false)
     }
-  }
+  }, [router])
 
   // Logout function
-  const logout = async () => {
+  const logout = useCallback(async () => {
     try {
       // Sign out from Supabase
       const { error } = await supabase.auth.signOut({
@@ -287,14 +288,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
         title: "Logged out",
         description: "You have been successfully logged out.",
       })
-      router.push("/")
-    } catch (error) {
+      router.push("/")    } catch (error) {
       console.error('Logout error:', error)
     }
-  }
+  }, [router])
 
   // Reset password function
-  const resetPassword = async (email: string) => {
+  const resetPassword = useCallback(async (email: string) => {
     setIsLoading(true)
 
     try {
@@ -317,14 +317,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
         description: error.message || "There was a problem sending the reset link. Please try again.",
         variant: "destructive",
       })
-      throw error
-    } finally {
+      throw error    } finally {
       setIsLoading(false)
     }
-  }
+  }, [])
 
   // Set new password function
-  const setNewPassword = async (token: string, password: string) => {
+  const setNewPassword = useCallback(async (token: string, password: string) => {
     setIsLoading(true)
 
     try {
@@ -349,14 +348,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
         description: error.message || "There was an error updating your password. Please try again.",
         variant: "destructive",
       })
-      throw error
-    } finally {
+      throw error    } finally {
       setIsLoading(false)
     }
-  }
+  }, [router])
 
   // OAuth login functions
-  const loginWithGoogle = async () => {
+  const loginWithGoogle = useCallback(async () => {
     setIsLoading(true)
     try {
       const { data, error } = await supabase.auth.signInWithOAuth({
@@ -385,13 +383,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
         description: error.message || "An unknown error occurred",
         variant: "destructive",
       })
-      throw error
-    } finally {
+      throw error    } finally {
       setIsLoading(false)
     }
-  }
+  }, [])
 
-  const loginWithFacebook = async () => {
+  const loginWithFacebook = useCallback(async () => {
     setIsLoading(true)
     try {
       const { data, error } = await supabase.auth.signInWithOAuth({
@@ -416,13 +413,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
         description: error.message || "An unknown error occurred",
         variant: "destructive",
       })
-      throw error
-    } finally {
+      throw error    } finally {
       setIsLoading(false)
     }
-  }
+  }, [])
 
-  const loginWithGitHub = async () => {
+  const loginWithGitHub = useCallback(async () => {
     setIsLoading(true)
     try {
       const { data, error } = await supabase.auth.signInWithOAuth({
@@ -439,46 +435,68 @@ export function AuthProvider({ children }: AuthProviderProps) {
       toast({
         title: "Redirecting to GitHub",
         description: "Please wait while we redirect you to GitHub...",
-      })
-    } catch (error: any) {
+      })    } catch (error: any) {
       console.error("GitHub login error:", error)
       toast({
         title: "GitHub login failed",
         description: error.message || "An unknown error occurred",
         variant: "destructive",
       })
-      throw error
-    } finally {
+      throw error    } finally {
       setIsLoading(false)
     }
-  }
+  }, [])
+  // Memoize state and actions separately to prevent unnecessary re-renders
+  const authState = useMemo(() => ({
+    user,
+    isLoading,
+    isAuthenticated: !!user,
+  }), [user, isLoading])
+
+  const authActions = useMemo(() => ({
+    login,
+    register,
+    logout,
+    resetPassword,
+    setNewPassword,
+    loginWithGoogle,
+    loginWithFacebook,
+    loginWithGitHub,
+  }), [login, register, logout, resetPassword, setNewPassword, loginWithGoogle, loginWithFacebook, loginWithGitHub])
 
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        isLoading,
-        isAuthenticated: !!user,
-        login,
-        register,
-        logout,
-        resetPassword,
-        setNewPassword,
-        loginWithGoogle,
-        loginWithFacebook,
-        loginWithGitHub,
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
+    <AuthStateContext.Provider value={authState}>
+      <AuthActionsContext.Provider value={authActions}>
+        {children}
+      </AuthActionsContext.Provider>
+    </AuthStateContext.Provider>
   )
 }
 
-// Custom hook to use auth context
-export function useAuth() {
-  const context = useContext(AuthContext)
+// Custom hooks to use auth contexts
+export function useAuthState() {
+  const context = useContext(AuthStateContext)
   if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider")
+    throw new Error("useAuthState must be used within an AuthProvider")
   }
   return context
+}
+
+export function useAuthActions() {
+  const context = useContext(AuthActionsContext)
+  if (context === undefined) {
+    throw new Error("useAuthActions must be used within an AuthProvider")
+  }
+  return context
+}
+
+// Backward compatibility hook (use separate hooks when possible)
+export function useAuth() {
+  const state = useAuthState()
+  const actions = useAuthActions()
+  
+  return {
+    ...state,
+    ...actions,
+  }
 }

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
-import { useAuth } from '@/contexts/auth-context'
+import { useAuthState } from '@/contexts/auth-context'
 
 interface UserProgressData {
   videosCompleted: number
@@ -19,7 +19,7 @@ interface UserProgressData {
 }
 
 export function useUserProgress() {
-  const { user } = useAuth()
+  const { user } = useAuthState()
   const [progressData, setProgressData] = useState<UserProgressData>({
     videosCompleted: 0,
     totalVideos: 0,

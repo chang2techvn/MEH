@@ -1,263 +1,249 @@
-/**
- * Performance optimization hooks and utilities
- */
+"use client"
 
-import { useEffect, useRef, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useRef } from "react"
+import { useSafeTimeout } from "./use-safe-async"
 
-/**
- * Debounce hook for optimizing frequent function calls
- */
-export function useDebounce<T extends (...args: any[]) => any>(
-  callback: T,
-  delay: number
-): T {
-  const timeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)
-  
-  return useCallback((...args: Parameters<T>) => {
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current)
-    }
-    
-    timeoutRef.current = setTimeout(() => {
-      callback(...args)
+// Debounced value hook with safe cleanup
+export function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value)
+  const { setSafeTimeout, clearSafeTimeout } = useSafeTimeout()
+
+  useEffect(() => {
+    clearSafeTimeout()
+    setSafeTimeout(() => {
+      setDebouncedValue(value)
     }, delay)
-  }, [callback, delay]) as T
+
+    return () => {
+      clearSafeTimeout()
+    }
+  }, [value, delay, setSafeTimeout, clearSafeTimeout])
+
+  return debouncedValue
 }
 
-/**
- * Throttle hook for limiting function execution frequency
- */
+// Throttled function hook
 export function useThrottle<T extends (...args: any[]) => any>(
-  callback: T,
+  func: T,
   delay: number
 ): T {
-  const lastRunRef = useRef<number>(0)
-  const timeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)
-  
-  return useCallback((...args: Parameters<T>) => {
-    const now = Date.now()
-    
-    if (now - lastRunRef.current >= delay) {
-      lastRunRef.current = now
-      callback(...args)
-    } else {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current)
+  const lastCall = useRef<number>(0)
+  const { setSafeTimeout } = useSafeTimeout()
+
+  return useCallback(
+    ((...args: Parameters<T>) => {
+      const now = Date.now()
+      if (now - lastCall.current >= delay) {
+        lastCall.current = now
+        return func(...args)
+      } else {
+        setSafeTimeout(() => {
+          lastCall.current = Date.now()
+          func(...args)
+        }, delay - (now - lastCall.current))
       }
-      
-      timeoutRef.current = setTimeout(() => {
-        lastRunRef.current = Date.now()
-        callback(...args)
-      }, delay - (now - lastRunRef.current))
-    }
-  }, [callback, delay]) as T
+    }) as T,
+    [func, delay, setSafeTimeout]
+  )
 }
 
-/**
- * Intersection Observer hook for lazy loading
- */
-export function useIntersectionObserver(
-  elementRef: React.RefObject<Element>,
-  callback: (isIntersecting: boolean) => void,
-  options: IntersectionObserverInit = {}
-) {
+// Performance monitoring hook
+export function usePerformanceMonitor(name: string) {
   useEffect(() => {
-    const element = elementRef.current
-    if (!element) return
-    
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        callback(entry.isIntersecting)
-      },
-      {
-        threshold: 0.1,
-        rootMargin: '50px',
-        ...options
-      }
-    )
-    
-    observer.observe(element)
-    
+    if (typeof window === 'undefined' || process.env.NODE_ENV !== 'development') {
+      return
+    }
+
+    const startTime = performance.now()
+    console.log(`[Performance] ${name} component mounted`)
+
     return () => {
-      observer.disconnect()
+      const endTime = performance.now()
+      console.log(`[Performance] ${name} component unmounted after ${endTime - startTime}ms`)
     }
-  }, [elementRef, callback, options])
+  }, [name])
 }
 
-/**
- * Performance monitoring hook
- */
-export function usePerformanceMonitor(componentName: string) {
-  const renderTimeRef = useRef<number>(0)
-  const mountTimeRef = useRef<number>(0)
-  
+// Frame rate monitoring
+export function useFrameRate() {
+  const [fps, setFps] = useState<number>(0)
+  const frameCount = useRef<number>(0)
+  const lastTime = useRef<number>(performance.now())
+
   useEffect(() => {
-    mountTimeRef.current = performance.now()
-    
+    if (typeof window === 'undefined' || process.env.NODE_ENV !== 'development') {
+      return
+    }
+
+    let animationId: number
+
+    const calculateFPS = () => {
+      frameCount.current++
+      const currentTime = performance.now()
+      const delta = currentTime - lastTime.current
+
+      if (delta >= 1000) {
+        const currentFPS = Math.round((frameCount.current * 1000) / delta)
+        setFps(currentFPS)
+        frameCount.current = 0
+        lastTime.current = currentTime
+      }
+
+      animationId = requestAnimationFrame(calculateFPS)
+    }
+
+    animationId = requestAnimationFrame(calculateFPS)
+
     return () => {
-      const unmountTime = performance.now()
-      const totalTime = unmountTime - mountTimeRef.current
-      
-      if (totalTime > 16) { // More than one frame
-        console.warn(`Component ${componentName} was mounted for ${totalTime.toFixed(2)}ms`)
-      }
+      cancelAnimationFrame(animationId)
     }
-  }, [componentName])
-  
-  useEffect(() => {
-    const renderTime = performance.now() - renderTimeRef.current
-    
-    if (renderTime > 16) { // More than one frame
-      console.warn(`Component ${componentName} render took ${renderTime.toFixed(2)}ms`)
-    }
-  })
-  
-  useEffect(() => {
-    renderTimeRef.current = performance.now()
-  })
-}
-
-/**
- * Memory usage monitoring hook
- */
-export function useMemoryMonitor(interval: number = 30000) {
-  useEffect(() => {
-    if (!('memory' in performance)) return
-    
-    let checks = 0
-    const maxChecks = 10 // Limit checks to avoid infinite monitoring
-    
-    const intervalId = setInterval(() => {
-      if (checks >= maxChecks) {
-        clearInterval(intervalId)
-        return
-      }
-      
-      const memory = (performance as any).memory
-      const usedMB = memory.usedJSHeapSize / (1024 * 1024)
-      const totalMB = memory.totalJSHeapSize / (1024 * 1024)
-      const limitMB = memory.jsHeapSizeLimit / (1024 * 1024)
-      
-      // Warn if memory usage is high
-      if (usedMB > limitMB * 0.8) {
-        console.warn(`High memory usage: ${usedMB.toFixed(2)}MB / ${limitMB.toFixed(2)}MB`)
-      }
-      
-      checks++
-    }, interval)
-    
-    return () => clearInterval(intervalId)
-  }, [interval])
-}
-
-/**
- * Request idle callback hook for non-critical tasks
- */
-export function useIdleCallback(
-  callback: () => void,
-  deps: React.DependencyList,
-  timeout: number = 1000
-) {
-  useEffect(() => {
-    if ('requestIdleCallback' in window) {
-      const id = (window as any).requestIdleCallback(callback, { timeout })
-      return () => (window as any).cancelIdleCallback(id)
-    } else {
-      // Fallback for browsers without requestIdleCallback
-      const id = setTimeout(callback, 1)
-      return () => clearTimeout(id)
-    }
-  }, deps)
-}
-
-/**
- * Virtual scrolling hook for large lists
- */
-export function useVirtualScrolling<T>(
-  items: T[],
-  itemHeight: number,
-  containerHeight: number
-) {
-  const [scrollTop, setScrollTop] = useState(0)
-  
-  const visibleItems = useMemo(() => {
-    const startIndex = Math.floor(scrollTop / itemHeight)
-    const endIndex = Math.min(
-      startIndex + Math.ceil(containerHeight / itemHeight) + 1,
-      items.length
-    )
-    
-    return {
-      startIndex,
-      endIndex,
-      items: items.slice(startIndex, endIndex),
-      totalHeight: items.length * itemHeight,
-      offsetY: startIndex * itemHeight
-    }
-  }, [items, itemHeight, containerHeight, scrollTop])
-  
-  const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
-    setScrollTop(e.currentTarget.scrollTop)
   }, [])
-  
+
+  return fps
+}
+
+// Memory usage monitoring
+export function useMemoryUsage() {
+  const [memoryInfo, setMemoryInfo] = useState<{
+    used: number
+    total: number
+    limit: number
+  } | null>(null)
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || 
+        process.env.NODE_ENV !== 'development' ||
+        !('memory' in performance)) {
+      return
+    }
+
+    const updateMemoryInfo = () => {
+      const memory = (performance as any).memory
+      setMemoryInfo({
+        used: Math.round(memory.usedJSHeapSize / 1048576), // MB
+        total: Math.round(memory.totalJSHeapSize / 1048576), // MB
+        limit: Math.round(memory.jsHeapSizeLimit / 1048576), // MB
+      })
+    }
+
+    updateMemoryInfo()
+    const interval = setInterval(updateMemoryInfo, 5000) // Update every 5s
+
+    return () => clearInterval(interval)
+  }, [])
+
+  return memoryInfo
+}
+
+// Bundle size tracking
+export function useBundleSize() {
+  const [bundleSize, setBundleSize] = useState<number>(0)
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || process.env.NODE_ENV !== 'development') {
+      return
+    }
+
+    // Estimate bundle size from transferred resources
+    const resources = performance.getEntriesByType('resource')
+    const jsResources = resources.filter(resource => 
+      resource.name.includes('.js') || resource.name.includes('chunk')
+    )
+    
+    const totalSize = jsResources.reduce((sum, resource) => {
+      return sum + ((resource as any).transferSize || 0)
+    }, 0)
+
+    setBundleSize(Math.round(totalSize / 1024)) // KB
+  }, [])
+
+  return bundleSize
+}
+
+// Render performance tracking
+export function useRenderPerformance(componentName: string) {
+  const renderCount = useRef<number>(0)
+  const renderTimes = useRef<number[]>([])
+
+  useEffect(() => {
+    if (process.env.NODE_ENV !== 'development') return
+
+    renderCount.current++
+    const renderTime = performance.now()
+    renderTimes.current.push(renderTime)
+
+    // Keep only last 10 renders
+    if (renderTimes.current.length > 10) {
+      renderTimes.current = renderTimes.current.slice(-10)
+    }
+
+    console.log(`[Render] ${componentName} rendered ${renderCount.current} times`)
+  })
+
   return {
-    visibleItems,
-    handleScroll
+    renderCount: renderCount.current,
+    averageRenderTime: renderTimes.current.length > 1 
+      ? renderTimes.current.slice(1).reduce((sum, time, index) => 
+          sum + (time - renderTimes.current[index]), 0) / (renderTimes.current.length - 1)
+      : 0,
   }
 }
 
-/**
- * Bundle size monitoring (development only)
- */
-export function useBundleMonitor() {
-  useEffect(() => {
-    if (process.env.NODE_ENV !== 'development') return
-      // Monitor the size of loaded JavaScript bundles
-    const observer = new PerformanceObserver((list) => {
-      list.getEntries().forEach((entry) => {
-        // Type assertion for PerformanceResourceTiming which has transferSize
-        const resourceEntry = entry as PerformanceResourceTiming
-        if (entry.name.includes('.js') && resourceEntry.transferSize) {
-          const sizeKB = resourceEntry.transferSize / 1024
-          if (sizeKB > 500) { // Warn for bundles > 500KB
-            console.warn(`Large bundle detected: ${entry.name} (${sizeKB.toFixed(2)}KB)`)
-          }
-        }
-      })
-    })
-    
-    observer.observe({ entryTypes: ['resource'] })
-    
-    return () => observer.disconnect()
-  }, [])
-}
+// Component size monitoring
+export function useComponentSize() {
+  const [size, setSize] = useState<{ width: number; height: number }>({ width: 0, height: 0 })
+  const ref = useRef<HTMLDivElement>(null)
 
-/**
- * Component re-render monitoring
- */
-export function useRenderMonitor(componentName: string, props?: any) {
-  const renderCount = useRef(0)
-  const prevProps = useRef(props)
-  
   useEffect(() => {
-    renderCount.current++
-    
-    if (renderCount.current > 10) {
-      console.warn(`Component ${componentName} has re-rendered ${renderCount.current} times`)
-      
-      if (props && prevProps.current) {
-        const changedProps = Object.keys(props).filter(
-          key => props[key] !== prevProps.current[key]
-        )
-        
-        if (changedProps.length > 0) {
-          console.log(`Changed props: ${changedProps.join(', ')}`)
-        }
+    if (!ref.current) return
+
+    const resizeObserver = new ResizeObserver(entries => {
+      for (const entry of entries) {
+        const { width, height } = entry.contentRect
+        setSize({ width, height })
       }
+    })
+
+    resizeObserver.observe(ref.current)
+
+    return () => {
+      resizeObserver.disconnect()
     }
-    
-    prevProps.current = props
-  })
+  }, [])
+
+  return { ref, size }
 }
 
-import { useState } from 'react'
+// Network performance monitoring
+export function useNetworkPerformance() {
+  const [networkInfo, setNetworkInfo] = useState<{
+    effectiveType: string
+    downlink: number
+    rtt: number
+  } | null>(null)
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('connection' in navigator)) {
+      return
+    }
+
+    const connection = (navigator as any).connection
+    
+    const updateNetworkInfo = () => {
+      setNetworkInfo({
+        effectiveType: connection.effectiveType || 'unknown',
+        downlink: connection.downlink || 0,
+        rtt: connection.rtt || 0,
+      })
+    }
+
+    updateNetworkInfo()
+    connection.addEventListener('change', updateNetworkInfo)
+
+    return () => {
+      connection.removeEventListener('change', updateNetworkInfo)
+    }
+  }, [])
+
+  return networkInfo
+}

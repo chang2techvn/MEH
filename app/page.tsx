@@ -7,13 +7,15 @@ import { Button } from "@/components/ui/button"
 import { toast } from "@/hooks/use-toast"
 import { useMobile } from "@/hooks/use-mobile"
 
-// Lazy load components that aren't needed immediately
-const MainHeader = lazy(() => import("@/components/ui/main-header"))
+// Critical above-the-fold components - NO lazy loading
+import MainHeader from "@/components/ui/main-header"
+import { MobileNavigation } from "@/components/home/mobile-navigation"
+import { MainContent } from "@/components/home/main-content"
+
+// Non-critical components - keep lazy loading  
 const AIChatButtonComponent = lazy(() =>
   import("@/components/ai-helper/ai-chat-button").then((mod) => ({ default: mod.AIChatButton })),
 )
-const MobileNavigation = lazy(() => import("@/components/home/mobile-navigation").then((mod) => ({ default: mod.MobileNavigation })))
-const MainContent = lazy(() => import("@/components/home/main-content").then((mod) => ({ default: mod.MainContent })))
 const Sidebar = lazy(() => import("@/components/home/sidebar").then((mod) => ({ default: mod.Sidebar })))
 const ChallengeTabs = lazy(() => import("@/components/challenge/challenge-tabs"))
 
@@ -62,18 +64,14 @@ export default function Home() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-gradient-to-b from-background via-background to-background/80 dark:from-background dark:via-background/90 dark:to-background/80">
-      <Suspense fallback={<div className="h-16 bg-background"></div>}>
-        <MainHeader mobileMenuOpen={mobileMenuOpen} setMobileMenuOpen={setMobileMenuOpen} />
-      </Suspense>
+    <div className="flex min-h-screen flex-col bg-gradient-to-b from-background via-background to-background/80 dark:from-background dark:via-background/90 dark:to-background/80">      {/* Critical above-the-fold components - NO Suspense */}
+      <MainHeader mobileMenuOpen={mobileMenuOpen} setMobileMenuOpen={setMobileMenuOpen} />
 
       {/* Mobile menu */}
-      <Suspense fallback={null}>
-        <MobileNavigation 
-          isOpen={mobileMenuOpen} 
-          onClose={() => setMobileMenuOpen(false)} 
-        />
-      </Suspense>
+      <MobileNavigation 
+        isOpen={mobileMenuOpen} 
+        onClose={() => setMobileMenuOpen(false)} 
+      />
 
       <main className="flex-1 relative overflow-hidden">
         {/* Background decorations - optimized with contain property */}
@@ -81,14 +79,11 @@ export default function Home() {
         <div className="absolute bottom-20 right-10 w-64 h-64 rounded-full bg-cantaloupe/10 dark:bg-cassis/10 blur-3xl -z-10 animate-blob animation-delay-2000 contain-paint"></div>
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full bg-mellow-yellow/5 dark:bg-mellow-yellow/5 blur-3xl -z-10 animate-blob animation-delay-4000 contain-paint"></div>        <div className="container py-8">
           {/* Top section: Main Content + Sidebar */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            {/* Main Content */}
-            <Suspense fallback={<LoadingFallback />}>
-              <MainContent 
-                newPostAdded={newPostAdded}
-                setNewPostAdded={setNewPostAdded}
-              />
-            </Suspense>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">            {/* Main Content - critical above-the-fold */}
+            <MainContent 
+              newPostAdded={newPostAdded}
+              setNewPostAdded={setNewPostAdded}
+            />
 
             {/* Sidebar */}
             <Suspense fallback={<LoadingFallback />}>

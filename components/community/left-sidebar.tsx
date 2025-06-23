@@ -1,0 +1,107 @@
+"use client"
+
+import { Button } from "@/components/ui/button"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Separator } from "@/components/ui/separator"
+import {
+  Home,
+  Users,
+  Award,
+  BookOpen,
+  MessageSquare,
+  ChevronDown,
+  Zap,
+  TrendingUp,
+  X,
+} from "lucide-react"
+import { UserProfileCard } from "./user-profile-card"
+import { NavItem } from "./nav-item"
+import { GroupNavItem } from "./group-nav-item"
+import type { Group } from "./types"
+
+interface LeftSidebarProps {
+  showLeftSidebar: boolean
+  setShowLeftSidebar: (show: boolean) => void
+  groups: Group[]
+}
+
+export function LeftSidebar({ showLeftSidebar, setShowLeftSidebar, groups }: LeftSidebarProps) {
+  return (
+    <aside
+      className={`
+        fixed inset-0 z-50 lg:static lg:z-auto lg:w-[240px] xl:w-[280px]
+        ${showLeftSidebar ? "block" : "hidden lg:block"}
+      `}
+    >
+      {/* Mobile overlay */}
+      {showLeftSidebar && (
+        <div
+          className="absolute inset-0 bg-black/50 lg:hidden"
+          onClick={() => setShowLeftSidebar(false)}
+        ></div>
+      )}
+
+      <div
+        className={`
+        relative h-full w-[280px] sm:w-[320px] lg:w-full 
+        bg-white dark:bg-gray-800 lg:bg-transparent lg:dark:bg-transparent
+        overflow-auto lg:sticky lg:top-[4.5rem] lg:h-[calc(100vh-4.5rem)]
+      `}
+      >
+        {/* Mobile header */}
+        {showLeftSidebar && (
+          <div className="p-4 flex justify-between items-center border-b lg:hidden">
+            <h2 className="font-semibold">Menu</h2>
+            <Button variant="ghost" size="icon" onClick={() => setShowLeftSidebar(false)}>
+              <X className="h-5 w-5" />
+            </Button>
+          </div>
+        )}
+
+        <ScrollArea className="h-full py-4">
+          <div className="space-y-1 px-2">
+            <UserProfileCard />
+
+            <NavItem icon={Home} label="Home" href="/" />
+            <NavItem icon={Users} label="Community" href="/community" active />
+            <NavItem icon={Award} label="Challenges" href="/challenges" />
+            <NavItem icon={BookOpen} label="Resources" href="/resources" />
+            <NavItem icon={MessageSquare} label="Messages" href="/messages" />
+
+            <Separator className="my-4" />
+
+            <h3 className="font-semibold text-gray-500 dark:text-gray-400 text-xs uppercase px-4 mb-2">
+              Your Shortcuts
+            </h3>
+
+            {groups.map((group) => (
+              <GroupNavItem key={group.id} name={group.name} image={group.image} active={group.active} />
+            ))}
+
+            <Button variant="ghost" className="w-full justify-start text-sm font-normal h-10 px-4">
+              <ChevronDown className="h-4 w-4 mr-2" />
+              See More
+            </Button>
+
+            <Separator className="my-4" />
+
+            <h3 className="font-semibold text-gray-500 dark:text-gray-400 text-xs uppercase px-4 mb-2">
+              Explore
+            </h3>
+
+            <NavItem icon={Users} label="Events" href="/events" />
+            <NavItem icon={Users} label="Groups" href="/groups" />
+            <NavItem icon={Zap} label="Learning Paths" href="/learning-paths" />
+            <NavItem icon={TrendingUp} label="Trending" href="/trending" />
+
+            <Separator className="my-4" />
+
+            <div className="px-4 text-xs text-gray-500 dark:text-gray-400">
+              <p>Privacy · Terms · Advertising · Cookies · More · EnglishMastery © 2025</p>
+            </div>
+          </div>
+        </ScrollArea>
+      </div>
+    </aside>
+  )
+}

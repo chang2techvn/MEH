@@ -10,10 +10,11 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { toast } from "@/hooks/use-toast"
-import { useAuth } from "@/contexts/auth-context"
+import { useAuthActions, useAuthState } from "@/contexts/auth-context"
 
 export default function ForgotPasswordPage() {
-  const { resetPassword, isLoading } = useAuth()
+  const { resetPassword } = useAuthActions()
+  const { isLoading } = useAuthState()
   const [email, setEmail] = useState("")
   const [isSubmitted, setIsSubmitted] = useState(false)
 

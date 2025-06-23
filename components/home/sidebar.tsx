@@ -14,7 +14,6 @@ interface SidebarProps {
 
 export function Sidebar({onViewLeaderboard }: SidebarProps) {
   const { leaderboardData, leaderboardLoading } = useLeaderboard()
-
   const container = {
     hidden: { opacity: 0 },
     show: {
@@ -27,7 +26,15 @@ export function Sidebar({onViewLeaderboard }: SidebarProps) {
 
   const item = {
     hidden: { opacity: 0, y: 10 },
-    show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 200, damping: 20 } },
+    show: { 
+      opacity: 1, 
+      y: 0, 
+      transition: { 
+        type: "spring" as const, 
+        stiffness: 200, 
+        damping: 20 
+      } 
+    },
   }
 
   return (

@@ -11,7 +11,7 @@ import { formatDistanceToNow } from "date-fns"
 import { supabase, dbHelpers } from "@/lib/supabase"
 import type { Database } from "@/lib/database.types"
 import { toast } from "@/hooks/use-toast"
-import { useAuth } from "@/contexts/auth-context"
+import { useAuthState } from "@/contexts/auth-context"
 
 // Types from Supabase schema
 type NotificationRow = Database['public']['Tables']['notifications']['Row']
@@ -34,7 +34,7 @@ interface NotificationItem {
 }
 
 export default function NotificationsDropdown() {
-  const { user, isAuthenticated } = useAuth()
+  const { user, isAuthenticated } = useAuthState()
   const [isOpen, setIsOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [notifications, setNotifications] = useState<NotificationItem[]>([])

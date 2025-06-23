@@ -14,10 +14,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { useAuth } from "@/contexts/auth-context"
+import { useAuthState, useAuthActions } from "@/contexts/auth-context"
 
 export default function UserMenu() {
-  const { user, isAuthenticated, logout } = useAuth()
+  const { user, isAuthenticated } = useAuthState()
+  const { logout } = useAuthActions()
   const router = useRouter()
   const [isOpen, setIsOpen] = useState(false)
 

@@ -13,11 +13,12 @@ import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Separator } from "@/components/ui/separator"
 import { toast } from "@/hooks/use-toast"
-import { useAuth } from "@/contexts/auth-context"
+import { useAuthActions, useAuthState } from "@/contexts/auth-context"
 
 export default function LoginPage() {
   const router = useRouter()
-  const { login, loginWithGoogle, loginWithFacebook, loginWithGitHub, isLoading } = useAuth()
+  const { login, loginWithGoogle, loginWithFacebook, loginWithGitHub } = useAuthActions()
+  const { isLoading } = useAuthState()
   const [showPassword, setShowPassword] = useState(false)
   const [formData, setFormData] = useState({
     email: "",

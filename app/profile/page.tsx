@@ -26,12 +26,12 @@ import {
 } from "lucide-react"
 import FeedPost from "@/components/feed/feed-post"
 import { Progress } from "@/components/ui/progress"
-import { useAuth } from "@/contexts/auth-context"
+import { useAuthState } from "@/contexts/auth-context"
 import { useToast } from "@/hooks/use-toast"
 import { useMobile } from "@/hooks/use-mobile"
 
 export default function ProfilePage() {
-  const { user } = useAuth()
+  const { user } = useAuthState()
   const { toast } = useToast()
   const isMobile = useMobile()
   const [activeTab, setActiveTab] = useState("submissions")
@@ -77,14 +77,13 @@ export default function ProfilePage() {
       },
     },
   }
-
   const itemVariants = {
     hidden: { y: 20, opacity: 0 },
     visible: {
       y: 0,
       opacity: 1,
       transition: {
-        type: "spring",
+        type: "spring" as const,
         stiffness: 100,
         damping: 15,
       },
@@ -296,9 +295,8 @@ export default function ProfilePage() {
 
             <AnimatePresence mode="wait">
               <motion.div key={activeTab} initial="hidden" animate="visible" exit="exit" variants={tabVariants}>
-                <TabsContent value="submissions" className="mt-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <motion.div whileHover={{ y: -5 }} transition={{ type: "spring", stiffness: 300, damping: 20 }}>
+                <TabsContent value="submissions" className="mt-6">                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <motion.div whileHover={{ y: -5 }} transition={{ type: "spring" as const, stiffness: 300, damping: 20 }}>
                       <FeedPost
                         username="John Doe"
                         userImage="/placeholder.svg?height=40&width=40"
@@ -309,9 +307,7 @@ export default function ProfilePage() {
                         likes={18}
                         comments={5}
                       />
-                    </motion.div>
-
-                    <motion.div whileHover={{ y: -5 }} transition={{ type: "spring", stiffness: 300, damping: 20 }}>
+                    </motion.div>                    <motion.div whileHover={{ y: -5 }} transition={{ type: "spring" as const, stiffness: 300, damping: 20 }}>
                       <FeedPost
                         username="John Doe"
                         userImage="/placeholder.svg?height=40&width=40"
@@ -322,9 +318,7 @@ export default function ProfilePage() {
                         likes={24}
                         comments={7}
                       />
-                    </motion.div>
-
-                    <motion.div whileHover={{ y: -5 }} transition={{ type: "spring", stiffness: 300, damping: 20 }}>
+                    </motion.div>                    <motion.div whileHover={{ y: -5 }} transition={{ type: "spring" as const, stiffness: 300, damping: 20 }}>
                       <FeedPost
                         username="John Doe"
                         userImage="/placeholder.svg?height=40&width=40"
@@ -335,9 +329,7 @@ export default function ProfilePage() {
                         likes={32}
                         comments={12}
                       />
-                    </motion.div>
-
-                    <motion.div whileHover={{ y: -5 }} transition={{ type: "spring", stiffness: 300, damping: 20 }}>
+                    </motion.div>                    <motion.div whileHover={{ y: -5 }} transition={{ type: "spring" as const, stiffness: 300, damping: 20 }}>
                       <FeedPost
                         username="John Doe"
                         userImage="/placeholder.svg?height=40&width=40"
@@ -529,11 +521,10 @@ export default function ProfilePage() {
                   </div>
                 </TabsContent>
 
-                <TabsContent value="achievements" className="mt-6">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                <TabsContent value="achievements" className="mt-6">                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                     <motion.div
                       whileHover={{ y: -5, boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1)" }}
-                      transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                      transition={{ type: "spring" as const, stiffness: 300, damping: 20 }}
                     >
                       <Card className="border-none shadow-lg overflow-hidden">
                         <CardContent className="p-6 flex flex-col items-center text-center">

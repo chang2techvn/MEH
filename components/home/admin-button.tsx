@@ -3,10 +3,10 @@
 import Link from "next/link"
 import { Shield } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { useAuth } from "@/contexts/auth-context"
+import { useAuthState } from "@/contexts/auth-context"
 
 export default function AdminButton() {
-  const { user, isAuthenticated } = useAuth()
+  const { user, isAuthenticated } = useAuthState()
 
   // Only show for authenticated admin users
   if (!isAuthenticated || !user || user.role !== 'admin') {

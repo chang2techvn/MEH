@@ -9,6 +9,7 @@ import ChatWindowsManager from "@/components/messages/chat-windows-manager"
 import MinimizedChatBar from "@/components/messages/minimized-chat-bar"
 import { ThemeProvider } from "@/contexts/theme-context"
 import Script from "next/script"
+import ServiceWorkerRegistration from "@/components/service-worker-registration"
 
 // Tối ưu font loading
 const outfit = Outfit({
@@ -114,8 +115,7 @@ export default function RootLayout({
         {/* Preload critical CSS */}
         <link rel="preload" href="/_next/static/css/app.css" as="style" />
       </head>
-      <body className={outfit.className}>
-        <AuthProvider>
+      <body className={outfit.className}>        <AuthProvider>
           <ThemeProvider>
             <ChatProvider>
               <div className="flex min-h-screen flex-col">
@@ -124,6 +124,7 @@ export default function RootLayout({
                 <MinimizedChatBar />
               </div>
               <Toaster />
+              <ServiceWorkerRegistration />
             </ChatProvider>
           </ThemeProvider>
         </AuthProvider>

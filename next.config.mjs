@@ -1,7 +1,12 @@
 
+import path from 'path'
+import { fileURLToPath } from 'url'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+
 /** @type {import('next').NextConfig} */
-const nextConfig = {
-  reactStrictMode: true,
+const nextConfig = {  reactStrictMode: true,
   // Removed swcMinify as it's no longer supported in Next.js 15
   images: {
     formats: ['image/avif', 'image/webp'],
@@ -14,9 +19,21 @@ const nextConfig = {
     minimumCacheTTL: 60 * 60 * 24 * 7, // 1 week
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
-  },  experimental: {
-    // Disable experimental features for stability
-    optimizePackageImports: [],
+    dangerouslyAllowSVG: true,
+    contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
+    domains: [], // Add your domains here if needed
+    unoptimized: false,
+  },
+  experimental: {
+    // Enable package import optimization for better tree shaking
+    optimizePackageImports: [
+      'lucide-react',
+      '@radix-ui/react-icons',
+      '@supabase/supabase-js',
+      'framer-motion',
+      'react-hook-form',
+      'date-fns'
+    ],
     serverActions: {
       bodySizeLimit: '2mb',
     },
@@ -71,7 +88,8 @@ const nextConfig = {
         {
           key: 'Permissions-Policy',
           value: 'camera=(), microphone=(), geolocation=(), interest-cohort=()',
-        },        {
+        },
+        {
           key: 'Cache-Control',
           value: 'public, max-age=3600, stale-while-revalidate=86400',
         },
@@ -126,13 +144,28 @@ const nextConfig = {
         },
       ],
     },
-  ],
-  webpack: (config, { dev, isServer }) => {
+  ],  webpack: (config, { dev, isServer }) => {
     // Add SVG support
     config.module.rules.push({
       test: /\.svg$/,
       use: ['@svgr/webpack'],
     });
+
+    // Optimize for tree shaking
+    if (!dev) {
+      config.optimization = {
+        ...config.optimization,
+        usedExports: true,
+        sideEffects: false, // Enable tree shaking for production
+        minimize: true,
+      };
+    }
+
+    // Add webpack aliases for better module resolution
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      '@': __dirname,
+    };
     
     return config;
   },

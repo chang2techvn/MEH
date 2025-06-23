@@ -1,11 +1,11 @@
 "use client"
 
-import { useAuth } from "@/contexts/auth-context"
+import { useAuthActions } from "@/contexts/auth-context"
 import { Button } from "@/components/ui/button"
 import { LogOut, ExternalLink } from "lucide-react"
 
 export function LogoutHelper() {
-  const { logout } = useAuth()
+  const { logout } = useAuthActions()
 
   const handleCompleteLogout = async () => {
     // Logout from the app first
