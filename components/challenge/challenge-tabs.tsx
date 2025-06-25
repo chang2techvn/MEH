@@ -188,19 +188,17 @@ export default function ChallengeTabs({
             <p className="text-sm text-muted-foreground">Challenges you've created • {userChallenges.length} available</p>
           </div>
           
-          <div className="h-[600px] min-h-[600px] overflow-y-auto border rounded-lg bg-background/50">
-            <div className="min-h-full p-4">
-              <OptimizedChallengeGrid
-                challenges={userChallenges}
-                onStartChallenge={handleStartChallenge}
-                loading={loading}
-                emptyMessage="You haven't created any challenges yet"
-                emptyAction={() => setCreateModalOpen(true)}
-                emptyActionLabel="Create Your First Challenge"
-                useVirtualScroll={userChallenges.length > 20}
-              />
-            </div>
-          </div>
+
+          <OptimizedChallengeGrid
+            challenges={userChallenges}
+            onStartChallenge={handleStartChallenge}
+            loading={loading}
+            emptyMessage="You haven't created any challenges yet"
+            emptyAction={() => setCreateModalOpen(true)}
+            emptyActionLabel="Create Your First Challenge"
+            useVirtualScroll={userChallenges.length > 20}
+          />
+
         </TabsContent>          
         <TabsContent value="all" className="mt-6">
           <div className="mb-4">
@@ -208,57 +206,52 @@ export default function ChallengeTabs({
             <p className="text-sm text-muted-foreground">Auto-generated + User challenges • {challenges.length} total</p>
           </div>
           
-          <div className="h-[600px] min-h-[600px] overflow-y-auto border rounded-lg bg-background/50">
-            <div className="min-h-full p-4">
-              <OptimizedChallengeGrid
-                challenges={filteredChallenges}
-                onStartChallenge={handleStartChallenge}
-                loading={loading}
-                emptyMessage="No challenges found matching your criteria"
-                emptyAction={() => setCreateModalOpen(true)}
-                emptyActionLabel="Create a Challenge"
-                useVirtualScroll={filteredChallenges.length > 20}
-                useInfiniteScroll={false}
-              />
-            </div>
-          </div>
+
+          <OptimizedChallengeGrid
+            challenges={filteredChallenges}
+            onStartChallenge={handleStartChallenge}
+            loading={loading}
+            emptyMessage="No challenges found matching your criteria"
+            emptyAction={() => setCreateModalOpen(true)}
+            emptyActionLabel="Create a Challenge"
+            useVirtualScroll={filteredChallenges.length > 20}
+            useInfiniteScroll={false}
+          />
+
         </TabsContent>
           <TabsContent value="beginner" className="mt-6">
           <div className="mb-4">
             <h3 className="text-lg font-semibold text-foreground">Beginner Challenges</h3>
             <p className="text-sm text-muted-foreground">Perfect for starting your English journey • {filteredChallenges.length} available</p>
           </div>
-          <div className="h-[600px] min-h-[600px] overflow-y-auto border rounded-lg bg-background/50">
-            <div className="min-h-full p-4">
-              <OptimizedChallengeGrid
-                challenges={filteredChallenges}
-                onStartChallenge={handleStartChallenge}
-                loading={loading}
-                emptyMessage="No beginner challenges found"
-                emptyAction={() => setCreateModalOpen(true)}
-                emptyActionLabel="Create a Beginner Challenge"
-                useVirtualScroll={filteredChallenges.length > 20}
-              />
-            </div>
-          </div>
-        </TabsContent>        <TabsContent value="intermediate" className="mt-6">
+
+          <OptimizedChallengeGrid
+            challenges={filteredChallenges}
+            onStartChallenge={handleStartChallenge}
+            loading={loading}
+            emptyMessage="No beginner challenges found"
+            emptyAction={() => setCreateModalOpen(true)}
+            emptyActionLabel="Create a Beginner Challenge"
+            useVirtualScroll={filteredChallenges.length > 20}
+          />
+
+        </TabsContent>        
+        <TabsContent value="intermediate" className="mt-6">
           <div className="mb-4">
             <h3 className="text-lg font-semibold text-foreground">Intermediate Challenges</h3>
             <p className="text-sm text-muted-foreground">Level up your skills • {filteredChallenges.length} available</p>
           </div>
-          <div className="h-[600px] min-h-[600px] overflow-y-auto border rounded-lg bg-background/50">
-            <div className="min-h-full p-4">
-              <OptimizedChallengeGrid
-                challenges={filteredChallenges}
-                onStartChallenge={handleStartChallenge}
-                loading={loading}
-                emptyMessage="No intermediate challenges found"
-                emptyAction={() => setCreateModalOpen(true)}
-                emptyActionLabel="Create an Intermediate Challenge"
-                useVirtualScroll={filteredChallenges.length > 20}
-              />
-            </div>
-          </div>
+
+          <OptimizedChallengeGrid
+            challenges={filteredChallenges}
+            onStartChallenge={handleStartChallenge}
+            loading={loading}
+            emptyMessage="No intermediate challenges found"
+            emptyAction={() => setCreateModalOpen(true)}
+            emptyActionLabel="Create an Intermediate Challenge"
+            useVirtualScroll={filteredChallenges.length > 20}
+          />
+
         </TabsContent>
           <TabsContent value="advanced" className="mt-6">
           <div className="mb-4">

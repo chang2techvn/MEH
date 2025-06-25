@@ -18,7 +18,7 @@ const AIChatButtonComponent = lazy(() =>
 )
 const Sidebar = lazy(() => import("@/components/home/sidebar").then((mod) => ({ default: mod.Sidebar })))
 const ChallengeTabs = lazy(() => import("@/components/challenge/challenge-tabs"))
-
+const CreateChallengeModal = lazy(() => import("@/components/challenge/create-challenge-modal"))
 // Loading fallback component
 const LoadingFallback = () => <div className="animate-pulse bg-gray-200 dark:bg-gray-800 rounded-lg h-32 w-full"></div>
 
@@ -28,6 +28,7 @@ export default function Home() {
   const [newPostAdded, setNewPostAdded] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedChallenge, setSelectedChallenge] = useState(null)
+  const [createModalOpen, setCreateModalOpen] = useState(false)
   const isMobile = useMobile()
   // Handle selected challenge change from ChallengeTabs
   const handleSelectedChallengeChange = useCallback((challenge: any) => {
@@ -117,12 +118,7 @@ export default function Home() {
                   />
                 </div>
                 <Button
-                  onClick={() => {
-                    toast({
-                      title: "Create Challenge",
-                      description: "Create functionality is available in the tabs below",
-                    })
-                  }}
+                  onClick={() => setCreateModalOpen(true)}
                   className="bg-gradient-to-r from-neo-mint to-purist-blue text-white"
                 >
                   <Plus className="h-4 w-4 mr-2" />
@@ -145,7 +141,14 @@ export default function Home() {
       <Suspense fallback={null}>
         <AIChatButtonComponent />
       </Suspense>
-
+      <CreateChallengeModal
+        open={createModalOpen}
+        onOpenChange={setCreateModalOpen}
+        onChallengeCreated={() => {
+          setNewPostAdded(true)
+          toast({ title: "Challenge created successfully!", description: "Your new challenge has been added."})
+        }}  
+      />
       <footer className="border-t border-white/10 dark:border-gray-800/10 bg-white/40 dark:bg-gray-900/40 backdrop-blur-xl">
           <div className="border-t border-white/10 dark:border-gray-800/10 mt-8 pt-8 text-center text-sm text-muted-foreground">
             <p>© 2025 EnglishMastery. All rights reserved.</p>

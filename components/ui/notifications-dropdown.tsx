@@ -283,7 +283,18 @@ export default function NotificationsDropdown() {
     
     setIsOpen(false)
   }
-
+  if (!isAuthenticated) {
+    return (
+      <Button
+        variant="outline"
+        size="icon"
+        className="relative group hover:bg-muted transition-colors"
+        arial-label="Notifications"
+        disabled
+        >
+        </Button>
+    )
+  }
   return (
     <div className="relative" ref={dropdownRef}>
       <TooltipProvider>

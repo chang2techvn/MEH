@@ -7,31 +7,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          operationName?: string
-          query?: string
-          variables?: Json
-          extensions?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
       achievements: {
@@ -628,6 +603,7 @@ export type Database = {
           thumbnail_url: string | null
           title: string
           topics: string[] | null
+          transcript: string | null
           updated_at: string | null
           video_url: string
         }
@@ -643,6 +619,7 @@ export type Database = {
           thumbnail_url?: string | null
           title: string
           topics?: string[] | null
+          transcript?: string | null
           updated_at?: string | null
           video_url: string
         }
@@ -658,6 +635,7 @@ export type Database = {
           thumbnail_url?: string | null
           title?: string
           topics?: string[] | null
+          transcript?: string | null
           updated_at?: string | null
           video_url?: string
         }
@@ -1070,6 +1048,7 @@ export type Database = {
       }
       posts: {
         Row: {
+          ai_evaluation: Json | null
           comments_count: number | null
           content: string
           created_at: string | null
@@ -1077,13 +1056,18 @@ export type Database = {
           is_public: boolean | null
           likes_count: number | null
           media_url: string | null
+          original_video_id: string | null
           post_type: string | null
+          score: number | null
           tags: string[] | null
           title: string | null
           updated_at: string | null
           user_id: string | null
+          user_image: string | null
+          username: string | null
         }
         Insert: {
+          ai_evaluation?: Json | null
           comments_count?: number | null
           content: string
           created_at?: string | null
@@ -1091,13 +1075,18 @@ export type Database = {
           is_public?: boolean | null
           likes_count?: number | null
           media_url?: string | null
+          original_video_id?: string | null
           post_type?: string | null
+          score?: number | null
           tags?: string[] | null
           title?: string | null
           updated_at?: string | null
           user_id?: string | null
+          user_image?: string | null
+          username?: string | null
         }
         Update: {
+          ai_evaluation?: Json | null
           comments_count?: number | null
           content?: string
           created_at?: string | null
@@ -1105,11 +1094,15 @@ export type Database = {
           is_public?: boolean | null
           likes_count?: number | null
           media_url?: string | null
+          original_video_id?: string | null
           post_type?: string | null
+          score?: number | null
           tags?: string[] | null
           title?: string | null
           updated_at?: string | null
           user_id?: string | null
+          user_image?: string | null
+          username?: string | null
         }
         Relationships: [
           {
@@ -1348,6 +1341,51 @@ export type Database = {
           },
         ]
       }
+      user_challenges: {
+        Row: {
+          challenge_type: string
+          content: Json | null
+          created_at: string | null
+          description: string | null
+          difficulty_level: string | null
+          id: string
+          is_active: boolean | null
+          points: number | null
+          title: string
+          transcript: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          challenge_type?: string
+          content?: Json | null
+          created_at?: string | null
+          description?: string | null
+          difficulty_level?: string | null
+          id?: string
+          is_active?: boolean | null
+          points?: number | null
+          title: string
+          transcript?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          challenge_type?: string
+          content?: Json | null
+          created_at?: string | null
+          description?: string | null
+          difficulty_level?: string | null
+          id?: string
+          is_active?: boolean | null
+          points?: number | null
+          title?: string
+          transcript?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       user_progress: {
         Row: {
           completed_challenges: number | null
@@ -1483,22 +1521,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      decrement_post_comments: {
-        Args: { post_id: string }
-        Returns: undefined
-      }
-      decrement_post_likes: {
-        Args: { post_id: string }
-        Returns: undefined
-      }
-      increment_post_comments: {
-        Args: { post_id: string }
-        Returns: undefined
-      }
-      increment_post_likes: {
-        Args: { post_id: string }
-        Returns: undefined
-      }
+      [_ in never]: never
     }
     Enums: {
       [_ in never]: never
@@ -1615,11 +1638,7 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {},
   },
 } as const
-

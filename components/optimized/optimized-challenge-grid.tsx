@@ -34,7 +34,7 @@ const ChallengeItem = memo(function ChallengeItem({
   index: number
 }) {
   return (
-    <div className="p-2" style={{ height: '320px' }}>
+    <div className="p-2">
       <LazyComponent
         threshold={0.1}
         rootMargin="200px"
@@ -64,9 +64,9 @@ const ChallengeGrid = memo(function ChallengeGrid({
   onStartChallenge: (id: string) => void 
 }) {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 w-full">
       {challenges.map((challenge, index) => (
-        <div key={challenge.id} className="h-[320px]">
+        <div key={challenge.id} className="h-full">
           <LazyComponent
             threshold={0.1}
             rootMargin="200px"
