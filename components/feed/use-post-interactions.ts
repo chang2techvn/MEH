@@ -52,6 +52,8 @@ export function usePostInteractions(
   }, [isNew])
 
   const handleLike = () => {
+    console.log('🔥 Like button clicked!', { liked: state.liked, likeCount: state.likeCount })
+    
     // Haptic feedback if available
     if (navigator.vibrate) {
       navigator.vibrate(50)
@@ -104,6 +106,7 @@ export function usePostInteractions(
   }
 
   const handleComment = () => {
+    console.log('💬 Comment button clicked!')
     if (state.newComment.trim()) {
       setState(prev => ({
         ...prev,
@@ -119,6 +122,7 @@ export function usePostInteractions(
   }
 
   const handleShare = () => {
+    console.log('📤 Share button clicked!')
     toast({
       title: "Link copied",
       description: "Post link has been copied to clipboard",

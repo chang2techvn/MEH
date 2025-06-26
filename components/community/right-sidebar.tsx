@@ -109,12 +109,9 @@ export function RightSidebar({
                 <h3 className="font-semibold text-gray-700 dark:text-gray-300 text-sm sm:text-base">
                   Upcoming Events
                 </h3>
-                <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 rounded-full">
-                  <PlusCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                </Button>
               </div>
 
-              <div className="space-y-2 sm:space-y-3">
+              <div className="space-y-2 sm:space-y-3 max-h-[240px] sm:max-h-[320px] overflow-y-auto pr-1">
                 {loading
                   ? Array(2)
                       .fill(0)

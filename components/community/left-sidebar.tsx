@@ -62,26 +62,8 @@ export function LeftSidebar({ showLeftSidebar, setShowLeftSidebar, groups }: Lef
           <div className="space-y-1 px-2">
             <UserProfileCard />
 
-            <NavItem icon={Home} label="Home" href="/" />
-            <NavItem icon={Users} label="Community" href="/community" active />
-            <NavItem icon={Award} label="Challenges" href="/challenges" />
-            <NavItem icon={BookOpen} label="Resources" href="/resources" />
-            <NavItem icon={MessageSquare} label="Messages" href="/messages" />
-
-            <Separator className="my-4" />
-
-            <h3 className="font-semibold text-gray-500 dark:text-gray-400 text-xs uppercase px-4 mb-2">
-              Your Shortcuts
-            </h3>
-
-            {groups.map((group) => (
-              <GroupNavItem key={group.id} name={group.name} image={group.image} active={group.active} />
-            ))}
-
-            <Button variant="ghost" className="w-full justify-start text-sm font-normal h-10 px-4">
-              <ChevronDown className="h-4 w-4 mr-2" />
-              See More
-            </Button>
+            <NavItem icon={Home} label="Challenges" href="/" />
+            <NavItem icon={BookOpen} label="Al Learning Hub" href="/resources" />
 
             <Separator className="my-4" />
 
@@ -90,8 +72,6 @@ export function LeftSidebar({ showLeftSidebar, setShowLeftSidebar, groups }: Lef
             </h3>
 
             <NavItem icon={Users} label="Events" href="/events" />
-            <NavItem icon={Users} label="Groups" href="/groups" />
-            <NavItem icon={Zap} label="Learning Paths" href="/learning-paths" />
             <NavItem icon={TrendingUp} label="Trending" href="/trending" />
 
             <Separator className="my-4" />

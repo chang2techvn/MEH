@@ -30,7 +30,7 @@ export interface Post {
 }
 
 export interface Contact {
-  id: number
+  id: string | number
   name: string
   image: string
   online: boolean

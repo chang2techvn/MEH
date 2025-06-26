@@ -86,17 +86,11 @@ export default function CommunityPage() {
   const loadData = async () => {
     try {
       setLoading(true)
-      console.log('🔄 Loading community data...')
-      console.log('🔑 Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL ? 'configured' : 'missing')
-      console.log('🔑 Supabase Key:', process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'configured' : 'missing')
+    
       
       // Check authentication state first
       const { data: { session }, error: authError } = await supabase.auth.getSession()
-      console.log('👤 Auth session:', session?.user?.email || 'No session')
-      if (authError) {
-        console.error('❌ Auth error:', authError)
-      }
-      
+
       // Load all data in parallel for better performance
       const [
         postsResult,
@@ -119,10 +113,7 @@ export default function CommunityPage() {
         dbHelpers.getTrendingTopics(10)
       ])
 
-      console.log('📊 Posts query result:', postsResult)
-      if (postsResult.error) {
-        console.error('❌ Posts query error:', postsResult.error)
-      }
+
 
       const postsData = postsResult.data || []
       const storiesData = storiesResult.data || []
@@ -131,11 +122,10 @@ export default function CommunityPage() {
       const groupsData = groupsResult.data || []
       const trendingData = trendingResult.data || []      
       
-      // Transform posts data to include user information
-      console.log('📊 Posts data from Supabase:', postsData)
-      
+      console.log('🔍 Debug: onlineUsersData:', onlineUsersData)
+      console.log('🔍 Debug: onlineUsersResult error:', onlineUsersResult.error)
+
       if (postsData.length === 0) {
-        console.log('⚠️ No posts found, creating sample data...')
         // Create some sample posts if none exist
         setFeedPosts([
           {
@@ -173,7 +163,6 @@ export default function CommunityPage() {
         ])
       } else {
         setFeedPosts(postsData.map((post: any) => {
-          console.log('📝 Processing post:', post)
           return {
             id: post.id, // Keep as string UUID instead of converting to number
             username: post.username || 'Unknown User', // Use username directly from posts table
@@ -218,29 +207,70 @@ export default function CommunityPage() {
       ])      
       
       // Transform contacts data (online users)
-      setContacts(onlineUsersData.map((user: any) => ({
-        id: Number(user.id.substring(0, 8)), // Use first 8 chars of UUID as number
-        name: user.name,
-        image: user.avatar || "/placeholder.svg?height=40&width=40",
-        online: user.last_active && new Date(user.last_active) > new Date(Date.now() - 30 * 60 * 1000), // Active in last 30 minutes
-        lastActive: user.last_active && new Date(user.last_active) <= new Date(Date.now() - 30 * 60 * 1000) ? formatTimeAgo(user.last_active) : undefined
-      })))      
+      if (onlineUsersData.length === 0) {
+        // Create sample contacts if none exist
+        setContacts([
+          {
+            id: "contact-1",
+            name: "Sarah Johnson",
+            image: "/placeholder.svg?height=40&width=40",
+            online: true,
+            lastActive: undefined
+          },
+          {
+            id: "contact-2",
+            name: "Mike Chen",
+            image: "/placeholder.svg?height=40&width=40",
+            online: true,
+            lastActive: undefined
+          },
+          {
+            id: "contact-3",
+            name: "Emma Wilson",
+            image: "/placeholder.svg?height=40&width=40",
+            online: false,
+            lastActive: "5 minutes ago"
+          },
+          {
+            id: "contact-4",
+            name: "Alex Rodriguez",
+            image: "/placeholder.svg?height=40&width=40",
+            online: false,
+            lastActive: "2 hours ago"
+          },
+          {
+            id: "contact-5",
+            name: "Lisa Park",
+            image: "/placeholder.svg?height=40&width=40",
+            online: true,
+            lastActive: undefined
+          }
+        ])
+      } else {
+        setContacts(onlineUsersData.map((profile: any, index: number) => ({
+          id: profile.user_id || profile.id || `contact-${index}`, // Use original ID or fallback
+          name: profile.full_name || profile.username || 'Unknown User',
+          image: profile.avatar_url || "/placeholder.svg?height=40&width=40",
+          online: profile.users?.last_active && new Date(profile.users.last_active) > new Date(Date.now() - 30 * 60 * 1000), // Active in last 30 minutes
+          lastActive: profile.users?.last_active && new Date(profile.users.last_active) <= new Date(Date.now() - 30 * 60 * 1000) ? formatTimeAgo(profile.users.last_active) : undefined
+        })))
+      }      
       
       // Transform events data
-      setEvents(eventsData.map((event: any) => ({
-        id: Number(event.id),
+      setEvents(eventsData.map((event: any, index: number) => ({
+        id: event.id || `event-${index}`, // Use original ID or fallback
         title: event.title,
-        date: new Date(event.startTime).toLocaleDateString(),
-        time: new Date(event.startTime).toLocaleTimeString(),
+        date: new Date(event.startTime || event.start_date).toLocaleDateString(),
+        time: new Date(event.startTime || event.start_date).toLocaleTimeString(),
         location: event.location,
         attendees: event.attendeeCount || 0,
-        badge: isToday(new Date(event.startTime)) ? 'today' as const : 
-               isTomorrow(new Date(event.startTime)) ? 'tomorrow' as const : 'upcoming' as const
+        badge: isToday(new Date(event.startTime || event.start_date)) ? 'today' as const : 
+               isTomorrow(new Date(event.startTime || event.start_date)) ? 'tomorrow' as const : 'upcoming' as const
       })))      
       
       // Transform groups data
-      setGroups(groupsData.map((group: any) => ({
-        id: Number(group.id),
+      setGroups(groupsData.map((group: any, index: number) => ({
+        id: group.id || `group-${index}`, // Use original ID or fallback
         name: group.name,
         image: group.avatar || "/placeholder.svg?height=40&width=40",
         members: group.memberCount || 0,
@@ -255,7 +285,6 @@ export default function CommunityPage() {
       })))
 
     } catch (error) {
-      console.error('Error loading community data:', error)
       toast({
         title: "Error loading data",
         description: "Unable to load community data. Please refresh the page.",
@@ -273,7 +302,29 @@ export default function CommunityPage() {
         viewed: false,
         isAddStory: true,
       }])
-      setContacts([])
+      setContacts([
+        {
+          id: 1,
+          name: "Sarah Johnson",
+          image: "/placeholder.svg?height=40&width=40",
+          online: true,
+          lastActive: undefined
+        },
+        {
+          id: 2,
+          name: "Mike Chen",
+          image: "/placeholder.svg?height=40&width=40",
+          online: true,
+          lastActive: undefined
+        },
+        {
+          id: 3,
+          name: "Emma Wilson",
+          image: "/placeholder.svg?height=40&width=40",
+          online: false,
+          lastActive: "5 minutes ago"
+        }
+      ])
       setEvents([])
       setGroups([])
       setTrendingTopics([])
@@ -283,7 +334,6 @@ export default function CommunityPage() {
   }
 
   useEffect(() => {
-    console.log('🚀 Community page mounted, loading data...')
     loadData()
 
     // Handle window resize
@@ -467,7 +517,6 @@ export default function CommunityPage() {
       })
       
       if (error || !newPost) {
-        console.error('Error creating post:', error)
         toast({
           title: "Error creating post",
           description: "There was an error publishing your post. Please try again.",
@@ -517,7 +566,6 @@ export default function CommunityPage() {
         })
       }, 300)
     } catch (error) {
-      console.error('Error creating post:', error)
       toast({
         title: "Error creating post",
         description: "There was an error publishing your post. Please try again.",
@@ -622,7 +670,6 @@ export default function CommunityPage() {
 
                 {/* Feed Posts */}
                 <div className="space-y-4">
-                  {console.log('🎯 Rendering feed section:', { loading, feedPostsLength: feedPosts.length, feedPosts })}
                   {loading ? (
                     Array(3)
                       .fill(0)
