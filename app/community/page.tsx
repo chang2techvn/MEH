@@ -57,8 +57,8 @@ export default function CommunityPage() {
   const [showLeftSidebar, setShowLeftSidebar] = useState(false)
   const [showRightSidebar, setShowRightSidebar] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [activeStory, setActiveStory] = useState<number | null>(null)
-  const [viewedStories, setViewedStories] = useState<number[]>([])
+  const [activeStory, setActiveStory] = useState<number | string | null>(null)
+  const [viewedStories, setViewedStories] = useState<(number | string)[]>([])
   const [showScrollToTop, setShowScrollToTop] = useState(false)
   const [activeFilters, setActiveFilters] = useState<string[]>([])
   const [feedPosts, setFeedPosts] = useState<Post[]>([])
@@ -196,13 +196,13 @@ export default function CommunityPage() {
           viewed: false,
           isAddStory: true,
         },        
-        ...storiesData.map((story: any) => ({
-          id: Number(story.id),
+        ...storiesData.map((story: any, index: number) => ({
+          id: story.id || `story-${index + 1}`, // Keep UUID as string or use fallback
           user: story.author?.name || 'Unknown User',
           userImage: story.author?.avatar || "/placeholder.svg?height=40&width=40",
           storyImage: story.media_url || "/placeholder.svg?height=200&width=200",
           time: formatTimeAgo(story.created_at || ''),
-          viewed: viewedStories.includes(Number(story.id)),
+          viewed: viewedStories.includes(story.id || `story-${index + 1}`),
         }))
       ])      
       
@@ -367,7 +367,7 @@ export default function CommunityPage() {
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
   
-  const handleStoryClick = (id: number) => {
+  const handleStoryClick = (id: number | string) => {
     if (id === 0) {
       // This is the "Add Story" button
       setShowStoryCreator(true)

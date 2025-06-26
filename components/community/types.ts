@@ -2,7 +2,7 @@ import type { VideoEvaluation } from "@/lib/gemini-video-evaluation"
 import type { LucideIcon } from "lucide-react"
 
 export interface Story {
-  id: number
+  id: number | string
   user: string
   userImage: string
   storyImage: string

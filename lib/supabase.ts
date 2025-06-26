@@ -987,15 +987,68 @@ export const dbHelpers = {
   },
 
   async getStories(limit: number = 10) {
+    // Simplified query - just get stories and author_id
     const { data, error } = await supabase
       .from('stories')
       .select(`
-        *,
-        author:users!author_id(name, avatar)
+        id,
+        author_id,
+        content,
+        media_url,
+        media_type,
+        background_color,
+        text_color,
+        duration,
+        is_active,
+        views_count,
+        created_at,
+        updated_at,
+        expires_at
       `)
+      .eq('is_active', true)
+      .gt('expires_at', new Date().toISOString())
       .order('created_at', { ascending: false })
       .limit(limit)
     
+    console.log('🔍 Stories query result:', { data, error })
+    
+    // If stories found, get profile info for each author
+    if (data && data.length > 0) {
+      const userIds = data.map(story => story.author_id).filter(Boolean)
+      
+      if (userIds.length > 0) {
+        const { data: profilesData } = await supabase
+          .from('profiles')
+          .select(`
+            user_id,
+            username,
+            full_name,
+            avatar_url
+          `)
+          .in('user_id', userIds)
+        
+        console.log('🔍 Profiles data:', profilesData)
+        
+        // Merge profile data with stories
+        const enrichedData = data.map(story => {
+          const profile = profilesData?.find(p => p.user_id === story.author_id)
+          
+          return {
+            ...story,
+            author: {
+              id: story.author_id,
+              name: profile?.full_name || profile?.username || 'Unknown User',
+              avatar: profile?.avatar_url || '/placeholder.svg?height=40&width=40'
+            }
+          }
+        })
+        
+        console.log('🔍 Enriched stories data:', enrichedData)
+        return { data: enrichedData, error }
+      }
+    }
+    
+    // If no stories found, return empty array
     return { data: data || [], error }
   },
 
