@@ -43,10 +43,7 @@ export function useFeedData() {
       // Load posts from Supabase with pagination
       const { data: postsData, error } = await supabase
         .from('posts')
-        .select(`
-          *,
-          users!user_id(id, name, avatar)
-        `)
+        .select('*')
         .eq('is_public', true)
         .order('created_at', { ascending: false })
         .range(page * 10, (page + 1) * 10 - 1) // 10 posts per page
@@ -80,8 +77,8 @@ export function useFeedData() {
         
         return {
           id: post.id,
-          username: post.users?.name || post.username || "Unknown User",
-          userImage: post.users?.avatar || post.user_image || "/placeholder.svg?height=40&width=40",
+          username: post.username || "Unknown User", // Use username directly from posts table
+          userImage: post.user_image || "/placeholder.svg?height=40&width=40", // Use user_image directly from posts table
           title: post.title,
           content: post.content,
           videoUrl: post.media_url,

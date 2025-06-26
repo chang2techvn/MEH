@@ -28,6 +28,8 @@ export default function FeedPost({
   videoEvaluation,
   isNew = false,
 }: FeedPostProps) {
+  console.log('🎨 Rendering FeedPost:', { username, content, mediaType, likes, comments })
+  
   const {
     state,
     updateState,
@@ -50,41 +52,21 @@ export default function FeedPost({
     <TooltipProvider>
       <motion.div
         ref={postRef}
-        initial={isNew ? { opacity: 0, y: 20, scale: 0.95 } : { opacity: 0, y: 20 }}
-        animate={
-          isNew
-            ? {
-                opacity: 1,
-                y: 0,
-                scale: 1,
-                boxShadow: ["0 0 0 rgba(0,0,0,0)", "0 0 20px rgba(var(--neo-mint), 0.5)", "0 0 0 rgba(0,0,0,0)"],
-              }
-            : state.hasBeenViewed
-              ? { opacity: 1, y: 0 }
-              : { opacity: 0, y: 20 }
-        }
+        initial={{ opacity: 1, y: 0 }}
+        animate={{ opacity: 1, y: 0 }}
         whileHover={{
           scale: 1.01,
           transition: { duration: 0.2 },
         }}
-        transition={
-          isNew
-            ? {
-                duration: 0.5,
-                type: "spring",
-                stiffness: 100,
-                boxShadow: { duration: 2, repeat: 3, repeatType: "reverse" },
-              }
-            : { duration: 0.3, type: "spring", stiffness: 100 }
-        }
-        onHoverStart={() => updateState({ isHovered: true })}
-        onHoverEnd={() => updateState({ isHovered: false })}
+        transition={{ duration: 0.3, type: "spring", stiffness: 100 }}
+        onHoverStart={() => updateState?.({ isHovered: true })}
+        onHoverEnd={() => updateState?.({ isHovered: false })}
         className={`animation-gpu ${isNew ? "relative z-10 mb-8" : "mb-6"}`}
       >
         <Card
           className={`neo-card overflow-hidden border-none bg-white/40 dark:bg-gray-900/40 backdrop-blur-xl shadow-neo ${
             isNew ? "ring-2 ring-neo-mint dark:ring-purist-blue" : ""
-          } ${state.isHovered ? "shadow-lg" : ""}`}
+          } ${state?.isHovered ? "shadow-lg" : ""}`}
         >
           {isNew && (
             <div className="absolute -top-3 left-4 z-10">
@@ -106,8 +88,8 @@ export default function FeedPost({
               timeAgo={timeAgo}
               mediaType={mediaType}
               submission={submission}
-              saved={state.saved}
-              onSavedChange={(saved) => updateState({ saved })}
+              saved={state?.saved || false}
+              onSavedChange={(saved) => updateState?.({ saved })}
             />
             
             <motion.p
@@ -131,32 +113,32 @@ export default function FeedPost({
               <PostAISubmission
                 submission={submission}
                 videoEvaluation={videoEvaluation}
-                showEvaluation={state.showEvaluation}
-                onShowEvaluationChange={(show) => updateState({ showEvaluation: show })}
+                showEvaluation={state?.showEvaluation || false}
+                onShowEvaluationChange={(show) => updateState?.({ showEvaluation: show })}
               />
             )}
 
             <div className="mt-6 pt-4 border-t border-white/20 dark:border-gray-800/20 flex flex-col gap-4">
               <PostActions
-                liked={state.liked}
-                likeCount={state.likeCount}
-                commentCount={state.commentCount}
-                saved={state.saved}
-                selectedReaction={state.selectedReaction}
-                showReactions={state.showReactions}
+                liked={state?.liked || false}
+                likeCount={state?.likeCount || 0}
+                commentCount={state?.commentCount || 0}
+                saved={state?.saved || false}
+                selectedReaction={state?.selectedReaction || null}
+                showReactions={state?.showReactions || false}
                 username={username}
                 onLike={handleLike}
-                onComment={() => updateState({ showComments: !state.showComments })}
+                onComment={() => updateState?.({ showComments: !(state?.showComments) })}
                 onShare={handleShare}
-                onSavedChange={(saved) => updateState({ saved })}
+                onSavedChange={(saved) => updateState?.({ saved })}
                 onReaction={handleReaction}
-                onShowReactionsChange={(show) => updateState({ showReactions: show })}
+                onShowReactionsChange={(show) => updateState?.({ showReactions: show })}
               />
 
               <PostComments
-                showComments={state.showComments}
-                newComment={state.newComment}
-                onNewCommentChange={(comment) => updateState({ newComment: comment })}
+                showComments={state?.showComments || false}
+                newComment={state?.newComment || ""}
+                onNewCommentChange={(comment) => updateState?.({ newComment: comment })}
                 onSubmitComment={handleComment}
                 onFocusCommentInput={focusCommentInput}
                 commentInputRef={commentInputRef}

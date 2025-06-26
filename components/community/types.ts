@@ -12,7 +12,7 @@ export interface Story {
 }
 
 export interface Post {
-  id: number
+  id: number | string
   username: string
   userImage: string
   timeAgo: string
@@ -23,6 +23,7 @@ export interface Post {
   textContent?: string
   likes: number
   comments: number
+  submission?: any
   isNew?: boolean
   aiEvaluation?: any
   videoEvaluation?: VideoEvaluation | null

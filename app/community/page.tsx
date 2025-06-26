@@ -85,7 +85,18 @@ export default function CommunityPage() {
   // Load real data from Supabase
   const loadData = async () => {
     try {
-      setLoading(true)      
+      setLoading(true)
+      console.log('🔄 Loading community data...')
+      console.log('🔑 Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL ? 'configured' : 'missing')
+      console.log('🔑 Supabase Key:', process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'configured' : 'missing')
+      
+      // Check authentication state first
+      const { data: { session }, error: authError } = await supabase.auth.getSession()
+      console.log('👤 Auth session:', session?.user?.email || 'No session')
+      if (authError) {
+        console.error('❌ Auth error:', authError)
+      }
+      
       // Load all data in parallel for better performance
       const [
         postsResult,
@@ -97,10 +108,7 @@ export default function CommunityPage() {
       ] = await Promise.all([
         supabase
           .from('posts')
-          .select(`
-            *,
-            users!user_id(id, name, avatar)
-          `)
+          .select('*')
           .eq('is_public', true)
           .order('created_at', { ascending: false })
           .limit(20),
@@ -111,6 +119,11 @@ export default function CommunityPage() {
         dbHelpers.getTrendingTopics(10)
       ])
 
+      console.log('📊 Posts query result:', postsResult)
+      if (postsResult.error) {
+        console.error('❌ Posts query error:', postsResult.error)
+      }
+
       const postsData = postsResult.data || []
       const storiesData = storiesResult.data || []
       const onlineUsersData = onlineUsersResult.data || []
@@ -120,25 +133,68 @@ export default function CommunityPage() {
       
       // Transform posts data to include user information
       console.log('📊 Posts data from Supabase:', postsData)
-      setFeedPosts(postsData.map((post: any) => {
-        console.log('📝 Processing post:', post)
-        return {
-          id: post.id, // Keep as string UUID instead of converting to number
-          username: post.users?.name || 'Unknown User',
-          userImage: post.users?.avatar || "/placeholder.svg?height=40&width=40",
-          timeAgo: formatTimeAgo(post.created_at || ''),
-          content: post.content || '',
-          mediaType: post.post_type === 'video' ? 'video' : 
-                    post.post_type === 'youtube' ? 'youtube' : 
-                    post.media_url ? 'image' : 'text',
-          mediaUrl: post.media_url,
-          youtubeVideoId: post.post_type === 'youtube' ? extractYouTubeId(post.media_url || '') : undefined,
-          textContent: post.post_type === 'text' ? post.content : undefined,
-          likes: post.likes_count || 0,          
-          comments: post.comments_count || 0,
-          isNew: false
-        }
-      }))
+      
+      if (postsData.length === 0) {
+        console.log('⚠️ No posts found, creating sample data...')
+        // Create some sample posts if none exist
+        setFeedPosts([
+          {
+            id: 'sample-1',
+            username: 'English Learner',
+            userImage: "/placeholder.svg?height=40&width=40",
+            timeAgo: '2 hours ago',
+            content: 'Just practiced my English conversation skills! 🗣️ Feeling more confident every day.',
+            mediaType: 'text',
+            mediaUrl: null,
+            youtubeVideoId: undefined,
+            textContent: 'Just practiced my English conversation skills! 🗣️ Feeling more confident every day.',
+            likes: 5,
+            comments: 2,
+            submission: undefined,
+            videoEvaluation: undefined,
+            isNew: false
+          },
+          {
+            id: 'sample-2',
+            username: 'Study Buddy',
+            userImage: "/placeholder.svg?height=40&width=40",
+            timeAgo: '4 hours ago',
+            content: 'Check out this amazing pronunciation video I found!',
+            mediaType: 'youtube',
+            mediaUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+            youtubeVideoId: 'dQw4w9WgXcQ',
+            textContent: undefined,
+            likes: 12,
+            comments: 5,
+            submission: undefined,
+            videoEvaluation: undefined,
+            isNew: false
+          }
+        ])
+      } else {
+        setFeedPosts(postsData.map((post: any) => {
+          console.log('📝 Processing post:', post)
+          return {
+            id: post.id, // Keep as string UUID instead of converting to number
+            username: post.username || 'Unknown User', // Use username directly from posts table
+            userImage: post.user_image || "/placeholder.svg?height=40&width=40", // Use user_image directly from posts table
+            timeAgo: formatTimeAgo(post.created_at || ''),
+            content: post.content || '',
+            mediaType: post.post_type === 'video' ? 'video' : 
+                      post.post_type === 'youtube' ? 'youtube' : 
+                      post.post_type === 'ai-submission' ? 'ai-submission' :
+                      post.media_url ? 'image' : 'text',
+            mediaUrl: post.media_url,
+            youtubeVideoId: post.post_type === 'youtube' ? extractYouTubeId(post.media_url || '') : undefined,
+            textContent: post.post_type === 'text' ? post.content : undefined,
+            likes: post.likes_count || 0,          
+            comments: post.comments_count || 0,
+            submission: post.submission_data ? JSON.parse(post.submission_data) : undefined,
+            videoEvaluation: post.video_evaluation ? JSON.parse(post.video_evaluation) : undefined,
+            isNew: false
+          }
+        }))
+      }
 
       // Transform stories data to include user information
       setStories([
@@ -227,6 +283,7 @@ export default function CommunityPage() {
   }
 
   useEffect(() => {
+    console.log('🚀 Community page mounted, loading data...')
     loadData()
 
     // Handle window resize
@@ -239,7 +296,7 @@ export default function CommunityPage() {
     return () => {
       window.removeEventListener("resize", handleResize)
     }
-  }, [viewedStories])
+  }, []) // Remove viewedStories dependency to prevent infinite loop
 
   // Set mounted to true for client-side rendering
   useEffect(() => {
@@ -565,6 +622,7 @@ export default function CommunityPage() {
 
                 {/* Feed Posts */}
                 <div className="space-y-4">
+                  {console.log('🎯 Rendering feed section:', { loading, feedPostsLength: feedPosts.length, feedPosts })}
                   {loading ? (
                     Array(3)
                       .fill(0)
@@ -583,10 +641,12 @@ export default function CommunityPage() {
                         textContent={post.textContent}
                         likes={post.likes}
                         comments={post.comments}
-                        isNew={post.isNew}
+                        submission={post.submission}
                         videoEvaluation={post.videoEvaluation}
+                        isNew={post.isNew}
                       />
-                    ))                  ) : (
+                    ))
+                  ) : (
                     <FeedEmptyState
                       onRefresh={() => loadData()}
                       filterActive={activeFilters.length > 0}
@@ -804,5 +864,6 @@ export default function CommunityPage() {
           )}
         </AnimatePresence>
       </div>
-    </>  )
+    </>
+  )
 }
