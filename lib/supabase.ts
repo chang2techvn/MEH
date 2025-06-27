@@ -294,10 +294,7 @@ export const dbHelpers = {
   async getUserNotifications(userId: string) {
     const { data, error } = await supabase
       .from('notifications')
-      .select(`
-        *,
-        sender:users!sender_id(name, avatar)
-      `)
+      .select('*')
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
       .limit(50)
@@ -319,14 +316,14 @@ export const dbHelpers = {
     title: string
     message: string
     type: string
-    senderId?: string
+    data?: any
   }) {
     const notifications = notification.userIds.map(userId => ({
       user_id: userId,
-      sender_id: notification.senderId,
-      type: notification.type,
+      notification_type: notification.type,
       title: notification.title,
       message: notification.message,
+      data: notification.data || null,
       is_read: false,
       created_at: new Date().toISOString()
     }))

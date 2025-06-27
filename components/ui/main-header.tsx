@@ -92,25 +92,35 @@ export default function MainHeader({ mobileMenuOpen, setMobileMenuOpen }: MainHe
             </Link>
           </nav>
 
-          <div className="hidden md:flex items-center gap-4">
-            <div className="relative">
-              <div className="flex items-center bg-white/20 dark:bg-gray-800/20 backdrop-blur-sm rounded-full pl-3 pr-1 py-1">
-                <Search className="h-4 w-4 text-muted-foreground mr-2" />
-                <Input
-                  type="search"
-                  placeholder="Search..."
-                  className="border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 h-8 w-[200px]"
-                />
-              </div>
+          <div className="flex items-center gap-2 md:gap-4">
+            {/* Mobile view - show only essential buttons */}
+            <div className="md:hidden flex items-center gap-2">
+              <NotificationsDropdown />
+              <MessageButton />
+              <UserMenu />
             </div>
+            
+            {/* Desktop view - show all features */}
+            <div className="hidden md:flex items-center gap-4">
+              <div className="relative">
+                <div className="flex items-center bg-white/20 dark:bg-gray-800/20 backdrop-blur-sm rounded-full pl-3 pr-1 py-1">
+                  <Search className="h-4 w-4 text-muted-foreground mr-2" />
+                  <Input
+                    type="search"
+                    placeholder="Search..."
+                    className="border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 h-8 w-[200px]"
+                  />
+                </div>
+              </div>
 
-            <NotificationsDropdown />
+              <NotificationsDropdown />
 
-            <MessageButton />
+              <MessageButton />
 
-            <ThemeToggle />
+              <ThemeToggle />
 
-            <UserMenu />
+              <UserMenu />
+            </div>
           </div>
         </div>
       </header>

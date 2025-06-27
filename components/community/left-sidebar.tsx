@@ -72,7 +72,6 @@ export function LeftSidebar({ showLeftSidebar, setShowLeftSidebar, groups }: Lef
             </h3>
 
             <NavItem icon={Users} label="Events" href="/events" />
-            <NavItem icon={TrendingUp} label="Trending" href="/trending" />
 
             <Separator className="my-4" />
 

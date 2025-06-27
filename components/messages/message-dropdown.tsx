@@ -138,13 +138,6 @@ export default function MessageDropdown() {
             })
           )}
         </div>
-
-        <div className="p-3 border-t border-white/20 dark:border-gray-800/20">
-          <Button variant="outline" size="sm" className="w-full gap-1 text-xs">
-            <Plus className="h-3.5 w-3.5" />
-            New message
-          </Button>
-        </div>
       </motion.div>
     </AnimatePresence>
   )

@@ -12,6 +12,7 @@ import { supabase, dbHelpers } from "@/lib/supabase"
 import type { Database } from "@/lib/database.types"
 import { toast } from "@/hooks/use-toast"
 import { useAuthState } from "@/contexts/auth-context"
+import { subscribeToNotifications, markNotificationAsRead, markAllNotificationsAsRead } from "@/lib/notification-utils"
 
 // Types from Supabase schema
 type NotificationRow = Database['public']['Tables']['notifications']['Row']
@@ -62,12 +63,7 @@ export default function NotificationsDropdown() {
         .limit(10)
 
       if (error) {
-        console.error('Error fetching notifications:', {
-          message: error.message,
-          details: error.details,
-          hint: error.hint,
-          code: error.code
-        })
+        console.error('Error fetching notifications:', error)
         // Fallback to sample data
         setSampleNotifications()
         return
@@ -80,10 +76,10 @@ export default function NotificationsDropdown() {
         message: notification.message,
         time: new Date(notification.created_at || Date.now()),
         read: notification.is_read || false,
-        avatar: "/placeholder.svg?height=40&width=40", // Default avatar since no sender info
+        avatar: "/placeholder.svg?height=40&width=40",
         link: (notification.data as any)?.action_url || undefined,
         sender: {
-          name: "System", // Default to system since no sender in schema
+          name: "System",
           avatar: "/placeholder.svg?height=40&width=40",
           status: "system",
         },
@@ -92,7 +88,7 @@ export default function NotificationsDropdown() {
       setNotifications(mappedNotifications)
       setUnreadCount(mappedNotifications.filter(n => !n.read).length)
     } catch (error) {
-      console.error('Error loading notifications:', error instanceof Error ? error.message : String(error))
+      console.error('Error loading notifications:', error)
       setSampleNotifications()
       toast({
         title: "Error loading notifications",
@@ -160,6 +156,25 @@ export default function NotificationsDropdown() {
   useEffect(() => {
     loadNotifications()
   }, [user?.id]) // Reload when user changes
+
+  // Subscribe to real-time notifications
+  useEffect(() => {
+    let unsubscribe: () => void
+
+    if (isAuthenticated && user?.id) {
+      unsubscribe = subscribeToNotifications(user.id, (newNotification) => {
+        setNotifications(prev => {
+          const updated = [newNotification, ...prev.filter(n => n.id !== newNotification.id)]
+          return updated
+        })
+        setUnreadCount(prev => prev + 1)
+      })
+    }
+
+    return () => {
+      if (unsubscribe) unsubscribe()
+    }
+  }, [isAuthenticated, user?.id])
 
   // Filter notifications based on search query
   const filteredNotifications = notifications.filter(
@@ -285,14 +300,26 @@ export default function NotificationsDropdown() {
   }
   if (!isAuthenticated) {
     return (
-      <Button
-        variant="outline"
-        size="icon"
-        className="relative group hover:bg-muted transition-colors"
-        arial-label="Notifications"
-        disabled
-        >
-        </Button>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="relative group hover:bg-muted transition-colors"
+              aria-label="Notifications"
+              disabled
+            >
+              <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-neo-mint to-purist-blue blur-sm opacity-0 group-hover:opacity-70 transition-opacity"></div>
+              <Bell className="relative h-5 w-5 opacity-50" />
+              <span className="sr-only">Notifications</span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Sign in to view notifications</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
     )
   }
   return (
@@ -426,10 +453,6 @@ export default function NotificationsDropdown() {
                   Clear all
                 </Button>
               </div>
-              <Button variant="outline" size="sm" className="w-full gap-1 text-xs">
-                <Plus className="h-3.5 w-3.5" />
-                Notification settings
-              </Button>
             </div>
           </motion.div>
         )}

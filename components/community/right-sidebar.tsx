@@ -134,49 +134,6 @@ export function RightSidebar({
                 See All Events
               </Button>
             </div>
-
-            {/* Trending Topics */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-3 sm:p-4">
-              <div className="flex items-center justify-between mb-3 sm:mb-4">
-                <h3 className="font-semibold text-gray-700 dark:text-gray-300 text-sm sm:text-base">
-                  Trending Topics
-                </h3>
-                <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 rounded-full">
-                  <Sparkles className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                </Button>
-              </div>
-
-              <div className="space-y-1 sm:space-y-2">
-                {loading
-                  ? Array(5)
-                      .fill(0)
-                      .map((_, i) => (
-                        <div key={i} className="flex items-center justify-between">
-                          <Skeleton className="h-4 sm:h-5 w-24 sm:w-32" />
-                          <Skeleton className="h-4 sm:h-5 w-12 sm:w-16" />
-                        </div>
-                      ))
-                  : trendingTopics.slice(0, 5).map((topic) => (
-                      <div
-                        key={topic.name}
-                        className="flex items-center justify-between p-1.5 sm:p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer"
-                      >
-                        <div className="flex items-center gap-1.5 sm:gap-2">
-                          <Hash className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-neo-mint dark:text-purist-blue" />
-                          <span className="font-medium text-sm sm:text-base">{topic.name}</span>
-                        </div>
-                        <Badge variant="outline" className="text-xs bg-white/10 dark:bg-gray-800/10">
-                          {topic.count}
-                        </Badge>
-                      </div>
-                    ))}
-              </div>
-
-              <Button variant="ghost" className="w-full justify-start text-xs sm:text-sm mt-2 sm:mt-3">
-                <ChevronRight className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                See All Topics
-              </Button>
-            </div>
           </div>
         </ScrollArea>
       </div>
