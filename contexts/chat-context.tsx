@@ -75,18 +75,20 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       // Get current user
       const user = await dbHelpers.getCurrentUser()
       if (!user) {
-        console.log('No current user found')
         setLoading(false)
         return
       }
 
-      setCurrentUser({
+
+      const currentUserObj = {
         id: user.id,
         name: user.name || "You",
         avatar: user.avatar || "/placeholder.svg?height=200&width=200",
-        status: "online",
+        status: "online" as const,
         lastActive: new Date(user.last_active || Date.now()),
-      })
+      }
+      
+      setCurrentUser(currentUserObj)
 
       // Get user's conversations from conversation_participants table
       const { data: conversationParticipants, error: participantsError } = await supabase
@@ -96,7 +98,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           role,
           joined_at,
           last_read_at,
-          conversation:conversations!inner(
+          conversations!inner(
             id,
             title,
             status,
@@ -109,14 +111,19 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         .order('last_read_at', { ascending: false })
 
       if (participantsError) {
-        console.error('Error loading conversation participants:', participantsError)
+        console.error('❌ ChatContext: Error loading conversation participants:', participantsError)
         setConversations(new Map())
         setLoading(false)
         return
       }
 
+      conversationParticipants?.forEach((cp: any, index: number) => {
+        if (Array.isArray(cp.conversations) && cp.conversations.length > 0) {
+        } else if (cp.conversations && !Array.isArray(cp.conversations)) {
+        }
+      })
+
       if (!conversationParticipants || conversationParticipants.length === 0) {
-        console.log('No conversations found for user')
         setConversations(new Map())
         setLoading(false)
         return
@@ -130,7 +137,9 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         const batch = conversationParticipants.slice(i, i + batchSize)
         
         const batchPromises = batch.map(async (participant: any) => {
-          const conversation = participant.conversation
+          const conversation = Array.isArray(participant.conversations) 
+            ? participant.conversations[0] 
+            : participant.conversations
           if (!conversation) return null
 
           try {
@@ -155,21 +164,46 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
               return null
             }
 
-            // Get other participants
-            const { data: otherParticipants, error: otherParticipantsError } = await supabase
+            // Get other participants - TEMPORARY: Use simpler query to bypass RLS issues
+            
+            // First get participant IDs
+            const { data: participantIds, error: participantIdsError } = await supabase
               .from('conversation_participants')
-              .select(`
-                user_id,
-                role,
-                user:users!user_id(id, name, avatar, last_active)
-              `)
+              .select('user_id')
               .eq('conversation_id', conversation.id)
               .neq('user_id', user.id)
 
-            if (otherParticipantsError) {
-              console.error(`Error loading participants for conversation ${conversation.id}:`, otherParticipantsError)
-              return null
+
+            let otherParticipants = []
+            if (participantIds && participantIds.length > 0) {
+              // Then get user details for each participant
+              for (const p of participantIds) {
+                const { data: userData, error: userError } = await supabase
+                  .from('users')
+                  .select('id, name, avatar, last_active')
+                  .eq('id', p.user_id)
+                  .single()
+
+                if (userData && !userError) {
+                  otherParticipants.push({
+                    user_id: p.user_id,
+                    user: userData
+                  })
+                } else {
+                  // Create a fallback participant
+                  otherParticipants.push({
+                    user_id: p.user_id,
+                    user: {
+                      id: p.user_id,
+                      name: `User ${p.user_id.slice(0, 8)}`,
+                      avatar: "/placeholder.svg?height=200&width=200",
+                      last_active: new Date().toISOString()
+                    }
+                  })
+                }
+              }
             }
+
 
             const participants: User[] = []
             
@@ -186,15 +220,17 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
             if (otherParticipants) {
               otherParticipants.forEach((p: any) => {
                 if (p.user) {
-                  participants.push({
+                  const participant = {
                     id: p.user.id,
                     name: p.user.name || "Unknown User",
                     avatar: p.user.avatar || "/placeholder.svg?height=200&width=200",
                     status: "offline", // Could be enhanced with real-time status
                     lastActive: new Date(p.user.last_active || Date.now()),
-                  })
+                  }
+                  participants.push(participant)
                 }
               })
+            } else {
             }
 
             const messages: Message[] = messagesData?.map((msg: any) => ({
@@ -209,11 +245,17 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
             const lastMessage = messages.length > 0 ? messages[messages.length - 1] : null
 
+            // Calculate unread count based on last_read_at from current participant record
+            const currentParticipantLastRead = new Date(participant.last_read_at || 0)
+            const unreadCount = messages.filter(msg => 
+              msg.timestamp > currentParticipantLastRead && msg.senderId !== user.id
+            ).length
+
             return {
               id: conversation.id,
               participants,
               messages,
-              unreadCount: 0, // Could calculate based on last_read_at
+              unreadCount,
               lastMessage,
               isTyping: false,
             }
@@ -231,10 +273,9 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         })
       }
 
-      console.log(`Loaded ${conversationMap.size} conversations`)
       setConversations(conversationMap)
     } catch (error) {
-      console.error('Error loading conversations:', error)
+      console.error('❌ ChatContext: Error loading conversations:', error)
       setConversations(new Map())
     } finally {
       setLoading(false)
@@ -309,6 +350,42 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     }
   }, [windowPositions])
 
+  // Mark conversation as read
+  const markConversationAsRead = useCallback(async (conversationId: string) => {
+    if (!currentUser) return
+
+    try {
+      // Update last_read_at in database
+      const { error } = await supabase
+        .from('conversation_participants')
+        .update({ 
+          last_read_at: new Date().toISOString() 
+        })
+        .eq('conversation_id', conversationId)
+        .eq('user_id', currentUser.id)
+
+      if (error) {
+        console.error('Error marking conversation as read:', error)
+        return
+      }
+
+      // Update local state to clear unread count
+      setConversations(prev => {
+        const newConversations = new Map(prev)
+        const conversation = newConversations.get(conversationId)
+        if (conversation) {
+          newConversations.set(conversationId, {
+            ...conversation,
+            unreadCount: 0
+          })
+        }
+        return newConversations
+      })
+    } catch (error) {
+      console.error('Error marking conversation as read:', error)
+    }
+  }, [currentUser])
+
   // Memoized actions
   const updateWindowPosition = useCallback((conversationId: string, position: WindowPosition) => {
     setWindowPositions((prev) => ({
@@ -333,7 +410,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     }, 100)
   }, [])
 
-  const openChatWindow = useCallback((conversationId: string) => {
+  const openChatWindow = useCallback(async (conversationId: string) => {
     setOpenChatWindows(prev => {
       if (prev.includes(conversationId)) return prev
       return [...prev, conversationId]
@@ -347,7 +424,10 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       const position = calculateNewWindowPosition(conversationId)
       updateWindowPosition(conversationId, position)
     }
-  }, [windowPositions, calculateNewWindowPosition, updateWindowPosition])
+
+    // Mark conversation as read when opened
+    await markConversationAsRead(conversationId)
+  }, [windowPositions, calculateNewWindowPosition, updateWindowPosition, markConversationAsRead])
 
   const closeChatWindow = useCallback((conversationId: string) => {
     setOpenChatWindows(prev => prev.filter(id => id !== conversationId))

@@ -7,7 +7,7 @@ import MessageDropdown from "./message-dropdown"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 export default function MessageButton() {
-  const { toggleDropdown, totalUnreadCount } = useChat()
+  const { toggleDropdown, totalUnreadCount, isDropdownOpen } = useChat()
 
   return (
     <TooltipProvider>
