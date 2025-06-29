@@ -54,7 +54,7 @@ export function StoriesSection({
             : stories
                 .filter((story) => !story.isAddStory) // Filter out the "Add Story" item since we're adding it separately
                 .map((story) => (
-                  <StoryCard key={story.id} story={story} onClick={() => handleStoryClick(story.id)} />
+                  <StoryCard key={story.id} story={story} onClick={() => handleStoryClick(Number(story.id))} />
                 ))}
         </div>
       </ScrollArea>

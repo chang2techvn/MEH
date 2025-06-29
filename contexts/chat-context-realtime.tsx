@@ -11,6 +11,24 @@ interface WindowPosition {
   y: number
 }
 
+// Utility functions for performance optimization
+const TYPING_DEBOUNCE_TIME = 1000 // 1 second
+const MESSAGE_BATCH_SIZE = 20 // Load messages in batches
+const CONVERSATION_CLEANUP_INTERVAL = 5 * 60 * 1000 // 5 minutes
+
+// Debounce function for typing indicators
+function debounce(func: Function, wait: number) {
+  let timeout: NodeJS.Timeout
+  return function executedFunction(...args: any[]) {
+    const later = () => {
+      clearTimeout(timeout)
+      func(...args)
+    }
+    clearTimeout(timeout)
+    timeout = setTimeout(later, wait)
+  }
+}
+
 // Split into 3 separate contexts for better performance
 interface ChatStateContextType {
   conversations: Map<string, Conversation>
@@ -74,23 +92,22 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     return total
   }, [conversations])
 
-  // Handle realtime message events
+  // Memoized conversations array for performance
+  const conversationsArray = useMemo(() => {
+    return Array.from(conversations.values()).sort((a, b) => {
+      const aTime = a.lastMessage?.timestamp?.getTime() || 0
+      const bTime = b.lastMessage?.timestamp?.getTime() || 0
+      return bTime - aTime // Sort by most recent message
+    })
+  }, [conversations])
+
+  // Handle realtime message events - optimized
   const handleNewMessage = useCallback(async (messageData: any) => {
     try {
       console.log('📨 Realtime message received:', messageData);
       
-      // Fetch sender information if not available
-      let senderInfo = null
-      if (messageData.sender_id) {
-        const { data: userData } = await supabase
-          .from('users')
-          .select('id, name, avatar')
-          .eq('id', messageData.sender_id)
-          .single()
-        
-        senderInfo = userData
-      }
-
+      // Create message object directly without fetching user data 
+      // (user data should already be available in conversation participants)
       const newMessage: Message = {
         id: messageData.id,
         senderId: messageData.sender_id,
@@ -108,28 +125,27 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         const conversation = newConversations.get(messageData.conversation_id)
         
         if (conversation) {
-          // Check if message already exists by real ID
-          const existingMessage = conversation.messages.find(msg => msg.id === messageData.id)
-          if (existingMessage) {
+          // Check if message already exists to avoid duplicates - more efficient check
+          const messageExists = conversation.messages.some(msg => msg.id === messageData.id)
+          if (messageExists) {
             console.log('⚠️ Message already exists, skipping:', messageData.id);
             return prev
           }
 
-          // Check if this is replacing an optimistic message from current user
+          // Optimized optimistic message replacement logic
           const isFromCurrentUser = messageData.sender_id === currentUser?.id
           let updatedMessages = [...conversation.messages]
           
           if (isFromCurrentUser && currentUser) {
-            // Look for optimistic message to replace (temporary ID starting with 'temp-')
+            // Look for optimistic message to replace (more efficient)
             const optimisticIndex = conversation.messages.findIndex(msg => 
               msg.id.startsWith('temp-') && 
               msg.senderId === currentUser.id &&
-              Math.abs(msg.timestamp.getTime() - new Date(messageData.created_at).getTime()) < 10000 // Within 10 seconds
+              Math.abs(msg.timestamp.getTime() - new Date(messageData.created_at).getTime()) < 10000
             )
             
             if (optimisticIndex !== -1) {
               console.log('🔄 Replacing optimistic message at index:', optimisticIndex);
-              // Replace optimistic message with real message
               updatedMessages[optimisticIndex] = newMessage
             } else {
               console.log('➕ Adding new message from current user (no optimistic found)');
@@ -240,66 +256,39 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     })
   }, [currentUser])
 
-  // Realtime subscriptions for chat
-  const setupRealtimeSubscriptions = useCallback(async () => {
-    if (!currentUser) return
+  // Track retry attempts and subscription state to prevent infinite loops
+  const retryAttemptsRef = useRef<Map<string, number>>(new Map())
+  const globalRetryAttemptsRef = useRef<number>(0)
+  const isCleaningUpRef = useRef<boolean>(false)
+  const setupInProgressRef = useRef<boolean>(false)
 
-    try {
-      // Clean up existing subscriptions
-      cleanupRealtimeSubscriptions()
+  // Individual conversation subscription setup
+  const setupConversationSubscription = useCallback((conversationId: string, retryCount: number = 0) => {
+    if (!currentUser || isCleaningUpRef.current) return
 
-      console.log('🔔 Setting up realtime subscriptions for', currentUser.id)
-
-      // Set up global subscription for conversation participants updates
-      // This helps us know when new conversations are created or when read status changes
-      const globalChannel = supabase
-        .channel('global-chat-updates')
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'conversation_participants',
-            filter: `user_id=eq.${currentUser.id}`
-          },
-          (payload: RealtimePostgresChangesPayload<any>) => {
-            console.log('🔔 Global participant update:', payload)
-            
-            if (payload.eventType === 'UPDATE' && payload.new.last_read_at !== payload.old?.last_read_at) {
-              // Read status was updated, refresh unread counts
-              handleReadStatusUpdate(payload.new.conversation_id, payload.new.last_read_at)
-            } else if (payload.eventType === 'INSERT') {
-              // New conversation participation, reload conversations
-              // Use setTimeout to avoid circular dependency
-              setTimeout(() => {
-                window.location.reload() // Simple reload for new conversations
-              }, 100)
-            }
-          }
-        )
-        .subscribe((status) => {
-          console.log('🔔 Global chat subscription status:', status)
-        })
-
-      globalChannelRef.current = globalChannel
-
-    } catch (error) {
-      console.error('❌ Error setting up realtime subscriptions:', error)
-    }
-  }, [currentUser, handleReadStatusUpdate])
-
-  const setupConversationSubscription = useCallback((conversationId: string) => {
-    if (!currentUser) return
-
-    // Don't create duplicate subscriptions
-    if (channelsRef.current.has(conversationId)) {
+    // Check if we already have a subscription for this conversation
+    const existingChannel = channelsRef.current.get(conversationId)
+    if (existingChannel) {
+      console.log(`📡 Channel already exists for conversation ${conversationId}, skipping`)
       return
     }
 
-    console.log(`💬 Setting up subscription for conversation ${conversationId}`)
+    // Check retry limit
+    const currentRetries = retryAttemptsRef.current.get(conversationId) || 0
+    if (currentRetries >= 3) {
+      console.error(`❌ Max retry attempts reached for conversation ${conversationId}`)
+      return
+    }
 
+    console.log(`💬 Setting up subscription for conversation ${conversationId} (attempt ${currentRetries + 1})`)
+    
     const channel = supabase
-      .channel(`conversation-${conversationId}`)
+      .channel(`conversation-${conversationId}`, {
+        config: {
+          broadcast: { self: false },
+          presence: { key: currentUser.id }
+        }
+      })
       .on(
         'postgres_changes',
         {
@@ -334,50 +323,222 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           handleTypingEvent(payload.payload)
         }
       )
-      .subscribe((status) => {
-        console.log(`💬 Conversation ${conversationId} subscription status:`, status)
+      .subscribe((status, err) => {
+        console.log(`💬 Conversation ${conversationId} subscription status:`, status, err)
+        
+        if (status === 'SUBSCRIBED') {
+          console.log(`✅ Successfully subscribed to conversation ${conversationId}`)
+          // Reset retry count on successful subscription
+          retryAttemptsRef.current.delete(conversationId)
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+          console.error(`❌ Failed to subscribe to conversation ${conversationId}:`, status, err)
+          
+          // Don't retry if we're cleaning up
+          if (isCleaningUpRef.current) {
+            console.log('🧹 Skipping retry due to cleanup in progress')
+            return
+          }
+          
+          // Clean up failed channel reference only
+          channelsRef.current.delete(conversationId)
+          
+          // Update retry count
+          const retries = retryAttemptsRef.current.get(conversationId) || 0
+          retryAttemptsRef.current.set(conversationId, retries + 1)
+          
+          // Retry with exponential backoff if under limit
+          if (retries < 2) {
+            const retryDelay = Math.min(2000 * Math.pow(2, retries), 8000)
+            console.log(`🔄 Retrying subscription for conversation ${conversationId} in ${retryDelay}ms (attempt ${retries + 2}/3)`)
+            setTimeout(() => {
+              if (!isCleaningUpRef.current) {
+                setupConversationSubscription(conversationId, retries + 1)
+              }
+            }, retryDelay)
+          } else {
+            console.error(`❌ Max retry attempts reached for conversation ${conversationId}`)
+            retryAttemptsRef.current.delete(conversationId)
+          }
+        }
       })
 
     channelsRef.current.set(conversationId, channel)
   }, [currentUser, handleNewMessage, handleMessageUpdate, handleTypingEvent])
 
   const cleanupRealtimeSubscriptions = useCallback(() => {
-    console.log('🧹 Cleaning up realtime subscriptions')
+    if (isCleaningUpRef.current) {
+      console.log('🧹 Cleanup already in progress, skipping')
+      return
+    }
     
-    // Cleanup individual conversation channels
-    channelsRef.current.forEach((channel, conversationId) => {
-      console.log(`🧹 Cleaning up subscription for conversation ${conversationId}`)
-      supabase.removeChannel(channel)
-    })
-    channelsRef.current.clear()
+    console.log('🧹 Starting cleanup of realtime subscriptions')
+    isCleaningUpRef.current = true
+    
+    try {
+      // Cleanup individual conversation channels
+      const channelEntries = Array.from(channelsRef.current.entries())
+      channelEntries.forEach(([conversationId, channel]) => {
+        console.log(`🧹 Cleaning up subscription for conversation ${conversationId}`)
+        try {
+          // Unsubscribe first to prevent callbacks during removal
+          channel.unsubscribe()
+          supabase.removeChannel(channel)
+        } catch (error) {
+          console.error(`Error cleaning up channel ${conversationId}:`, error)
+        }
+      })
+      channelsRef.current.clear()
 
-    // Cleanup global channel
-    if (globalChannelRef.current) {
-      console.log('🧹 Cleaning up global chat subscription')
-      supabase.removeChannel(globalChannelRef.current)
-      globalChannelRef.current = null
+      // Cleanup global channel
+      if (globalChannelRef.current) {
+        console.log('🧹 Cleaning up global chat subscription')
+        try {
+          globalChannelRef.current.unsubscribe()
+          supabase.removeChannel(globalChannelRef.current)
+        } catch (error) {
+          console.error('Error cleaning up global channel:', error)
+        }
+        globalChannelRef.current = null
+      }
+
+      // Clear all typing timeouts
+      typingTimeoutsRef.current.forEach((timeout) => {
+        clearTimeout(timeout)
+      })
+      typingTimeoutsRef.current.clear()
+
+      // Clear retry attempts
+      retryAttemptsRef.current.clear()
+      globalRetryAttemptsRef.current = 0
+      
+      console.log('🧹 Cleanup completed successfully')
+    } catch (error) {
+      console.error('Error during cleanup:', error)
+    } finally {
+      // Always reset cleanup flag
+      setTimeout(() => {
+        isCleaningUpRef.current = false
+      }, 1000) // Small delay to ensure all operations complete
+    }
+  }, [])
+
+  // Realtime subscriptions setup (defined after cleanup for better organization)
+  const setupRealtimeSubscriptions = useCallback(async () => {
+    if (!currentUser || isCleaningUpRef.current || setupInProgressRef.current) {
+      console.log('🔔 Skipping realtime setup - user not ready or setup in progress')
+      return
     }
 
-    // Clear all typing timeouts
-    typingTimeoutsRef.current.forEach((timeout) => {
-      clearTimeout(timeout)
-    })
-    typingTimeoutsRef.current.clear()
-  }, [])
+    setupInProgressRef.current = true
+
+    try {
+      // Clean up existing subscriptions and wait for completion
+      await new Promise<void>((resolve) => {
+        cleanupRealtimeSubscriptions()
+        // Wait for cleanup to complete
+        const checkCleanup = () => {
+          if (!isCleaningUpRef.current) {
+            resolve()
+          } else {
+            setTimeout(checkCleanup, 100)
+          }
+        }
+        checkCleanup()
+      })
+
+      console.log('🔔 Setting up realtime subscriptions for user:', currentUser.id)
+
+      // Set up global subscription for conversation participants updates
+      const globalChannel = supabase
+        .channel('global-chat-updates', {
+          config: {
+            broadcast: { self: false },
+            presence: { key: currentUser.id }
+          }
+        })
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'conversation_participants',
+            filter: `user_id=eq.${currentUser.id}`
+          },
+          (payload: RealtimePostgresChangesPayload<any>) => {
+            console.log('🔔 Global participant update:', payload)
+            
+            if (payload.eventType === 'UPDATE' && payload.new?.last_read_at !== payload.old?.last_read_at) {
+              handleReadStatusUpdate(payload.new.conversation_id, payload.new.last_read_at)
+            } else if (payload.eventType === 'INSERT') {
+              // Reload conversations when new ones are added
+              // Use a ref to avoid circular dependency
+              setLoading(true)
+              setTimeout(() => {
+                // Trigger a reload without circular dependency
+                window.dispatchEvent(new CustomEvent('reloadConversations'))
+              }, 100)
+            }
+          }
+        )
+        .subscribe((status, err) => {
+          console.log('🔔 Global chat subscription status:', status, err)
+          
+          if (status === 'SUBSCRIBED') {
+            console.log('✅ Global chat subscription established')
+            globalRetryAttemptsRef.current = 0 // Reset retry count on success
+          } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+            console.error('❌ Global chat subscription failed:', status, err)
+            
+            // Don't retry if we're cleaning up or already retrying too much
+            if (isCleaningUpRef.current || globalRetryAttemptsRef.current >= 3) {
+              console.log('🔔 Skipping global retry due to cleanup or max attempts reached')
+              return
+            }
+            
+            globalRetryAttemptsRef.current++
+            const retryDelay = Math.min(3000 * globalRetryAttemptsRef.current, 15000)
+            
+            console.log(`🔄 Retrying global chat subscription in ${retryDelay}ms (attempt ${globalRetryAttemptsRef.current}/3)`)
+            setTimeout(() => {
+              if (!isCleaningUpRef.current && !setupInProgressRef.current) {
+                setupRealtimeSubscriptions()
+              }
+            }, retryDelay)
+          }
+        })
+
+      globalChannelRef.current = globalChannel
+
+      console.log(`🔔 Global subscription set up, will handle individual conversations via events`)
+
+    } catch (error) {
+      console.error('❌ Error setting up realtime subscriptions:', error)
+      
+      // Only retry if not cleaning up and under retry limit
+      if (!isCleaningUpRef.current && globalRetryAttemptsRef.current < 3) {
+        globalRetryAttemptsRef.current++
+        const retryDelay = Math.min(3000 * globalRetryAttemptsRef.current, 15000)
+        
+        console.log(`🔄 Retrying realtime subscriptions after error in ${retryDelay}ms (attempt ${globalRetryAttemptsRef.current}/3)`)
+        setTimeout(() => {
+          if (!isCleaningUpRef.current && !setupInProgressRef.current) {
+            setupRealtimeSubscriptions()
+          }
+        }, retryDelay)
+      }
+    } finally {
+      setupInProgressRef.current = false
+    }
+  }, [currentUser, conversations, handleReadStatusUpdate, setupConversationSubscription, cleanupRealtimeSubscriptions])
 
   // Load conversations (optimized with useCallback)
   const loadConversations = useCallback(async () => {
     try {
-      console.log('🔄 Starting loadConversations...')
       setLoading(true)
       
       // Get current user
-      console.log('👤 Getting current user...')
       const user = await dbHelpers.getCurrentUser()
-      console.log('👤 Current user result:', user ? `Found: ${user.name} (${user.email})` : 'No user found')
-      
       if (!user) {
-        console.log('❌ No current user, stopping conversation load')
         setLoading(false)
         return
       }
@@ -390,11 +551,9 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         lastActive: new Date(user.last_active || Date.now()),
       }
       
-      console.log('✅ Current user object created:', currentUserObj.name)
       setCurrentUser(currentUserObj)
 
       // Get user's conversations from conversation_participants table
-      console.log('🔍 Querying conversation participants...')
       const { data: conversationParticipants, error: participantsError } = await supabase
         .from('conversation_participants')
         .select(`
@@ -414,13 +573,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         .eq('user_id', user.id)
         .order('last_read_at', { ascending: false })
 
-      console.log('📊 Participants query result:', {
-        success: !participantsError,
-        count: conversationParticipants?.length || 0,
-        error: participantsError,
-        data: conversationParticipants
-      })
-
       if (participantsError) {
         console.error('❌ ChatContext: Error loading conversation participants:', participantsError)
         setConversations(new Map())
@@ -429,13 +581,10 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (!conversationParticipants || conversationParticipants.length === 0) {
-        console.log('⚠️ No conversation participants found for user')
         setConversations(new Map())
         setLoading(false)
         return
       }
-
-      console.log('🔄 Processing', conversationParticipants.length, 'conversation participants...')
 
       const conversationMap = new Map<string, Conversation>()
       
@@ -448,15 +597,10 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           const conversation = Array.isArray(participant.conversations) 
             ? participant.conversations[0] 
             : participant.conversations
-          if (!conversation) {
-            console.log('⚠️ No conversation data in participant:', participant)
-            return null
-          }
-
-          console.log('🔄 Processing conversation:', conversation.id, conversation.title)
+          if (!conversation) return null
 
           try {
-            // Get messages for this conversation (limit to recent messages)
+            // Get messages for this conversation - optimized with batch loading
             const { data: messagesData, error: messagesError } = await supabase
               .from('conversation_messages')
               .select(`
@@ -465,18 +609,11 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                 sender_id,
                 created_at,
                 message_type,
-                media_url,
-                sender:users!sender_id(id, name, avatar)
+                media_url
               `)
               .eq('conversation_id', conversation.id)
               .order('created_at', { ascending: false })
-              .limit(50) // Only load recent messages initially
-
-            console.log(`📨 Messages for ${conversation.id}:`, {
-              success: !messagesError,
-              count: messagesData?.length || 0,
-              error: messagesError
-            })
+              .limit(MESSAGE_BATCH_SIZE) // Use configurable batch size
 
             if (messagesError) {
               console.error(`Error loading messages for conversation ${conversation.id}:`, messagesError)
@@ -582,66 +719,78 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         const batchResults = await Promise.all(batchPromises)
         batchResults.forEach(conv => {
           if (conv) {
-            console.log('✅ Adding conversation to map:', conv.id, conv.participants?.map(p => p.name))
             conversationMap.set(conv.id, conv)
           }
         })
       }
 
-      console.log('📝 Final conversation map size:', conversationMap.size)
-      console.log('📝 Conversation map contents:', Array.from(conversationMap.keys()))
-      
       setConversations(conversationMap)
       
-      console.log('✅ Conversations set in state, map size:', conversationMap.size)
-      
-      // Set up realtime subscriptions after conversations are loaded
-      // Use setTimeout to avoid setting up subscriptions in the same tick
-      setTimeout(() => {
-        setupRealtimeSubscriptions()
-        // Set up individual conversation subscriptions
-        conversationMap.forEach((conversation, conversationId) => {
-          setupConversationSubscription(conversationId)
-        })
-      }, 100)
+      // Set up realtime subscriptions directly after conversations are loaded
+      console.log('🔔 Setting up realtime subscriptions after loading conversations...');
+      setTimeout(async () => {
+        // First set up global subscription
+        await setupRealtimeSubscriptions()
+        
+        // Then set up individual conversation subscriptions
+        setTimeout(() => {
+          console.log('🔔 Setting up individual conversation subscriptions...');
+          conversationMap.forEach((conversation, conversationId) => {
+            if (!channelsRef.current.has(conversationId)) {
+              console.log(`🔔 Setting up subscription for conversation ${conversationId}`);
+              setupConversationSubscription(conversationId)
+            }
+          })
+        }, 1000) // Give global subscription time to establish
+      }, 500) // Give React time to update state
       
     } catch (error) {
       console.error('❌ ChatContext: Error loading conversations:', error)
       setConversations(new Map())
     } finally {
-      console.log('🏁 loadConversations finished, setting loading to false')
       setLoading(false)
     }
-  }, [setupRealtimeSubscriptions])
+  }, [])
 
-  // Cleanup old conversations (memory management)
+  // Optimized cleanup for memory management
   const cleanupOldConversations = useCallback(() => {
-    const maxConversations = 50 // Keep only recent 50 conversations
-    const maxAge = 30 * 24 * 60 * 60 * 1000 // 30 days
+    const maxConversations = 30 // Reduced for better performance
+    const maxAge = 7 * 24 * 60 * 60 * 1000 // 7 days (reduced from 30)
     const now = Date.now()
 
     setConversations(prevConversations => {
-      const newConversations = new Map()
-      const conversationsArray = Array.from(prevConversations.entries())
-      
-      // Sort by last message time
-      conversationsArray.sort((a, b) => {
-        const aTime = a[1].lastMessage?.timestamp?.getTime() || 0
-        const bTime = b[1].lastMessage?.timestamp?.getTime() || 0
-        return bTime - aTime
-      })
+      if (prevConversations.size <= maxConversations) {
+        return prevConversations // No cleanup needed
+      }
 
-      // Keep only recent conversations
-      conversationsArray.slice(0, maxConversations).forEach(([id, conv]) => {
+      const newConversations = new Map()
+      
+      // Use memoized array if available for better performance
+      const sortedEntries = Array.from(prevConversations.entries())
+        .sort((a, b) => {
+          const aTime = a[1].lastMessage?.timestamp?.getTime() || 0
+          const bTime = b[1].lastMessage?.timestamp?.getTime() || 0
+          return bTime - aTime
+        })
+        .slice(0, maxConversations) // Keep only top conversations
+
+      // Filter by age and activity
+      for (const [id, conv] of sortedEntries) {
         const lastMessageTime = conv.lastMessage?.timestamp?.getTime() || 0
-        if (now - lastMessageTime < maxAge) {
+        const isRecent = now - lastMessageTime < maxAge
+        const hasUnread = conv.unreadCount > 0
+        const isActive = openChatWindows.includes(id) || minimizedChatWindows.includes(id)
+        
+        // Keep conversation if it's recent, has unread messages, or is actively being used
+        if (isRecent || hasUnread || isActive) {
           newConversations.set(id, conv)
         }
-      })
+      }
 
+      console.log(`🧹 Cleaned up conversations: ${prevConversations.size} → ${newConversations.size}`)
       return newConversations
     })
-  }, [])
+  }, [openChatWindows, minimizedChatWindows])
 
   // Window position management
   const calculateNewWindowPosition = useCallback((conversationId: string): WindowPosition => {
@@ -799,8 +948,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
   const sendMessage = useCallback(async (conversationId: string, text: string, attachments?: any[]) => {
     try {
-      console.log('🚀 Sending message:', { conversationId, text, currentUser: currentUser?.id });
-      
       if (!currentUser) {
         throw new Error('No current user')
       }
@@ -816,27 +963,21 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         reactions: [],
       }
 
-      console.log('📝 Created optimistic message:', optimisticMessage);
-
       // Update UI immediately with optimistic message
       setConversations(prev => {
         const newConversations = new Map(prev)
         const conversation = newConversations.get(conversationId)
         if (conversation) {
-          console.log('✅ Adding optimistic message to conversation');
           newConversations.set(conversationId, {
             ...conversation,
             messages: [...conversation.messages, optimisticMessage],
             lastMessage: optimisticMessage,
           })
-        } else {
-          console.log('❌ Conversation not found for optimistic update');
         }
         return newConversations
       })
 
       // Create message in database
-      console.log('💾 Inserting message to database...');
       const { data: messageData, error: messageError } = await supabase
         .from('conversation_messages')
         .insert({
@@ -850,7 +991,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         .single()
 
       if (messageError) {
-        console.error('❌ Database insert failed:', messageError);
         // Remove optimistic message on error
         setConversations(prev => {
           const newConversations = new Map(prev)
@@ -867,13 +1007,30 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         throw messageError
       }
 
-      console.log('✅ Database insert successful:', messageData);
+      // Replace optimistic message with real message
+      setConversations(prev => {
+        const newConversations = new Map(prev)
+        const conversation = newConversations.get(conversationId)
+        if (conversation) {
+          const updatedMessages = conversation.messages.map(msg => 
+            msg.id === optimisticMessage.id 
+              ? {
+                  ...msg,
+                  id: messageData.id,
+                  status: "sent" as const,
+                }
+              : msg
+          )
+          
+          newConversations.set(conversationId, {
+            ...conversation,
+            messages: updatedMessages,
+            lastMessage: updatedMessages[updatedMessages.length - 1],
+          })
+        }
+        return newConversations
+      })
 
-      // DON'T replace optimistic message here - let realtime event handle it
-      // This prevents duplicate messages when realtime event arrives
-      console.log('⏳ Waiting for realtime event to replace optimistic message');
-
-      console.log('⏰ Updating conversation timestamp...');
       // Update last_message_at in conversations table
       await supabase
         .from('conversations')
@@ -883,68 +1040,53 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         })
         .eq('id', conversationId)
 
-      console.log('✅ Message sending completed successfully');
-
     } catch (error) {
       console.error('Error sending message:', error)
       throw error
     }
   }, [currentUser])
 
-  // Typing indicator functionality
+  // Optimized typing indicator with debounce
   const sendTypingIndicator = useCallback((conversationId: string, isTyping: boolean) => {
     if (!currentUser) return
 
     const channel = channelsRef.current.get(conversationId)
     if (!channel) return
 
-    if (isTyping) {
-      // Send typing start event
+    // Debounced typing start - only send after user stops typing for a moment
+    const sendTypingEvent = (typing: boolean) => {
       channel.send({
         type: 'broadcast',
         event: 'typing',
         payload: {
           userId: currentUser.id,
           userName: currentUser.name,
-          isTyping: true,
+          isTyping: typing,
           conversationId
         }
       })
+    }
 
+    if (isTyping) {
       // Clear any existing timeout
       const existingTimeout = typingTimeoutsRef.current.get(conversationId)
       if (existingTimeout) {
         clearTimeout(existingTimeout)
       }
 
-      // Set timeout to automatically stop typing after 3 seconds
+      // Send typing immediately for responsiveness
+      sendTypingEvent(true)
+
+      // Set timeout to automatically stop typing after reduced time
       const timeout = setTimeout(() => {
-        channel.send({
-          type: 'broadcast',
-          event: 'typing',
-          payload: {
-            userId: currentUser.id,
-            userName: currentUser.name,
-            isTyping: false,
-            conversationId
-          }
-        })
+        sendTypingEvent(false)
         typingTimeoutsRef.current.delete(conversationId)
-      }, 3000)
+      }, TYPING_DEBOUNCE_TIME)
 
       typingTimeoutsRef.current.set(conversationId, timeout)
     } else {
-      // Send typing stop event
-      channel.send({
-        type: 'broadcast',
-        event: 'typing',
-        payload: {
-          userId: currentUser.id,
-          userName: currentUser.name,
-          isTyping: false,
-          conversationId
-        }
-      })
+      // Send typing stop event immediately
+      sendTypingEvent(false)
 
       // Clear timeout
       const existingTimeout = typingTimeoutsRef.current.get(conversationId)
@@ -984,30 +1126,41 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     loadConversations()
   }, [loadConversations])
 
-  // Set up realtime subscriptions when conversations change
+  // Handle conversation subscription setup - simplified approach
   useEffect(() => {
-    if (currentUser && conversations.size > 0) {
-      console.log('🔔 Setting up conversation subscriptions for', conversations.size, 'conversations')
+    if (currentUser && conversations.size > 0 && !isCleaningUpRef.current) {
+      console.log('🔔 Checking conversation subscriptions...');
       
-      // Set up subscriptions for any new conversations
+      // Set up subscriptions for conversations that don't have them yet
       conversations.forEach((conversation, conversationId) => {
         if (!channelsRef.current.has(conversationId)) {
-          console.log('🔔 Setting up new subscription for conversation:', conversationId)
+          console.log(`🔔 Setting up missing subscription for conversation ${conversationId}`)
           setupConversationSubscription(conversationId)
         }
       })
+    }
+  }, [currentUser, conversations.size, setupConversationSubscription]) // Use size instead of full conversations object
 
-      // Clean up subscriptions for conversations that no longer exist
+  // Clean up subscriptions for conversations that no longer exist
+  useEffect(() => {
+    if (conversations.size > 0) {
       const currentConversationIds = new Set(conversations.keys())
-      channelsRef.current.forEach((channel, conversationId) => {
+      const channelEntries = Array.from(channelsRef.current.entries())
+      channelEntries.forEach(([conversationId, channel]) => {
         if (!currentConversationIds.has(conversationId)) {
           console.log(`🧹 Removing subscription for conversation ${conversationId}`)
-          supabase.removeChannel(channel)
+          try {
+            channel.unsubscribe()
+            supabase.removeChannel(channel)
+          } catch (error) {
+            console.error(`Error removing channel ${conversationId}:`, error)
+          }
           channelsRef.current.delete(conversationId)
+          retryAttemptsRef.current.delete(conversationId)
         }
       })
     }
-  }, [currentUser, conversations.size, setupConversationSubscription]) // Use size instead of the full conversations object
+  }, [conversations])
 
   // Cleanup all subscriptions on unmount
   useEffect(() => {
@@ -1017,9 +1170,9 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     }
   }, [cleanupRealtimeSubscriptions])
 
-  // Periodic cleanup
+  // Optimized periodic cleanup with configurable interval
   useEffect(() => {
-    const cleanup = setInterval(cleanupOldConversations, 5 * 60 * 1000) // Every 5 minutes
+    const cleanup = setInterval(cleanupOldConversations, CONVERSATION_CLEANUP_INTERVAL)
     return () => clearInterval(cleanup)
   }, [cleanupOldConversations])
 
@@ -1116,17 +1269,25 @@ export function useChatActions() {
   return context
 }
 
-// Backward compatibility hook (use separate hooks when possible)
+// Optimized backward compatibility hook
 export function useChat() {
   const state = useChatState()
   const ui = useChatUI()
   const actions = useChatActions()
   
+  // Use memoized conversations array for better performance
+  const conversationsArray = useMemo(() => {
+    return Array.from(state.conversations.values()).sort((a, b) => {
+      const aTime = a.lastMessage?.timestamp?.getTime() || 0
+      const bTime = b.lastMessage?.timestamp?.getTime() || 0
+      return bTime - aTime
+    })
+  }, [state.conversations])
+  
   return {
     ...state,
     ...ui,
     ...actions,
-    // Convert Map back to array for compatibility
-    conversations: Array.from(state.conversations.values()),
+    conversations: conversationsArray,
   }
 }

@@ -1,7 +1,7 @@
 "use client"
 
 import { motion, AnimatePresence } from "framer-motion"
-import { useChat } from "@/contexts/chat-context"
+import { useChat } from "@/contexts/chat-context-realtime"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Grid2X2 } from "lucide-react"

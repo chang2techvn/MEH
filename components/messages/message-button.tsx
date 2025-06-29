@@ -1,6 +1,6 @@
 "use client"
 
-import { useChat } from "@/contexts/chat-context"
+import { useChat } from "@/contexts/chat-context-realtime"
 import { MessageSquare } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import MessageDropdown from "./message-dropdown"

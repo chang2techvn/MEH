@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { X, Minus, Maximize2, ArrowRightIcon as ArrowsMaximize, ArrowLeftIcon as ArrowsMinimize } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
-import { useChat } from "@/contexts/chat-context"
+import { useChat } from "@/contexts/chat-context-realtime"
 import { formatDistanceToNow } from "date-fns"
 import { useDraggable } from "@/hooks/use-draggable"
 import MessageInput from "./message-input"
@@ -288,7 +288,11 @@ export default function ChatWindow({ conversationId }: ChatWindowProps) {
 
       {/* Input */}
       <div className="border-t border-white/20 dark:border-gray-800/20 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm">
-        <MessageInput onSendMessage={handleSendMessage} compact={!isExpanded && !isFullscreen} />
+        <MessageInput 
+          onSendMessage={handleSendMessage} 
+          compact={!isExpanded && !isFullscreen} 
+          conversationId={conversationId}
+        />
       </div>
     </motion.div>
   )

@@ -4,12 +4,13 @@ import { Outfit } from "next/font/google"
 import "./globals.css"
 import { AuthProvider } from "@/contexts/auth-context"
 import { Toaster } from "@/components/ui/toaster"
-import { ChatProvider } from "@/contexts/chat-context"
+import { ChatProvider } from "@/contexts/chat-context-realtime"
 import ChatWindowsManager from "@/components/messages/chat-windows-manager"
 import MinimizedChatBar from "@/components/messages/minimized-chat-bar"
 import { ThemeProvider } from "@/contexts/theme-context"
 import Script from "next/script"
 import ServiceWorkerRegistration from "@/components/service-worker-registration"
+
 
 // Tối ưu font loading
 const outfit = Outfit({
@@ -124,7 +125,7 @@ export default function RootLayout({
                 <MinimizedChatBar />
               </div>
               <Toaster />
-              <ServiceWorkerRegistration />
+
             </ChatProvider>
           </ThemeProvider>
         </AuthProvider>

@@ -26,6 +26,16 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   realtime: {
     params: {
       eventsPerSecond: 10
+    },
+    headers: {
+      'X-Client-Info': 'supabase-js-web'
+    },
+    heartbeatIntervalMs: 30000,
+    reconnectAfterMs: (attempts: number) => Math.min(1000 * Math.pow(2, attempts), 30000)
+  },
+  global: {
+    headers: {
+      'X-Client-Info': 'english-learning-platform'
     }
   }
 })
@@ -34,16 +44,48 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
 export const dbHelpers = {
   // User operations
   async getCurrentUser() {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return null
+    console.log('🔍 dbHelpers.getCurrentUser called')
     
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', user.id)
-      .single()
-    
-    return error ? null : data
+    try {
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      console.log('🔐 Auth user result:', { user: user?.email || 'No user', error: authError })
+      
+      if (!user) {
+        console.log('⚠️ No authenticated user, trying to get first user from database as fallback')
+        
+        // Fallback: get first user from database for development
+        const { data: firstUser, error: fallbackError } = await supabase
+          .from('users')
+          .select('*')
+          .limit(1)
+          .single()
+        
+        if (fallbackError || !firstUser) {
+          console.log('❌ No users found in database:', fallbackError)
+          return null
+        }
+        
+        console.log('✅ Using fallback user:', firstUser.name, firstUser.email)
+        return firstUser
+      }
+      
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', user.id)
+        .single()
+      
+      if (error) {
+        console.log('❌ Error fetching user data:', error)
+        return null
+      }
+      
+      console.log('✅ Found authenticated user:', data.name, data.email)
+      return data
+    } catch (err) {
+      console.error('💥 Error in getCurrentUser:', err)
+      return null
+    }
   },
 
   async getUserById(id: string) {

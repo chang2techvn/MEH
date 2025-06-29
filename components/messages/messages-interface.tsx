@@ -8,7 +8,7 @@ import { AnimatePresence, motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Menu } from "lucide-react"
 import { useMediaQuery } from "@/hooks/use-mobile"
-import { useChat } from "@/contexts/chat-context"
+import { useChat } from "@/contexts/chat-context-realtime"
 
 export default function MessagesInterface() {
   const [activeConversation, setActiveConversation] = useState<Conversation | null>(null)

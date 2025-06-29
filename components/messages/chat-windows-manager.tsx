@@ -1,7 +1,7 @@
 "use client"
 
 import { AnimatePresence } from "framer-motion"
-import { useChat } from "@/contexts/chat-context"
+import { useChat } from "@/contexts/chat-context-realtime"
 import ChatWindow from "./chat-window"
 
 export default function ChatWindowsManager() {

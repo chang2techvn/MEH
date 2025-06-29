@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, useCallback } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Smile, Paperclip, Mic, Send, ImageIcon, File, X, StopCircle } from "lucide-react"
@@ -10,13 +10,15 @@ import { motion, AnimatePresence } from "framer-motion"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { useChat } from "@/contexts/chat-context-realtime"
 
 interface MessageInputProps {
   onSendMessage: (text: string, attachments?: any[]) => void
   compact?: boolean
+  conversationId?: string
 }
 
-export default function MessageInput({ onSendMessage, compact = false }: MessageInputProps) {
+export default function MessageInput({ onSendMessage, compact = false, conversationId }: MessageInputProps) {
   const [message, setMessage] = useState("")
   const [attachments, setAttachments] = useState<any[]>([])
   const [isRecording, setIsRecording] = useState(false)
@@ -26,15 +28,50 @@ export default function MessageInput({ onSendMessage, compact = false }: Message
   const fileInputRef = useRef<HTMLInputElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const recordingTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  
+  // Get chat actions for typing indicators
+  const { sendTypingIndicator } = useChat()
 
-  // Clean up recording timer on unmount
+  // Clean up recording timer and typing timeout on unmount
   useEffect(() => {
     return () => {
       if (recordingTimerRef.current) {
         clearInterval(recordingTimerRef.current)
       }
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current)
+      }
     }
   }, [])
+
+  // Send typing indicators when user is typing
+  const handleTypingStart = useCallback(() => {
+    if (!conversationId) return
+    
+    // Send typing indicator
+    sendTypingIndicator(conversationId, true)
+    
+    // Clear existing timeout
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current)
+    }
+    
+    // Set timeout to stop typing indicator after 1 second of inactivity
+    typingTimeoutRef.current = setTimeout(() => {
+      sendTypingIndicator(conversationId, false)
+    }, 1000)
+  }, [conversationId, sendTypingIndicator])
+
+  const handleTypingStop = useCallback(() => {
+    if (!conversationId) return
+    
+    // Clear timeout and send stop typing
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current)
+    }
+    sendTypingIndicator(conversationId, false)
+  }, [conversationId, sendTypingIndicator])
 
   // Focus input on mount
   useEffect(() => {
@@ -45,6 +82,9 @@ export default function MessageInput({ onSendMessage, compact = false }: Message
 
   const handleSend = () => {
     if (message.trim() || attachments.length > 0) {
+      // Stop typing indicator before sending
+      handleTypingStop()
+      
       onSendMessage(message.trim(), attachments)
       setMessage("")
       setAttachments([])
@@ -376,7 +416,15 @@ export default function MessageInput({ onSendMessage, compact = false }: Message
             ref={inputRef}
             placeholder="Type a message..."
             value={message}
-            onChange={(e) => setMessage(e.target.value)}
+            onChange={(e) => {
+              setMessage(e.target.value)
+              // Send typing indicator when user starts typing
+              if (e.target.value.length > 0) {
+                handleTypingStart()
+              } else {
+                handleTypingStop()
+              }
+            }}
             onKeyDown={handleKeyDown}
             className="py-2 px-4 rounded-full border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
           />

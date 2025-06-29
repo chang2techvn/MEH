@@ -72,14 +72,13 @@ export function useWebVitals() {
 
     // Try to import web-vitals dynamically
     const loadWebVitals = async () => {
-      try {
-        const { getCLS, getFID, getFCP, getLCP, getTTFB } = await import('web-vitals')
-        
-        getCLS(handleMetric)
-        getFID(handleMetric)
-        getFCP(handleMetric)
-        getLCP(handleMetric)
-        getTTFB(handleMetric)
+      try {        const { onCLS, onINP, onFCP, onLCP, onTTFB } = await import('web-vitals')
+
+        onCLS(handleMetric)
+        onINP(handleMetric)
+        onFCP(handleMetric)
+        onLCP(handleMetric)
+        onTTFB(handleMetric)
       } catch (error) {
         console.warn('web-vitals library not available:', error)
         
@@ -147,7 +146,7 @@ export function usePerformanceBudget() {
 
       // Check load time
       const navigation = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming
-      const loadTime = navigation ? navigation.loadEventEnd - navigation.navigationStart : 0
+      const loadTime = navigation ? navigation.loadEventEnd - navigation.fetchStart : 0
 
       // Check memory usage
       let memoryUsage = 0

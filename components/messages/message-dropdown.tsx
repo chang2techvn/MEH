@@ -1,18 +1,38 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Search, Plus, X } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { useChat } from "@/contexts/chat-context"
+import { useChat } from "@/contexts/chat-context-realtime"
+import { useAuth } from "@/contexts/auth-context"
 import { formatDistanceToNow } from "date-fns"
 import type { Conversation, User } from "@/components/messages/types"
 
 export default function MessageDropdown() {
   const { conversations, isDropdownOpen, openChatWindow, closeDropdown, currentUser, loading } = useChat()
+  const authContext = useAuth()
   const [searchQuery, setSearchQuery] = useState("")
+
+  // Debug logging
+  useEffect(() => {
+    console.log('🔍 MessageDropdown debug:', {
+      loading,
+      currentUser: currentUser?.id,
+      conversationsCount: conversations?.length || 0,
+      authUser: authContext?.user?.email || 'No auth user'
+    })
+  }, [loading, currentUser, conversations, authContext])
+
+  // Debug logging
+  console.log('🔍 MessageDropdown state:', {
+    loading,
+    currentUser: currentUser?.id,
+    conversationsCount: conversations?.length || 0,
+    conversations: conversations?.map(c => ({ id: c.id, participants: c.participants.length }))
+  })
 
   const getConversationTitle = (conv: Conversation) => {
     // Filter out current user from participants for title
@@ -127,7 +147,20 @@ export default function MessageDropdown() {
                       )}
                     </div>
                     <p className={`text-xs truncate ${conversation.unreadCount > 0 ? 'text-gray-700 dark:text-gray-300 font-medium' : 'text-gray-500 dark:text-gray-400'}`}>
-                      {typeof conversation.lastMessage === 'string' ? conversation.lastMessage : conversation.lastMessage?.text || "No messages yet"}
+                      {conversation.isTyping ? (
+                        <span className="text-neo-mint dark:text-purist-blue font-medium">
+                          <span className="inline-flex items-center">
+                            <span>Typing</span>
+                            <span className="ml-1 flex space-x-1">
+                              <span className="w-1 h-1 rounded-full bg-current animate-bounce"></span>
+                              <span className="w-1 h-1 rounded-full bg-current animate-bounce" style={{ animationDelay: '0.1s' }}></span>
+                              <span className="w-1 h-1 rounded-full bg-current animate-bounce" style={{ animationDelay: '0.2s' }}></span>
+                            </span>
+                          </span>
+                        </span>
+                      ) : (
+                        typeof conversation.lastMessage === 'string' ? conversation.lastMessage : conversation.lastMessage?.text || "No messages yet"
+                      )}
                     </p>
                   </div>
                   <div className="flex flex-col items-end space-y-1">
