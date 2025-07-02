@@ -99,26 +99,6 @@ export default function FeedPost({
               {content.replace(/<[^>]*>/g, '')}
             </motion.p>
 
-            {/* Show AI Evaluation Button */}
-            {(mediaType === "ai-submission" || submission || mediaType === "video" || mediaType === "audio") && (
-              <motion.div
-                className="mt-4 flex justify-center"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.15 }}
-              >
-                <button
-                  onClick={() => updateState?.({ showEvaluation: !(state?.showEvaluation) })}
-                  className="flex items-center gap-2 px-4 py-2 text-dark rounded-full font-medium text-sm hover:from-blue-600 hover:to-purple-700 transition-all duration-200 hover:shadow-lg transform hover:-translate-y-0.5"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                  </svg>
-                  Show AI Evaluation
-                </button>
-              </motion.div>
-            )}
-
             <PostMedia
               mediaType={mediaType}
               mediaUrl={mediaUrl}
@@ -127,17 +107,8 @@ export default function FeedPost({
               content={content}
             />
 
-            {mediaType === "ai-submission" && submission && (
-              <PostAISubmission
-                submission={submission}
-                videoEvaluation={videoEvaluation}
-                showEvaluation={state?.showEvaluation || false}
-                onShowEvaluationChange={(show) => updateState?.({ showEvaluation: show })}
-              />
-            )}
-
-            {/* Show AI Evaluation for other content types */}
-            {mediaType !== "ai-submission" && state?.showEvaluation && (
+            {/* Always Show AI Evaluation (no button) - now below media */}
+            {(mediaType === "ai-submission" || submission || mediaType === "video" || mediaType === "audio") && (
               <motion.div
                 className="mt-4 w-full"
                 initial={{ opacity: 0, height: 0 }}
