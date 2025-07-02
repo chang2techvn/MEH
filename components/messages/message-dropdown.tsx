@@ -174,7 +174,7 @@ function MessageDropdownContent() {
       console.log('🔍 Auth check before creating conversation:', {
         authUser: authUser?.email || 'No auth user',
         authError: authError?.message || 'No auth error',
-        currentUser: currentUser?.email || 'No current user',
+        currentUser: currentUser?.name || currentUser?.id || 'No current user',
         userId: authUser?.id || 'No user ID'
       })
       
