@@ -151,7 +151,7 @@ export default function Home() {
       />
       <footer className="border-t border-white/10 dark:border-gray-800/10 bg-white/40 dark:bg-gray-900/40 backdrop-blur-xl">
           <div className="border-t border-white/10 dark:border-gray-800/10 mt-8 pt-8 text-center text-sm text-muted-foreground">
-            <p>© 2025 EnglishMastery. All rights reserved.</p>
+            <p>© 2025 EnglishMasteryHub. All rights reserved.</p>
           </div>
       </footer>
     </div>

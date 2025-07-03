@@ -271,6 +271,10 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
           setError(null)
           
           try {
+            console.log("🤖 Daily Challenge: Starting AI evaluation...")
+            console.log("📹 Daily Challenge: Video URL for AI:", videoStorageUrl)
+            console.log("📝 Daily Challenge: Content for AI:", richTextContent.substring(0, 100) + "...")
+            
             const { evaluateSubmissionForPublish } = await import("@/lib/gemini-video-evaluation")
             
             // Use the transcript already saved in the database (limited by admin watch time)
@@ -278,6 +282,8 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
             
             // Create challenge context including original video info
             const challengeContext = `Daily English Challenge - Original Video: "${videoData.title}" | Topic: ${videoData.topics?.join(', ') || 'General English Learning'} | User is responding to and creating content based on this original video.`
+            
+            console.log("🔄 Daily Challenge: Calling evaluateSubmissionForPublish...")
             
             // Evaluate with original video transcript as context and user's content as caption
             // Use the Supabase Storage URL for AI evaluation
@@ -288,10 +294,12 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
               challengeContext
             )
             
+            console.log("✅ Daily Challenge: AI evaluation completed:", evaluation)
             setVideoEvaluation(evaluation)
             console.log("✅ Video evaluation completed before step 4")
           } catch (error) {
-            console.error("Error during AI evaluation:", error)
+            console.error("❌ Daily Challenge: Error during AI evaluation:", error)
+            setError(`AI evaluation failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
             // Continue to next step even if evaluation fails
             setVideoEvaluation(null)          } finally {
             setIsEvaluating(false)

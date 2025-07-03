@@ -59,7 +59,7 @@ export default function MainHeader({ mobileMenuOpen, setMobileMenuOpen }: MainHe
                 transition={{ duration: 0.3 }}
                 className="hidden sm:inline-block text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-neo-mint to-purist-blue"
               >
-                EnglishMastery
+                EnglishMasteryHub
               </motion.span>
             </Link>
           </div>
