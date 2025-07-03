@@ -107,8 +107,8 @@ export default function FeedPost({
               content={content}
             />
 
-            {/* Always Show AI Evaluation (no button) - now below media */}
-            {(mediaType === "ai-submission" || submission || mediaType === "video" || mediaType === "audio") && (
+            {/* Always Show AI Evaluation for relevant content types */}
+            {(mediaType === "ai-submission" || submission || mediaType === "video" || mediaType === "audio" || videoEvaluation) && (
               <motion.div
                 className="mt-4 w-full"
                 initial={{ opacity: 0, height: 0 }}
@@ -118,7 +118,7 @@ export default function FeedPost({
               >
                 <div className="w-full max-w-full overflow-hidden">
                   <EnhancedVideoEvaluationDisplay
-                    evaluation={{
+                    evaluation={videoEvaluation || {
                       // Overall scores
                       score: 82,
                       feedback: "Great job! Your English communication shows strong fundamentals with clear areas for targeted improvement.",

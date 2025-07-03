@@ -43,7 +43,7 @@ export default function MainHeader({ mobileMenuOpen, setMobileMenuOpen }: MainHe
       >
         <div className="container flex h-20 items-center justify-between">
           <div className="flex items-center gap-3">
-            <Link href="/" className="flex items-center gap-3">
+            <Link href="/" prefetch={true} className="flex items-center gap-3">
               <motion.div
                 initial={{ rotate: 0 }}
                 animate={{ rotate: [0, 10, -10, 0] }}
@@ -71,6 +71,7 @@ export default function MainHeader({ mobileMenuOpen, setMobileMenuOpen }: MainHe
 
           <nav className="hidden md:flex items-center gap-8">            <Link
               href="/"
+              prefetch={true}
               className="text-sm font-medium text-neo-mint dark:text-purist-blue transition-colors hover:text-neo-mint/80 dark:hover:text-purist-blue/80 relative group"
             >
               <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-neo-mint to-purist-blue group-hover:w-full transition-all duration-300"></span>
@@ -78,6 +79,7 @@ export default function MainHeader({ mobileMenuOpen, setMobileMenuOpen }: MainHe
             </Link>
             <Link
               href="/community"
+              prefetch={true}
               className="text-sm font-medium transition-colors hover:text-neo-mint dark:hover:text-purist-blue relative group"
             >
               <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-neo-mint to-purist-blue group-hover:w-full transition-all duration-300"></span>
@@ -85,6 +87,7 @@ export default function MainHeader({ mobileMenuOpen, setMobileMenuOpen }: MainHe
             </Link>
             <Link
               href="/resources"
+              prefetch={true}
               className="text-sm font-medium transition-colors hover:text-neo-mint dark:hover:text-purist-blue relative group"
             >
               <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-neo-mint to-purist-blue group-hover:w-full transition-all duration-300"></span>

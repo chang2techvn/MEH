@@ -1,9 +1,11 @@
 "use client"
 
+import { useRouter } from "next/navigation"
 import { useFeedData } from "@/hooks/use-feed-data"
 import { FeedSection as HomeFeedSection } from "@/components/home/feed-section"
 
 export default function CommunityFeedSection() {
+  const router = useRouter()
   const {
     posts,
     filteredPosts,
@@ -18,8 +20,10 @@ export default function CommunityFeedSection() {
   const refreshFeed = () => {
     // Refresh logic would go here
     console.log("Refreshing community feed...")
-    // Reload posts by resetting page and loading fresh data
-    window.location.reload()
+    // Instead of page reload, trigger a re-fetch of feed data
+    // This would require adding a refresh function to useFeedData hook
+    // For now, use router.refresh() which is more efficient than window.location.reload()
+    router.refresh()
   }
 
   const handleFilterChange = (filters: string[]) => {

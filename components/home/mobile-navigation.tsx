@@ -69,6 +69,7 @@ export function MobileNavigation({ isOpen, onClose }: MobileNavigationProps) {
                 <Link
                   key={item.href}
                   href={item.href}
+                  prefetch={true}
                   className="text-lg font-medium flex items-center gap-2 hover:text-neo-mint dark:hover:text-purist-blue transition-colors"
                   onClick={onClose}
                 >

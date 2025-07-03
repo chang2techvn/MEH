@@ -20,7 +20,8 @@ export function PostMedia({
 }: PostMediaProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
 
-  if (mediaType === "video" && mediaUrl) {
+  // Enhanced video support for "video", "ai-submission" mediaTypes with videoUrl
+  if ((mediaType === "video" || mediaType === "ai-submission") && mediaUrl) {
     return (
       <motion.div
         className="mt-4 rounded-xl overflow-hidden bg-white/20 dark:bg-gray-800/20 backdrop-blur-sm"
@@ -35,8 +36,11 @@ export function PostMedia({
             controls
             poster="/placeholder.svg?height=400&width=600"
             preload="none"
+            crossOrigin="anonymous"
           >
             <source src={mediaUrl} type="video/mp4" />
+            <source src={mediaUrl} type="video/webm" />
+            <source src={mediaUrl} type="video/ogg" />
             Your browser does not support the video tag.
           </video>
         </div>

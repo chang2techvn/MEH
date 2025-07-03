@@ -7,7 +7,8 @@ export function formatNewPost(postData: any) {
     userImage: postData.userImage || "/placeholder.svg?height=40&width=40",
     timeAgo: "Just now",
     content: postData.title || "New post",
-    mediaType: "ai-submission",
+    mediaType: postData.videoUrl ? "video" : "ai-submission", // Use "video" if videoUrl exists
+    mediaUrl: postData.videoUrl, // Add mediaUrl for video display
     likes: 0,
     comments: 0,
     isNew: true,

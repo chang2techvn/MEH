@@ -1,10 +1,12 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { toast } from "@/hooks/use-toast"
 
 export default function ServiceWorkerManager() {
+  const router = useRouter()
   const [waitingWorker, setWaitingWorker] = useState<ServiceWorker | null>(null)
   const [showReload, setShowReload] = useState(false)
 
@@ -43,7 +45,8 @@ export default function ServiceWorkerManager() {
         navigator.serviceWorker.addEventListener("controllerchange", () => {
           if (refreshing) return
           refreshing = true
-          window.location.reload()
+          // Use router.refresh() instead of window.location.reload() for better performance
+          router.refresh()
         })
       } catch (error) {
         console.error("Service worker registration failed:", error)

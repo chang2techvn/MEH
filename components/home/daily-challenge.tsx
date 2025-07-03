@@ -22,6 +22,7 @@ import { getVideoSettings } from "@/app/actions/admin-settings"
 import { compareVideoContentWithUserContent, type ContentComparison } from "@/app/actions/content-comparison"
 import { v4 as uuidv4 } from "uuid"
 import type { VideoEvaluation } from "@/lib/gemini-video-evaluation"
+import { uploadVideoToStorage, type VideoUploadResult } from "@/lib/video-storage"
 import { useAuthState } from "@/contexts/auth-context"
 
 interface DailyChallengeProps {
@@ -40,6 +41,9 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
   const [rewrittenContent, setRewrittenContent] = useState("")
   const [videoFile, setVideoFile] = useState<File | null>(null)
   const [videoPreviewUrl, setVideoPreviewUrl] = useState<string | null>(null)
+  const [videoStorageUrl, setVideoStorageUrl] = useState<string | null>(null)
+  const [isUploadingVideo, setIsUploadingVideo] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState(0)
   const [submitting, setSubmitting] = useState(false)  
   const [error, setError] = useState<string | null>(null)
   const [videoWatched, setVideoWatched] = useState(false)
@@ -163,12 +167,44 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
   }, [retryCount, loadingSettings])
 
   // Handle video file selection
-  const handleVideoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Handle video file selection
+  const handleVideoFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
+      console.log('🎥 Daily Challenge: Video file selected:', file.name, file.size, 'bytes')
       setVideoFile(file)
       const url = URL.createObjectURL(file)
       setVideoPreviewUrl(url)
+      
+      // Automatically upload to Supabase Storage
+      setIsUploadingVideo(true)
+      setUploadProgress(0)
+      setError(null)
+      console.log('🚀 Daily Challenge: Starting video upload to storage...')
+      
+      try {
+        const uploadResult = await uploadVideoToStorage(
+          file, 
+          userId,
+          (progress) => {
+            setUploadProgress(progress.percentage)
+          }
+        )
+        
+        if (uploadResult.success && uploadResult.publicUrl) {
+          setVideoStorageUrl(uploadResult.publicUrl)
+          console.log('✅ Daily Challenge: Video uploaded to storage:', uploadResult.publicUrl)
+        } else {
+          console.error('❌ Daily Challenge: Upload failed:', uploadResult.error)
+          throw new Error(uploadResult.error || 'Upload failed')
+        }
+      } catch (error) {
+        console.error('❌ Daily Challenge: Video upload failed:', error)
+        setError(`Failed to upload video: ${error instanceof Error ? error.message : 'Unknown error'}`)
+        // Keep the preview URL for local preview even if upload fails
+      } finally {
+        setIsUploadingVideo(false)
+      }
     }
   }
   // Handle next step
@@ -221,8 +257,16 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
         if (!videoFile) {
           setError("Please upload a video before proceeding.")
           return
+        }
+        if (isUploadingVideo) {
+          setError("Please wait for video upload to complete.")
+          return
+        }
+        if (!videoStorageUrl) {
+          setError("Video upload failed. Please try uploading again.")
+          return
         }        // Perform AI evaluation before proceeding to step 4
-        if (videoData && videoPreviewUrl) {
+        if (videoData && videoStorageUrl) {
           setIsEvaluating(true)
           setError(null)
           
@@ -236,8 +280,9 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
             const challengeContext = `Daily English Challenge - Original Video: "${videoData.title}" | Topic: ${videoData.topics?.join(', ') || 'General English Learning'} | User is responding to and creating content based on this original video.`
             
             // Evaluate with original video transcript as context and user's content as caption
+            // Use the Supabase Storage URL for AI evaluation
             const evaluation = await evaluateSubmissionForPublish(
-              videoPreviewUrl, 
+              videoStorageUrl, 
               richTextContent, 
               originalTranscript, 
               challengeContext
@@ -360,7 +405,17 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
       return
     }
 
-    if (!videoData || !richTextContent || !videoPreviewUrl) {
+    console.log('🚀 Daily Challenge: handlePublish called')
+    console.log('📊 Daily Challenge: videoData:', !!videoData)
+    console.log('📊 Daily Challenge: richTextContent:', !!richTextContent)
+    console.log('📊 Daily Challenge: videoStorageUrl:', videoStorageUrl)
+
+    if (!videoData || !richTextContent || !videoStorageUrl) {
+      console.error('❌ Daily Challenge: Missing required content:', {
+        videoData: !!videoData,
+        richTextContent: !!richTextContent, 
+        videoStorageUrl: !!videoStorageUrl
+      })
       setError("Missing required content for publishing.")
       return
     }
@@ -374,31 +429,39 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
     try {
       setSubmitting(true)
 
-      // Generate a unique ID for the post
-      const postId = uuidv4()
-      setPublishedPostId(postId)
-
-      console.log("Publishing post using stored AI evaluation:", videoEvaluation)      // Create community post using stored evaluation and authenticated user
-      await createCommunityPost(
+      console.log("Publishing post using stored AI evaluation:", videoEvaluation)      
+      
+      // Create community post using stored evaluation and authenticated user
+      console.log('💾 Daily Challenge: Creating community post with video URL:', videoStorageUrl)
+      const createdPost = await createCommunityPost(
         user.id, // Use authenticated user ID
         user.name || username,
         user.avatar || userImage,
         richTextContent,
-        videoPreviewUrl,
+        videoStorageUrl, // Use the Supabase Storage URL
         videoData.id,
         videoEvaluation // Use evaluation from step 3
-      )      // Dispatch a custom event to notify other components about the new post
+      )
+
+      console.log("✅ Daily Challenge: Post saved to Supabase:", createdPost.id)
+      console.log("✅ Daily Challenge: Post media_url:", createdPost.media_url)
+
+      // Use the real post ID from Supabase response
+      const postId = createdPost.id
+      setPublishedPostId(postId)
+
+      // Dispatch a custom event to notify other components about the new post
       if (typeof window !== "undefined") {
         const event = new CustomEvent("newPostPublished", { 
           detail: {
-            id: postId,
+            id: postId, // Use real post ID
             username: user.name || username,
             userImage: user.avatar || userImage,
             title: `Video Analysis - ${new Date().toLocaleDateString()}`,
             content: richTextContent,
-            videoUrl: videoPreviewUrl,
+            videoUrl: videoStorageUrl, // Use the Supabase Storage URL
             mediaType: 'ai-submission',
-            mediaUrl: videoPreviewUrl,
+            mediaUrl: videoStorageUrl, // Use the Supabase Storage URL
             likes: 0,
             comments: 0,
             createdAt: new Date().toISOString(),
@@ -406,7 +469,7 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
             videoEvaluation: videoEvaluation,
             submission: {
               type: 'video_submission',
-              videoUrl: videoPreviewUrl,
+              videoUrl: videoStorageUrl, // Use the Supabase Storage URL
               content: richTextContent,
               evaluation: videoEvaluation
             },
@@ -429,6 +492,7 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
 
   // Trigger file input click
   const triggerFileInput = () => {
+    console.log('🎬 Daily Challenge: triggerFileInput called')
     fileInputRef.current?.click()
   }
 
@@ -440,6 +504,9 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
     setRichTextContent("")
     setVideoFile(null)
     setVideoPreviewUrl(null)
+    setVideoStorageUrl(null)
+    setIsUploadingVideo(false)
+    setUploadProgress(0)
     setActiveStep(1)
     setProgress(25)
     setVideoWatched(false)
@@ -570,6 +637,15 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
                     <div className="aspect-video rounded-xl overflow-hidden mb-4">
                       <div className="relative w-full h-full">
                         <video className="w-full h-full object-contain" controls src={videoPreviewUrl} />
+                        {isUploadingVideo && (
+                          <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                            <div className="text-center text-white">
+                              <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
+                              <p className="text-sm">Uploading to storage...</p>
+                              <p className="text-xs">{uploadProgress}%</p>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   ) : (
@@ -585,13 +661,22 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
                           accept="video/*"
                           onChange={handleVideoFileChange}
                           className="hidden"
+                          disabled={isUploadingVideo}
                         />
                         <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                           <Button
                             onClick={triggerFileInput}
+                            disabled={isUploadingVideo}
                             className="bg-gradient-to-r from-neo-mint to-purist-blue hover:from-neo-mint/90 hover:to-purist-blue/90 text-white border-0"
                           >
-                            Upload Video
+                            {isUploadingVideo ? (
+                              <>
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                Uploading...
+                              </>
+                            ) : (
+                              "Upload Video"
+                            )}
                           </Button>
                         </motion.div>
                       </div>

@@ -69,6 +69,7 @@ export default function CommunityPage() {
   const [trendingTopics, setTrendingTopics] = useState<{ name: string; count: number }[]>([])
   const [showStoryCreator, setShowStoryCreator] = useState(false)
   const [windowWidth, setWindowWidth] = useState<number>(typeof window !== "undefined" ? window.innerWidth : 0)
+  const [highlightPostId, setHighlightPostId] = useState<string | null>(null)
 
   const [selectedDate, setSelectedDate] = useState<Date>()
   const [location, setLocation] = useState<string>("")
@@ -81,6 +82,20 @@ export default function CommunityPage() {
   const [taggedPeople, setTaggedPeople] = useState<string[]>([])
   const postFileInputRef = useRef<HTMLInputElement>(null!)
   const [storyViewers, setStoryViewers] = useState<StoryViewer[]>([])
+
+  // Extract highlight parameter from URL on mount
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const urlParams = new URLSearchParams(window.location.search)
+      const highlight = urlParams.get('highlight')
+      if (highlight) {
+        setHighlightPostId(highlight)
+        // Remove the parameter from URL after extracting
+        const newUrl = window.location.pathname
+        window.history.replaceState({}, '', newUrl)
+      }
+    }
+  }, [])
   
   // Load real data from Supabase
   const loadData = async () => {
@@ -163,23 +178,51 @@ export default function CommunityPage() {
         ])
       } else {
         setFeedPosts(postsData.map((post: any) => {
+          // Parse AI evaluation if it exists
+          let videoEvaluation = null
+          if (post.ai_evaluation) {
+            try {
+              videoEvaluation = typeof post.ai_evaluation === 'string' 
+                ? JSON.parse(post.ai_evaluation) 
+                : post.ai_evaluation
+            } catch (error) {
+              console.error('Error parsing AI evaluation:', error)
+            }
+          }
+
+          // Determine media type with AI submission support
+          let mediaType: "video" | "text" | "none" | "ai-submission" | "youtube" | "image" = 'text'
+          if (post.media_url) {
+            if (post.media_url.includes('youtube') || post.post_type === 'youtube') {
+              mediaType = 'youtube'
+            } else if (videoEvaluation) {
+              mediaType = 'ai-submission' // Video with AI evaluation (from challenges)
+            } else {
+              mediaType = 'video' // Regular video without AI evaluation
+            }
+          } else {
+            mediaType = 'text' // Text-only posts
+          }
+
           return {
             id: post.id, // Keep as string UUID instead of converting to number
             username: post.username || 'Unknown User', // Use username directly from posts table
             userImage: post.user_image || "/placeholder.svg?height=40&width=40", // Use user_image directly from posts table
             timeAgo: formatTimeAgo(post.created_at || ''),
             content: post.content || '',
-            mediaType: post.post_type === 'video' ? 'video' : 
-                      post.post_type === 'youtube' ? 'youtube' : 
-                      post.post_type === 'ai-submission' ? 'ai-submission' :
-                      post.media_url ? 'image' : 'text',
+            mediaType,
             mediaUrl: post.media_url,
             youtubeVideoId: post.post_type === 'youtube' ? extractYouTubeId(post.media_url || '') : undefined,
             textContent: post.post_type === 'text' ? post.content : undefined,
             likes: post.likes_count || 0,          
             comments: post.comments_count || 0,
-            submission: post.submission_data ? JSON.parse(post.submission_data) : undefined,
-            videoEvaluation: post.video_evaluation ? JSON.parse(post.video_evaluation) : undefined,
+            submission: videoEvaluation ? {
+              type: 'video_submission',
+              videoUrl: post.media_url,
+              content: post.content,
+              evaluation: videoEvaluation
+            } : undefined,
+            videoEvaluation: videoEvaluation,
             isNew: false
           }
         }))
@@ -341,12 +384,78 @@ export default function CommunityPage() {
       setWindowWidth(window.innerWidth)
     }
 
+    // Listen for new posts published from challenges
+    const handleNewPostPublished = (event: CustomEvent) => {
+      console.log("🎉 New post published event received:", event.detail)
+      
+      const newPost = {
+        id: event.detail.id,
+        username: event.detail.username,
+        userImage: event.detail.userImage,
+        timeAgo: 'Just now',
+        content: event.detail.content,
+        mediaType: event.detail.mediaType || 'ai-submission',
+        mediaUrl: event.detail.videoUrl || event.detail.mediaUrl,
+        youtubeVideoId: undefined,
+        textContent: undefined,
+        likes: 0,
+        comments: 0,
+        submission: event.detail.submission,
+        videoEvaluation: event.detail.videoEvaluation,
+        isNew: true
+      }
+
+      // Add new post to the beginning of the feed
+      setFeedPosts(prev => [newPost, ...prev])
+      
+      // Show success toast
+      toast({
+        title: "New post published!",
+        description: "Your post has been added to the community feed.",
+      })
+    }
+
     window.addEventListener("resize", handleResize)
+    window.addEventListener("newPostPublished", handleNewPostPublished as EventListener)
     
     return () => {
       window.removeEventListener("resize", handleResize)
+      window.removeEventListener("newPostPublished", handleNewPostPublished as EventListener)
     }
   }, []) // Remove viewedStories dependency to prevent infinite loop
+
+  // Scroll to highlighted post after data is loaded
+  useEffect(() => {
+    if (highlightPostId && feedPosts.length > 0 && !loading) {
+      const scrollToPost = () => {
+        const postElement = document.getElementById(`post-${highlightPostId}`)
+        if (postElement) {
+          postElement.scrollIntoView({ 
+            behavior: "smooth", 
+            block: "center" 
+          })
+          
+          // Add highlight effect
+          postElement.classList.add('ring-2', 'ring-neo-mint', 'dark:ring-purist-blue')
+          
+          // Remove highlight after 3 seconds
+          setTimeout(() => {
+            postElement.classList.remove('ring-2', 'ring-neo-mint', 'dark:ring-purist-blue')
+          }, 3000)
+          
+          // Show toast notification
+          toast({
+            title: "📍 Your post is here!",
+            description: "Successfully navigated to your published post.",
+            duration: 3000,
+          })
+        }
+      }
+      
+      // Delay scroll to ensure all posts are rendered
+      setTimeout(scrollToPost, 500)
+    }
+  }, [highlightPostId, feedPosts, loading])
 
   // Set mounted to true for client-side rendering
   useEffect(() => {
@@ -676,22 +785,23 @@ export default function CommunityPage() {
                       .map((_, i) => <PostSkeleton key={i} />)
                   ) : feedPosts.length > 0 ? (
                     feedPosts.map((post) => (
-                      <FeedPost
-                        key={post.id}
-                        username={post.username}
-                        userImage={post.userImage}
-                        timeAgo={post.timeAgo}
-                        content={post.content}
-                        mediaType={post.mediaType}
-                        mediaUrl={post.mediaUrl}
-                        youtubeVideoId={post.youtubeVideoId}
-                        textContent={post.textContent}
-                        likes={post.likes}
-                        comments={post.comments}
-                        submission={post.submission}
-                        videoEvaluation={post.videoEvaluation}
-                        isNew={post.isNew}
-                      />
+                      <div key={post.id} id={`post-${post.id}`}>
+                        <FeedPost
+                          username={post.username}
+                          userImage={post.userImage}
+                          timeAgo={post.timeAgo}
+                          content={post.content}
+                          mediaType={post.mediaType}
+                          mediaUrl={post.mediaUrl}
+                          youtubeVideoId={post.youtubeVideoId}
+                          textContent={post.textContent}
+                          likes={post.likes}
+                          comments={post.comments}
+                          submission={post.submission}
+                          videoEvaluation={post.videoEvaluation}
+                          isNew={post.isNew}
+                        />
+                      </div>
                     ))
                   ) : (
                     <FeedEmptyState

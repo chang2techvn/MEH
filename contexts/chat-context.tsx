@@ -272,7 +272,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
               // New conversation participation, reload conversations
               // Use setTimeout to avoid circular dependency
               setTimeout(() => {
-                window.location.reload() // Simple reload for new conversations
+                loadConversations() // Refetch conversations instead of full reload
               }, 100)
             }
           }

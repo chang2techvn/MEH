@@ -82,10 +82,9 @@ export function useFeedData() {
           title: post.title,
           content: post.content,
           videoUrl: post.media_url,
-          youtubeVideoId: post.post_type === 'youtube' ? extractYouTubeId(post.media_url || '') : undefined,          mediaType: post.ai_evaluation ? 'ai-submission' :
-                    post.post_type === 'video' ? 'video' : 
-                    post.post_type === 'youtube' ? 'youtube' : 
-                    post.media_url ? 'image' : 'text',
+          youtubeVideoId: post.post_type === 'youtube' ? extractYouTubeId(post.media_url || '') : undefined,          mediaType: post.media_url ? 
+                    (post.media_url.includes('youtube') || post.post_type === 'youtube' ? 'youtube' :
+                     post.ai_evaluation ? 'ai-submission' : 'video') : 'text',
           mediaUrl: post.media_url,
           textContent: post.post_type === 'text' ? post.content : undefined,
           likes: post.likes_count || 0,

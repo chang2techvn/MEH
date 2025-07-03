@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import { Bell, Check, Search, Plus, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -36,6 +37,7 @@ interface NotificationItem {
 
 export default function NotificationsDropdown() {
   const { user, isAuthenticated } = useAuthState()
+  const router = useRouter()
   const [isOpen, setIsOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [notifications, setNotifications] = useState<NotificationItem[]>([])
@@ -291,9 +293,21 @@ export default function NotificationsDropdown() {
   const handleNotificationClick = (notification: NotificationItem) => {
     markAsRead(notification.id)
     
-    // Navigate to link if provided
+    // Navigate to link if provided using Next.js router
     if (notification.link) {
-      window.location.href = notification.link
+      try {
+        // Check if it's an internal link (starts with / or is relative)
+        if (notification.link.startsWith('/')) {
+          router.push(notification.link)
+        } else {
+          // External link - open in new tab
+          window.open(notification.link, '_blank', 'noopener,noreferrer')
+        }
+      } catch (error) {
+        console.error('Navigation error:', error)
+        // Fallback to window.location for external links
+        window.location.href = notification.link
+      }
     }
     
     setIsOpen(false)

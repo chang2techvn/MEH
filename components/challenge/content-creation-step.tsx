@@ -109,23 +109,6 @@ export default function ContentCreationStep({
               <span>Start writing to see character count</span>
             )}
           </div>
-          <Button
-            onClick={handleSave}
-            disabled={isSaving || content.trim().length < 100}
-            className="bg-gradient-to-r from-neo-mint to-purist-blue hover:from-neo-mint/90 hover:to-purist-blue/90 text-white border-0"
-          >
-            {isSaving ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Saving...
-              </>
-            ) : (
-              <>
-                <Save className="mr-2 h-4 w-4" />
-                Save Content
-              </>
-            )}
-          </Button>
         </div>
       </div>
     </Card>

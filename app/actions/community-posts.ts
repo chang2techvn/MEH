@@ -70,7 +70,7 @@ export async function createCommunityPost(
       post_type: videoUrl ? 'video' : 'text', // Use 'video' for posts with video, 'text' for text-only
       media_url: videoUrl,
       original_video_id: originalVideoId,
-      ai_evaluation: aiEvaluation ? JSON.stringify(aiEvaluation) : null,
+      ai_evaluation: aiEvaluation ? JSON.stringify(aiEvaluation) : null, // Store as JSON string
       score: aiEvaluation?.score || null,
       is_public: true,
       likes_count: 0,
