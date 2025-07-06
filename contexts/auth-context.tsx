@@ -73,24 +73,68 @@ export function AuthProvider({ children }: AuthProviderProps) {
         }
 
         if (session?.user) {
-          // For now, just use Supabase auth user data
-          const userData: User = {
-            id: session.user.id,
-            email: session.user.email!,
-            name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0],
-            avatar: session.user.user_metadata?.avatar_url,
-            role: 'MEMBER',
-            isActive: true,
-            joinedAt: new Date(session.user.created_at),
-            lastActive: new Date(),
+          // Fetch user data from profiles table first
+          try {
+            const { data: profileData, error: profileError } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('user_id', session.user.id)
+              .single()
+
+            if (profileData && !profileError) {
+              // Use profile data from database
+              const userData: User = {
+                id: session.user.id,
+                email: session.user.email!,
+                name: profileData.full_name || session.user.email?.split('@')[0],
+                avatar: profileData.avatar_url,
+                role: 'MEMBER',
+                bio: profileData.bio,
+                isActive: true,
+                joinedAt: new Date(session.user.created_at),
+                lastActive: new Date(),
+              }
+              console.log('🎨 Auth Context - Setting user with avatar:', {
+                name: userData.name,
+                avatar: userData.avatar,
+                profileData: profileData
+              })
+              setUser(userData)
+            } else {
+              // Fallback to auth user data if profile not found
+              const userData: User = {
+                id: session.user.id,
+                email: session.user.email!,
+                name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0],
+                avatar: session.user.user_metadata?.avatar_url,
+                role: 'MEMBER',
+                isActive: true,
+                joinedAt: new Date(session.user.created_at),
+                lastActive: new Date(),
+              }
+              setUser(userData)
+            }
+          } catch (error) {
+            console.log('Error fetching profile data, using auth data:', error)
+            // Fallback to auth user data
+            const userData: User = {
+              id: session.user.id,
+              email: session.user.email!,
+              name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0],
+              avatar: session.user.user_metadata?.avatar_url,
+              role: 'MEMBER',
+              isActive: true,
+              joinedAt: new Date(session.user.created_at),
+              lastActive: new Date(),
+            }
+            setUser(userData)
           }
-          setUser(userData)
           
           // Try to sync with database, but don't fail if it doesn't work
           try {
             await createUserInDatabase(session.user)
           } catch (error) {
-            console.log('Database sync failed, continuing with auth-only user:', error)
+            console.log('Database sync failed, continuing with existing user:', error)
           }
         }
       } catch (error) {
@@ -108,18 +152,57 @@ export function AuthProvider({ children }: AuthProviderProps) {
         console.log('Auth state changed:', event, session?.user?.email)
         
         if (event === 'SIGNED_IN' && session?.user) {
-          // Create user data from Supabase auth
-          const userData: User = {
-            id: session.user.id,
-            email: session.user.email!,
-            name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0],
-            avatar: session.user.user_metadata?.avatar_url,
-            role: 'MEMBER',
-            isActive: true,
-            joinedAt: new Date(session.user.created_at),
-            lastActive: new Date(),
+          // Fetch user data from profiles table first
+          try {
+            const { data: profileData, error: profileError } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('user_id', session.user.id)
+              .single()
+
+            if (profileData && !profileError) {
+              // Use profile data from database
+              const userData: User = {
+                id: session.user.id,
+                email: session.user.email!,
+                name: profileData.full_name || session.user.email?.split('@')[0],
+                avatar: profileData.avatar_url,
+                role: 'MEMBER',
+                bio: profileData.bio,
+                isActive: true,
+                joinedAt: new Date(session.user.created_at),
+                lastActive: new Date(),
+              }
+              setUser(userData)
+            } else {
+              // Fallback to auth user data if profile not found
+              const userData: User = {
+                id: session.user.id,
+                email: session.user.email!,
+                name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0],
+                avatar: session.user.user_metadata?.avatar_url,
+                role: 'MEMBER',
+                isActive: true,
+                joinedAt: new Date(session.user.created_at),
+                lastActive: new Date(),
+              }
+              setUser(userData)
+            }
+          } catch (error) {
+            console.log('Error fetching profile data on sign in, using auth data:', error)
+            // Fallback to auth user data
+            const userData: User = {
+              id: session.user.id,
+              email: session.user.email!,
+              name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0],
+              avatar: session.user.user_metadata?.avatar_url,
+              role: 'MEMBER',
+              isActive: true,
+              joinedAt: new Date(session.user.created_at),
+              lastActive: new Date(),
+            }
+            setUser(userData)
           }
-          setUser(userData)
           
           // Try to sync with database in background
           try {

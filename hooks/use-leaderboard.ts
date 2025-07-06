@@ -27,8 +27,8 @@ export function useLeaderboard() {
         // Transform data to match LeaderboardUser interface
         const transformedData: LeaderboardUser[] = rawData.map((user: any, index: number) => ({
           id: user.id,
-          name: user.profiles?.full_name || 'Unknown User',
-          avatar: user.profiles?.avatar_url,
+          name: user.profiles?.[0]?.full_name || 'Unknown User',
+          avatar: user.profiles?.[0]?.avatar_url,
           rank: index + 1, // Assign rank based on order
           points: user.points || 0,
           level: user.level || 'Beginner',

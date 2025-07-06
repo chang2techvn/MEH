@@ -960,7 +960,9 @@ export default function CommunityPage() {
                                 >
                                   <Avatar className="h-8 w-8">
                                     <AvatarImage src={viewer.image || "/placeholder.svg"} />
-                                    <AvatarFallback>{viewer.name.substring(0, 2)}</AvatarFallback>
+                                    <AvatarFallback className="bg-gradient-to-br from-neo-mint to-purist-blue text-white">
+                                      {viewer.name ? viewer.name.split(' ').map(n => n[0]).join('').toUpperCase() : 'U'}
+                                    </AvatarFallback>
                                   </Avatar>
                                   <div className="flex-1 min-w-0">
                                     <p className="text-sm font-medium truncate">{viewer.name}</p>

@@ -26,6 +26,8 @@ export default function ChatWindow({ conversationId }: ChatWindowProps) {
     updateWindowPosition,
     setActiveConversation,
     activeConversation,
+    getChatWindowWidth,
+    isMobile,
   } = useChat()
 
   const conversation = getConversationById(conversationId)
@@ -84,9 +86,15 @@ export default function ChatWindow({ conversationId }: ChatWindowProps) {
 
   if (!conversation || !otherParticipant) return null
 
-  // Determine window dimensions based on state
-  let windowWidth = isExpanded ? "500px" : "350px"
-  let windowHeight = isExpanded ? "80vh" : "450px"
+  // Determine window dimensions based on state and screen size
+  const getResponsiveWidth = () => {
+    if (isFullscreen) return "100vw"
+    if (isExpanded) return Math.min(500, getChatWindowWidth() * 1.4) + "px"
+    return getChatWindowWidth() + "px"
+  }
+  
+  let windowWidth = getResponsiveWidth()
+  let windowHeight = isExpanded ? "80vh" : (isMobile ? "70vh" : "450px")
   let windowPosition = { ...position }
 
   // Override for fullscreen mode
@@ -148,7 +156,9 @@ export default function ChatWindow({ conversationId }: ChatWindowProps) {
           <div className="relative">
             <Avatar className="h-9 w-9 border border-white/20 dark:border-gray-800/20">
               <AvatarImage src={otherParticipant.avatar || "/placeholder.svg"} alt={otherParticipant.name} />
-              <AvatarFallback>{otherParticipant.name.substring(0, 2).toUpperCase()}</AvatarFallback>
+              <AvatarFallback className="bg-gradient-to-br from-neo-mint to-purist-blue text-white">
+                {otherParticipant.name ? otherParticipant.name.split(' ').map(n => n[0]).join('').toUpperCase() : 'U'}
+              </AvatarFallback>
             </Avatar>
             <span
               className={`absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-white dark:border-gray-900 ${
@@ -258,7 +268,9 @@ export default function ChatWindow({ conversationId }: ChatWindowProps) {
             <div className="flex gap-2 max-w-[80%]">
               <Avatar className="h-8 w-8 mt-1">
                 <AvatarImage src={otherParticipant.avatar || "/placeholder.svg"} alt={otherParticipant.name} />
-                <AvatarFallback>{otherParticipant.name.substring(0, 2).toUpperCase()}</AvatarFallback>
+                <AvatarFallback className="bg-gradient-to-br from-neo-mint to-purist-blue text-white">
+                  {otherParticipant.name ? otherParticipant.name.split(' ').map(n => n[0]).join('').toUpperCase() : 'U'}
+                </AvatarFallback>
               </Avatar>
               <div className="rounded-lg p-3 bg-white/20 dark:bg-gray-800/20">
                 <div className="flex space-x-1">

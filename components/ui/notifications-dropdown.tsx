@@ -420,7 +420,9 @@ export default function NotificationsDropdown() {
                             src={notification.sender.avatar || "/placeholder.svg"}
                             alt={notification.sender.name}
                           />
-                          <AvatarFallback>{notification.sender.name.substring(0, 2).toUpperCase()}</AvatarFallback>
+                          <AvatarFallback className="bg-gradient-to-br from-neo-mint to-purist-blue text-white">
+                            {notification.sender.name ? notification.sender.name.split(' ').map(n => n[0]).join('').toUpperCase() : 'U'}
+                          </AvatarFallback>
                         </Avatar>
                         <span
                           className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white dark:border-gray-900 ${

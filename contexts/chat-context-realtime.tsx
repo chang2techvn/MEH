@@ -60,6 +60,9 @@ interface ChatActionsContextType {
   loadConversations: () => Promise<void>
   cleanupOldConversations: () => void
   sendTypingIndicator: (conversationId: string, isTyping: boolean) => void
+  getChatWindowWidth: () => number
+  getMaxChatWindows: () => number
+  isMobile: boolean
 }
 
 // Create separate contexts
@@ -77,6 +80,70 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const [windowPositions, setWindowPositions] = useState<Record<string, WindowPosition>>({})
   const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
+  
+  // Screen size management for responsive chat windows
+  const [screenWidth, setScreenWidth] = useState<number>(0)
+  const [isMobile, setIsMobile] = useState<boolean>(false)
+
+  // Calculate max chat windows based on screen size
+  const getMaxChatWindows = useCallback(() => {
+    if (typeof window === 'undefined') return 3
+    
+    const width = window.innerWidth
+    if (width < 768) return 1 // Mobile: 1 window
+    if (width < 1024) return 2 // Tablet: 2 windows  
+    if (width < 1440) return 3 // Small desktop: 3 windows
+    if (width < 1920) return 4 // Medium desktop: 4 windows
+    return 5 // Large desktop: 5 windows
+  }, [])
+
+  // Calculate chat window width based on screen size and number of windows
+  const getChatWindowWidth = useCallback(() => {
+    if (typeof window === 'undefined') return 350
+    
+    const width = window.innerWidth
+    const maxWindows = getMaxChatWindows()
+    const openWindows = openChatWindows.length
+    
+    if (width < 768) return Math.min(width - 20, 350) // Mobile: almost full width
+    
+    // Desktop: adjust width based on number of windows
+    const availableWidth = width - 100 // Leave some margin
+    const idealWidth = 350
+    const minWidth = 280
+    
+    if (openWindows <= maxWindows) {
+      return idealWidth
+    }
+    
+    // Auto-shrink when too many windows
+    const calculatedWidth = Math.floor(availableWidth / openWindows)
+    return Math.max(calculatedWidth, minWidth)
+  }, [openChatWindows.length, getMaxChatWindows])
+
+  // Handle screen resize
+  useEffect(() => {
+    const handleResize = () => {
+      const width = window.innerWidth
+      setScreenWidth(width)
+      setIsMobile(width < 768)
+      
+      // Auto-minimize excess windows if screen becomes smaller
+      const maxWindows = getMaxChatWindows()
+      if (openChatWindows.length > maxWindows) {
+        const excessWindows = openChatWindows.slice(maxWindows)
+        setMinimizedChatWindows(prev => [...prev, ...excessWindows])
+        setOpenChatWindows(prev => prev.slice(0, maxWindows))
+      }
+    }
+
+    // Initial call
+    handleResize()
+    
+    // Add event listener
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [openChatWindows.length, getMaxChatWindows])
 
   // Realtime subscriptions management
   const channelsRef = useRef<Map<string, RealtimeChannel>>(new Map())
@@ -808,44 +875,51 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     })
   }, [openChatWindows, minimizedChatWindows])
 
-  // Window position management
+  // Window position management with bottom-right alignment
   const calculateNewWindowPosition = useCallback((conversationId: string): WindowPosition => {
-    // Default position for the first window
-    if (Object.keys(windowPositions).length === 0) {
-      return {
-        x: Math.max(80, Math.min(window.innerWidth - 380, window.innerWidth / 2 - 175)),
-        y: Math.max(0, Math.min(window.innerHeight - 450, window.innerHeight / 2 - 225)),
-      }
-    }
-
     // If this window already has a position, return it
     if (windowPositions[conversationId]) {
       return windowPositions[conversationId]
     }
 
-    // Find a position that doesn't overlap with existing windows
-    const existingPositions = Object.values(windowPositions)
-    const windowWidth = 350
-    const windowHeight = 450
+    // Use responsive width calculation
+    const windowWidth = getChatWindowWidth()
+    const windowHeight = isMobile ? Math.min(500, window.innerHeight * 0.8) : 450
     const screenWidth = window.innerWidth
     const screenHeight = window.innerHeight
-    const padding = 20
-
-    // Simplified position calculation for better performance
-    const cols = Math.floor((screenWidth - padding) / (windowWidth + padding))
-    const rows = Math.floor((screenHeight - padding) / (windowHeight + padding))
-    const totalPositions = cols * rows
-
-    // Use modulo to cycle through positions
-    const positionIndex = Object.keys(windowPositions).length % totalPositions
-    const row = Math.floor(positionIndex / cols)
-    const col = positionIndex % cols
+    const padding = isMobile ? 10 : 20
+    const bottomPadding = isMobile ? 100 : 100 // Extra space for minimized chat bar (increased from 70/80)
+    
+    // On mobile, center the single window
+    if (isMobile) {
+      return {
+        x: (screenWidth - windowWidth) / 2,
+        y: Math.max(padding, (screenHeight - windowHeight) / 2 - 50), // Higher on mobile to avoid overlap
+      }
+    }
+    
+    // Desktop: Calculate how many windows can fit horizontally
+    const maxWindowsHorizontal = Math.floor((screenWidth - padding * 2) / (windowWidth + padding))
+    
+    // Get current number of open windows
+    const existingWindows = openChatWindows.length
+    
+    // Calculate position index for current window
+    const horizontalIndex = existingWindows % maxWindowsHorizontal
+    
+    // Position from right to left at bottom, above minimized chat bar
+    const x = screenWidth - padding - (horizontalIndex + 1) * (windowWidth + padding)
+    const y = screenHeight - bottomPadding - windowHeight
+    
+    // Ensure window stays within screen bounds
+    const finalX = Math.max(padding, Math.min(x, screenWidth - windowWidth - padding))
+    const finalY = Math.max(padding, Math.min(y, screenHeight - windowHeight - bottomPadding))
 
     return {
-      x: padding + col * (windowWidth + padding),
-      y: padding + row * (windowHeight + padding),
+      x: finalX,
+      y: finalY,
     }
-  }, [windowPositions])
+  }, [windowPositions, getChatWindowWidth, isMobile, openChatWindows.length])
 
   // Mark conversation as read
   const markConversationAsRead = useCallback(async (conversationId: string) => {
@@ -908,8 +982,26 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const openChatWindow = useCallback(async (conversationId: string) => {
+    const maxWindows = getMaxChatWindows()
+    
     setOpenChatWindows(prev => {
       if (prev.includes(conversationId)) return prev
+      
+      // Check if we need to limit windows
+      if (prev.length >= maxWindows) {
+        // On mobile, close the current window to open new one
+        if (isMobile) {
+          // Move current window to minimized
+          setMinimizedChatWindows(minimized => [...minimized, ...prev])
+          return [conversationId]
+        } else {
+          // On desktop, minimize the oldest window
+          const oldestWindow = prev[0]
+          setMinimizedChatWindows(minimized => [...minimized, oldestWindow])
+          return [...prev.slice(1), conversationId]
+        }
+      }
+      
       return [...prev, conversationId]
     })
     
@@ -922,9 +1014,49 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       updateWindowPosition(conversationId, position)
     }
 
+    // Rearrange all windows to ensure proper positioning and avoid overlap
+    setTimeout(() => {
+      // Call rearrangeAllWindows without adding it to dependencies to avoid circular dependency
+      const openWindows = openChatWindows
+      if (openWindows.length === 0) return
+
+      const windowWidth = getChatWindowWidth()
+      const windowHeight = isMobile ? Math.min(500, window.innerHeight * 0.8) : 450
+      const screenWidth = window.innerWidth
+      const screenHeight = window.innerHeight
+      const padding = isMobile ? 10 : 20
+      const bottomPadding = isMobile ? 100 : 100
+
+      const newPositions: Record<string, WindowPosition> = {}
+      
+      if (isMobile) {
+        if (openWindows.length > 0) {
+          newPositions[openWindows[0]] = {
+            x: (screenWidth - windowWidth) / 2,
+            y: Math.max(padding, (screenHeight - windowHeight) / 2 - 50),
+          }
+        }
+      } else {
+        openWindows.forEach((conversationId, index) => {
+          const x = screenWidth - padding - (index + 1) * (windowWidth + padding)
+          const y = screenHeight - bottomPadding - windowHeight
+          
+          const finalX = Math.max(padding, Math.min(x, screenWidth - windowWidth - padding))
+          const finalY = Math.max(padding, Math.min(y, screenHeight - windowHeight - bottomPadding))
+
+          newPositions[conversationId] = {
+            x: finalX,
+            y: finalY,
+          }
+        })
+      }
+
+      setWindowPositions(prev => ({ ...prev, ...newPositions }))
+    }, 100)
+
     // Mark conversation as read when opened
     await markConversationAsRead(conversationId)
-  }, [windowPositions, calculateNewWindowPosition, updateWindowPosition, markConversationAsRead])
+  }, [windowPositions, calculateNewWindowPosition, updateWindowPosition, markConversationAsRead, getMaxChatWindows, isMobile, getChatWindowWidth, openChatWindows])
 
   const closeChatWindow = useCallback((conversationId: string) => {
     setOpenChatWindows(prev => prev.filter(id => id !== conversationId))
@@ -1113,29 +1245,64 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     }
   }, [currentUser])
 
+  // Rearrange all open windows to follow the right-to-left, bottom-to-top layout
   const rearrangeAllWindows = useCallback(() => {
-    const windowWidth = 350
-    const windowHeight = 450
+    const openWindows = openChatWindows
+    if (openWindows.length === 0) return
+
+    const windowWidth = getChatWindowWidth()
+    const windowHeight = isMobile ? Math.min(500, window.innerHeight * 0.8) : 450
     const screenWidth = window.innerWidth
     const screenHeight = window.innerHeight
-    const padding = 20
+    const padding = isMobile ? 10 : 20
+    const bottomPadding = isMobile ? 100 : 100 // Match the padding from calculateNewWindowPosition
 
-    const cols = Math.floor((screenWidth - padding) / (windowWidth + padding))
-    
     const newPositions: Record<string, WindowPosition> = {}
     
-    openChatWindows.forEach((conversationId, index) => {
-      const row = Math.floor(index / cols)
-      const col = index % cols
-      
-      newPositions[conversationId] = {
-        x: padding + col * (windowWidth + padding),
-        y: padding + row * (windowHeight + padding),
+    if (isMobile) {
+      // On mobile, position the single window in center but above minimized chat bar
+      if (openWindows.length > 0) {
+        newPositions[openWindows[0]] = {
+          x: (screenWidth - windowWidth) / 2,
+          y: Math.max(padding, (screenHeight - windowHeight) / 2 - 50), // Higher to avoid overlap
+        }
       }
-    })
+    } else {
+      // Desktop: arrange windows from right to left at bottom
+      openWindows.forEach((conversationId, index) => {
+        const x = screenWidth - padding - (index + 1) * (windowWidth + padding)
+        const y = screenHeight - bottomPadding - windowHeight
+        
+        // Ensure window stays within screen bounds
+        const finalX = Math.max(padding, Math.min(x, screenWidth - windowWidth - padding))
+        const finalY = Math.max(padding, Math.min(y, screenHeight - windowHeight - bottomPadding))
+
+        newPositions[conversationId] = {
+          x: finalX,
+          y: finalY,
+        }
+      })
+    }
 
     setWindowPositions(prev => ({ ...prev, ...newPositions }))
-  }, [openChatWindows])
+  }, [openChatWindows, getChatWindowWidth, isMobile])
+
+  // Handle window resize to rearrange windows
+  useEffect(() => {
+    const handleResize = debounce(() => {
+      rearrangeAllWindows()
+    }, 300)
+
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [rearrangeAllWindows])
+
+  // Rearrange windows when number of open windows changes
+  useEffect(() => {
+    if (openChatWindows.length > 0) {
+      rearrangeAllWindows()
+    }
+  }, [openChatWindows.length, rearrangeAllWindows])
 
   // Load conversations on mount
   useEffect(() => {
@@ -1233,6 +1400,9 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     loadConversations,
     cleanupOldConversations,
     sendTypingIndicator,
+    getChatWindowWidth,
+    getMaxChatWindows,
+    isMobile,
   }), [
     openChatWindow,
     closeChatWindow,
@@ -1247,6 +1417,9 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     loadConversations,
     cleanupOldConversations,
     sendTypingIndicator,
+    getChatWindowWidth,
+    getMaxChatWindows,
+    isMobile,
   ])
 
   return (

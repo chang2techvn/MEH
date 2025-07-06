@@ -1,5 +1,6 @@
 "use client"
 
+import { useMemo } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { useChat } from "@/contexts/chat-context-realtime"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -7,12 +8,23 @@ import { Button } from "@/components/ui/button"
 import { Grid2X2 } from "lucide-react"
 
 export default function MinimizedChatBar() {
-  const { minimizedChatWindows, maximizeChatWindow, getConversationById, rearrangeAllWindows } = useChat()
+  const { minimizedChatWindows, maximizeChatWindow, getConversationById, rearrangeAllWindows, currentUser } = useChat()
 
-  if (minimizedChatWindows.length === 0) return null
+  // Filter out duplicates and invalid conversations
+  const validMinimizedWindows = useMemo(() => {
+    const uniqueIds = [...new Set(minimizedChatWindows)]
+    return uniqueIds.filter(conversationId => {
+      const conversation = getConversationById(conversationId)
+      if (!conversation) return false
+      const otherParticipant = conversation.participants.find((p) => p.id !== currentUser?.id)
+      return !!otherParticipant
+    })
+  }, [minimizedChatWindows, getConversationById, currentUser?.id])
+
+  if (validMinimizedWindows.length === 0) return null
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-40 flex justify-center pointer-events-none">
+    <div className="fixed bottom-0 left-0 right-0 z-30 flex justify-center pointer-events-none">
       <motion.div
         initial={{ y: 20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
@@ -20,12 +32,9 @@ export default function MinimizedChatBar() {
         className="flex items-center gap-2 p-2 pointer-events-auto"
       >
         <AnimatePresence>
-          {minimizedChatWindows.map((conversationId) => {
+          {validMinimizedWindows.map((conversationId) => {
             const conversation = getConversationById(conversationId)
-            if (!conversation) return null
-
-            const otherParticipant = conversation.participants.find((p) => p.id !== "current-user")
-            if (!otherParticipant) return null
+            const otherParticipant = conversation!.participants.find((p) => p.id !== currentUser?.id)!
 
             return (
               <motion.div
@@ -42,7 +51,9 @@ export default function MinimizedChatBar() {
                 <div className="relative">
                   <Avatar className="h-10 w-10 border-2 border-white dark:border-gray-900 shadow-md group-hover:ring-2 group-hover:ring-neo-mint dark:group-hover:ring-purist-blue transition-all">
                     <AvatarImage src={otherParticipant.avatar || "/placeholder.svg"} alt={otherParticipant.name} />
-                    <AvatarFallback>{otherParticipant.name.substring(0, 2).toUpperCase()}</AvatarFallback>
+                    <AvatarFallback className="bg-gradient-to-br from-neo-mint to-purist-blue text-white">
+                      {otherParticipant.name ? otherParticipant.name.split(' ').map(n => n[0]).join('').toUpperCase() : 'U'}
+                    </AvatarFallback>
                   </Avatar>
                   <span
                     className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white dark:border-gray-900 ${
@@ -55,7 +66,7 @@ export default function MinimizedChatBar() {
                   ></span>
                 </div>
 
-                {conversation.unreadCount > 0 && (
+                {conversation && conversation.unreadCount > 0 && (
                   <motion.span
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}

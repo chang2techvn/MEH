@@ -7,6 +7,7 @@ import { Search, Plus, X } from "lucide-react"
 import type { Conversation, User } from "./types"
 import { motion } from "framer-motion"
 import { Badge } from "@/components/ui/badge"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
 interface ConversationListProps {
   conversations: Conversation[]
@@ -128,11 +129,15 @@ export default function ConversationList({
                 onClick={() => onSelectConversation(conversation)}
               >
                 <div className="relative">
-                  <img
-                    src={otherParticipant.avatar || "/placeholder.svg"}
-                    alt={otherParticipant.name}
-                    className="h-12 w-12 rounded-full object-cover border"
-                  />
+                  <Avatar className="h-12 w-12 border">
+                    <AvatarImage 
+                      src={otherParticipant.avatar || "/placeholder.svg?height=48&width=48"} 
+                      alt={otherParticipant.name}
+                    />
+                    <AvatarFallback className="bg-gradient-to-br from-neo-mint to-purist-blue text-white">
+                      {otherParticipant.name ? otherParticipant.name.split(' ').map(n => n[0]).join('').toUpperCase() : 'U'}
+                    </AvatarFallback>
+                  </Avatar>
                   <span
                     className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-background ${getStatusColor(
                       otherParticipant.status,
