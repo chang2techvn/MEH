@@ -620,7 +620,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
               return null
             }
 
-            // Get other participants
+            // Get other participants with their profile data
             const { data: participantIds, error: participantIdsError } = await supabase
               .from('conversation_participants')
               .select('user_id')
@@ -629,20 +629,36 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
             let otherParticipants = []
             if (participantIds && participantIds.length > 0) {
-              // Then get user details for each participant
+              // Get user details with profiles for each participant
               for (const p of participantIds) {
-                const { data: userData, error: userError } = await supabase
+                const { data: userWithProfile, error: userError } = await supabase
                   .from('users')
-                  .select('id, name, avatar, last_active')
+                  .select(`
+                    id,
+                    email,
+                    last_active,
+                    profiles!inner(
+                      full_name,
+                      username,
+                      avatar_url
+                    )
+                  `)
                   .eq('id', p.user_id)
                   .single()
 
-                if (userData && !userError) {
+                if (userWithProfile && !userError && userWithProfile.profiles && userWithProfile.profiles.length > 0) {
+                  const profile = userWithProfile.profiles[0]
                   otherParticipants.push({
                     user_id: p.user_id,
-                    user: userData
+                    user: {
+                      id: userWithProfile.id,
+                      name: profile.full_name || profile.username || userWithProfile.email,
+                      avatar: profile.avatar_url || "/placeholder.svg?height=200&width=200",
+                      last_active: userWithProfile.last_active || new Date().toISOString()
+                    }
                   })
                 } else {
+                  console.log(`⚠️ Could not fetch profile for user ${p.user_id}:`, userError)
                   // Create a fallback participant
                   otherParticipants.push({
                     user_id: p.user_id,

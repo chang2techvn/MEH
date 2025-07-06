@@ -67,6 +67,7 @@ function MessageDropdownContent() {
     if (!currentUser || loadingUsers) return
     
     try {
+      console.log('🔍 loadAvailableUsers called:', { searchTerm, page, currentUser: currentUser?.id })
       setLoadingUsers(true)
       setError(null)
       
@@ -91,26 +92,51 @@ function MessageDropdownContent() {
         })
       })
       
-      // Build optimized query with search
+      // Build simple query from users table first
       let query = supabase
         .from('users')
-        .select('id, name, avatar, email, last_active')
+        .select(`
+          id, 
+          email, 
+          last_login,
+          profiles!inner (
+            username,
+            full_name,
+            avatar_url
+          )
+        `)
         .neq('id', currentUser.id)
         .eq('is_active', true)
-        .order('last_active', { ascending: false })
+        .order('last_login', { ascending: false })
         .range(offset, offset + pageSize - 1)
       
-      // Add search filters
+      // Add search filters - only search in users table fields for now
       if (searchTerm.trim()) {
-        query = query.or(`name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`)
+        query = query.ilike('email', `%${searchTerm}%`)
       }
       
-      // If we have existing conversations, exclude those users at database level
+      // If we have existing conversations, exclude those users
+      // Temporarily disable exclude logic for debugging
+      /*
       if (existingUserIds.size > 0) {
-        query = query.not('id', 'in', `(${Array.from(existingUserIds).join(',')})`)
+        const existingUserIdsList = Array.from(existingUserIds)
+        // Use individual .neq() for each ID since .not('in') has syntax issues
+        existingUserIdsList.forEach(userId => {
+          query = query.neq('id', userId)
+        })
       }
+      */
+      
+      console.log('🔍 Exclude logic temporarily disabled - showing all users for debugging')
       
       const { data: users, error } = await query
+      
+      console.log('📊 loadAvailableUsers result:', { 
+        usersFound: users?.length || 0, 
+        error: error?.message,
+        searchTerm,
+        page 
+      })
       
       if (error) {
         console.error('Error loading users:', error)
@@ -118,16 +144,19 @@ function MessageDropdownContent() {
         return
       }
       
-      // Process users with validation
+      // Process users with validation - fix data mapping
       const newUsers: User[] = (users || [])
         .filter(user => user?.id && user.id !== currentUser.id)
-        .map(user => ({
-          id: user.id,
-          name: user.name || user.email?.split('@')[0] || 'Unknown User',
-          avatar: user.avatar || '/placeholder.svg?height=200&width=200',
-          status: 'offline' as const,
-          lastActive: new Date(user.last_active || Date.now()),
-        }))
+        .map(user => {
+          const profile = user.profiles?.[0] || {}
+          return {
+            id: user.id,
+            name: profile.full_name || profile.username || user.email?.split('@')[0] || 'Unknown User',
+            avatar: profile.avatar_url || '/placeholder.svg?height=200&width=200',
+            status: 'offline' as const,
+            lastActive: new Date(user.last_login || Date.now()),
+          }
+        })
       
       // Update state based on page
       if (page === 0) {
@@ -137,6 +166,11 @@ function MessageDropdownContent() {
       }
       
       setHasMoreUsers(newUsers.length === pageSize)
+      
+      console.log('✅ loadAvailableUsers completed:', {
+        newUsersCount: newUsers.length,
+        totalAvailableUsers: page === 0 ? newUsers.length : availableUsers.length + newUsers.length
+      })
       
     } catch (error) {
       console.error('Error loading available users:', error)

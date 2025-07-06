@@ -452,7 +452,9 @@ export async function uploadVideoDirectAPI(
       
       xhr.addEventListener('load', () => {
         if (xhr.status === 200) {
-          const publicUrl = `http://127.0.0.1:54321/storage/v1/object/public/videos/${fileName}`
+          // Use cloud URL from environment variables
+          const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://127.0.0.1:54321'
+          const publicUrl = `${supabaseUrl}/storage/v1/object/public/videos/${fileName}`
           console.log('✅ Direct API upload successful:', publicUrl)
           resolve({
             success: true,
@@ -486,7 +488,9 @@ export async function uploadVideoDirectAPI(
       })
       
       xhr.timeout = 60000 // 60 seconds
-      xhr.open('POST', `http://127.0.0.1:54321/storage/v1/object/videos/${fileName}`)
+      // Use cloud URL from environment variables
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://127.0.0.1:54321'
+      xhr.open('POST', `${supabaseUrl}/storage/v1/object/videos/${fileName}`)
       xhr.setRequestHeader('Authorization', `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`)
       xhr.send(formData)
     })

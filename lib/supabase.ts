@@ -53,25 +53,46 @@ export const dbHelpers = {
       if (!user) {
         console.log('⚠️ No authenticated user, trying to get first user from database as fallback')
         
-        // Fallback: get first user from database for development
-        const { data: firstUser, error: fallbackError } = await supabase
+        // Fallback: get first user from database for development - with profile
+        const { data: firstUserWithProfile, error: fallbackError } = await supabase
           .from('users')
-          .select('*')
+          .select(`
+            *,
+            profiles!inner(
+              full_name,
+              username,
+              avatar_url
+            )
+          `)
           .limit(1)
           .single()
         
-        if (fallbackError || !firstUser) {
+        if (fallbackError || !firstUserWithProfile) {
           console.log('❌ No users found in database:', fallbackError)
           return null
         }
         
-        console.log('✅ Using fallback user:', firstUser.name, firstUser.email)
-        return firstUser
+        const profile = firstUserWithProfile.profiles?.[0]
+        const enrichedUser = {
+          ...firstUserWithProfile,
+          name: profile?.full_name || profile?.username || firstUserWithProfile.email,
+          avatar: profile?.avatar_url || firstUserWithProfile.avatar
+        }
+        
+        console.log('✅ Using fallback user:', enrichedUser.name, enrichedUser.email)
+        return enrichedUser
       }
       
       const { data, error } = await supabase
         .from('users')
-        .select('*')
+        .select(`
+          *,
+          profiles!inner(
+            full_name,
+            username,
+            avatar_url
+          )
+        `)
         .eq('id', user.id)
         .single()
       
@@ -80,8 +101,15 @@ export const dbHelpers = {
         return null
       }
       
-      console.log('✅ Found authenticated user:', data.name, data.email)
-      return data
+      const profile = data.profiles?.[0]
+      const enrichedUser = {
+        ...data,
+        name: profile?.full_name || profile?.username || data.email,
+        avatar: profile?.avatar_url || data.avatar
+      }
+      
+      console.log('✅ Found authenticated user:', enrichedUser.name, enrichedUser.email)
+      return enrichedUser
     } catch (err) {
       console.error('💥 Error in getCurrentUser:', err)
       return null

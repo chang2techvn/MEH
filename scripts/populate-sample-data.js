@@ -16,11 +16,16 @@
 const { createClient } = require('@supabase/supabase-js');
 require('dotenv').config({ path: '.env.local' });
 
-// Initialize Supabase client - use local development settings
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://127.0.0.1:54321';
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU';
+// Use Supabase CLOUD settings from .env.local  
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-console.log('🔗 Connecting to Supabase:', supabaseUrl);
+if (!supabaseUrl || !supabaseServiceKey) {
+    console.error('❌ Missing Supabase URL or Service Role Key in .env.local');
+    process.exit(1);
+}
+
+console.log('🔗 Connecting to Supabase CLOUD:', supabaseUrl);
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 

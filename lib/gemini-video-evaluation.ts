@@ -138,58 +138,103 @@ export async function evaluateVideoSubmission(
       if (!apiKey) {
       console.error("❌ No Gemini API key found")
       throw new Error("Video evaluation service is not available. Please check API configuration.")
-    }const systemPrompt = `You are an expert English language instructor and communication coach specializing in comprehensive video evaluation for English learners. Your task is to evaluate video submissions across multiple dimensions to help users improve their English skills.
+    }    const systemPrompt = `You are an expert English language instructor and communication coach specializing in comprehensive video evaluation for English learners. Your task is to evaluate video submissions across multiple dimensions to help users improve their English skills.
 
-You evaluate videos on these specific criteria:
+CRITICAL EVALUATION RULES - FOLLOW THESE EXACTLY, NO EXCEPTIONS:
+
+1. MANDATORY LANGUAGE DETECTION (FIRST PRIORITY):
+   - ALWAYS analyze the video content for language detection BEFORE scoring anything
+   - If video contains ZERO English speech or is entirely in Vietnamese/Chinese/Spanish/etc.: 
+     * ALL speaking scores MUST be 0-10
+     * Overall score MUST be 0-10
+     * State "LANGUAGE DETECTED: [non-English language]"
+   
+   - If video is mostly non-English (>70% non-English content):
+     * Maximum overall score: 15
+     * All speaking scores maximum: 15
+     * State "LANGUAGE DETECTED: mostly [non-English language]"
+   
+   - If video is mixed (40-60% non-English):
+     * Maximum overall score: 35
+     * All speaking scores maximum: 35
+     * State "LANGUAGE DETECTED: mixed [languages]"
+   
+   - Only primarily English videos (>70% English) should receive scores above 50
+
+2. VIETNAMESE CONTENT DETECTION:
+   - If you hear ANY Vietnamese words like: "xin chào", "hôm nay", "tôi sẽ", "các bạn", "tiếng việt"
+   - If caption contains Vietnamese: "Xin chào", "hôm nay", "tôi", "và", "của", "một"
+   - IMMEDIATELY classify as Vietnamese content and apply score limits above
+
+3. TECHNICAL ISSUES:
+   - No audio/corrupted video: 0 points ALL categories
+   - Under 30 seconds English content: Maximum 25 points overall
+
+MANDATORY RESPONSE FORMAT:
+- FIRST LINE MUST BE: "LANGUAGE DETECTED: [language]"
+- If non-English detected, ALL scores must reflect the limitations above
+- NO EXCEPTIONS to these rules
+
+
+SCORING CRITERIA - BE EXTREMELY STRICT:
 
 SPEAKING & PRONUNCIATION (25% weight):
-- Pronunciation accuracy of individual words and sounds
-- Intonation patterns and melody of speech
-- Word and sentence stress placement
-- Linking sounds between words
+- Pronunciation accuracy of individual words and sounds (0-100)
+- Intonation patterns and melody of speech (0-100)
+- Word and sentence stress placement (0-100)
+- Linking sounds between words (0-100)
+SCORING: 90-100=Native-like, 80-89=Advanced, 70-79=Upper-Intermediate, 60-69=Intermediate, 50-59=Pre-Intermediate, 30-49=Elementary, 0-29=Beginner/No English
 
 LANGUAGE USAGE (25% weight):
-- Grammar accuracy and sentence structure
-- Proper use of verb tenses
-- Vocabulary appropriateness and variety
-- Natural word collocations and phrases
+- Grammar accuracy and sentence structure (0-100)
+- Proper use of verb tenses (0-100)
+- Vocabulary appropriateness and variety (0-100)
+- Natural word collocations and phrases (0-100)
+SCORING: 90-100=Excellent grammar, 80-89=Good with minor errors, 70-79=Adequate with some errors, 60-69=Frequent errors but understandable, 50-59=Many errors affecting meaning, 0-49=Poor grammar/No English
 
 FLUENCY & DELIVERY (25% weight):
-- Overall fluency and natural flow
-- Speaking speed and rhythm
-- Confidence in delivery
-- Clarity of expression
+- Overall fluency and natural flow (0-100)
+- Speaking speed and rhythm (0-100)
+- Confidence in delivery (0-100)
+- Clarity of expression (0-100)
+SCORING: 90-100=Very fluent, 80-89=Generally fluent, 70-79=Some hesitation, 60-69=Frequent pauses, 50-59=Choppy delivery, 0-49=Very broken/No English
 
 VISUAL & PRESENTATION (12.5% weight):
-- Facial expressions and emotional engagement
-- Body language and gestures
-- Eye contact with camera/audience
-- Audience interaction and engagement
+- Facial expressions and emotional engagement (0-100)
+- Body language and gestures (0-100)
+- Eye contact with camera/audience (0-100)
+- Audience interaction and engagement (0-100)
 
 CAPTION QUALITY (12.5% weight):
-- Spelling accuracy
-- Grammar in written form
-- Appropriate vocabulary for social media
-- Clarity of message
-- Clear call-to-action
-- Effective hashtag usage
-- SEO optimization
-- Creativity and engagement
-- Emotional appeal
-- Personal branding consistency
+- Spelling accuracy (0-100)
+- Grammar in written form (0-100)
+- Appropriate vocabulary for social media (0-100)
+- Clarity of message (0-100)
+- Clear call-to-action (0-100)
+- Effective hashtag usage (0-100)
+- SEO optimization (0-100)
+- Creativity and engagement (0-100)
+- Emotional appeal (0-100)
+- Personal branding consistency (0-100)
 
-IMPORTANT: When evaluating content that responds to an original video or lesson, pay special attention to:
+CONTENT COMPREHENSION (when applicable):
 - How well the user understood and internalized the original content
 - Whether their response demonstrates genuine comprehension vs. superficial copying
 - The accuracy of their interpretation and explanation of key concepts
 - Their ability to explain topics in their own words while maintaining accuracy
 - Use of appropriate vocabulary and terminology from the original content
 
-Be STRICT but fair in your evaluation. Content that shows genuine understanding and good English skills should score well, while generic or inaccurate responses should receive lower scores.
+STRICT EVALUATION GUIDELINES:
+- ALWAYS detect the language first before scoring
+- Give 0 points if criteria cannot be assessed due to language barriers
+- Be brutally honest about English proficiency level - do not inflate scores
+- Penalize heavily for non-English content in an English learning context
+- Only reward genuine English communication attempts
+- Focus on constructive feedback that helps learners progress
 
-Provide scores from 0-100 for each criterion and comprehensive feedback. Be encouraging but honest, focusing on helping users improve their English communication skills.`
+You MUST provide numerical scores (0-100) for each criterion and clearly state the detected language.`
 
-    const evaluationPrompt = `Please evaluate this English learning video submission comprehensively:
+    const evaluationPrompt = `Please evaluate this English learning video submission comprehensively and strictly:
 
 VIDEO DETAILS:
 - Video URL: ${videoUrl}
@@ -200,88 +245,113 @@ ${originalContent ? `
 ORIGINAL CONTENT CONTEXT:
 ${originalContent}
 
-IMPORTANT: This user's video is responding to the original content above. Evaluate how well they:
-- Understood and internalized the original material
+CRITICAL: This user's video is responding to the original content above. Evaluate how well they:
+- Understood and internalized the original material (30% of evaluation weight)
 - Demonstrated genuine comprehension vs. superficial copying
 - Accurately interpreted and explained key concepts
 - Used their own words while maintaining accuracy
 - Applied appropriate vocabulary and terminology from the original content
 
-Be STRICT but fair. Content showing genuine understanding and good English skills should score well, while generic or inaccurate responses should receive lower scores.` : ""}
+Be EXTREMELY STRICT: Content showing genuine understanding and good English skills should score well, while generic, inaccurate responses, or non-English content should receive very low scores.` : ""}
 
-Please provide a detailed evaluation with:
+MANDATORY EVALUATION REQUIREMENTS:
 
-1. OVERALL ASSESSMENT (0-100 score)
-${originalContent ? `   - Consider comprehension of original content (30% weight)
-   - English language skills (40% weight)  
-   - Video presentation quality (30% weight)` : ""}
+1. LANGUAGE DETECTION (CRITICAL - DO THIS FIRST):
+   - Analyze the video content and detect the primary language
+   - State clearly: "LANGUAGE DETECTED: [language name]"
+   - If video contains NO English speech or is entirely in Vietnamese/Chinese/Spanish/etc.: Give 0 for ALL speaking scores, overall score 0-10
+   - If video is mostly non-English: Maximum overall score 20
+   - If video is 50% non-English: Maximum overall score 40
+   - Only primarily English videos should score above 50
 
-2. SPEAKING & PRONUNCIATION scores (0-100 each):
-   - Pronunciation: [score] - [brief comment]
-   - Intonation: [score] - [brief comment] 
-   - Stress: [score] - [brief comment]
-   - Linking sounds: [score] - [brief comment]
+2. PROVIDE EXACT NUMERICAL SCORES (0-100) for each criterion:
 
-3. LANGUAGE USAGE scores (0-100 each):
-   - Grammar: [score] - [brief comment]
-   - Tenses: [score] - [brief comment]
-   - Vocabulary: [score] - [brief comment]
-   - Collocations: [score] - [brief comment]
+SPEAKING & PRONUNCIATION (25% weight):
+   - Pronunciation: [exact score 0-100] - [brief comment]
+   - Intonation: [exact score 0-100] - [brief comment] 
+   - Stress: [exact score 0-100] - [brief comment]
+   - Linking sounds: [exact score 0-100] - [brief comment]
 
-4. FLUENCY & DELIVERY scores (0-100 each):
-   - Fluency: [score] - [brief comment]
-   - Speaking speed: [score] - [brief comment]
-   - Confidence: [score] - [brief comment]
-   - Clarity: [score] - [brief comment]
+LANGUAGE USAGE (25% weight):
+   - Grammar: [exact score 0-100] - [brief comment]
+   - Tenses: [exact score 0-100] - [brief comment]
+   - Vocabulary: [exact score 0-100] - [brief comment]
+   - Collocations: [exact score 0-100] - [brief comment]
 
-5. VISUAL & PRESENTATION scores (0-100 each):
-   - Facial expressions: [score] - [brief comment]
-   - Body language: [score] - [brief comment]
-   - Eye contact: [score] - [brief comment]
-   - Audience interaction: [score] - [brief comment]
+FLUENCY & DELIVERY (25% weight):
+   - Fluency: [exact score 0-100] - [brief comment]
+   - Speaking speed: [exact score 0-100] - [brief comment]
+   - Confidence: [exact score 0-100] - [brief comment]
+   - Clarity: [exact score 0-100] - [brief comment]
 
-6. CAPTION QUALITY scores (0-100 each):
-   - Spelling: [score] - [brief comment]
-   - Grammar: [score] - [brief comment]
-   - Vocabulary: [score] - [brief comment]
-   - Clarity: [score] - [brief comment]
-   - Call-to-action: [score] - [brief comment]
-   - Hashtags: [score] - [brief comment]
-   - SEO: [score] - [brief comment]
-   - Creativity: [score] - [brief comment]
-   - Emotions: [score] - [brief comment]
-   - Personal branding: [score] - [brief comment]
+VISUAL & PRESENTATION (12.5% weight):
+   - Facial expressions: [exact score 0-100] - [brief comment]
+   - Body language: [exact score 0-100] - [brief comment]
+   - Eye contact: [exact score 0-100] - [brief comment]
+   - Audience interaction: [exact score 0-100] - [brief comment]
 
-${originalContent ? `7. CONTENT ACCURACY & COMPREHENSION scores (0-100 each):
-   - Understanding: [score] - [brief comment]
-   - Accuracy: [score] - [brief comment]
-   - Use of details: [score] - [brief comment]
-   - Own words: [score] - [brief comment]
-   - Terminology: [score] - [brief comment]
+CAPTION QUALITY (12.5% weight):
+   - Spelling: [exact score 0-100] - [brief comment]
+   - Grammar: [exact score 0-100] - [brief comment]
+   - Vocabulary: [exact score 0-100] - [brief comment]
+   - Clarity: [exact score 0-100] - [brief comment]
+   - Call-to-action: [exact score 0-100] - [brief comment]
+   - Hashtags: [exact score 0-100] - [brief comment]
+   - SEO: [exact score 0-100] - [brief comment]
+   - Creativity: [exact score 0-100] - [brief comment]
+   - Emotions: [exact score 0-100] - [brief comment]
+   - Personal branding: [exact score 0-100] - [brief comment]
 
-` : ""}7. DETAILED FEEDBACK:
-   - Overall assessment: [2-3 sentences describing overall performance]
+${originalContent ? `CONTENT COMPREHENSION (when applicable):
+   - Understanding: [exact score 0-100] - [brief comment]
+   - Accuracy: [exact score 0-100] - [brief comment]
+   - Use of details: [exact score 0-100] - [brief comment]
+   - Own words: [exact score 0-100] - [brief comment]
+   - Terminology: [exact score 0-100] - [brief comment]
+
+` : ""}3. OVERALL ASSESSMENT:
+   - Overall score: [exact score 0-100 calculated from weighted averages]
+   - LANGUAGE DETECTED: [state the primary language clearly]
+${originalContent ? `   - Content comprehension weight: 30%
+   - English language skills weight: 40%  
+   - Video presentation quality weight: 30%` : `   - Speaking & Pronunciation: 25%
+   - Language Usage: 25%
+   - Fluency & Delivery: 25%
+   - Visual & Presentation: 12.5%
+   - Caption Quality: 12.5%`}
+
+4. DETAILED FEEDBACK (Required):
+   - Overall assessment: [2-3 specific sentences about performance and language used]
    - Speaking feedback: [specific feedback on pronunciation and speaking]
    - Language feedback: [specific feedback on grammar and vocabulary]
    - Delivery feedback: [specific feedback on fluency and confidence]
    - Visual feedback: [specific feedback on presentation and body language]
    - Caption feedback: [specific feedback on written content]
+${originalContent ? `   - Content accuracy feedback: [specific feedback on understanding and accuracy]` : ""}
    
-8. STRENGTHS:
-   - [List 3-5 specific strengths observed]
+5. STRENGTHS (3-5 specific items):
+   - [List specific strengths with examples, if any English is present]
    
-9. AREAS TO IMPROVE:
-   - [List 3-5 specific areas needing improvement]
+6. AREAS TO IMPROVE (3-5 specific items):
+   - [List specific improvement areas with actionable advice]
 
-SCORING GUIDELINES:
-- 90-100: EXCEPTIONAL - Outstanding performance across all criteria
-- 80-89: EXCELLENT - Strong performance with minor areas for improvement
-- 70-79: GOOD - Solid performance with some notable strengths
-- 60-69: SATISFACTORY - Adequate performance with clear improvement areas
-- 50-59: NEEDS IMPROVEMENT - Basic performance requiring significant work
-- 0-49: UNSATISFACTORY - Major deficiencies requiring fundamental improvement
+SCORING GUIDELINES (BE EXTREMELY STRICT):
+- 90-100: EXCEPTIONAL - Near-native English proficiency
+- 80-89: EXCELLENT - Advanced English with minor improvements needed
+- 70-79: GOOD - Upper-intermediate with notable strengths
+- 60-69: SATISFACTORY - Intermediate level with clear improvement areas
+- 50-59: NEEDS IMPROVEMENT - Pre-intermediate requiring significant work
+- 30-49: ELEMENTARY - Basic level with fundamental gaps
+- 20-29: BEGINNER - Mostly non-English with some English attempts
+- 0-19: NO ENGLISH - Video contains no or minimal English content
 
-Format your response clearly with headers and specific scores as requested above.`
+CRITICAL INSTRUCTIONS:
+- ALWAYS state "LANGUAGE DETECTED: [language]" in your response
+- If language is NOT English, scores must reflect this according to the strict guidelines above
+- Do not give high scores to non-English content regardless of quality
+- Be honest and help learners understand they need to use English for this assessment
+
+Format your response with clear section headers and exact numerical scores for every criterion listed above.`
 
     // Output prompts to terminal for debugging
     console.log("\n" + "=".repeat(80))
@@ -304,61 +374,213 @@ Format your response clearly with headers and specific scores as requested above
     console.log("=".repeat(80) + "\n")
     
     // Parse the AI response and convert to structured format
-    return parseVideoEvaluationResponse(response)
+    return parseVideoEvaluationResponse(response, videoUrl, caption)
       } catch (error) {
     console.error("❌ Error evaluating video with Gemini AI:", error)
-    throw new Error(`Video evaluation failed: ${error instanceof Error ? error.message : String(error)}`)
+    
+    // Provide more specific error messages based on error type
+    if (error instanceof Error) {
+      if (error.message.includes("API key") || error.message.includes("authentication")) {
+        throw new Error("Video evaluation service is unavailable. Please contact support.")
+      } else if (error.message.includes("parse") || error.message.includes("extract") || error.message.includes("Unable to parse")) {
+        throw new Error("Failed to process AI evaluation response. The AI may be experiencing issues. Please try again in a few minutes.")
+      } else if (error.message.includes("quota") || error.message.includes("limit") || error.message.includes("rate")) {
+        throw new Error("Video evaluation service is temporarily unavailable due to high demand. Please try again in 10-15 minutes.")
+      } else if (error.message.includes("network") || error.message.includes("timeout") || error.message.includes("connection")) {
+        throw new Error("Network connection issue. Please check your internet connection and try again.")
+      } else if (error.message.includes("video") || error.message.includes("URL") || error.message.includes("file")) {
+        throw new Error("Unable to access the video file. Please ensure the video was uploaded correctly and try again.")
+      } else if (error.message.includes("language") || error.message.includes("English")) {
+        throw new Error("Video evaluation failed. Please ensure your video contains clear English speech and try again.")
+      } else {
+        throw new Error(`Video evaluation failed: ${error.message}`)
+      }
+    }
+    
+    throw new Error("Video evaluation failed due to an unexpected error. Please try again later.")
   }
 }
 
 /**
  * Parse Gemini AI response and convert to structured VideoEvaluation format
  */
-function parseVideoEvaluationResponse(response: string): VideoEvaluation {
+function parseVideoEvaluationResponse(response: string, videoUrl?: string, caption?: string): VideoEvaluation {
   // For now, we'll use a more sophisticated parsing approach
   // In a production environment, you'd want to use structured output from Gemini
   
   try {
-    // Extract scores using regex patterns - NO fallback values
-    const overallScore = extractScore(response, "overall|total|final")
+    // Check for language detection in AI response
+    const languageDetected = extractLanguageDetection(response)
+    console.log("🌐 Language detected by AI:", languageDetected)
+    
+    // STRICT LANGUAGE-BASED SCORE ENFORCEMENT - Early detection
+    const detectedLanguage = languageDetected?.toLowerCase() || 'unknown'
+    
+    // Vietnamese content - immediate override
+    if (detectedLanguage.includes('vietnamese') || detectedLanguage.includes('việt')) {
+      console.log("🚨 ENFORCING Vietnamese content limits - overriding AI scores")
+      return createNonEnglishEvaluation('vietnamese', response, caption || "")
+    }
+    
+    // Additional Vietnamese detection from caption
+    const hasVietnameseInCaption = caption && (
+      caption.toLowerCase().includes('xin chào') ||
+      caption.toLowerCase().includes('hôm nay') ||
+      caption.toLowerCase().includes('tôi sẽ') ||
+      caption.toLowerCase().includes('các bạn') ||
+      caption.toLowerCase().includes('tiếng việt')
+    )
+    
+    if (hasVietnameseInCaption) {
+      console.log("🚨 OVERRIDE: Vietnamese detected in caption - enforcing strict limits")
+      return createNonEnglishEvaluation('vietnamese', response, caption || "")
+    }
+    
+    // Extract scores using enhanced regex patterns - STRICT validation
+    // Look for "Overall score: 72" format specifically
+    const overallScore = extractScore(response, "overall score") || extractScore(response, "overall.*?score|total.*?score|final.*?score")
+    
+    // Core speaking scores - these are mandatory
     const pronunciationScore = extractScore(response, "pronunciation")
     const intonationScore = extractScore(response, "intonation")
     const stressScore = extractScore(response, "stress")
-    const linkingSoundsScore = extractScore(response, "linking")
+    const linkingSoundsScore = extractScore(response, "linking.*?sounds?|linking")
+    
+    // Core language scores - these are mandatory
     const grammarScore = extractScore(response, "grammar")
-    const tensesScore = extractScore(response, "tense")
+    const tensesScore = extractScore(response, "tenses?|verb.*?tenses?")
     const vocabularyScore = extractScore(response, "vocabulary")
-    const collocationScore = extractScore(response, "collocation")
+    const collocationScore = extractScore(response, "collocations?")
+    
+    // Core fluency scores - these are mandatory
     const fluencyScore = extractScore(response, "fluency")
-    const speakingSpeedScore = extractScore(response, "speed")
+    const speakingSpeedScore = extractScore(response, "speaking.*?speed|speed")
     const confidenceScore = extractScore(response, "confidence")
-    const facialExpressionsScore = extractScore(response, "facial|expression")
-    const bodyLanguageScore = extractScore(response, "body|gesture")
-    const eyeContactScore = extractScore(response, "eye")
-    const audienceInteractionScore = extractScore(response, "interaction|engagement")
+    const clarityScore = extractScore(response, "clarity")
+    
+    // Visual presentation scores
+    const facialExpressionsScore = extractScore(response, "facial.*?expressions?|expressions?")
+    const bodyLanguageScore = extractScore(response, "body.*?language|gestures?")
+    const eyeContactScore = extractScore(response, "eye.*?contact")
+    const audienceInteractionScore = extractScore(response, "audience.*?interaction|interaction")
+    
+    // Caption quality scores
     const captionSpellingScore = extractScore(response, "spelling")
-    const captionGrammarScore = extractScore(response, "caption.*grammar|written.*grammar")
-    const appropriateVocabularyScore = extractScore(response, "appropriate|suitable")
-    const clarityScore = extractScore(response, "clarity|clear")
-    const callToActionScore = extractScore(response, "call.*action|cta")
-    const hashtagsScore = extractScore(response, "hashtag")
+    const captionGrammarScore = extractScore(response, "caption.*?grammar|written.*?grammar")
+    const appropriateVocabularyScore = extractScore(response, "appropriate.*?vocabulary|suitable.*?vocabulary")
+    const callToActionScore = extractScore(response, "call.*?to.*?action|call.*?action|cta")
+    const hashtagsScore = extractScore(response, "hashtags?")
     const seoScore = extractScore(response, "seo")
     const creativityScore = extractScore(response, "creativity|creative")
-    const emotionsScore = extractScore(response, "emotion|emotional")
-    const personalBrandingScore = extractScore(response, "brand|branding|personal")
+    const emotionsScore = extractScore(response, "emotions?|emotional.*?appeal")
+    const personalBrandingScore = extractScore(response, "personal.*?branding|branding")
 
-    // Validate that we got essential scores from AI
-    if (!overallScore) {
-      console.error("❌ Failed to parse overall score from AI response")
-      console.error("AI Response:", response)
-      throw new Error("Unable to parse overall score from AI response. Please ensure the AI provides a numerical overall score.")
+    // STRICT VALIDATION: Check that we got essential scores from AI
+    const missingScores = []
+    if (overallScore === null || overallScore === undefined) missingScores.push("overall score")
+    if (pronunciationScore === null || pronunciationScore === undefined) missingScores.push("pronunciation")
+    if (grammarScore === null || grammarScore === undefined) missingScores.push("grammar")
+    if (fluencyScore === null || fluencyScore === undefined) missingScores.push("fluency")
+    if (vocabularyScore === null || vocabularyScore === undefined) missingScores.push("vocabulary")
+    
+    if (missingScores.length > 0) {
+      console.error("❌ Failed to parse essential scores from AI response:")
+      console.error("Missing scores:", missingScores)
+      console.error("AI Response preview:", response.substring(0, 500) + "...")
+      throw new Error(`Unable to parse essential evaluation scores from AI response. Missing: ${missingScores.join(", ")}`)
+    }
+
+    // Convert null scores to numbers (we've validated essential ones above)
+    const finalOverallScore = overallScore ?? 0
+    const finalPronunciationScore = pronunciationScore ?? 0
+    const finalGrammarScore = grammarScore ?? 0
+    const finalFluencyScore = fluencyScore ?? 0
+    const finalVocabularyScore = vocabularyScore ?? 0
+
+    // Additional validation: ensure scores are reasonable
+    const coreScores = [finalOverallScore, finalPronunciationScore, finalGrammarScore, finalFluencyScore, finalVocabularyScore]
+    const invalidScores = coreScores.filter(score => score < 0 || score > 100)
+    if (invalidScores.length > 0) {
+      console.error("❌ Invalid scores detected:", invalidScores)
+      throw new Error("AI returned invalid scores outside the 0-100 range")
+    }
+
+    console.log("✅ Successfully parsed and validated AI evaluation scores:", {
+      overall: finalOverallScore,
+      pronunciation: finalPronunciationScore,
+      grammar: finalGrammarScore,
+      fluency: finalFluencyScore,
+      vocabulary: finalVocabularyScore
+    })
+    
+    // Log the final evaluation result that will be returned
+    console.log("🎯 Final evaluation result that will be returned:", {
+      overallScore: finalOverallScore,
+      detectedLanguage: languageDetected || 'english',
+      isEnglishContent: !languageDetected || languageDetected.toLowerCase() === 'english'
+    })
+
+    // Additional check: If overall score is suspiciously high but we detected non-English indicators
+    const suspiciouslyHighScore = finalOverallScore > 50
+    const hasNonEnglishIndicators = response.toLowerCase().includes('vietnamese') || 
+                                   response.toLowerCase().includes('tiếng việt') ||
+                                   response.toLowerCase().includes('không phải tiếng anh') ||
+                                   caption?.includes('tiếng việt') ||
+                                   caption?.includes('vietnamese') ||
+                                   // Additional checks for content that might be non-English
+                                   (caption && !caption.match(/[a-zA-Z]{3,}/)) || // Caption has no English words
+                                   (finalOverallScore > 50 && finalPronunciationScore < 30) // High overall but very low pronunciation suggests non-English
+    
+    // Enhanced detection: Check if user uploaded video in Vietnamese based on URL pattern or other indicators
+    const urlMightBeVietnamese = videoUrl?.includes('vietnamese') || videoUrl?.includes('tieng-viet')
+    
+    if (suspiciouslyHighScore && (hasNonEnglishIndicators || urlMightBeVietnamese)) {
+      console.log("⚠️ Detected high score for potentially non-English content, enforcing strict rules")
+      console.log("Indicators found:", {
+        hasNonEnglishIndicators,
+        urlMightBeVietnamese,
+        overallScore: finalOverallScore,
+        pronunciationScore: finalPronunciationScore
+      })
+      return createNonEnglishEvaluation('vietnamese', response, caption || "")
+    }
+    
+    // Additional validation: If video is claimed to be English but has very poor English scores across the board
+    const coreEnglishScores = [finalPronunciationScore, finalGrammarScore, finalFluencyScore, finalVocabularyScore]
+    const averageCoreScore = coreEnglishScores.reduce((sum, score) => sum + score, 0) / coreEnglishScores.length
+    
+    if (finalOverallScore > 60 && averageCoreScore < 40) {
+      console.log("⚠️ Inconsistent scoring detected - high overall score but very low English skills")
+      console.log("Overall:", finalOverallScore, "Average core English:", averageCoreScore)
+      // Adjust overall score to be more consistent with English skills
+      const adjustedOverallScore = Math.max(10, Math.min(averageCoreScore + 10, finalOverallScore))
+      console.log("Adjusted overall score to:", adjustedOverallScore)
+      return {
+        ...createNonEnglishEvaluation('potentially non-english', response, caption || ""),
+        score: adjustedOverallScore,
+        overallFeedback: `Inconsistent evaluation detected. While some presentation skills are good, English language proficiency appears limited. Overall score adjusted to ${adjustedOverallScore} to reflect actual English skills demonstrated.`
+      }
+    }
+
+    // Require at least some scores for a valid evaluation
+    const scoreCount = [pronunciationScore, grammarScore, fluencyScore, vocabularyScore].filter(s => s !== null).length
+    if (scoreCount < 2) {
+      console.error("❌ Insufficient scores extracted from AI response")
+      console.error("Extracted scores:", {
+        pronunciation: pronunciationScore,
+        grammar: grammarScore,
+        fluency: fluencyScore,
+        vocabulary: vocabularyScore
+      })
+      throw new Error("AI response does not contain enough evaluation scores. Please try again.")
     }
 
     console.log("✅ Successfully parsed AI evaluation scores:", {
       overall: overallScore,
       pronunciation: pronunciationScore || 0,
       grammar: grammarScore || 0,
-      fluency: fluencyScore || 0
+      fluency: fluencyScore || 0,
+      totalScoresFound: scoreCount
     })
 
     // Extract feedback sections from AI response
@@ -366,17 +588,18 @@ function parseVideoEvaluationResponse(response: string): VideoEvaluation {
     const strengths = extractBulletPoints(response, "strength|positive|good|excellent|well")
     const weaknesses = extractBulletPoints(response, "improve|weakness|area.*improve|consider|work.*on")
     
-    if (!feedback || feedback.trim().length === 0) {
-      console.error("❌ Failed to extract feedback from AI response")
-      throw new Error("Unable to extract feedback from AI response")
+    if (!feedback || feedback.trim().length < 20) {
+      console.error("❌ Failed to extract meaningful feedback from AI response")
+      console.error("Extracted feedback:", feedback)
+      throw new Error("AI response does not contain meaningful feedback. Please try again.")
     }
 
     console.log("✅ Successfully extracted AI feedback:", feedback.substring(0, 100) + "...")
-    console.log("✅ Extracted strengths:", strengths)
-    console.log("✅ Extracted weaknesses:", weaknesses)
+    console.log("✅ Extracted strengths:", strengths.length, "items")
+    console.log("✅ Extracted weaknesses:", weaknesses.length, "items")
     
     return {
-      score: overallScore,
+      score: finalOverallScore,
       feedback,
       overallFeedback: feedback,
       
@@ -506,16 +729,26 @@ function parseVideoEvaluationResponse(response: string): VideoEvaluation {
       }
     }  } catch (error) {
     console.error("❌ Error parsing video evaluation response:", error)
-    throw new Error("Failed to parse AI evaluation response. Please try again later.")
+    console.error("❌ Raw AI response that failed to parse:", response)
+    
+    if (error instanceof Error && error.message.includes("extract")) {
+      throw error // Re-throw our custom extraction errors
+    }
+    
+    throw new Error("Failed to parse AI evaluation response. The AI response format may be invalid. Please try submitting your video again.")
   }
 }
 
 /**
- * Extract numerical score from text using regex patterns
+ * Extract numerical score from text using enhanced regex patterns
  */
 function extractScore(text: string, keyword: string): number | null {
-  // More specific patterns for extracting scores
+  // Enhanced patterns to catch various score formats
   const patterns = [
+    // Pattern: "Overall score: 72" (most specific)
+    new RegExp(`${keyword}:\\s*([0-9]{1,3})(?:\\s|$|\\n)`, "i"),
+    // Pattern: "- Overall score: 72"
+    new RegExp(`-\\s*${keyword}:\\s*([0-9]{1,3})(?:\\s|$|\\n)`, "i"),
     // Pattern: "Keyword: 85 - comment"
     new RegExp(`${keyword}[^\\d]*:?\\s*([0-9]{1,3})\\s*[-\\s]`, "i"),
     // Pattern: "Keyword score: 85"
@@ -535,11 +768,13 @@ function extractScore(text: string, keyword: string): number | null {
     if (match && match[1]) {
       const score = parseInt(match[1])
       if (score >= 0 && score <= 100) {
+        console.log(`✅ Extracted score for '${keyword}': ${score} using pattern: ${pattern}`)
         return score
       }
     }
   }
   
+  console.log(`❌ Could not extract score for '${keyword}'`)
   return null
 }
 
@@ -574,7 +809,7 @@ function extractFeedback(text: string): string {
     }
   }
   
-  // Fallback: return first meaningful paragraph that's not a header
+  // Last attempt: return first meaningful paragraph that's not a header
   const sentences = text.split(/[\.!?]+/).filter(s => s.trim().length > 30 && !s.includes(':'))
   if (sentences.length > 0) {
     return sentences[0].trim() + '.'
@@ -651,6 +886,229 @@ function extractBulletPoints(text: string, keywords: string): string[] {
   return points.slice(0, 5) // Limit to 5 points
 }
 
+
+/**
+ * Extract language detection from AI response
+ */
+function extractLanguageDetection(response: string): string | null {
+  const patterns = [
+    /LANGUAGE DETECTED:\s*([^,\n.]+)/i,
+    /detected language:\s*([^,\n.]+)/i,
+    /language:\s*([^,\n.]+)/i,
+    /speaking in:\s*([^,\n.]+)/i,
+    /primarily in:\s*([^,\n.]+)/i,
+    /video is in:\s*([^,\n.]+)/i,
+    /content is in:\s*([^,\n.]+)/i
+  ]
+  
+  for (const pattern of patterns) {
+    const match = response.match(pattern)
+    if (match && match[1]) {
+      const language = match[1].trim().toLowerCase()
+      console.log("🔍 Language detection match:", language)
+      
+      // If AI detects English but we suspect otherwise, do additional checks
+      if (language === 'english') {
+        // Check if the response mentions non-English characteristics
+        const responseText = response.toLowerCase()
+        if (responseText.includes('no english') || 
+            responseText.includes('not english') ||
+            responseText.includes('vietnamese') ||
+            responseText.includes('chinese') ||
+            responseText.includes('non-english') ||
+            responseText.includes('another language')) {
+          console.log("⚠️ AI claimed English but response suggests otherwise")
+          return 'non-english'
+        }
+      }
+      
+      return language
+    }
+  }
+  
+  // Also check for common language mentions in the response
+  const text = response.toLowerCase()
+  if (text.includes('no english speech') || text.includes('not english')) return 'non-english'
+  if (text.includes('vietnamese') || text.includes('tiếng việt')) return 'vietnamese'
+  if (text.includes('chinese') || text.includes('mandarin') || text.includes('cantonese')) return 'chinese'
+  if (text.includes('spanish') || text.includes('español')) return 'spanish'
+  if (text.includes('french') || text.includes('français')) return 'french'
+  if (text.includes('japanese') || text.includes('日本語')) return 'japanese'
+  if (text.includes('korean') || text.includes('한국어')) return 'korean'
+  
+  // Check for phrases that suggest the video is not in English
+  if (text.includes('cannot assess english') || 
+      text.includes('no english content') ||
+      text.includes('minimal english') ||
+      text.includes('primarily non-english')) {
+    return 'non-english'
+  }
+  
+  return null
+}
+
+/**
+ * Create evaluation for non-English content
+ */
+function createNonEnglishEvaluation(detectedLanguage: string, aiResponse: string, caption: string): VideoEvaluation {
+  const languageName = detectedLanguage.charAt(0).toUpperCase() + detectedLanguage.slice(1)
+  
+  // Very low scores for non-English content
+  const baseScore = 0
+  const overallScore = detectedLanguage.toLowerCase() === 'vietnamese' ? 5 : 10 // Even lower for Vietnamese
+  
+  const feedback = `This video is primarily in ${languageName}, not English. For English learning evaluation, please submit a video where you speak primarily in English. While your presentation skills may be good, this assessment is specifically for English language proficiency.`
+  
+  const strengths = [
+    "Video quality and presentation",
+    "Confidence in speaking",
+    "Clear audio and visual quality"
+  ]
+  
+  const improvements = [
+    "Speak primarily in English for English assessment",
+    "Practice English pronunciation and vocabulary",
+    "Focus on English grammar and sentence structure",
+    "Build English fluency through regular practice",
+    "Record a new video speaking only in English"
+  ]
+  
+  return {
+    score: overallScore,
+    feedback,
+    overallFeedback: feedback,
+    
+    // All English-related scores are 0 or very low
+    pronunciation: baseScore,
+    intonation: baseScore,
+    stress: baseScore,
+    linkingSounds: baseScore,
+    grammar: baseScore,
+    tenses: baseScore,
+    vocabulary: baseScore,
+    collocations: baseScore,
+    fluency: baseScore,
+    speakingSpeed: baseScore,
+    confidence: 30, // Can give some credit for confidence
+    facialExpressions: 40, // Visual elements can get some points
+    bodyLanguage: 40,
+    eyeContact: 40,
+    audienceInteraction: 30,
+    captionSpelling: caption.length > 0 ? 20 : 0, // Some credit if there's a caption
+    captionGrammar: 0,
+    appropriateVocabulary: 0,
+    clarity: baseScore,
+    callToAction: 0,
+    hashtags: 0,
+    seoCaption: 0,
+    creativity: 20,
+    emotions: 30,
+    personalBranding: 20,
+    
+    pronunciationScore: baseScore,
+    intonationScore: baseScore,
+    stressScore: baseScore,
+    linkingSoundsScore: baseScore,
+    grammarScore: baseScore,
+    tensesScore: baseScore,
+    vocabularyScore: baseScore,
+    collocationScore: baseScore,
+    fluencyScore: baseScore,
+    speakingSpeedScore: baseScore,
+    confidenceScore: 30,
+    facialExpressionsScore: 40,
+    bodyLanguageScore: 40,
+    eyeContactScore: 40,
+    audienceInteractionScore: 30,
+    captionSpellingScore: caption.length > 0 ? 20 : 0,
+    captionGrammarScore: 0,
+    appropriateVocabularyScore: 0,
+    clarityScore: baseScore,
+    callToActionScore: 0,
+    hashtagsScore: 0,
+    seoScore: 0,
+    creativityScore: 20,
+    emotionsScore: 30,
+    personalBrandingScore: 20,
+    
+    strengths,
+    weaknesses: improvements,
+    improvements,
+    recommendations: [
+      "Record a new video speaking only in English",
+      "Practice English daily before recording",
+      "Focus on English pronunciation exercises",
+      "Use English learning resources and apps"
+    ],
+    
+    speakingFeedback: `Video is in ${languageName}, not English. English speaking skills cannot be assessed.`,
+    languageFeedback: `No English language usage detected. Please use English for language assessment.`,
+    deliveryFeedback: `While delivery confidence is good, English fluency cannot be evaluated from ${languageName} speech.`,
+    visualFeedback: "Good visual presentation and camera presence.",
+    captionFeedback: caption.length > 0 ? "Caption provided but English content evaluation needed." : "No caption provided.",
+    
+    speakingCategory: {
+      score: baseScore,
+      overallScore: baseScore,
+      feedback: `Cannot assess English speaking skills from ${languageName} content`,
+      strengths: [],
+      areas_to_improve: ["Speak in English", "Practice English pronunciation", "Focus on English grammar"],
+      pronunciation: baseScore,
+      intonation: baseScore,
+      stress: baseScore,
+      linkingSounds: baseScore
+    },
+    languageCategory: {
+      score: baseScore,
+      overallScore: baseScore,
+      feedback: `No English language usage detected in this ${languageName} video`,
+      strengths: [],
+      areas_to_improve: ["Use English vocabulary", "Practice English grammar", "Build English sentence structure"],
+      grammar: baseScore,
+      tenses: baseScore,
+      vocabulary: baseScore,
+      collocations: baseScore
+    },
+    deliveryCategory: {
+      score: 20,
+      overallScore: 20,
+      feedback: "Good general delivery confidence, but English fluency cannot be assessed",
+      strengths: ["Speaking confidence"],
+      areas_to_improve: ["English fluency", "English speaking practice"],
+      fluency: baseScore,
+      speakingSpeed: baseScore,
+      confidence: 30
+    },
+    visualCategory: {
+      score: 38,
+      overallScore: 38,
+      feedback: "Good visual presentation and camera work",
+      strengths: ["Camera presence", "Visual quality"],
+      areas_to_improve: ["English content focus"],
+      facialExpressions: 40,
+      bodyLanguage: 40,
+      eyeContact: 40,
+      audienceInteraction: 30
+    },
+    captionCategory: {
+      score: caption.length > 0 ? 8 : 0,
+      overallScore: caption.length > 0 ? 8 : 0,
+      feedback: caption.length > 0 ? "Caption provided but needs English content focus" : "No caption provided",
+      strengths: caption.length > 0 ? ["Caption attempt"] : [],
+      areas_to_improve: ["English caption writing", "English grammar in captions"],
+      captionSpelling: caption.length > 0 ? 20 : 0,
+      captionGrammar: 0,
+      appropriateVocabulary: 0,
+      clarity: 0,
+      callToAction: 0,
+      hashtags: 0,
+      seoCaption: 0,
+      creativity: 20,
+      emotions: 30,
+      personalBranding: 20
+    }
+  }
+}
 
 /**
  * Evaluate video and caption together for comprehensive assessment
