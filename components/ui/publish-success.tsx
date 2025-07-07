@@ -66,7 +66,7 @@ export default function PublishSuccess({ postId, onStartNewChallenge }: PublishS
             <Button
               onClick={viewPostInFeed}
               variant="outline"
-              className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white border-0 flex items-center gap-2"
+              className="w-full bg-gradient-to-r from-neo-mint to-purist-blue hover:from-green-600 hover:to-emerald-700 text-white border-0 flex items-center gap-2"
             >
               <Eye className="h-4 w-4" />
               View Post

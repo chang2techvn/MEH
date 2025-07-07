@@ -52,6 +52,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { toast } from "@/hooks/use-toast"
+import { useAuthState } from "@/contexts/auth-context"
 import type { Contact } from "./types"
 
 interface CreatePostModalProps {
@@ -90,6 +91,7 @@ interface CreatePostModalProps {
 }
 
 export function CreatePostModal(props: CreatePostModalProps) {
+  const { user } = useAuthState()
   const {
     showNewPostForm,
     setShowNewPostForm,
@@ -194,13 +196,14 @@ export function CreatePostModal(props: CreatePostModalProps) {
                   transition={{ type: "spring", stiffness: 400, damping: 10 }}
                 >
                   <Avatar className="h-10 w-10 sm:h-12 sm:w-12 border-2 border-white dark:border-gray-800 shadow-md">
+                    <AvatarImage src={user?.avatar || "/placeholder.svg"} alt={user?.name || "User"} />
                     <AvatarFallback className="bg-gradient-to-br from-neo-mint to-purist-blue text-white">
-                      JD
+                      {user?.name ? user.name.split(' ').map(n => n[0]).join('').toUpperCase() : 'U'}
                     </AvatarFallback>
                   </Avatar>
                 </motion.div>
                 <div className="flex flex-col">
-                  <p className="font-semibold text-base sm:text-lg">John Doe</p>
+                  <p className="font-semibold text-base sm:text-lg">{user?.name || 'User'}</p>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button
@@ -239,8 +242,8 @@ export function CreatePostModal(props: CreatePostModalProps) {
                 className="relative"
               >
                 <Textarea
-                  placeholder="What's on your mind, John?"
-                  className="min-h-[120px] sm:min-h-[150px] resize-none border-0 focus-visible:ring-1 focus-visible:ring-neo-mint dark:focus-visible:ring-purist-blue text-base sm:text-lg p-0 bg-transparent placeholder:text-gray-400 dark:placeholder:text-gray-500"
+                  placeholder={`What's on your mind, ${user?.name?.split(' ').pop() || 'there'}?`}
+                  className="min-h-[120px] sm:min-h-[150px] resize-none border-0 focus-visible:ring-1 focus-visible:ring-neo-mint dark:focus-visible:ring-purist-blue text-base sm:text-lg p-0 bg-transparent placeholder:text-gray-400 dark:placeholder:text-gray-500 hover:bg-transparent focus:bg-transparent"
                   value={newPostContent}
                   onChange={(e) => setNewPostContent(e.target.value)}
                   aria-label="Post content"

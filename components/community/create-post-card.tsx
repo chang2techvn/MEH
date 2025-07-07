@@ -2,10 +2,11 @@
 
 import { useRef } from "react"
 import { Card } from "@/components/ui/card"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { ImageIcon, Smile } from "lucide-react"
+import { useAuthState } from "@/contexts/auth-context"
 
 interface CreatePostCardProps {
   setShowNewPostForm: (show: boolean) => void
@@ -18,21 +19,24 @@ export function CreatePostCard({
   setShowEmojiPicker,
   postFileInputRef,
 }: CreatePostCardProps) {
+  const { user } = useAuthState()
+  
   return (
     <Card className="mb-4 bg-white dark:bg-gray-800 shadow-sm border-0 overflow-hidden">
       <div className="p-3 sm:p-4">
         <div className="flex items-center gap-2">
           <Avatar className="h-9 w-9 sm:h-10 sm:w-10">
+            <AvatarImage src={user?.avatar || "/placeholder.svg"} alt={user?.name || "User"} />
             <AvatarFallback className="bg-gradient-to-br from-neo-mint to-purist-blue text-white">
-              JD
+              {user?.name ? user.name.split(' ').map(n => n[0]).join('').toUpperCase() : 'U'}
             </AvatarFallback>
           </Avatar>
           <Button
             variant="outline"
-            className="flex-1 justify-start text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 border-0 rounded-full h-9 sm:h-10 text-sm sm:text-base"
+            className="flex-1 justify-start text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 border-0 rounded-full h-9 sm:h-10 text-sm sm:text-base hover:bg-gray-100 dark:hover:bg-gray-700"
             onClick={() => setShowNewPostForm(true)}
           >
-            What&apos;s on your mind, John?
+            What&apos;s on your mind, {user?.name?.split(' ').pop() || 'there'}?
           </Button>
         </div>
 
