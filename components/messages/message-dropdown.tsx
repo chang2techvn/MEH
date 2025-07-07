@@ -67,7 +67,12 @@ function MessageDropdownContent() {
     if (!currentUser || loadingUsers) return
     
     try {
-      console.log('🔍 loadAvailableUsers called:', { searchTerm, page, currentUser: currentUser?.id })
+      console.log('🔍 loadAvailableUsers called:', { 
+        searchTerm, 
+        page, 
+        currentUser: currentUser?.id,
+        currentUserName: currentUser?.name
+      })
       setLoadingUsers(true)
       setError(null)
       
@@ -146,7 +151,18 @@ function MessageDropdownContent() {
       
       // Process users with validation - fix data mapping
       const newUsers: User[] = (users || [])
-        .filter(user => user?.id && user.id !== currentUser.id)
+        .filter(user => {
+          const shouldInclude = user?.id && user.id !== currentUser.id
+          if (!shouldInclude) {
+            console.log('🚫 Filtering out user:', { 
+              userId: user?.id, 
+              currentUserId: currentUser.id, 
+              userEmail: user?.email,
+              reason: !user?.id ? 'No user ID' : 'Same as current user'
+            })
+          }
+          return shouldInclude
+        })
         .map(user => {
           const profile = user.profiles?.[0] || {}
           return {
@@ -354,10 +370,18 @@ function MessageDropdownContent() {
 
   // Memoized filtered conversations for performance
   const filteredConversations = useMemo(() => {
-    return conversations.filter((conv) => {
-      // If currentUser is not loaded, show all conversations
-      if (!currentUser) {
-        return true
+    // Don't show any conversations if user is not authenticated or loaded
+    if (!currentUser) {
+      return []
+    }
+
+    // First filter conversations where current user is participant
+    const validConversations = conversations.filter((conv) => {
+      // Check if current user is a participant in this conversation
+      const isParticipant = conv.participants.some((p: User) => p.id === currentUser.id)
+      
+      if (!isParticipant) {
+        return false
       }
 
       // Find other participants (not current user)
@@ -377,7 +401,35 @@ function MessageDropdownContent() {
       
       return searchMatch
     })
-  }, [conversations, currentUser, searchQuery])
+
+    // Group conversations by other participant ID to remove duplicates
+    const conversationMap = new Map()
+    
+    validConversations.forEach(conv => {
+      const otherParticipant = conv.participants.find((p: User) => p.id !== currentUser.id)
+      if (otherParticipant) {
+        const existingConv = conversationMap.get(otherParticipant.id)
+        
+        // Keep the conversation with the most recent message
+        if (!existingConv || 
+            (conv.lastMessage && existingConv.lastMessage && 
+             new Date(conv.lastMessage.timestamp) > new Date(existingConv.lastMessage.timestamp))) {
+          conversationMap.set(otherParticipant.id, conv)
+        } else if (!existingConv.lastMessage && conv.lastMessage) {
+          // Prefer conversation with messages over empty ones
+          conversationMap.set(otherParticipant.id, conv)
+        }
+      }
+    })
+
+    // Convert map back to array and sort by last message timestamp
+    return Array.from(conversationMap.values()).sort((a, b) => {
+      if (!a.lastMessage && !b.lastMessage) return 0
+      if (!a.lastMessage) return 1
+      if (!b.lastMessage) return -1
+      return new Date(b.lastMessage.timestamp).getTime() - new Date(a.lastMessage.timestamp).getTime()
+    })
+  }, [conversations, currentUser, searchQuery, getConversationTitle])
 
   // Memoized filtered available users for performance (server-side filtering is preferred)
   const filteredAvailableUsers = useMemo(() => {
@@ -387,6 +439,11 @@ function MessageDropdownContent() {
   }, [availableUsers])
 
   if (!isDropdownOpen) return null
+
+  // Don't show dropdown if user is not authenticated
+  if (!authContext?.isAuthenticated || !currentUser) {
+    return null
+  }
 
   if (loading) {
     return (
@@ -469,7 +526,7 @@ function MessageDropdownContent() {
           {showNewChat ? (
             // Show available users for new chat
             <>
-              {loadingUsers ? (
+              {loadingUsers && availableUsers.length === 0 ? (
                 <div className="p-4 text-center">
                   <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-neo-mint dark:border-purist-blue mx-auto"></div>
                   <p className="text-sm text-muted-foreground mt-2">Loading users...</p>
@@ -513,7 +570,7 @@ function MessageDropdownContent() {
                 ))
               )}
               {/* Load More Button */}
-              {hasMoreUsers && !searchTerm && (
+              {hasMoreUsers && !searchTerm && availableUsers.length > 0 && (
                 <div className="p-3 border-t border-white/10 dark:border-gray-800/10">
                   <Button
                     onClick={loadMoreUsers}
@@ -553,7 +610,7 @@ function MessageDropdownContent() {
                   >
                     <div className="flex items-center space-x-3">
                       <Avatar className="h-10 w-10 border-2 border-white/20">
-                        <AvatarImage src={conversation.participants.find(p => p.id !== currentUser?.id)?.avatar || ''} />
+                        <AvatarImage src={conversation.participants.find((p: User) => p.id !== currentUser?.id)?.avatar || ''} />
                         <AvatarFallback className="bg-gradient-to-br from-neo-mint to-purist-blue text-white text-sm font-semibold">
                           {getConversationTitle(conversation).charAt(0).toUpperCase()}
                         </AvatarFallback>
