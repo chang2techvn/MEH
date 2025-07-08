@@ -23,7 +23,7 @@ import { getVideoSettings } from "@/app/actions/admin-settings"
 import { compareVideoContentWithUserContent, type ContentComparison } from "@/app/actions/content-comparison"
 import { v4 as uuidv4 } from "uuid"
 import type { VideoEvaluation } from "@/lib/gemini-video-evaluation"
-import { uploadVideoToStorage, type VideoUploadResult } from "@/lib/video-storage"
+import { uploadVideoToStorage, deleteVideoFromStorage, type VideoUploadResult } from "@/lib/video-storage"
 import { useAuthState } from "@/contexts/auth-context"
 
 interface DailyChallengeProps {
@@ -43,6 +43,7 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
   const [videoFile, setVideoFile] = useState<File | null>(null)
   const [videoPreviewUrl, setVideoPreviewUrl] = useState<string | null>(null)
   const [videoStorageUrl, setVideoStorageUrl] = useState<string | null>(null)
+  const [videoFilePath, setVideoFilePath] = useState<string | null>(null) // Track current video file path for deletion
   const [isUploadingVideo, setIsUploadingVideo] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [submitting, setSubmitting] = useState(false)  
@@ -168,14 +169,36 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
   }, [retryCount, loadingSettings])
 
   // Handle video file selection
-  // Handle video file selection
   const handleVideoFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
       console.log('🎥 Daily Challenge: Video file selected:', file.name, file.size, 'bytes')
+      
+      // Delete old video from storage if exists
+      if (videoFilePath) {
+        console.log('🗑️ Daily Challenge: Deleting old video:', videoFilePath)
+        try {
+          const deleteSuccess = await deleteVideoFromStorage(videoFilePath)
+          if (deleteSuccess) {
+            console.log('✅ Daily Challenge: Old video deleted successfully')
+          } else {
+            console.warn('⚠️ Daily Challenge: Failed to delete old video, continuing with upload')
+          }
+        } catch (error) {
+          console.error('❌ Daily Challenge: Error deleting old video:', error)
+          // Continue with upload even if deletion fails
+        }
+      }
+      
+      // Cleanup old preview URL
+      cleanupVideoPreview()
+      
       setVideoFile(file)
       const url = URL.createObjectURL(file)
       setVideoPreviewUrl(url)
+      
+      // Reset video evaluation since we have a new video
+      setVideoEvaluation(null)
       
       // Automatically upload to Supabase Storage
       setIsUploadingVideo(true)
@@ -192,9 +215,11 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
           }
         )
         
-        if (uploadResult.success && uploadResult.publicUrl) {
+        if (uploadResult.success && uploadResult.publicUrl && uploadResult.filePath) {
           setVideoStorageUrl(uploadResult.publicUrl)
+          setVideoFilePath(uploadResult.filePath) // Store file path for future deletion
           console.log('✅ Daily Challenge: Video uploaded to storage:', uploadResult.publicUrl)
+          console.log('📁 Daily Challenge: Video file path stored:', uploadResult.filePath)
         } else {
           console.error('❌ Daily Challenge: Upload failed:', uploadResult.error)
           throw new Error(uploadResult.error || 'Upload failed')
@@ -505,15 +530,33 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
     fileInputRef.current?.click()
   }
 
+  // Cleanup function for video preview URL
+  const cleanupVideoPreview = () => {
+    if (videoPreviewUrl) {
+      URL.revokeObjectURL(videoPreviewUrl)
+    }
+  }
+
+  // Cleanup when component unmounts or video changes
+  useEffect(() => {
+    return () => {
+      cleanupVideoPreview()
+    }
+  }, [videoPreviewUrl])
+
   // Handle retry
   const handleRetry = () => {
     setRetryCount((prev) => prev + 1)
   }  // Reset challenge
   const resetChallenge = () => {
+    // Cleanup video preview URL before reset
+    cleanupVideoPreview()
+    
     setRichTextContent("")
     setVideoFile(null)
     setVideoPreviewUrl(null)
     setVideoStorageUrl(null)
+    setVideoFilePath(null) // Reset video file path
     setIsUploadingVideo(false)
     setUploadProgress(0)
     setActiveStep(1)
@@ -643,18 +686,52 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
                   className="md:w-1/2 flex flex-col"
                 >
                   {videoPreviewUrl ? (
-                    <div className="aspect-video rounded-xl overflow-hidden mb-4">
-                      <div className="relative w-full h-full">
-                        <video className="w-full h-full object-contain" controls src={videoPreviewUrl} />
-                        {isUploadingVideo && (
-                          <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                            <div className="text-center text-white">
-                              <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
-                              <p className="text-sm">Uploading to storage...</p>
-                              <p className="text-xs">{uploadProgress}%</p>
+                    <div className="space-y-3">
+                      <div className="aspect-video rounded-xl overflow-hidden">
+                        <div className="relative w-full h-full">
+                          <video className="w-full h-full object-contain" controls src={videoPreviewUrl} />
+                          {isUploadingVideo && (
+                            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                              <div className="text-center text-white">
+                                <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
+                                <p className="text-sm">Uploading to storage...</p>
+                                <p className="text-xs">{uploadProgress}%</p>
+                              </div>
                             </div>
-                          </div>
-                        )}
+                          )}
+                        </div>
+                      </div>
+                      
+                      {/* Change Video Button */}
+                      <div className="flex justify-center">
+                        <input
+                          type="file"
+                          ref={fileInputRef}
+                          accept="video/*"
+                          onChange={handleVideoFileChange}
+                          className="hidden"
+                          disabled={isUploadingVideo}
+                        />
+                        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                          <Button
+                            onClick={triggerFileInput}
+                            disabled={isUploadingVideo}
+                            variant="outline"
+                            className="bg-white/10 hover:bg-white/20 border-white/20 text-foreground"
+                          >
+                            {isUploadingVideo ? (
+                              <>
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                Uploading...
+                              </>
+                            ) : (
+                              <>
+                                <RefreshCw className="h-4 w-4 mr-2" />
+                                Change Video
+                              </>
+                            )}
+                          </Button>
+                        </motion.div>
                       </div>
                     </div>
                   ) : (
