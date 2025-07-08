@@ -6,6 +6,7 @@ import { Clock } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
 import { type Challenge } from "@/utils/challenge-constants"
 import { getVideoSettings } from "@/app/actions/admin-settings"
+import { formatTime } from "@/components/youtube/youtube-api"
 const HeroSection = lazy(() => import("@/components/home/hero-section"))
 const AssignedTask = lazy(() => import("@/components/home/assigned-task"))
 
@@ -27,23 +28,17 @@ export function CurrentChallengeSection({
   currentChallenge, 
   challengeLoading 
 }: CurrentChallengeSectionProps) {
-  const [watchTimeText, setWatchTimeText] = useState("3-minute")
+  const [watchTimeText, setWatchTimeText] = useState("3:00")
 
   useEffect(() => {
     const loadWatchTime = async () => {
       try {
         const settings = await getVideoSettings()
-        const minutes = Math.ceil(settings.minWatchTime / 60)
-        const seconds = settings.minWatchTime % 60
-        
-        if (seconds > 0) {
-          setWatchTimeText(`${minutes}m ${seconds}s`)
-        } else {
-          setWatchTimeText(`${minutes}-minute`)
-        }
+        // Use formatTime for consistent mm:ss format
+        setWatchTimeText(formatTime(settings.minWatchTime))
       } catch (error) {
         console.error("Failed to load watch time:", error)
-        setWatchTimeText("3-minute") // fallback
+        setWatchTimeText("3:00") // fallback
       }
     }
 

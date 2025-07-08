@@ -18,6 +18,7 @@ import PublishSuccess from "../ui/publish-success"
 import ContentComparisonFeedback from "../ai-evaluation-display/content-comparison-feedback"
 import { submitUserContent, publishSubmission } from "@/app/actions/user-submissions"
 import { createCommunityPost } from "@/app/actions/community-posts"
+import { formatTime } from "@/components/youtube/youtube-api"
 import { getVideoSettings } from "@/app/actions/admin-settings"
 import { compareVideoContentWithUserContent, type ContentComparison } from "@/app/actions/content-comparison"
 import { v4 as uuidv4 } from "uuid"
@@ -882,7 +883,7 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
                         <AlertTriangle className="h-4 w-4 text-amber-500" />
                         <AlertTitle>Watch the Video</AlertTitle>
                         <AlertDescription>
-                          Please watch at least {Math.floor(adminSettings.minWatchTime / 60)} minutes of the video
+                          Please watch at least {formatTime(adminSettings.minWatchTime)} of the video
                           before proceeding to the next step.
                         </AlertDescription>
                       </Alert>

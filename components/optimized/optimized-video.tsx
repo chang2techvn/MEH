@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useCallback } from "react"
 import { Play, Pause, Volume2, VolumeX, Maximize, Settings } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useIntersectionObserver } from "@/hooks/use-intersection-observer"
+import { formatTime } from "@/components/youtube/youtube-api"
 
 interface OptimizedVideoProps {
   src: string
@@ -213,13 +214,6 @@ export function OptimizedVideo({
       document.removeEventListener('fullscreenchange', handleFullscreenChange)
     }
   }, [handleTimeUpdate, handleLoad, handleError])
-
-  // Format time display
-  const formatTime = (time: number) => {
-    const minutes = Math.floor(time / 60)
-    const seconds = Math.floor(time % 60)
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`
-  }
 
   // Error state
   if (hasError) {

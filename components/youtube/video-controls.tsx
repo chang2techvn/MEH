@@ -227,7 +227,8 @@ export function VideoControls({
           animate={{ width: `${progressPercentage}%` }}
           transition={{ duration: 0.3 }}
         />
-      </div>      <div className="mt-1 flex justify-between items-center">
+      </div>      
+      <div className="mt-1 flex justify-between items-center">
         <div className="text-xs text-white/80">
           {completed ? (
             <span className="text-green-400 font-medium">
