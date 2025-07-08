@@ -205,6 +205,21 @@ export default function FeedPost({
                         "Study effective social media engagement strategies"
                       ],
 
+                      // AI-specific feedback sections
+                      keyPoints: [
+                        "Strong foundation in grammar and basic communication skills",
+                        "Clear pronunciation with good articulation",
+                        "Natural speaking pace and confidence in delivery",
+                        "Good engagement with the topic and audience"
+                      ],
+                      nextSteps: [
+                        "Focus on improving word stress patterns for better rhythm",
+                        "Expand vocabulary with more advanced expressions and idioms",
+                        "Practice reducing hesitations during speech",
+                        "Work on more consistent eye contact with camera",
+                        "Develop stronger call-to-action elements in content"
+                      ],
+
                       // Category-specific feedback
                       speakingFeedback: "Your pronunciation is clear and intelligible. Focus on stress patterns for better rhythm.",
                       languageFeedback: "Strong grammar foundation. Expand vocabulary with more sophisticated expressions.",

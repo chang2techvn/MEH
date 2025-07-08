@@ -32,7 +32,8 @@ import {
   Award,
   Speaker,
   Clock,
-  PenTool
+  PenTool,
+  Lightbulb
 } from "lucide-react"
 import type { VideoEvaluation } from "@/lib/gemini-video-evaluation"
 
@@ -140,6 +141,47 @@ export default function EnhancedVideoEvaluationDisplay({
     return "bg-red-100 text-red-800 border-red-300 dark:bg-red-900/30 dark:text-red-300"
   }
 
+  const getPracticetips = (criteria: any[]) => {
+    const tips = []
+    
+    // Add specific tips based on low-scoring areas
+    const lowScoring = criteria.filter(c => c.score < 70)
+    
+    if (lowScoring.some(c => c.id === "pronunciation")) {
+      tips.push("Practice with pronunciation apps daily")
+    }
+    
+    if (lowScoring.some(c => c.id === "fluency")) {
+      tips.push("Read aloud for 5 minutes daily")
+    }
+    
+    if (lowScoring.some(c => c.id === "grammar")) {
+      tips.push("Review basic grammar rules")
+    }
+    
+    if (lowScoring.some(c => c.id === "vocabulary")) {
+      tips.push("Learn 5 new words daily")
+    }
+    
+    if (lowScoring.some(c => c.id === "coherence")) {
+      tips.push("Use linking words: first, then, finally")
+    }
+    
+    if (lowScoring.some(c => c.id === "content")) {
+      tips.push("Practice storytelling techniques")
+    }
+    
+    // Add general tips if not enough specific ones
+    if (tips.length < 4) {
+      tips.push("Record yourself speaking daily")
+      tips.push("Watch English videos with subtitles")
+      tips.push("Practice with native speakers")
+      tips.push("Join English conversation groups")
+    }
+    
+    return tips.slice(0, 4)
+  }
+
   if (isCompact && !expanded) {
     return (
       <motion.div
@@ -232,85 +274,174 @@ export default function EnhancedVideoEvaluationDisplay({
           </TabsList>
 
           <TabsContent value="feedback" className="mt-4">
-            <div className="space-y-3">
-              {/* Strengths */}
-              {evaluation.strengths && evaluation.strengths.length > 0 && (
-                <Alert className="border-green-200 bg-green-50 dark:bg-green-900/20">
-                  <CheckCircle2 className="h-4 w-4" />
-                  <AlertDescription>
-                    <div className="font-medium text-green-800 dark:text-green-300 mb-2">
-                      ✅ What you did well:
-                    </div>
-                    <ul className="text-sm space-y-1">
-                      {evaluation.strengths.slice(0, 3).map((strength, idx) => (
-                        <li key={idx} className="flex items-start gap-2">
-                          <span className="text-green-600">•</span>
-                          {strength}
-                        </li>
-                      ))}
-                    </ul>
-                  </AlertDescription>
-                </Alert>
+            <div className="space-y-4">
+              {/* AI Key Points */}
+              {evaluation.keyPoints && evaluation.keyPoints.length > 0 && (
+                <div className="space-y-3">
+                  <h4 className="font-medium text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-blue-600" />
+                    AI Key Points
+                  </h4>
+                  <div className="space-y-2">
+                    {evaluation.keyPoints.map((point: string, idx: number) => (
+                      <div key={idx} className="flex items-start gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border-l-4 border-blue-400">
+                        <div className="flex-shrink-0 w-6 h-6 bg-blue-100 dark:bg-blue-800 rounded-full flex items-center justify-center mt-0.5">
+                          <span className="text-blue-600 dark:text-blue-400 text-sm font-medium">{idx + 1}</span>
+                        </div>
+                        <p className="text-sm text-blue-800 dark:text-blue-200 leading-relaxed">{point}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               )}
-              
-              {/* Overall Feedback */}
-              <Alert>
-                <Brain className="h-4 w-4" />
-                <AlertDescription>
-                  <div className="font-medium mb-2">💡 Overall Assessment:</div>
-                  <p className="text-sm">
+
+              {/* Fallback: Current Level Summary if no AI key points */}
+              {(!evaluation.keyPoints || evaluation.keyPoints.length === 0) && (
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 p-4 rounded-xl border border-blue-200 dark:border-blue-800">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="p-2 bg-blue-100 dark:bg-blue-900/50 rounded-lg">
+                      <Brain className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-blue-900 dark:text-blue-100">Your Current Level</h3>
+                      <p className="text-sm text-blue-700 dark:text-blue-300">
+                        {getPerformanceLevel(overallScore)} • {overallScore}/100 points
+                      </p>
+                    </div>
+                  </div>
+                  <p className="text-sm text-blue-800 dark:text-blue-200 leading-relaxed">
                     {evaluation.overallFeedback || 
-                     `Your English shows ${getPerformanceLevel(overallScore).toLowerCase()} level. Focus on the improvement areas below to enhance your speaking skills.`}
+                     `Your English communication shows ${getPerformanceLevel(overallScore).toLowerCase()} proficiency. You're making good progress in your English learning journey!`}
                   </p>
-                </AlertDescription>
-              </Alert>
+                </div>
+              )}
+
+              {/* Additional Strengths (if available) */}
+              {evaluation.strengths && evaluation.strengths.length > 0 && (
+                <div className="space-y-2">
+                  <h4 className="font-medium text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                    <Star className="h-4 w-4 text-green-600" />
+                    Your Strengths
+                  </h4>
+                  <div className="grid gap-2">
+                    {evaluation.strengths.slice(0, 3).map((strength: string, idx: number) => (
+                      <div key={idx} className="flex items-start gap-3 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border-l-4 border-green-400">
+                        <div className="flex-shrink-0 w-6 h-6 bg-green-100 dark:bg-green-800 rounded-full flex items-center justify-center mt-0.5">
+                          <span className="text-green-600 dark:text-green-400 text-sm font-medium">{idx + 1}</span>
+                        </div>
+                        <p className="text-sm text-green-800 dark:text-green-200 leading-relaxed">{strength}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </TabsContent>
 
           <TabsContent value="improvements" className="mt-4">
             <div className="space-y-4">
-              {/* Quick Improvements */}
-              <div className="grid gap-3">
-                {speakingCriteria
-                  .filter(c => c.score < 75)
-                  .slice(0, 3)
-                  .map((criteria, idx) => (
-                    <div key={criteria.id} className="p-3 rounded-lg border-l-4 border-orange-400 bg-orange-50 dark:bg-orange-900/20">
-                      <div className="flex items-center gap-2 mb-1">
-                        <div className={`p-1 rounded ${criteria.color} text-white`}>
-                          {criteria.icon}
+              {/* AI Next Steps */}
+              {evaluation.nextSteps && evaluation.nextSteps.length > 0 && (
+                <div className="space-y-3">
+                  <h4 className="font-medium text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                    <TrendingUp className="h-4 w-4 text-blue-600" />
+                    AI Next Steps
+                  </h4>
+                  <div className="space-y-2">
+                    {evaluation.nextSteps.map((step: string, idx: number) => (
+                      <div key={idx} className="flex items-start gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border-l-4 border-blue-400">
+                        <div className="flex-shrink-0 w-6 h-6 bg-blue-100 dark:bg-blue-800 rounded-full flex items-center justify-center mt-0.5">
+                          <span className="text-blue-600 dark:text-blue-400 text-sm font-medium">{idx + 1}</span>
                         </div>
-                        <span className="font-medium text-sm">{criteria.title}</span>
-                        <span className="text-xs bg-orange-100 dark:bg-orange-800 px-2 py-1 rounded">
-                          {criteria.score}/100
-                        </span>
+                        <p className="text-sm text-blue-800 dark:text-blue-200 leading-relaxed">{step}</p>
                       </div>
-                      <p className="text-sm text-gray-700 dark:text-gray-300">
-                        {criteria.improvement}
-                      </p>
-                    </div>
-                  ))}
-              </div>
-
-              {/* Practice Recommendations */}
-              {evaluation.recommendations && evaluation.recommendations.length > 0 && (
-                <Alert className="border-blue-200 bg-blue-50 dark:bg-blue-900/20">
-                  <PlayCircle className="h-4 w-4" />
-                  <AlertDescription>
-                    <div className="font-medium text-blue-800 dark:text-blue-300 mb-2">
-                      🎯 Recommended Practice:
-                    </div>
-                    <ul className="text-sm space-y-1">
-                      {evaluation.recommendations.slice(0, 3).map((rec, idx) => (
-                        <li key={idx} className="flex items-start gap-2">
-                          <span className="text-blue-600">•</span>
-                          {rec}
-                        </li>
-                      ))}
-                    </ul>
-                  </AlertDescription>
-                </Alert>
+                    ))}
+                  </div>
+                </div>
               )}
+
+              {/* Fallback: Priority Areas if no AI next steps */}
+              {(!evaluation.nextSteps || evaluation.nextSteps.length === 0) && (
+                <div className="space-y-2">
+                  <h4 className="font-medium text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                    <Target className="h-4 w-4 text-orange-600" />
+                    Priority Areas to Improve
+                  </h4>
+                  <div className="grid gap-3">
+                    {speakingCriteria
+                      .filter(c => c.score < 75)
+                      .slice(0, 3)
+                      .map((criteria, idx) => (
+                        <div key={criteria.id} className="p-4 rounded-lg bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800">
+                          <div className="flex items-center gap-3 mb-2">
+                            <div className={`p-1.5 rounded-md ${criteria.color} text-white`}>
+                              {criteria.icon}
+                            </div>
+                            <div className="flex-1">
+                              <h5 className="font-medium text-orange-900 dark:text-orange-100">{criteria.title}</h5>
+                              <p className="text-xs text-orange-700 dark:text-orange-300">Current: {criteria.score}%</p>
+                            </div>
+                            <div className="px-2 py-1 bg-orange-100 dark:bg-orange-800 rounded text-xs font-medium text-orange-800 dark:text-orange-200">
+                              Priority {idx + 1}
+                            </div>
+                          </div>
+                          <p className="text-sm text-orange-800 dark:text-orange-200 leading-relaxed">
+                            {criteria.improvement}
+                          </p>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Additional AI Recommendations */}
+              {evaluation.recommendations && evaluation.recommendations.length > 0 && (
+                <div className="space-y-2">
+                  <h4 className="font-medium text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                    <Lightbulb className="h-4 w-4 text-yellow-600" />
+                    Additional Recommendations
+                  </h4>
+                  <div className="grid gap-2">
+                    {evaluation.recommendations.slice(0, 3).map((rec: string, idx: number) => (
+                      <div key={idx} className="flex items-start gap-3 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border-l-4 border-yellow-400">
+                        <div className="flex-shrink-0 w-6 h-6 bg-yellow-100 dark:bg-yellow-800 rounded-full flex items-center justify-center mt-0.5">
+                          <span className="text-yellow-600 dark:text-yellow-400 text-sm font-medium">{idx + 1}</span>
+                        </div>
+                        <p className="text-sm text-yellow-800 dark:text-yellow-200 leading-relaxed">{rec}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Quick Action Items */}
+              <div className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 p-4 rounded-xl border border-purple-200 dark:border-purple-800">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="p-2 bg-purple-100 dark:bg-purple-900/50 rounded-lg">
+                    <PlayCircle className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-purple-900 dark:text-purple-100">Next Practice Session</h4>
+                    <p className="text-sm text-purple-700 dark:text-purple-300">Focus on your top improvement area</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <button className="p-3 bg-white dark:bg-gray-800 rounded-lg border border-purple-200 dark:border-purple-700 hover:border-purple-400 dark:hover:border-purple-500 transition-colors">
+                    <div className="flex items-center gap-2">
+                      <Mic className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                      <span className="text-sm font-medium text-purple-900 dark:text-purple-100">Record Again</span>
+                    </div>
+                    <p className="text-xs text-purple-700 dark:text-purple-300 mt-1">Practice the same topic</p>
+                  </button>
+                  <button className="p-3 bg-white dark:bg-gray-800 rounded-lg border border-purple-200 dark:border-purple-700 hover:border-purple-400 dark:hover:border-purple-500 transition-colors">
+                    <div className="flex items-center gap-2">
+                      <BookOpen className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                      <span className="text-sm font-medium text-purple-900 dark:text-purple-100">New Challenge</span>
+                    </div>
+                    <p className="text-xs text-purple-700 dark:text-purple-300 mt-1">Try a different topic</p>
+                  </button>
+                </div>
+              </div>
             </div>
           </TabsContent>
         </Tabs>
