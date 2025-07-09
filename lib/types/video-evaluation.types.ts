@@ -28,7 +28,8 @@ export interface VideoEvaluation {
   captionSpelling: number
   captionGrammar: number
   appropriateVocabulary: number
-  clarity: number
+  coherence: number
+  content: number
   callToAction: number
   hashtags: number
   seoCaption: number
@@ -56,6 +57,8 @@ export interface VideoEvaluation {
   captionGrammarScore: number
   appropriateVocabularyScore: number
   clarityScore: number
+  coherenceScore: number
+  contentScore: number
   callToActionScore: number
   hashtagsScore: number
   seoScore: number

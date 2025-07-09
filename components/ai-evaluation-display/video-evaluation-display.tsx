@@ -55,14 +55,14 @@ export default function EnhancedVideoEvaluationDisplay({
   const [expanded, setExpanded] = useState(showFullDetails)
   const [activeTab, setActiveTab] = useState("overview")
 
-  // Calculate scores for the 6 key English criteria (simplified)
+  // Use AI's direct scores for the 6 key English criteria
   const speakingCriteria = [
     {
       id: "pronunciation",
       title: "Pronunciation",
       subtitle: "Phát âm",
       icon: <Speaker className="h-4 w-4" />,
-      score: Math.round((evaluation.pronunciation + evaluation.intonation + evaluation.stress) / 3),
+      score: evaluation.pronunciation || 0,
       color: "bg-blue-500",
       improvement: "Practice word stress and clear articulation"
     },
@@ -71,7 +71,7 @@ export default function EnhancedVideoEvaluationDisplay({
       title: "Fluency",
       subtitle: "Độ trôi chảy",
       icon: <Clock className="h-4 w-4" />,
-      score: Math.round((evaluation.fluency + evaluation.speakingSpeed + evaluation.confidence) / 3),
+      score: evaluation.fluency || 0,
       color: "bg-green-500",
       improvement: "Reduce pauses and speak more naturally"
     },
@@ -80,7 +80,7 @@ export default function EnhancedVideoEvaluationDisplay({
       title: "Grammar",
       subtitle: "Ngữ pháp",
       icon: <PenTool className="h-4 w-4" />,
-      score: Math.round((evaluation.grammar + evaluation.tenses) / 2),
+      score: evaluation.grammar || 0,
       color: "bg-purple-500",
       improvement: "Focus on tense consistency and sentence structure"
     },
@@ -89,7 +89,7 @@ export default function EnhancedVideoEvaluationDisplay({
       title: "Vocabulary",
       subtitle: "Từ vựng",
       icon: <BookOpen className="h-4 w-4" />,
-      score: Math.round((evaluation.vocabulary + evaluation.collocations + evaluation.appropriateVocabulary) / 3),
+      score: evaluation.vocabulary || 0,
       color: "bg-orange-500",
       improvement: "Use more varied and topic-specific words"
     },
@@ -98,7 +98,7 @@ export default function EnhancedVideoEvaluationDisplay({
       title: "Coherence",
       subtitle: "Mạch lạc",
       icon: <Link className="h-4 w-4" />,
-      score: Math.round((evaluation.clarity + (evaluation.audienceInteraction || 75)) / 2),
+      score: evaluation.coherence || 0,
       color: "bg-teal-500",
       improvement: "Use connecting words and organize ideas better"
     },
@@ -107,15 +107,14 @@ export default function EnhancedVideoEvaluationDisplay({
       title: "Content",
       subtitle: "Nội dung",
       icon: <FileText className="h-4 w-4" />,
-      score: Math.round((evaluation.creativity + evaluation.clarity + (evaluation.callToAction || 70)) / 3),
+      score: evaluation.content || 0,
       color: "bg-pink-500",
       improvement: "Develop ideas more thoroughly and stay on topic"
     }
   ]
 
-  const overallScore = Math.round(
-    speakingCriteria.reduce((sum, criteria) => sum + criteria.score, 0) / speakingCriteria.length
-  )
+  // Use AI's direct overall score
+  const overallScore = evaluation.score || 0
 
   const getScoreColor = (score: number) => {
     if (score >= 85) return "text-green-600 dark:text-green-400"

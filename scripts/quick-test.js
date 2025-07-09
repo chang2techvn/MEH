@@ -162,7 +162,8 @@ async function testCurrentUserVideo() {
     console.log('Fluency:', evaluation.fluency);
     console.log('Speaking Speed:', evaluation.speakingSpeed);
     console.log('Confidence:', evaluation.confidence);
-    console.log('Clarity:', evaluation.clarity);
+    console.log('Coherence:', evaluation.coherence);
+    console.log('Content:', evaluation.content);
     
     console.log('');
     log('💬 FEEDBACK:', 'cyan');
