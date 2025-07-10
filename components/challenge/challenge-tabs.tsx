@@ -258,19 +258,16 @@ export default function ChallengeTabs({
             <h3 className="text-lg font-semibold text-foreground">Advanced Challenges</h3>
             <p className="text-sm text-muted-foreground">Master-level challenges • {filteredChallenges.length} available</p>
           </div>
-          <div className="h-[600px] min-h-[600px] overflow-y-auto border rounded-lg bg-background/50">
-            <div className="min-h-full p-4">
-              <OptimizedChallengeGrid
-                challenges={filteredChallenges}
-                onStartChallenge={handleStartChallenge}
-                loading={loading}
-                emptyMessage="No advanced challenges found"
-                emptyAction={() => setCreateModalOpen(true)}
-                emptyActionLabel="Create an Advanced Challenge"
-                useVirtualScroll={filteredChallenges.length > 20}
-              />
-            </div>
-          </div>
+
+          <OptimizedChallengeGrid
+            challenges={filteredChallenges}
+            onStartChallenge={handleStartChallenge}
+            loading={loading}
+            emptyMessage="No advanced challenges found"
+            emptyAction={() => setCreateModalOpen(true)}
+            emptyActionLabel="Create an Advanced Challenge"
+            useVirtualScroll={filteredChallenges.length > 20}
+          />
         </TabsContent>
       </Tabs>
 
