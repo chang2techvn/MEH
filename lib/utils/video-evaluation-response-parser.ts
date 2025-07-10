@@ -30,6 +30,8 @@ export function parseVideoEvaluationResponse(response: string, videoUrl?: string
     // Extract key sections directly from AI response
     const keyPoints = extractBulletPoints(response, "key.*points") || []
     const nextSteps = extractBulletPoints(response, "next.*steps") || []
+    const strengths = extractBulletPoints(response, "strengths") || []
+    const weaknesses = extractBulletPoints(response, "weaknesses") || []
     const detailedFeedback = extractFeedback(response) || response
     
     // Extract language detected info for transparency
@@ -38,6 +40,8 @@ export function parseVideoEvaluationResponse(response: string, videoUrl?: string
     console.log("✅ Extracted scores:", scores)
     console.log("✅ Extracted keyPoints:", keyPoints.length, "items")
     console.log("✅ Extracted nextSteps:", nextSteps.length, "items")
+    console.log("✅ Extracted strengths:", strengths.length, "items")
+    console.log("✅ Extracted weaknesses:", weaknesses.length, "items")
     console.log("✅ Language detected:", languageDetected)
     
     return {
@@ -105,8 +109,8 @@ export function parseVideoEvaluationResponse(response: string, videoUrl?: string
       personalBrandingScore: scores.overall,
       
       // AI feedback sections - trust the AI's analysis
-      strengths: extractBulletPoints(response, "strengths") || [],
-      weaknesses: extractBulletPoints(response, "weaknesses") || [],
+      strengths: strengths,
+      weaknesses: weaknesses,
       improvements: nextSteps,
       recommendations: keyPoints,
       keyPoints,

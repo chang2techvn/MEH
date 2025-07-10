@@ -30,15 +30,17 @@ ENGLISH ONLY SCORING (0-100):
 - Must hear clear English pronunciation
 - Must hear English grammar structures
 - Must hear English vocabulary
-- 90-100: Native-like English
-- 80-89: Advanced English
-- 70-79: Upper-intermediate English
-- 60-69: Intermediate English
-- 50-59: Pre-intermediate English
-- 30-49: Elementary English
-- 0-29: Beginner English or NON-ENGLISH
+- Must match expected topic/caption (if off-topic = scores below 50)
+- 90-100: Native-like English + perfect topic match
+- 80-89: Advanced English + good topic relevance
+- 70-79: Upper-intermediate English + decent topic match
+- 60-69: Intermediate English + some topic relevance
+- 50-59: Pre-intermediate English + basic topic match
+- 30-49: Elementary English OR major topic mismatch
+- 0-29: Beginner English, NON-ENGLISH, or completely off-topic
 
-❌ IF NON-ENGLISH DETECTED: Give ALL scores 0 and explain why it's not English.`
+❌ IF NON-ENGLISH DETECTED: Give ALL scores 0 and explain why it's not English.
+❌ IF OFF-TOPIC: Give scores below 50 and explain topic mismatch.`
 }
 
 export function generateEvaluationPrompt(
@@ -79,11 +81,24 @@ Listen carefully to the ACTUAL AUDIO and identify:
 ✗ Silent video or unclear/inaudible audio
 ✗ No actual speech content
 
+STEP 3: TOPIC RELEVANCE ASSESSMENT (CRITICAL)
+Compare the video content with the expected topic/caption:
+- Does the video content match the user's caption?
+- Does it address the expected topic (if provided)?
+- Is the content relevant to what was promised?
+
+🚨 AUTOMATIC SCORES BELOW 50 IF:
+✗ Video content completely unrelated to caption/topic
+✗ Video discusses different subject than expected
+✗ Content is misleading compared to description
+✗ Off-topic or irrelevant material
+
 ✅ ENGLISH SCORING CRITERIA (Required for non-zero scores):
 - Clear English words and pronunciation
 - English grammar structures
 - English intonation and stress patterns
 - Comprehensible English speech throughout
+- Content relevance to stated topic/caption
 
 STEP 3: SCORING (0-100, ONLY for confirmed English)
 Rate each aspect based on what you ACTUALLY hear:
@@ -92,13 +107,21 @@ Rate each aspect based on what you ACTUALLY hear:
 - Vocabulary: Word choice, appropriateness, complexity
 - Fluency: Rhythm, pace, natural speech flow
 - Coherence: Logical flow, organization, connection between ideas
-- Content: Relevance, depth, engagement, message clarity
+- Content: Relevance, depth, engagement, message clarity, TOPIC MATCHING
+
+🎯 TOPIC RELEVANCE SCORING RULES:
+- Content Score: If video topic doesn't match caption/expected topic = MAX 40 points
+- Overall Score: If off-topic = MAX 45 points
+- Other scores: Reduced by 20-30 points if content is misleading/off-topic
 
 STEP 4: PROVIDE SPECIFIC FEEDBACK
 Base your feedback on the actual video content you analyzed:
 - Quote specific phrases you heard
 - Comment on visual elements if relevant
 - Give concrete examples from the actual performance
+- Address topic relevance and any content mismatches
+- Identify 3-5 specific strengths and 3-5 specific weaknesses
+- Analyze both spoken English and written caption quality
 
 REQUIRED RESPONSE FORMAT:
 
@@ -121,13 +144,28 @@ REQUIRED RESPONSE FORMAT:
 - [Actual strengths demonstrated]
 - [Real areas for improvement]
 
+**STRENGTHS:**
+- [English speaking strengths observed in the video]
+- [Positive aspects of pronunciation, grammar, vocabulary usage]
+- [Good communication techniques demonstrated]
+- [Caption writing strengths if applicable]
+
+**WEAKNESSES:**
+- [Areas needing improvement in English speaking]
+- [Pronunciation, grammar, or vocabulary issues observed]
+- [Communication challenges identified]
+- [Caption writing issues if applicable]
+
 **NEXT STEPS:**
 - [Targeted recommendations based on actual performance]
 - [Specific practice suggestions]
 - [Learning priorities based on observed needs]
 
 **DETAILED FEEDBACK:**
-[Comprehensive analysis based on the actual video content, including specific examples of what you heard and saw]
+[Comprehensive analysis based on the actual video content, including specific examples of what you heard and saw. Address topic relevance - does the video match the caption and expected topic? If not, explain the mismatch and how it affects scoring.]
 
-🎯 REMEMBER: You are analyzing REAL video content. Your evaluation must be based on what you actually see and hear, not assumptions or general feedback.`
+🎯 REMEMBER: 
+- You are analyzing REAL video content based on what you actually see and hear
+- Topic relevance is CRITICAL - videos off-topic receive scores below 50
+- Content mismatching caption/topic significantly reduces all scores`
 }

@@ -261,10 +261,14 @@ export default function EnhancedVideoEvaluationDisplay({
 
         {/* Tabbed Details */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="feedback">
               <MessageSquare className="h-4 w-4 mr-2" />
               Key Points
+            </TabsTrigger>
+            <TabsTrigger value="assessment">
+              <BarChart3 className="h-4 w-4 mr-2" />
+              Assessment
             </TabsTrigger>
             <TabsTrigger value="improvements">
               <TrendingUp className="h-4 w-4 mr-2" />
@@ -279,7 +283,7 @@ export default function EnhancedVideoEvaluationDisplay({
                 <div className="space-y-3">
                   <h4 className="font-medium text-gray-900 dark:text-gray-100 flex items-center gap-2">
                     <CheckCircle2 className="h-4 w-4 text-blue-600" />
-                    AI Key Points
+                    Your Key Points
                   </h4>
                   <div className="space-y-2">
                     {evaluation.keyPoints.map((point: string, idx: number) => (
@@ -315,25 +319,62 @@ export default function EnhancedVideoEvaluationDisplay({
                 </div>
               )}
 
-              {/* Additional Strengths (if available) */}
-              {evaluation.strengths && evaluation.strengths.length > 0 && (
+            </div>
+          </TabsContent>
+
+          <TabsContent value="assessment" className="mt-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Strengths */}
+              <div className="space-y-3">
+                <h4 className="font-medium text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-green-600" />
+                  Your Strengths
+                </h4>
                 <div className="space-y-2">
-                  <h4 className="font-medium text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                    <Star className="h-4 w-4 text-green-600" />
-                    Your Strengths
-                  </h4>
-                  <div className="grid gap-2">
-                    {evaluation.strengths.slice(0, 3).map((strength: string, idx: number) => (
+                  {evaluation.strengths && evaluation.strengths.length > 0 ? (
+                    evaluation.strengths.map((strength: string, idx: number) => (
                       <div key={idx} className="flex items-start gap-3 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border-l-4 border-green-400">
                         <div className="flex-shrink-0 w-6 h-6 bg-green-100 dark:bg-green-800 rounded-full flex items-center justify-center mt-0.5">
                           <span className="text-green-600 dark:text-green-400 text-sm font-medium">{idx + 1}</span>
                         </div>
                         <p className="text-sm text-green-800 dark:text-green-200 leading-relaxed">{strength}</p>
                       </div>
-                    ))}
-                  </div>
+                    ))
+                  ) : (
+                    <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                      <p className="text-sm text-green-700 dark:text-green-300 text-center">
+                        No specific strengths identified. Keep practicing to improve your English skills!
+                      </p>
+                    </div>
+                  )}
                 </div>
-              )}
+              </div>
+
+              {/* Weaknesses */}
+              <div className="space-y-3">
+                <h4 className="font-medium text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4 text-red-600" />
+                  Your Weaknesses
+                </h4>
+                <div className="space-y-2">
+                  {evaluation.weaknesses && evaluation.weaknesses.length > 0 ? (
+                    evaluation.weaknesses.map((weakness: string, idx: number) => (
+                      <div key={idx} className="flex items-start gap-3 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border-l-4 border-red-400">
+                        <div className="flex-shrink-0 w-6 h-6 bg-red-100 dark:bg-red-800 rounded-full flex items-center justify-center mt-0.5">
+                          <span className="text-red-600 dark:text-red-400 text-sm font-medium">{idx + 1}</span>
+                        </div>
+                        <p className="text-sm text-red-800 dark:text-red-200 leading-relaxed">{weakness}</p>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+                      <p className="text-sm text-red-700 dark:text-red-300 text-center">
+                        No major weaknesses identified. Great job with your English!
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           </TabsContent>
 
@@ -343,16 +384,16 @@ export default function EnhancedVideoEvaluationDisplay({
               {evaluation.nextSteps && evaluation.nextSteps.length > 0 && (
                 <div className="space-y-3">
                   <h4 className="font-medium text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                    <TrendingUp className="h-4 w-4 text-blue-600" />
-                    AI Next Steps
+                    <TrendingUp className="h-4 w-4 text-purple-600" />
+                    Your Next Move
                   </h4>
                   <div className="space-y-2">
                     {evaluation.nextSteps.map((step: string, idx: number) => (
-                      <div key={idx} className="flex items-start gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border-l-4 border-blue-400">
-                        <div className="flex-shrink-0 w-6 h-6 bg-blue-100 dark:bg-blue-800 rounded-full flex items-center justify-center mt-0.5">
-                          <span className="text-blue-600 dark:text-blue-400 text-sm font-medium">{idx + 1}</span>
+                      <div key={idx} className="flex items-start gap-3 p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border-l-4 border-purple-400">
+                        <div className="flex-shrink-0 w-6 h-6 bg-purple-100 dark:bg-purple-800 rounded-full flex items-center justify-center mt-0.5">
+                          <span className="text-purple-600 dark:text-purple-400 text-sm font-medium">{idx + 1}</span>
                         </div>
-                        <p className="text-sm text-blue-800 dark:text-blue-200 leading-relaxed">{step}</p>
+                        <p className="text-sm text-purple-800 dark:text-purple-200 leading-relaxed">{step}</p>
                       </div>
                     ))}
                   </div>
@@ -393,54 +434,7 @@ export default function EnhancedVideoEvaluationDisplay({
                 </div>
               )}
 
-              {/* Additional AI Recommendations */}
-              {evaluation.recommendations && evaluation.recommendations.length > 0 && (
-                <div className="space-y-2">
-                  <h4 className="font-medium text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                    <Lightbulb className="h-4 w-4 text-yellow-600" />
-                    Additional Recommendations
-                  </h4>
-                  <div className="grid gap-2">
-                    {evaluation.recommendations.slice(0, 3).map((rec: string, idx: number) => (
-                      <div key={idx} className="flex items-start gap-3 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border-l-4 border-yellow-400">
-                        <div className="flex-shrink-0 w-6 h-6 bg-yellow-100 dark:bg-yellow-800 rounded-full flex items-center justify-center mt-0.5">
-                          <span className="text-yellow-600 dark:text-yellow-400 text-sm font-medium">{idx + 1}</span>
-                        </div>
-                        <p className="text-sm text-yellow-800 dark:text-yellow-200 leading-relaxed">{rec}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
 
-              {/* Quick Action Items */}
-              <div className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 p-4 rounded-xl border border-purple-200 dark:border-purple-800">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="p-2 bg-purple-100 dark:bg-purple-900/50 rounded-lg">
-                    <PlayCircle className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-purple-900 dark:text-purple-100">Next Practice Session</h4>
-                    <p className="text-sm text-purple-700 dark:text-purple-300">Focus on your top improvement area</p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <button className="p-3 bg-white dark:bg-gray-800 rounded-lg border border-purple-200 dark:border-purple-700 hover:border-purple-400 dark:hover:border-purple-500 transition-colors">
-                    <div className="flex items-center gap-2">
-                      <Mic className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-                      <span className="text-sm font-medium text-purple-900 dark:text-purple-100">Record Again</span>
-                    </div>
-                    <p className="text-xs text-purple-700 dark:text-purple-300 mt-1">Practice the same topic</p>
-                  </button>
-                  <button className="p-3 bg-white dark:bg-gray-800 rounded-lg border border-purple-200 dark:border-purple-700 hover:border-purple-400 dark:hover:border-purple-500 transition-colors">
-                    <div className="flex items-center gap-2">
-                      <BookOpen className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-                      <span className="text-sm font-medium text-purple-900 dark:text-purple-100">New Challenge</span>
-                    </div>
-                    <p className="text-xs text-purple-700 dark:text-purple-300 mt-1">Try a different topic</p>
-                  </button>
-                </div>
-              </div>
             </div>
           </TabsContent>
         </Tabs>
