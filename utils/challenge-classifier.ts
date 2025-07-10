@@ -78,13 +78,13 @@ export function classifyChallengeDifficulty(
 export function getDifficultyBadgeColor(difficulty: string): string {
   switch (difficulty) {
     case "beginner":
-      return "bg-green-600"
+      return "!bg-emerald-500 !text-white border-emerald-500 hover:!bg-emerald-600" // Xanh lá sáng - dễ/mới bắt đầu
     case "intermediate":
-      return "bg-primary"
+      return "!bg-amber-500 !text-white border-amber-500 hover:!bg-amber-600" // Vàng cam - trung bình
     case "advanced":
-      return "bg-amber-600"
+      return "!bg-rose-500 !text-white border-rose-500 hover:!bg-rose-600" // Đỏ hồng - khó/nâng cao
     default:
-      return "bg-primary"
+      return "!bg-slate-500 !text-white border-slate-500 hover:!bg-slate-600"
   }
 }
 
@@ -99,5 +99,63 @@ export function getDifficultyDisplayName(difficulty: string): string {
       return "Advanced"
     default:
       return "Intermediate"
+  }
+}
+
+// Hàm lấy variant badge cho các component UI khác nhau
+export function getDifficultyBadgeVariant(difficulty: string): 'default' | 'secondary' | 'destructive' | 'outline' {
+  switch (difficulty) {
+    case "beginner":
+      return "secondary" // Màu xanh lá nhẹ
+    case "intermediate":  
+      return "default" // Màu vàng
+    case "advanced":
+      return "destructive" // Màu đỏ
+    default:
+      return "outline" // Mặc định
+  }
+}
+
+// Hàm lấy màu Tailwind CSS cho gradient
+export function getDifficultyGradientColor(difficulty: string): string {
+  switch (difficulty) {
+    case "beginner":
+      return "from-emerald-400 to-emerald-600" // Gradient xanh lá
+    case "intermediate":
+      return "from-amber-400 to-amber-600" // Gradient vàng cam
+    case "advanced":
+      return "from-rose-400 to-rose-600" // Gradient đỏ hồng
+    default:
+      return "from-slate-400 to-slate-600" // Gradient xám
+  }
+}
+
+// Hàm lấy style inline cho badge (để đảm bảo màu hiển thị đúng)
+export function getDifficultyBadgeStyle(difficulty: string): React.CSSProperties {
+  switch (difficulty) {
+    case "beginner":
+      return {
+        backgroundColor: '#10b981', // emerald-500
+        color: '#ffffff',
+        borderColor: '#10b981'
+      }
+    case "intermediate":
+      return {
+        backgroundColor: '#f59e0b', // amber-500
+        color: '#ffffff',
+        borderColor: '#f59e0b'
+      }
+    case "advanced":
+      return {
+        backgroundColor: '#ef4444', // rose-500
+        color: '#ffffff',
+        borderColor: '#ef4444'
+      }
+    default:
+      return {
+        backgroundColor: '#6b7280', // slate-500
+        color: '#ffffff',
+        borderColor: '#6b7280'
+      }
   }
 }

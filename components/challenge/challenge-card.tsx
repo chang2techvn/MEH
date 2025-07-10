@@ -5,7 +5,7 @@ import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { BookOpen, Clock } from "lucide-react"
-import { getDifficultyBadgeColor, getDifficultyDisplayName } from "@/utils/challenge-classifier"
+import { getDifficultyBadgeColor, getDifficultyDisplayName, getDifficultyBadgeStyle } from "@/utils/challenge-classifier"
 import OptimizedImage from "@/components/optimized/optimized-image"
 
 interface ChallengeCardProps {
@@ -41,6 +41,7 @@ const ChallengeCard = memo(function ChallengeCard({
 
   // Memoize difficulty badge color to avoid repeated function calls
   const difficultyBadgeColor = useMemo(() => getDifficultyBadgeColor(difficulty), [difficulty])
+  const difficultyBadgeStyle = useMemo(() => getDifficultyBadgeStyle(difficulty), [difficulty])
   const difficultyDisplayName = useMemo(() => getDifficultyDisplayName(difficulty), [difficulty])
 
   // Memoize click handler to prevent unnecessary re-renders
@@ -68,7 +69,12 @@ const ChallengeCard = memo(function ChallengeCard({
             </div>
           )}
           <div className="absolute top-2 right-2">
-            <Badge className={difficultyBadgeColor}>{difficultyDisplayName}</Badge>
+            <div 
+              className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors"
+              style={difficultyBadgeStyle}
+            >
+              {difficultyDisplayName}
+            </div>
           </div>
         </div>
         <div className="p-4 flex-1 flex flex-col justify-between">
@@ -85,7 +91,10 @@ const ChallengeCard = memo(function ChallengeCard({
         </div>
       </CardContent>
       <CardFooter className="px-4 py-3 border-t mt-auto">
-        <Button className="w-full" onClick={handleStart}>
+        <Button 
+          className="w-full bg-gradient-to-r from-neo-mint to-purist-blue hover:from-neo-mint/90 hover:to-purist-blue/90 text-white border-0" 
+          onClick={handleStart}
+        >
           Start Challenge
         </Button>
       </CardFooter>

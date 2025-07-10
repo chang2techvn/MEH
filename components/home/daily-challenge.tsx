@@ -143,6 +143,11 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
         setLoading(true)
         setError(null)
         
+        console.log(`🎯 === FETCH VIDEO USEEFFECT ===`)
+        console.log(`Challenge Mode: ${challengeMode}`)
+        console.log(`Practice Challenge:`, practiceChallenge?.id || "null")
+        console.log(`Loading Settings: ${loadingSettings}`)
+        
         let videoData: VideoData | null = null
         
         if (challengeMode === 'practice' && practiceChallenge) {
@@ -527,6 +532,10 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
           }
         })
         window.dispatchEvent(event)
+        
+        // Trigger refresh of progress data
+        const refreshEvent = new CustomEvent("refreshProgress")
+        window.dispatchEvent(refreshEvent)
       }console.log("✅ Post published successfully to community feed")
 
       // Set published state

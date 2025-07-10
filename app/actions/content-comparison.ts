@@ -37,12 +37,42 @@ export async function compareVideoContentWithUserContent(
     console.log(`\n🔍 === CONTENT COMPARISON FOR VIDEO ${videoId} ===`)
     console.log(`Admin Min Watch Time: ${minWatchTimeSeconds} seconds (${Math.round(minWatchTimeSeconds / 60)} minutes)`)
     console.log(`User Content Length: ${userContent.length} characters`)
-    console.log(`Threshold: ${threshold}%`)    // Get video transcript from database (already limited by admin settings)
-    const { data: videoData, error } = await supabaseServer
+    console.log(`Threshold: ${threshold}%`)
+
+    let videoData: any = null
+    let error: any = null
+    
+    // First try daily_videos table (for daily challenges)
+    console.log(`🔍 Checking daily_videos table for video: ${videoId}`)
+    const { data: dailyVideoData, error: dailyVideoError } = await supabaseServer
       .from('daily_videos')
       .select('transcript, id, title')
       .eq('id', videoId)
       .single()
+    
+    if (dailyVideoData && !dailyVideoError && dailyVideoData.transcript) {
+      videoData = dailyVideoData
+      console.log(`✅ Found transcript in daily_videos table`)
+    } else {
+      // If not found in daily_videos, try daily_challenges table (for practice challenges)
+      console.log(`🔍 Not found in daily_videos, checking daily_challenges table...`)
+      const { data: dailyChallengeData, error: dailyChallengeError } = await supabaseServer
+        .from('daily_challenges')
+        .select('transcript, id, title')
+        .eq('id', videoId)
+        .single()
+      
+      if (dailyChallengeData && !dailyChallengeError && dailyChallengeData.transcript) {
+        videoData = dailyChallengeData
+        error = null
+        console.log(`✅ Found transcript in daily_challenges table`)
+        console.log(`📝 Transcript length: ${dailyChallengeData.transcript.length} characters`)
+      } else {
+        error = dailyChallengeError
+        console.log(`❌ No transcript found in either table`)
+        console.log(`Error details:`, dailyChallengeError)
+      }
+    }
       if (error || !videoData || !videoData.transcript) {
       return {
         similarityScore: 0,

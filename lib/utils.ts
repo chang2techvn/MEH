@@ -112,6 +112,32 @@ export function formatNumber(num: number): string {
 }
 
 /**
+ * Formats a number with K/M/B/T abbreviations for compact display
+ */
+export function formatNumberShort(num: number): string {
+  if (num < 1000) {
+    return num.toString()
+  }
+  
+  const units = [
+    { value: 1e12, suffix: 'T' }, // Trillion
+    { value: 1e9, suffix: 'B' },  // Billion
+    { value: 1e6, suffix: 'M' },  // Million
+    { value: 1e3, suffix: 'K' }   // Thousand
+  ]
+  
+  for (const unit of units) {
+    if (num >= unit.value) {
+      const formatted = (num / unit.value).toFixed(1)
+      // Remove trailing .0 for whole numbers
+      return formatted.replace(/\.0$/, '') + unit.suffix
+    }
+  }
+  
+  return num.toString()
+}
+
+/**
  * Checks if the current environment is a browser
  */
 export function isBrowser(): boolean {

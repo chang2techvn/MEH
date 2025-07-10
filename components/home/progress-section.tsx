@@ -1,15 +1,28 @@
 "use client"
 
 import { motion } from "framer-motion"
+import { useEffect } from "react"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { TrendingUp } from "lucide-react"
 import { useUserProgress } from "@/hooks/use-user-progress"
+import { formatNumberShort } from "@/lib/utils"
 
 
 export function ProgressSection() {
-  const { progressData, loading, error } = useUserProgress()
+  const { progressData, loading, error, refetch } = useUserProgress()
+
+  // Listen for potential updates (you can call this from parent components)
+  useEffect(() => {
+    const handleRefresh = () => {
+      refetch()
+    }
+
+    // Listen for custom events to refresh progress
+    window.addEventListener('refreshProgress', handleRefresh)
+    return () => window.removeEventListener('refreshProgress', handleRefresh)
+  }, [refetch])
 
   if (loading) {
     return (
@@ -133,12 +146,26 @@ export function ProgressSection() {
           </div>
         </div>
 
-        {/* Additional stats */}
+        {/* Additional stats - 4 columns in one row */}
         <div className="mt-6 pt-4 border-t border-white/20 dark:border-gray-700/20">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-4 gap-2">
             <div className="text-center">
-              <p className="text-lg font-bold text-neo-mint dark:text-purist-blue">{progressData.totalPoints}</p>
+              <p className="text-lg font-bold text-neo-mint dark:text-purist-blue" title={`${progressData.totalPoints} points`}>
+                {formatNumberShort(progressData.totalPoints)}
+              </p>
               <p className="text-xs text-muted-foreground">Total Points</p>
+            </div>
+            <div className="text-center">
+              <p className="text-lg font-bold text-neo-mint dark:text-purist-blue" title={`${progressData.weeklyPoints} points this week`}>
+                {formatNumberShort(progressData.weeklyPoints)}
+              </p>
+              <p className="text-xs text-muted-foreground">Week Points</p>
+            </div>
+            <div className="text-center">
+              <p className="text-lg font-bold text-neo-mint dark:text-purist-blue" title={`${progressData.latestPostPoints} points from latest post`}>
+                {formatNumberShort(progressData.latestPostPoints)}
+              </p>
+              <p className="text-xs text-muted-foreground">Latest Post</p>
             </div>
             <div className="text-center">
               <p className="text-lg font-bold text-neo-mint dark:text-purist-blue">

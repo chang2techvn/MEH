@@ -77,7 +77,7 @@ export async function createCommunityPost(
       comments_count: 0,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
-    }// Save to Supabase
+    }    // Save to Supabase
     const { data, error } = await supabaseServer
       .from('posts')
       .insert([postData])
@@ -87,6 +87,44 @@ export async function createCommunityPost(
     if (error) {
       console.error("❌ Error saving community post:", error)
       throw new Error(`Failed to save post: ${error.message}`)
+    }
+
+    // Add points to user if AI evaluation has a score
+    if (aiEvaluation?.score && aiEvaluation.score > 0) {
+      const pointsToAdd = Math.round(aiEvaluation.score) // Round to nearest integer
+      
+      try {
+        // First get current points
+        const { data: currentUser, error: fetchError } = await supabaseServer
+          .from('users')
+          .select('points')
+          .eq('id', userId)
+          .single()
+
+        if (fetchError) {
+          console.error("⚠️ Warning: Could not fetch current points:", fetchError.message)
+        } else {
+          const currentPoints = currentUser?.points || 0
+          const newPoints = currentPoints + pointsToAdd
+
+          // Update user points
+          const { error: pointsError } = await supabaseServer
+            .from('users')
+            .update({ 
+              points: newPoints,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', userId)
+
+          if (pointsError) {
+            console.error("⚠️ Warning: Could not update user points:", pointsError.message)
+          } else {
+            console.log(`✅ Added ${pointsToAdd} points to user ${username} (${currentPoints} → ${newPoints})`)
+          }
+        }
+      } catch (pointsErr) {
+        console.error("⚠️ Warning: Error updating points:", pointsErr)
+      }
     }
 
     console.log("✅ Community post saved successfully:", data.id)
