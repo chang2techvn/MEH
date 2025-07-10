@@ -61,29 +61,34 @@ export function ProgressSection() {
 
 
 
-  // Generate daily streak visualization
-  const generateDailyStreak = () => {
+  // Generate daily streak visualization for current week (Mon-Sun)
+  const generateWeeklyStreak = () => {
     const today = new Date()
-    const daysOfWeek = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
+    const daysOfWeek = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
+    // Calculate Monday of current week
+    const weekStart = new Date(today)
+    const day = today.getDay()
+    // JS: Sunday=0, Monday=1, ...
+    const diffToMonday = (day === 0 ? -6 : 1) - day
+    weekStart.setDate(today.getDate() + diffToMonday)
     const streak = []
-    
-    for (let i = 6; i >= 0; i--) {
-      const date = new Date(today)
-      date.setDate(today.getDate() - i)
-      const dayOfWeek = date.getDay()
-      const isCompleted = i <= (6 - Math.min(progressData.streakDays, 7))
-      
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(weekStart)
+      date.setDate(weekStart.getDate() + i)
+      const isToday = date.toDateString() === today.toDateString()
+      const isPast = date < today && !isToday
+      const isFuture = date > today
       streak.push({
         day: date.getDate(),
-        dayOfWeek: daysOfWeek[dayOfWeek],
-        isCompleted: isCompleted
+        dayOfWeek: daysOfWeek[i],
+        isToday,
+        isPast,
+        isFuture
       })
     }
-    
     return streak
   }
-
-  const dailyStreak = generateDailyStreak()
+  const weeklyStreak = generateWeeklyStreak()
 
   return (
     <Card className="neo-card overflow-hidden border-none bg-white/40 dark:bg-gray-900/40 backdrop-blur-xl shadow-neo">
@@ -107,20 +112,22 @@ export function ProgressSection() {
             <span className="text-xs text-muted-foreground">{progressData.streakDays} days</span>
           </div>
           <div className="flex justify-between">
-            {dailyStreak.map((day, i) => (
+            {weeklyStreak.map((day, i) => (
               <div key={i} className="flex flex-col items-center">
                 <motion.div
-                  className={`w-10 h-10 rounded-full flex items-center justify-center mb-1 ${
-                    day.isCompleted
-                      ? "bg-gradient-to-br from-neo-mint to-purist-blue text-white shadow-glow-sm"
-                      : "bg-white/20 dark:bg-gray-800/20"
-                  }`}
+                  className={`w-10 h-10 rounded-full flex items-center justify-center mb-1
+                    ${day.isToday
+                      ? "bg-gradient-to-br from-neo-mint to-purist-blue text-white shadow-glow-sm border-2 border-purist-blue"
+                      : day.isPast
+                        ? "bg-neo-mint/80 text-white"
+                        : "bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-600"}
+                  `}
                   whileHover={{ scale: 1.05 }}
                   transition={{ type: "spring", stiffness: 400, damping: 10 }}
                 >
                   <span className="text-xs font-bold">{day.day}</span>
                 </motion.div>
-                <span className="text-xs">{day.dayOfWeek}</span>
+                <span className={`text-xs ${day.isFuture ? "text-gray-400 dark:text-gray-600" : ""}`}>{day.dayOfWeek}</span>
               </div>
             ))}
           </div>

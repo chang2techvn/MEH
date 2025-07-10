@@ -54,16 +54,7 @@ export function PostHeader({
           <div>
             <p className="font-medium">{username}</p>
             <p className="text-xs text-muted-foreground">{timeAgo}</p>
-          </div>          {mediaType === "ai-submission" && submission && (
-            <div className="hover-scale">
-              <Badge className="bg-gradient-to-r from-neo-mint to-purist-blue text-white border-0">
-                <Award className="h-3 w-3 mr-1" />
-                <span className="animate-fade-in">
-                  Score: {submission.overallScore}
-                </span>
-              </Badge>
-            </div>
-          )}
+          </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button

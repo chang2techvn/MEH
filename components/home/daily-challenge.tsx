@@ -25,6 +25,8 @@ import { v4 as uuidv4 } from "uuid"
 import type { VideoEvaluation } from "@/lib/gemini-video-evaluation"
 import { uploadVideoToStorage, deleteVideoFromStorage, type VideoUploadResult } from "@/lib/video-storage"
 import { useAuthState } from "@/contexts/auth-context"
+import { useChallenge } from "@/contexts/challenge-context"
+import { getPracticeChallengeVideo } from "@/app/actions/practice-challenge"
 
 interface DailyChallengeProps {
   userId: string
@@ -35,6 +37,7 @@ interface DailyChallengeProps {
 
 export default function DailyChallenge({ userId, username, userImage, onSubmissionComplete }: DailyChallengeProps) {
   const { user } = useAuthState() // Get authenticated user
+  const { challengeMode, currentChallenge: practiceChallenge } = useChallenge()
   const [loading, setLoading] = useState(true)
   const [videoData, setVideoData] = useState<VideoData | null>(null)
   const [activeStep, setActiveStep] = useState(1)
@@ -139,19 +142,32 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
       try {
         setLoading(true)
         setError(null)
-        console.log("Fetching today's video...")
-        const video = await getTodayVideo()
-        console.log("Video fetched successfully:", video.id)
-        setVideoData(video)
-          // Check if video already has transcript from database
+        
+        let videoData: VideoData | null = null
+        
+        if (challengeMode === 'practice' && practiceChallenge) {
+          // Load practice challenge video
+          console.log("🔍 Loading practice challenge video...")
+          videoData = await getPracticeChallengeVideo(practiceChallenge.id)
+          console.log("✅ Practice challenge video loaded:", videoData.id)
+        } else {
+          // Load daily challenge video (default behavior)
+          console.log("🔍 Fetching today's video...")
+          videoData = await getTodayVideo()
+          console.log("✅ Video fetched successfully:", videoData.id)
+        }
+        
+        setVideoData(videoData)
+        
+        // Check if video already has transcript from database
         console.log("=== CHECKING VIDEO TRANSCRIPT ===")
-        if (video.transcript && video.transcript.length > 100) {
+        if (videoData && videoData.transcript && videoData.transcript.length > 100) {
           console.log("✅ Using transcript from database!")
-          console.log(`📝 Transcript length: ${video.transcript.length} characters`)
-          console.log(`📄 Transcript preview: ${video.transcript.substring(0, 200)}...`)
+          console.log(`📝 Transcript length: ${videoData.transcript.length} characters`)
+          console.log(`📄 Transcript preview: ${videoData.transcript.substring(0, 200)}...`)
         } else {
           console.log("⚠️ No transcript in database, would need to extract...")
-          console.log("📝 Transcript from database:", video.transcript || "null")
+          console.log("📝 Transcript from database:", videoData?.transcript || "null")
         }
         console.log("=== END TRANSCRIPT CHECK ===")
         
@@ -166,7 +182,7 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
     if (!loadingSettings) {
       fetchVideo()
     }
-  }, [retryCount, loadingSettings])
+  }, [retryCount, loadingSettings, challengeMode, practiceChallenge]) // Add dependencies
 
   // Handle video file selection
   const handleVideoFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {

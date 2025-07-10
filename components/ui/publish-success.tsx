@@ -7,14 +7,16 @@ import { CheckCircle, ArrowRight, Home, Eye, MapPin } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { toast } from "@/hooks/use-toast"
 import { useEffect } from "react"
+import { useChallenge } from "@/contexts/challenge-context"
 
 interface PublishSuccessProps {
   postId: string
-  onStartNewChallenge: () => void
+  onStartNewChallenge?: () => void
 }
 
 export default function PublishSuccess({ postId, onStartNewChallenge }: PublishSuccessProps) {
   const router = useRouter()
+  const { resetToDaily } = useChallenge()
 
   // Show success popup when component mounts
   useEffect(() => {
@@ -26,6 +28,9 @@ export default function PublishSuccess({ postId, onStartNewChallenge }: PublishS
   }, [])
 
   const goToHome = () => {
+    // Reset challenge mode to daily when going home
+    resetToDaily()
+    
     // Use Next.js router for client-side navigation
     router.push("/")
   }
@@ -35,9 +40,33 @@ export default function PublishSuccess({ postId, onStartNewChallenge }: PublishS
     router.push(`/community?highlight=${postId}`)
   }
 
-  const scrollToPostInFeed = () => {
-    // Use Next.js router for client-side navigation
-    router.push(`/community?highlight=${postId}`)
+  const scrollToPracticeChallenges = () => {
+    // Navigate to home page first, then scroll to Practice Challenges section
+    router.push("/")
+    
+    // Wait a bit for navigation to complete, then scroll
+    setTimeout(() => {
+      const challengesSection = document.querySelector('[data-section="practice-challenges"]') || 
+                               document.querySelector('#practice-challenges') ||
+                               document.querySelector('.practice-challenges') ||
+                               // Fallback: try to find by text content
+                               Array.from(document.querySelectorAll('h2, h3')).find(el => 
+                                 el.textContent?.includes('Practice Challenges')
+                               )?.closest('section, div')
+
+      if (challengesSection) {
+        challengesSection.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'start' 
+        })
+      } else {
+        // Fallback: scroll down to approximate location
+        window.scrollTo({ 
+          top: window.innerHeight * 1.5, 
+          behavior: 'smooth' 
+        })
+      }
+    }, 500)
   }
 
   return (
@@ -73,10 +102,10 @@ export default function PublishSuccess({ postId, onStartNewChallenge }: PublishS
             </Button>
 
             <Button
-              onClick={onStartNewChallenge}
+              onClick={scrollToPracticeChallenges}
               className="w-full bg-gradient-to-r from-neo-mint to-purist-blue hover:from-neo-mint/90 hover:to-purist-blue/90 text-white border-0 flex items-center gap-2"
             >
-              New Challenge
+              Practice Challenge
               <ArrowRight className="h-4 w-4" />
             </Button>
           </div>

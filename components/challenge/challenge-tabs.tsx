@@ -8,6 +8,7 @@ import { fetchAllChallenges, fetchCurrentChallenge } from "@/app/actions/challen
 import { type Challenge } from '@/utils/challenge-constants'
 import { toast } from "@/hooks/use-toast"
 import { useDebounce } from "@/hooks/use-performance"
+import { useChallenge } from "@/contexts/challenge-context"
 
 interface ChallengeTabsProps {
   searchTerm: string
@@ -22,6 +23,7 @@ export default function ChallengeTabs({
   const [activeTab, setActiveTab] = useState("all")
   const [loading, setLoading] = useState(true)
   const [createModalOpen, setCreateModalOpen] = useState(false)
+  const { setChallengeMode, setCurrentChallenge } = useChallenge()
   
   // Debounced search term using hook
   const debouncedSearchTerm = useDebounce(searchTerm, 300)
@@ -154,15 +156,27 @@ export default function ChallengeTabs({
     const challenge = challenges.find(c => c.id === id)
     
     if (challenge) {
+      // Convert challenge to have proper format for daily_challenges table lookup
+      const practiceChallenge: Challenge = {
+        ...challenge,
+        // Ensure it has proper video properties for the database lookup
+        videoUrl: challenge.videoUrl || challenge.embedUrl || "",
+        embedUrl: challenge.embedUrl || challenge.videoUrl || "",
+      }
+      
+      // Set practice mode and challenge
+      setChallengeMode('practice')
+      setCurrentChallenge(practiceChallenge)
+      
       // Set challenge được chọn để hiển thị ở "Your Current Challenge"
-      onSelectedChallengeChange(challenge)
+      onSelectedChallengeChange(practiceChallenge)
       
       toast({
-        title: "Challenge started",
+        title: "Practice Challenge started",
         description: `Started: ${challenge.title}`,
       })
       
-      // Scroll lên top để user có thể thấy "Your Current Challenge"
+      // Scroll lên top để user có thể thấy "Your Practice Challenge"
       window.scrollTo({ top: 0, behavior: 'smooth' })
     } else {
       console.error("❌ [ChallengeTabs] Challenge not found with ID:", id)
@@ -172,7 +186,7 @@ export default function ChallengeTabs({
         variant: "destructive",
       })
     }
-  }, [challenges, onSelectedChallengeChange])
+  }, [challenges, onSelectedChallengeChange, setChallengeMode, setCurrentChallenge])
 
   return (
     <>      <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab} className="w-full">

@@ -47,13 +47,15 @@ export function generateEvaluationPrompt(
   videoUrl: string,
   caption: string,
   transcript?: string,
-  originalContent?: string
+  originalContent?: string,
+  videoTitle?: string,
+  videoDescription?: string
 ): string {
   return `🚨🚨🚨 ANALYZE THE VIDEO CONTENT ABOVE 🚨🚨🚨
 
 SUBMISSION CONTEXT:
 - User Caption: "${caption}"
-${transcript ? `- Expected Topic: "${transcript}"` : ""}
+${(videoTitle || videoDescription || transcript) ? `- Expected Topic: ${[videoTitle, videoDescription, transcript].filter(Boolean).join(" | ")}` : ""}
 ${originalContent ? `- Context: "${originalContent}"` : ""}
 
 🚨 CRITICAL: YOU HAVE BEEN PROVIDED WITH AN ACTUAL VIDEO FILE TO ANALYZE

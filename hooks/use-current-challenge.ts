@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { getTodayVideo, type VideoData } from "@/app/actions/youtube-video"
 import { type Challenge } from "@/utils/challenge-constants"
+import { useChallenge } from "@/contexts/challenge-context"
 
 // Helper function to convert VideoData to Challenge format
 function videoDataToChallenge(videoData: VideoData): Challenge {
@@ -26,23 +27,34 @@ function videoDataToChallenge(videoData: VideoData): Challenge {
 export function useCurrentChallenge() {
   const [currentChallenge, setCurrentChallenge] = useState<Challenge | null>(null)
   const [challengeLoading, setChallengeLoading] = useState(true)
+  const { challengeMode, currentChallenge: practiceChallenge, resetToDaily } = useChallenge()
 
   useEffect(() => {
     const loadCurrentChallenge = async () => {
       try {
         setChallengeLoading(true)
-        console.log("🔍 Loading today's video for homepage challenge...")
+        console.log(`🔍 Loading challenge for mode: ${challengeMode}`)
         
-        // Get today's video instead of fetching challenges
-        const videoData = await getTodayVideo()
-        
-        // Convert VideoData to Challenge format for UI compatibility
-        const challenge = videoDataToChallenge(videoData)
-        
-        console.log("✅ Today's video loaded successfully:", challenge.id)
-        setCurrentChallenge(challenge)
+        if (challengeMode === 'practice' && practiceChallenge) {
+          // Use practice challenge from context
+          console.log("✅ Using practice challenge:", practiceChallenge.id)
+          setCurrentChallenge(practiceChallenge)
+        } else {
+          // Load daily challenge (default behavior)
+          console.log("🔍 Loading today's video for daily challenge...")
+          const videoData = await getTodayVideo()
+          const challenge = videoDataToChallenge(videoData)
+          
+          console.log("✅ Today's video loaded successfully:", challenge.id)
+          setCurrentChallenge(challenge)
+          
+          // If we're in practice mode but no practice challenge, reset to daily
+          if (challengeMode === 'practice') {
+            resetToDaily()
+          }
+        }
       } catch (error) {
-        console.error("❌ Error loading today's video:", error)
+        console.error("❌ Error loading challenge:", error)
         setCurrentChallenge(null)
       } finally {
         setChallengeLoading(false)
@@ -50,11 +62,12 @@ export function useCurrentChallenge() {
     }
 
     loadCurrentChallenge()
-  }, [])
+  }, [challengeMode, practiceChallenge, resetToDaily]) // Re-run when challenge mode or practice challenge changes
 
   return {
     currentChallenge,
     challengeLoading,
-    setCurrentChallenge,
+    challengeMode,
+    setCurrentChallenge
   }
 }

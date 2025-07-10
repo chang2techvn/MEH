@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { type Challenge } from "@/utils/challenge-constants"
 import { getVideoSettings } from "@/app/actions/admin-settings"
 import { formatTime } from "@/components/youtube/youtube-api"
+import { useChallenge } from "@/contexts/challenge-context"
 const HeroSection = lazy(() => import("@/components/home/hero-section"))
 const AssignedTask = lazy(() => import("@/components/home/assigned-task"))
 
@@ -29,6 +30,7 @@ export function CurrentChallengeSection({
   challengeLoading 
 }: CurrentChallengeSectionProps) {
   const [watchTimeText, setWatchTimeText] = useState("3:00")
+  const { challengeMode } = useChallenge()
 
   useEffect(() => {
     const loadWatchTime = async () => {
@@ -68,7 +70,7 @@ export function CurrentChallengeSection({
 
     <Suspense fallback={<LoadingFallback />}>      
     <HeroSection
-        title="Your Current Challenge"
+        title={challengeMode === 'practice' ? "Your Practice Challenge" : "Your Current Challenge"}
         description={`Watch this ${watchTimeText} video about how technology is changing our daily lives and follow the 4-skill process.`}
       >
       <Suspense fallback={<LoadingFallback />}>

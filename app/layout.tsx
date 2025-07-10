@@ -8,6 +8,7 @@ import { ChatProvider } from "@/contexts/chat-context-realtime"
 import ChatWindowsManager from "@/components/messages/chat-windows-manager"
 import MinimizedChatBar from "@/components/messages/minimized-chat-bar"
 import { ThemeProvider } from "@/contexts/theme-context"
+import { ChallengeProvider } from "@/contexts/challenge-context"
 import Script from "next/script"
 import ServiceWorkerRegistration from "@/components/service-worker-registration"
 
@@ -118,15 +119,17 @@ export default function RootLayout({
       </head>
       <body className={outfit.className}>        <AuthProvider>
           <ThemeProvider>
-            <ChatProvider>
-              <div className="flex min-h-screen flex-col">
-                {children}
-                <ChatWindowsManager />
-                <MinimizedChatBar />
-              </div>
-              <Toaster />
+            <ChallengeProvider>
+              <ChatProvider>
+                <div className="flex min-h-screen flex-col">
+                  {children}
+                  <ChatWindowsManager />
+                  <MinimizedChatBar />
+                </div>
+                <Toaster />
 
-            </ChatProvider>
+              </ChatProvider>
+            </ChallengeProvider>
           </ThemeProvider>
         </AuthProvider>
 
