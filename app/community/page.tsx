@@ -216,6 +216,7 @@ export default function CommunityPage() {
             textContent: post.post_type === 'text' ? post.content : undefined,
             likes: post.likes_count || 0,          
             comments: post.comments_count || 0,
+            title: post.title, // Add title for badge extraction
             submission: videoEvaluation ? {
               type: 'video_submission',
               videoUrl: post.media_url,
@@ -400,6 +401,7 @@ export default function CommunityPage() {
         textContent: undefined,
         likes: 0,
         comments: 0,
+        title: event.detail.title, // Add title for badge
         submission: event.detail.submission,
         videoEvaluation: event.detail.videoEvaluation,
         isNew: true
@@ -800,6 +802,7 @@ export default function CommunityPage() {
                           submission={post.submission}
                           videoEvaluation={post.videoEvaluation}
                           isNew={post.isNew}
+                          title={post.title}
                         />
                       </div>
                     ))

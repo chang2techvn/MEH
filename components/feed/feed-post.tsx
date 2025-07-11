@@ -28,6 +28,7 @@ export default function FeedPost({
   submission,
   videoEvaluation,
   isNew = false,
+  title,
 }: FeedPostProps) {
 
   const {
@@ -88,6 +89,7 @@ export default function FeedPost({
               submission={submission}
               saved={state?.saved || false}
               onSavedChange={(saved) => updateState?.({ saved })}
+              title={title}
             />
             
             <motion.p

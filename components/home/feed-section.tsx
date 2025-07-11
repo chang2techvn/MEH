@@ -148,6 +148,7 @@ export function FeedSection({
                             comments={formattedPost.comments}
                             isNew={post.isNew || false}
                             submission={formattedPost.submission}
+                            title={formattedPost.title}
                           />
                         </div>
                       </Suspense>

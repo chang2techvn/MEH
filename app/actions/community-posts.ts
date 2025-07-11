@@ -30,7 +30,8 @@ export async function createCommunityPost(
   content: string,
   videoUrl?: string,
   originalVideoId?: string,
-  aiEvaluation?: VideoEvaluation
+  aiEvaluation?: VideoEvaluation,
+  challengeType?: 'daily' | 'practice'
 ): Promise<CommunityPost> {
   try {
     // First, ensure the user exists in the public.users table
@@ -61,11 +62,15 @@ export async function createCommunityPost(
         console.log('✅ Created user record for:', username)
       }
     }    // Create post data to match the posts table schema
+    const postTitle = challengeType 
+      ? `${challengeType === 'daily' ? 'Daily' : 'Practice'} - ${new Date().toLocaleDateString()}`
+      : `Video Analysis - ${new Date().toLocaleDateString()}`
+    
     const postData = {
       user_id: userId,
       username,
       user_image: userImage,
-      title: `Video Analysis - ${new Date().toLocaleDateString()}`,
+      title: postTitle,
       content,
       post_type: videoUrl ? 'video' : 'text', // Use 'video' for posts with video, 'text' for text-only
       media_url: videoUrl,

@@ -12,6 +12,7 @@ export function formatNewPost(postData: any) {
     likes: 0,
     comments: 0,
     isNew: true,
+    title: postData.title, // Add title for badge extraction
     submission: {
       id: postData.id,
       userId: "user-1",

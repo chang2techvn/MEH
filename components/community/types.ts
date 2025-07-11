@@ -23,6 +23,7 @@ export interface Post {
   textContent?: string
   likes: number
   comments: number
+  title?: string
   submission?: any
   isNew?: boolean
   aiEvaluation?: any

@@ -22,6 +22,7 @@ interface PostHeaderProps {
   submission?: UserSubmission
   saved: boolean
   onSavedChange: (saved: boolean) => void
+  title?: string // Add title prop to extract badge text
 }
 
 export function PostHeader({
@@ -32,7 +33,19 @@ export function PostHeader({
   submission,
   saved,
   onSavedChange,
-}: PostHeaderProps) {  return (
+  title,
+}: PostHeaderProps) {
+  // Extract badge text from title
+  const getBadgeText = (title?: string): string | null => {
+    if (!title) return null
+    if (title.startsWith('Daily -')) return 'Daily'
+    if (title.startsWith('Practice -')) return 'Practice'
+    return null
+  }
+
+  const badgeText = getBadgeText(title)
+
+  return (
     <div className="flex items-start gap-4">
       <div className="hover-scale-small">
         <Avatar className="h-12 w-12 border-2 border-white dark:border-gray-800"><Image
@@ -55,38 +68,48 @@ export function PostHeader({
             <p className="font-medium">{username}</p>
             <p className="text-xs text-muted-foreground">{timeAgo}</p>
           </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 rounded-full hover:bg-white/20 dark:hover:bg-gray-800/20"
+          <div className="flex items-center gap-2">
+            {badgeText && (
+              <Badge 
+                variant="secondary" 
+                className="bg-gradient-to-r from-neo-mint to-purist-blue text-white border-0 text-[10px] px-1.5 py-0.5"
               >
-                <MoreHorizontal className="h-4 w-4" />
-                <span className="sr-only">More options</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent
-              align="end"
-              className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-white/20 dark:border-gray-800/20"
-            >
-              <DropdownMenuItem
-                className="flex items-center gap-2 focus:bg-white/20 dark:focus:bg-gray-800/20"
-                onClick={() => onSavedChange(!saved)}
+                {badgeText}
+              </Badge>
+            )}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 rounded-full hover:bg-white/20 dark:hover:bg-gray-800/20"
+                >
+                  <MoreHorizontal className="h-4 w-4" />
+                  <span className="sr-only">More options</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="end"
+                className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-white/20 dark:border-gray-800/20"
               >
-                <Bookmark className="h-4 w-4" />
-                {saved ? "Unsave post" : "Save post"}
-              </DropdownMenuItem>
-              <DropdownMenuItem className="flex items-center gap-2 focus:bg-white/20 dark:focus:bg-gray-800/20">
-                <EyeOff className="h-4 w-4" />
-                Hide
-              </DropdownMenuItem>
-              <DropdownMenuItem className="flex items-center gap-2 focus:bg-white/20 dark:focus:bg-gray-800/20">
-                <Flag className="h-4 w-4" />
-                Report
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+                <DropdownMenuItem
+                  className="flex items-center gap-2 focus:bg-white/20 dark:focus:bg-gray-800/20"
+                  onClick={() => onSavedChange(!saved)}
+                >
+                  <Bookmark className="h-4 w-4" />
+                  {saved ? "Unsave post" : "Save post"}
+                </DropdownMenuItem>
+                <DropdownMenuItem className="flex items-center gap-2 focus:bg-white/20 dark:focus:bg-gray-800/20">
+                  <EyeOff className="h-4 w-4" />
+                  Hide
+                </DropdownMenuItem>
+                <DropdownMenuItem className="flex items-center gap-2 focus:bg-white/20 dark:focus:bg-gray-800/20">
+                  <Flag className="h-4 w-4" />
+                  Report
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </div>
     </div>

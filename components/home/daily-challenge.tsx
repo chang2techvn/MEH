@@ -495,7 +495,8 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
         richTextContent,
         videoStorageUrl, // Use the Supabase Storage URL
         videoData.id,
-        videoEvaluation // Use evaluation from step 3
+        videoEvaluation, // Use evaluation from step 3
+        challengeMode === 'practice' ? 'practice' : 'daily' // Mark challenge type based on mode
       )
 
       console.log("✅ Daily Challenge: Post saved to Supabase:", createdPost.id)
@@ -512,7 +513,7 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
             id: postId, // Use real post ID
             username: user.name || username,
             userImage: user.avatar || userImage,
-            title: `Video Analysis - ${new Date().toLocaleDateString()}`,
+            title: createdPost.title, // Use the actual title from DB
             content: richTextContent,
             videoUrl: videoStorageUrl, // Use the Supabase Storage URL
             mediaType: 'ai-submission',

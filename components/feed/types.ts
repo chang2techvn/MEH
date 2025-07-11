@@ -31,6 +31,7 @@ export interface FeedPostProps {
   submission?: UserSubmission
   videoEvaluation?: VideoEvaluation | null
   isNew?: boolean
+  title?: string // Add title prop
 }
 
 export interface PostInteractionState {
