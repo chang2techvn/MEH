@@ -115,12 +115,38 @@ export default function CommunityPage() {
         groupsResult,
         trendingResult      
       ] = await Promise.all([
+        // Get posts with fallback profile handling
         supabase
           .from('posts')
           .select('*')
           .eq('is_public', true)
           .order('created_at', { ascending: false })
-          .limit(20),
+          .limit(20)
+          .then(async (postsResult) => {
+            if (postsResult.data) {
+              // Get unique user_ids from posts
+              const userIds = [...new Set(postsResult.data.map(post => post.user_id))]
+              
+              // Get profiles for all users
+              const { data: profilesData } = await supabase
+                .from('profiles')
+                .select('user_id, full_name, username, avatar_url')
+                .in('user_id', userIds)
+              
+              // Create a lookup map
+              const profilesMap = new Map()
+              profilesData?.forEach(profile => {
+                profilesMap.set(profile.user_id, profile)
+              })
+              
+              // Attach profiles to posts
+              postsResult.data = postsResult.data.map(post => ({
+                ...post,
+                profile: profilesMap.get(post.user_id)
+              }))
+            }
+            return postsResult
+          }),
         dbHelpers.getStories(10),
         dbHelpers.getOnlineUsers(10),
         dbHelpers.getEvents(),
@@ -206,8 +232,8 @@ export default function CommunityPage() {
 
           return {
             id: post.id, // Keep as string UUID instead of converting to number
-            username: post.username || 'Unknown User', // Use username directly from posts table
-            userImage: post.user_image || "/placeholder.svg?height=40&width=40", // Use user_image directly from posts table
+            username: post.profile?.full_name || post.profile?.username || 'Unknown User', // Từ profiles table
+            userImage: post.profile?.avatar_url || "/placeholder.svg?height=40&width=40", // Từ profiles table
             timeAgo: formatTimeAgo(post.created_at || ''),
             content: post.content || '',
             mediaType,
@@ -581,8 +607,16 @@ export default function CommunityPage() {
   }
   
   const handlePostSubmit = async () => {
-    if (!newPostContent.trim() && !mediaPreview) return
+    console.log("🚀 handlePostSubmit called")
+    console.log("📝 newPostContent:", newPostContent)
+    console.log("🖼️ mediaPreview:", mediaPreview)
+    
+    if (!newPostContent.trim() && !mediaPreview) {
+      console.log("❌ No content or media, returning early")
+      return
+    }
 
+    console.log("🔄 Setting isPostingContent to true")
     setIsPostingContent(true)
 
     // Add haptic feedback if available
@@ -591,9 +625,13 @@ export default function CommunityPage() {
     }
 
     try {
+      console.log("👤 Getting current user...")
       // Get current user
       const currentUser = await dbHelpers.getCurrentUser()
+      console.log("👤 Current user:", currentUser)
+      
       if (!currentUser) {
+        console.log("❌ No current user found")
         toast({
           title: "Authentication required",
           description: "Please log in to create a post.",
@@ -603,12 +641,10 @@ export default function CommunityPage() {
         return
       }
 
-      // Prepare post content
-      let fullContent = newPostContent
-      if (selectedFeeling) fullContent += ` — feeling ${selectedFeeling}`
-      if (location) fullContent += ` — at ${location}`
-      if (taggedPeople.length > 0) fullContent += ` — with ${taggedPeople.join(", ")}`
-      if (selectedDate) fullContent += ` — ${selectedDate.toLocaleDateString()}`
+      // Prepare post content - CHỈ dùng nội dung chính, không thêm feeling, location, etc.
+      let fullContent = newPostContent.trim()
+
+      console.log("📝 Clean content:", fullContent)
 
       // Determine post type
       let postType = 'text'
@@ -618,16 +654,24 @@ export default function CommunityPage() {
         postType = 'image'
       }      
 
+      console.log("📄 Post type:", postType)
+      console.log("📤 Creating post in Supabase...")
+
       // Create post in Supabase
       const { data: newPost, error } = await dbHelpers.createPost({
         title: fullContent.substring(0, 100), // Use first 100 chars as title
         content: fullContent,
-        author_id: currentUser.id,
-        type: postType,
+        user_id: currentUser.id,
+        post_type: postType,
+        media_url: mediaPreview || undefined,
         tags: [] // Could extract hashtags from content
       })
       
+      console.log("📤 Supabase response - data:", newPost)
+      console.log("📤 Supabase response - error:", error)
+      
       if (error || !newPost) {
+        console.log("❌ Error creating post:", error)
         toast({
           title: "Error creating post",
           description: "There was an error publishing your post. Please try again.",
@@ -637,22 +681,40 @@ export default function CommunityPage() {
         return
       }      
 
-      // Add the new post to the feed
+      console.log("✅ Post created successfully!")
+      
+      // Add the new post to the feed với thông tin chính xác từ currentUser
       const newPostForFeed = {
-        id: newPost.id, // Keep as string UUID instead of converting to number
-        username: currentUser.name || "You",
-        userImage: currentUser.avatar || "/placeholder.svg?height=40&width=40",
+        id: newPost.id,
+        username: currentUser.name || "Anonymous User", // Từ currentUser
+        userImage: currentUser.avatar || "/placeholder.svg?height=40&width=40", // Từ currentUser
         timeAgo: "Just now",
         content: fullContent,
-        mediaType: postType === 'video' ? 'video' : mediaPreview ? 'text' : 'none' as "video" | "text" | "none" | "ai-submission" | "youtube",
+        mediaType: postType === 'video' ? 'video' : postType === 'image' ? 'image' : 'text' as "video" | "text" | "none" | "ai-submission" | "youtube",
         mediaUrl: mediaPreview,
+        youtubeVideoId: undefined,
+        textContent: postType === 'text' && !mediaPreview ? fullContent : undefined,
         likes: 0,
         comments: 0,
+        title: newPost.title,
+        submission: undefined, // Không có AI evaluation cho post thường
+        videoEvaluation: undefined, // Không có AI evaluation cho post thường
         isNew: true,
       }
 
+      console.log("🔄 Adding new post to feed...")
       setFeedPosts([newPostForFeed, ...feedPosts])
       
+      // Tự động remove "New Post" badge sau 30 giây
+      setTimeout(() => {
+        setFeedPosts(prevPosts => 
+          prevPosts.map(post => 
+            post.id === newPost.id ? { ...post, isNew: false } : post
+          )
+        )
+      }, 30000) // 30 seconds
+      
+      console.log("🧹 Resetting form...")
       // Reset form
       setNewPostContent("")
       setIsPostingContent(false)
@@ -664,6 +726,7 @@ export default function CommunityPage() {
       setSelectedMedia(null)
       setMediaPreview(null)
 
+      console.log("✅ Post published successfully!")
       toast({
         title: "Post published!",
         description: "Your post has been published to the community feed.",
@@ -677,6 +740,7 @@ export default function CommunityPage() {
         })
       }, 300)
     } catch (error) {
+      console.log("💥 Catch block error:", error)
       toast({
         title: "Error creating post",
         description: "There was an error publishing your post. Please try again.",

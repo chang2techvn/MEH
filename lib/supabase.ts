@@ -54,29 +54,27 @@ export const dbHelpers = {
         console.log('⚠️ No authenticated user, trying to get first user from database as fallback')
         
         // Fallback: get first user from database for development - with profile
-        const { data: firstUserWithProfile, error: fallbackError } = await supabase
+        const { data: firstUser, error: userError } = await supabase
           .from('users')
-          .select(`
-            *,
-            profiles!inner(
-              full_name,
-              username,
-              avatar_url
-            )
-          `)
+          .select('*')
           .limit(1)
           .single()
         
-        if (fallbackError || !firstUserWithProfile) {
-          console.log('❌ No users found in database:', fallbackError)
+        if (userError || !firstUser) {
+          console.log('❌ No users found in database:', userError)
           return null
         }
         
-        const profile = firstUserWithProfile.profiles?.[0]
+        const { data: firstProfile } = await supabase
+          .from('profiles')
+          .select('full_name, username, avatar_url')
+          .eq('user_id', firstUser.id)
+          .single()
+        
         const enrichedUser = {
-          ...firstUserWithProfile,
-          name: profile?.full_name || profile?.username || firstUserWithProfile.email,
-          avatar: profile?.avatar_url || firstUserWithProfile.avatar
+          ...firstUser,
+          name: firstProfile?.full_name || firstProfile?.username || firstUser.email,
+          avatar: firstProfile?.avatar_url || firstUser.avatar
         }
         
         console.log('✅ Using fallback user:', enrichedUser.name, enrichedUser.email)
@@ -87,7 +85,7 @@ export const dbHelpers = {
         .from('users')
         .select(`
           *,
-          profiles!inner(
+          profiles!profiles_user_id_fkey(
             full_name,
             username,
             avatar_url
@@ -98,6 +96,30 @@ export const dbHelpers = {
       
       if (error) {
         console.log('❌ Error fetching user data:', error)
+        // Try alternative approach - get user and profile separately
+        const { data: userData } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', user.id)
+          .single()
+        
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('full_name, username, avatar_url')
+          .eq('user_id', user.id)
+          .single()
+        
+        if (userData) {
+          const enrichedUser = {
+            ...userData,
+            name: profileData?.full_name || profileData?.username || userData.email,
+            avatar: profileData?.avatar_url || userData.avatar
+          }
+          
+          console.log('✅ Found authenticated user (alternative method):', enrichedUser.name, enrichedUser.email)
+          return enrichedUser
+        }
+        
         return null
       }
       
@@ -1287,21 +1309,58 @@ export const dbHelpers = {
   async createPost(postData: {
     title: string
     content: string
-    author_id: string
-    type?: string
+    user_id: string
+    post_type?: string
+    media_url?: string
     tags?: string[]
   }) {
-    const { data, error } = await supabase
-      .from('posts')
-      .insert([{
-        ...postData,
+    console.log('📤 dbHelpers.createPost called with data:', postData)
+    
+    try {
+      // Get user profile info first
+      const { data: userProfile, error: profileError } = await supabase
+        .from('profiles')
+        .select('full_name, avatar_url')
+        .eq('user_id', postData.user_id)
+        .single()
+      
+      if (profileError) {
+        console.log('⚠️ Could not get user profile:', profileError)
+      }
+      
+      const insertData = {
+        title: postData.title,
+        content: postData.content,
+        user_id: postData.user_id,
+        post_type: postData.post_type || 'text',
+        media_url: postData.media_url || null,
+        tags: postData.tags || null,
+        is_public: true,
+        likes_count: 0,
+        comments_count: 0,
+        // Add user info from profiles
+        username: userProfile?.full_name || 'Anonymous User',
+        user_image: userProfile?.avatar_url || '/placeholder.svg?height=40&width=40',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
-      }])
-      .select()
-      .single()
-    
-    return { data, error }
+      }
+      
+      console.log('📤 Inserting data:', insertData)
+      
+      const { data, error } = await supabase
+        .from('posts')
+        .insert([insertData])
+        .select()
+        .single()
+      
+      console.log('📤 Insert result - data:', data)
+      console.log('📤 Insert result - error:', error)
+      
+      return { data, error }
+    } catch (err) {
+      console.error('💥 Error in createPost:', err)
+      return { data: null, error: err }
+    }
   },
 
   async getNotificationTemplates() {

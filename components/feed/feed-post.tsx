@@ -109,8 +109,8 @@ export default function FeedPost({
               content={content}
             />
 
-            {/* Always Show AI Evaluation for relevant content types */}
-            {(mediaType === "ai-submission" || submission || mediaType === "video" || mediaType === "audio" || videoEvaluation) && (
+            {/* Chỉ hiển thị AI Evaluation cho posts từ challenge (có submission hoặc videoEvaluation) */}
+            {(mediaType === "ai-submission" || submission || videoEvaluation) && (
               <motion.div
                 className="mt-4 w-full"
                 initial={{ opacity: 0, height: 0 }}
