@@ -815,7 +815,7 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ duration: 0.3 }}
-                  className="md:w-full"
+                  className="w-full"
                 >                  <PostPreview
                     title={videoData?.title || "My Video Analysis"}
                     content={richTextContent}

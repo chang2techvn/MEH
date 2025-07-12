@@ -208,7 +208,7 @@ export default function EnhancedVideoEvaluationDisplay({
   }
 
   return (
-    <Card className="max-w-4xl mx-auto border-0 shadow-lg">
+    <Card className="w-full border-0 shadow-lg">
       <CardHeader className="text-center pb-4">
         <div className="flex items-center justify-center gap-2 mb-2">
           <Brain className="h-6 w-6 text-blue-500" />
@@ -223,8 +223,8 @@ export default function EnhancedVideoEvaluationDisplay({
       </CardHeader>
 
       <CardContent className="space-y-6">
-        {/* Quick Overview Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+        {/* Quick Overview Grid - Responsive */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {speakingCriteria.map((criteria, index) => (
             <motion.div
               key={criteria.id}
@@ -323,7 +323,7 @@ export default function EnhancedVideoEvaluationDisplay({
           </TabsContent>
 
           <TabsContent value="assessment" className="mt-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Strengths */}
               <div className="space-y-3">
                 <h4 className="font-medium text-gray-900 dark:text-gray-100 flex items-center gap-2">

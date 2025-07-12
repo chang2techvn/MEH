@@ -14,6 +14,9 @@ const AssignedTask = lazy(() => import("@/components/home/assigned-task"))
 interface CurrentChallengeSectionProps {
   currentChallenge: Challenge | null
   challengeLoading: boolean
+  showToggle?: boolean
+  sidebarCollapsed?: boolean
+  onToggleSidebar?: () => void
 }
 
 
@@ -27,7 +30,10 @@ const LoadingFallback = () => (
 
 export function CurrentChallengeSection({ 
   currentChallenge, 
-  challengeLoading 
+  challengeLoading,
+  showToggle,
+  sidebarCollapsed,
+  onToggleSidebar
 }: CurrentChallengeSectionProps) {
   const [watchTimeText, setWatchTimeText] = useState("3:00")
   const { challengeMode } = useChallenge()
@@ -72,6 +78,9 @@ export function CurrentChallengeSection({
     <HeroSection
         title={challengeMode === 'practice' ? "Your Practice Challenge" : "Your Current Challenge"}
         description={`Watch this ${watchTimeText} video about how technology is changing our daily lives and follow the 4-skill process.`}
+        showToggle={showToggle}
+        sidebarCollapsed={sidebarCollapsed}
+        onToggleSidebar={onToggleSidebar}
       >
       <Suspense fallback={<LoadingFallback />}>
         <AssignedTask

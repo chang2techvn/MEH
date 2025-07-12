@@ -9,6 +9,10 @@ import { useCurrentChallenge } from "@/hooks/use-current-challenge"
 interface MainContentProps {
   newPostAdded?: boolean
   setNewPostAdded?: (value: boolean) => void
+  isExpanded?: boolean // Indicates if this is expanded (sidebar collapsed)
+  showToggle?: boolean
+  sidebarCollapsed?: boolean
+  onToggleSidebar?: () => void
 }
 
 const LoadingFallback = () => (
@@ -18,7 +22,7 @@ const LoadingFallback = () => (
   </div>
 )
 
-export function MainContent({ newPostAdded, setNewPostAdded }: MainContentProps) {
+export function MainContent({ newPostAdded, setNewPostAdded, isExpanded = false, showToggle, sidebarCollapsed, onToggleSidebar }: MainContentProps) {
   const { 
     currentChallenge, 
     challengeLoading 
@@ -41,7 +45,11 @@ export function MainContent({ newPostAdded, setNewPostAdded }: MainContentProps)
 
   return (
     <motion.div
-      className="md:col-span-2 space-y-6"
+      className={`space-y-6 transition-all duration-500 ease-in-out ${
+        isExpanded 
+          ? "col-span-1" // Take full width when expanded (sidebar collapsed)
+          : "md:col-span-2" // Normal responsive layout when sidebar is shown
+      }`}
       variants={container}
       initial="hidden"
       animate="show"
@@ -53,6 +61,9 @@ export function MainContent({ newPostAdded, setNewPostAdded }: MainContentProps)
           <CurrentChallengeSection 
             currentChallenge={currentChallenge}
             challengeLoading={challengeLoading}
+            showToggle={showToggle}
+            sidebarCollapsed={sidebarCollapsed}
+            onToggleSidebar={onToggleSidebar}
           />
         </Suspense>
       </motion.div>

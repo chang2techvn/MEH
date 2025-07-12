@@ -1199,6 +1199,91 @@ export const dbHelpers = {
     return { data: data || [], error }
   },
 
+  async getExtendedLeaderboard(limit: number = 50) {
+    try {
+      // Get user data with profiles
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select(`
+          id, 
+          points, 
+          level,
+          profiles!inner(full_name, avatar_url)
+        `)
+        .order('points', { ascending: false })
+        .limit(limit)
+
+      if (userError) {
+        console.error('Error fetching user data:', userError)
+        return { data: [], error: userError }
+      }
+
+      // Get challenge completion counts and Daily posts for each user
+      const userIds = userData?.map(user => user.id) || []
+      
+      const { data: challengeData, error: challengeError } = await supabase
+        .from('posts')
+        .select('user_id, created_at, title')
+        .in('user_id', userIds)
+        .not('ai_evaluation', 'is', null) // Only posts with AI evaluation (completed challenges)
+
+      if (challengeError) {
+        console.error('Error fetching challenge data:', challengeError)
+      }
+
+      // Calculate metrics for each user
+      const now = new Date()
+      const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+
+      const enhancedData = userData?.map(user => {
+        const userChallenges = challengeData?.filter(challenge => challenge.user_id === user.id) || []
+        const weekChallenges = userChallenges.filter(challenge => 
+          new Date(challenge.created_at) >= weekAgo
+        )
+
+        // Calculate Daily Streak for this user
+        const dailyPosts = userChallenges.filter(challenge => 
+          challenge.title && challenge.title.startsWith('Daily')
+        ).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+        
+        // Group Daily posts by date
+        const dailyPostsByDate = new Map<string, boolean>()
+        dailyPosts.forEach(post => {
+          const date = new Date(post.created_at)
+          const dateKey = date.toISOString().split('T')[0]
+          dailyPostsByDate.set(dateKey, true)
+        })
+
+        // Calculate current streak
+        let streak = 0
+        let currentDate = new Date(now)
+        
+        while (true) {
+          const dateKey = currentDate.toISOString().split('T')[0]
+          
+          if (dailyPostsByDate.has(dateKey)) {
+            streak++
+            currentDate.setDate(currentDate.getDate() - 1)
+          } else {
+            break
+          }
+        }
+
+        return {
+          ...user,
+          challenges_completed: userChallenges.length,
+          week_points: weekChallenges.length * 100, // Assuming 100 points per challenge
+          streak_days: streak // Use calculated daily streak
+        }
+      }) || []
+
+      return { data: enhancedData, error: null }
+    } catch (error) {
+      console.error('Error in getExtendedLeaderboard:', error)
+      return { data: [], error }
+    }
+  },
+
   async createPost(postData: {
     title: string
     content: string

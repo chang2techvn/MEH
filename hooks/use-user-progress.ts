@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAuthState } from '@/contexts/auth-context'
+import { calculateDailyStreak, type DailyStreakData } from '@/lib/daily-streak-utils'
 
 // Helper function to get Monday of current week
 function getCurrentWeekStart(): string {
@@ -73,6 +74,8 @@ interface UserProgressData {
   weeklyPoints: number
   latestPostPoints: number
   latestPostDate: string | null
+  // Daily streak data
+  dailyStreakData: DailyStreakData
 }
 
 // Shared function to fetch user progress data
@@ -185,6 +188,9 @@ async function fetchUserProgressData(userId: string) {
   const currentLevelChallengesNeeded = getChallengesForLevel(newLevel)
   const challengesInCurrentLevel = getChallengesCompletedInCurrentLevel(completedChallenges, newLevel)
 
+  // Calculate Daily Streak based on posts with "Daily" title
+  const dailyStreakData = await calculateDailyStreak(userId)
+
   return {
     videosCompleted: videoSubmissions,
     totalVideos: totalVideoChallenges,
@@ -194,12 +200,13 @@ async function fetchUserProgressData(userId: string) {
     totalSpeaking: totalSpeakingChallenges,
     level: newLevel,
     totalPoints: userData?.points || 0,
-    streakDays: userData?.streak_days || 0,
+    streakDays: dailyStreakData.currentStreak, // Use calculated streak instead of database value
     completedChallenges: challengesInCurrentLevel,
     totalChallenges: currentLevelChallengesNeeded,
     weeklyPoints: weeklyData?.total_points || 0,
     latestPostPoints: weeklyData?.latest_post_points || 0,
     latestPostDate: weeklyData?.latest_post_date || null,
+    dailyStreakData: dailyStreakData,
   }
 }
 
@@ -220,6 +227,10 @@ export function useUserProgress() {
     weeklyPoints: 0,
     latestPostPoints: 0,
     latestPostDate: null,
+    dailyStreakData: {
+      currentStreak: 0,
+      weeklyActivity: []
+    },
   })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)

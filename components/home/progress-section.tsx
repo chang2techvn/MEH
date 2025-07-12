@@ -72,41 +72,13 @@ export function ProgressSection() {
     )
   }
 
-
-
-  // Generate daily streak visualization for current week (Mon-Sun)
-  const generateWeeklyStreak = () => {
-    const today = new Date()
-    const daysOfWeek = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
-    // Calculate Monday of current week
-    const weekStart = new Date(today)
-    const day = today.getDay()
-    // JS: Sunday=0, Monday=1, ...
-    const diffToMonday = (day === 0 ? -6 : 1) - day
-    weekStart.setDate(today.getDate() + diffToMonday)
-    const streak = []
-    for (let i = 0; i < 7; i++) {
-      const date = new Date(weekStart)
-      date.setDate(weekStart.getDate() + i)
-      const isToday = date.toDateString() === today.toDateString()
-      const isPast = date < today && !isToday
-      const isFuture = date > today
-      streak.push({
-        day: date.getDate(),
-        dayOfWeek: daysOfWeek[i],
-        isToday,
-        isPast,
-        isFuture
-      })
-    }
-    return streak
-  }
-  const weeklyStreak = generateWeeklyStreak()
+  // Use daily streak data from hook instead of generating locally
+  const weeklyStreak = progressData.dailyStreakData.weeklyActivity
 
   return (
     <Card className="neo-card overflow-hidden border-none bg-white/40 dark:bg-gray-900/40 backdrop-blur-xl shadow-neo">
-      <div className="p-6">
-        <div className="flex items-center justify-between mb-6">
+      <div className="p-5">
+        <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
             <div className="relative">
               <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-neo-mint to-purist-blue blur-sm opacity-70"></div>
@@ -119,35 +91,47 @@ export function ProgressSection() {
           </Badge>
         </div>
 
-        <div className="mt-8 pt-6 border-t border-white/20 dark:border-gray-700/20">
+        <div className="mt-6 pt-4 border-t border-white/20 dark:border-gray-700/20">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-sm font-medium">Daily Streak</h3>
             <span className="text-xs text-muted-foreground">{progressData.streakDays} days</span>
           </div>
           <div className="flex justify-between">
-            {weeklyStreak.map((day, i) => (
-              <div key={i} className="flex flex-col items-center">
-                <motion.div
-                  className={`w-10 h-10 rounded-full flex items-center justify-center mb-1
-                    ${day.isToday
-                      ? "bg-gradient-to-br from-neo-mint to-purist-blue text-white shadow-glow-sm border-2 border-purist-blue"
-                      : day.isPast
-                        ? "bg-neo-mint/80 text-white"
-                        : "bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-600"}
-                  `}
-                  whileHover={{ scale: 1.05 }}
-                  transition={{ type: "spring", stiffness: 400, damping: 10 }}
-                >
-                  <span className="text-xs font-bold">{day.day}</span>
-                </motion.div>
-                <span className={`text-xs ${day.isFuture ? "text-gray-400 dark:text-gray-600" : ""}`}>{day.dayOfWeek}</span>
-              </div>
-            ))}
+            {weeklyStreak.map((day, i) => {
+              const dayNumber = new Date(day.date).getDate()
+              return (
+                <div key={i} className="flex flex-col items-center">
+                  <motion.div
+                    className={`w-10 h-10 rounded-full flex items-center justify-center mb-1
+                      ${day.isToday
+                        ? day.hasDaily 
+                          ? "bg-gradient-to-br from-neo-mint to-purist-blue text-white shadow-glow-sm border-2 border-purist-blue"
+                          : "bg-gradient-to-br from-red-400 to-red-600 text-white shadow-glow-sm border-2 border-red-500"
+                        : day.isPast
+                          ? day.hasDaily
+                            ? "bg-neo-mint/80 text-white"
+                            : "bg-gray-400 dark:bg-gray-600 text-white opacity-50" // Missed day - gray
+                          : day.isFuture
+                            ? "bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-600"
+                            : "bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-600"}
+                    `}
+                    whileHover={{ scale: 1.05 }}
+                    transition={{ type: "spring", stiffness: 400, damping: 10 }}
+                    title={day.hasDaily ? `Daily challenge completed on ${day.date}` : day.isPast ? `Missed daily challenge on ${day.date}` : `Upcoming: ${day.date}`}
+                  >
+                    <span className="text-xs font-bold">{dayNumber}</span>
+                  </motion.div>
+                  <span className={`text-xs ${day.isFuture ? "text-gray-400 dark:text-gray-600" : ""}`}>
+                    {day.dayOfWeek}
+                  </span>
+                </div>
+              )
+            })}
           </div>
         </div>
 
         {/* Additional stats - 4 columns in one row */}
-        <div className="mt-6 pt-4 border-t border-white/20 dark:border-gray-700/20">
+        <div className="mt-4 pt-4 border-t border-white/20 dark:border-gray-700/20">
           <div className="grid grid-cols-4 gap-2">
             <div className="text-center">
               <p className="text-lg font-bold text-neo-mint dark:text-purist-blue" title={`${progressData.totalPoints} points`}>

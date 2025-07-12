@@ -4,6 +4,7 @@ import type React from "react"
 
 import { motion } from "framer-motion"
 import { Card } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
 import { Sparkles } from "lucide-react"
 import { fadeInUp, staggerContainer, staggerItem } from "@/lib/utils/animation"
 
@@ -11,13 +12,16 @@ interface HeroSectionProps {
   title: string
   description?: string
   children: React.ReactNode
+  showToggle?: boolean
+  sidebarCollapsed?: boolean
+  onToggleSidebar?: () => void
 }
 
-export default function HeroSection({ title, description, children }: HeroSectionProps) {
+export default function HeroSection({ title, description, children, showToggle, sidebarCollapsed, onToggleSidebar }: HeroSectionProps) {
   return (
     <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="space-y-6">
       <motion.div variants={staggerItem}>
-        <Card className="neo-card overflow-hidden border-none bg-white/40 dark:bg-gray-900/40 backdrop-blur-xl shadow-neo">
+        <Card className="neo-card overflow-hidden border-none bg-white/40 dark:bg-gray-900/40 backdrop-blur-xl shadow-neo relative">
           <div className="p-6">
             <motion.div className="flex items-center gap-3 mb-4" variants={fadeInUp}>
               <div className="relative">
@@ -25,6 +29,51 @@ export default function HeroSection({ title, description, children }: HeroSectio
                 <Sparkles className="relative h-5 w-5 text-neo-mint dark:text-purist-blue" />
               </div>
               <h2 className="text-xl font-bold">{title}</h2>
+              
+              {/* Toggle Button - positioned in top right corner */}
+              {showToggle && onToggleSidebar && (
+                <>
+                  {/* Desktop Toggle Button */}
+                  <div className="hidden md:block absolute top-4 right-4 z-10">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={onToggleSidebar}
+                      className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm border-white/20 dark:border-gray-700/20 hover:bg-white dark:hover:bg-gray-800 shadow-lg rounded-full w-8 h-8 transition-all duration-300"
+                    >
+                      {sidebarCollapsed ? (
+                        <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                        </svg>
+                      ) : (
+                        <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      )}
+                    </Button>
+                  </div>
+
+                  {/* Mobile Toggle Button */}
+                  <div className="md:hidden fixed top-20 right-4 z-50">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={onToggleSidebar}
+                      className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm border-white/20 dark:border-gray-700/20 hover:bg-white dark:hover:bg-gray-800 shadow-lg"
+                    >
+                      {sidebarCollapsed ? (
+                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                        </svg>
+                      ) : (
+                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      )}
+                    </Button>
+                  </div>
+                </>
+              )}
             </motion.div>
 
             {description && (
