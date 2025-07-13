@@ -19,6 +19,7 @@ export interface Post {
   content: string
   mediaType: "video" | "text" | "none" | "ai-submission" | "youtube" | "image"
   mediaUrl?: string | null
+  mediaUrls?: string[]
   youtubeVideoId?: string
   textContent?: string
   likes: number

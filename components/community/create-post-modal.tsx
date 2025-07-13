@@ -51,6 +51,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { ImageViewer } from "@/components/ui/image-viewer"
 import { toast } from "@/hooks/use-toast"
 import { useAuthState } from "@/contexts/auth-context"
 import type { Contact } from "./types"
@@ -69,10 +70,10 @@ interface CreatePostModalProps {
   setTaggedPeople: (people: string[]) => void
   selectedDate: Date | undefined
   setSelectedDate: (date: Date | undefined) => void
-  selectedMedia: File | null
-  setSelectedMedia: (media: File | null) => void
-  mediaPreview: string | null
-  setMediaPreview: (preview: string | null) => void
+  selectedMedia: File[]
+  setSelectedMedia: (media: File[]) => void
+  mediaPreviews: string[]
+  setMediaPreviews: (previews: string[]) => void
   showEmojiPicker: boolean
   setShowEmojiPicker: (show: boolean) => void
   showLocationPicker: boolean
@@ -83,7 +84,7 @@ interface CreatePostModalProps {
   contacts: Contact[]
   handlePostSubmit: () => void
   handleMediaSelect: (e: React.ChangeEvent<HTMLInputElement>) => void
-  removeSelectedMedia: () => void
+  removeSelectedMedia: (index?: number) => void
   handleFeelingSelect: (feeling: string) => void
   handleLocationSelect: (place: string) => void
   handlePersonTag: (person: string) => void
@@ -92,6 +93,8 @@ interface CreatePostModalProps {
 
 export function CreatePostModal(props: CreatePostModalProps) {
   const { user } = useAuthState()
+  const [imageViewerOpen, setImageViewerOpen] = useState(false)
+  const [imageViewerIndex, setImageViewerIndex] = useState(0)
   const {
     showNewPostForm,
     setShowNewPostForm,
@@ -108,8 +111,8 @@ export function CreatePostModal(props: CreatePostModalProps) {
     setSelectedDate,
     selectedMedia,
     setSelectedMedia,
-    mediaPreview,
-    setMediaPreview,
+    mediaPreviews,
+    setMediaPreviews,
     showEmojiPicker,
     setShowEmojiPicker,
     showLocationPicker,
@@ -134,12 +137,13 @@ export function CreatePostModal(props: CreatePostModalProps) {
     setLocation("")
     setTaggedPeople([])
     setSelectedDate(undefined)
-    setSelectedMedia(null)
-    setMediaPreview(null)
+    setSelectedMedia([])
+    setMediaPreviews([])
   }
 
   return (
-    <AnimatePresence>
+    <>
+      <AnimatePresence>
       {showNewPostForm && (
         <motion.div
           initial={{ opacity: 0 }}
@@ -358,44 +362,108 @@ export function CreatePostModal(props: CreatePostModalProps) {
                 ))}
               </motion.div>
 
-              {/* Media preview */}
+              {/* Media previews */}
               <AnimatePresence>
-                {mediaPreview && (
+                {mediaPreviews.length > 0 && (
                   <motion.div
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: "auto" }}
                     exit={{ opacity: 0, height: 0 }}
                     transition={{ type: "spring", damping: 20, stiffness: 300 }}
-                    className="mt-4 relative rounded-xl overflow-hidden bg-black/5 dark:bg-white/5"
+                    className="mt-4 space-y-3"
                   >
-                    <div className="relative">
-                      {selectedMedia?.type.startsWith("video/") ? (
-                        <video src={mediaPreview} controls className="w-full h-auto max-h-[300px] object-contain" />
-                      ) : (
-                        <Image
-                          src={mediaPreview || "/placeholder.svg"}
-                          alt="Media preview"
-                          width={500}
-                          height={300}
-                          className="w-full h-auto max-h-[300px] object-contain"
-                        />
-                      )}
-                      <motion.div
-                        className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent pointer-events-none"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                      />
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={removeSelectedMedia}
-                        className="absolute top-2 right-2 rounded-full bg-black/50 text-white hover:bg-black/70 h-8 w-8 shadow-lg"
-                        aria-label="Remove media"
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
+                    {/* Display in 2 rows x 3 columns for multiple images */}
+                    {mediaPreviews.length === 1 ? (
+                      // Single media - show normally
+                      <div className="relative rounded-xl overflow-hidden bg-black/5 dark:bg-white/5">
+                        <div className="relative aspect-video">
+                          {selectedMedia[0]?.type.startsWith("video/") ? (
+                            <video 
+                              src={mediaPreviews[0]} 
+                              className="w-full h-full object-cover" 
+                              muted
+                              playsInline
+                            />
+                          ) : (
+                            <Image
+                              src={mediaPreviews[0]}
+                              alt="Media preview"
+                              width={400}
+                              height={300}
+                              className="w-full h-full object-cover"
+                            />
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeSelectedMedia(0)}
+                            className="absolute top-2 right-2 h-6 w-6 p-0 rounded-full bg-black/50 hover:bg-black/70 text-white"
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                          {selectedMedia[0]?.type.startsWith("video/") && (
+                            <div className="absolute bottom-2 left-2 text-xs text-white bg-black/50 px-2 py-1 rounded">
+                              Video
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      // Multiple images - 2 rows x 3 columns layout
+                      <div className="grid grid-cols-3 grid-rows-2 gap-2 max-h-80">
+                        {mediaPreviews.slice(0, 5).map((preview, index) => (
+                          <div 
+                            key={index} 
+                            className={`relative rounded-xl overflow-hidden bg-black/5 dark:bg-white/5 ${
+                              index === 0 ? 'row-span-2' : '' // First image spans 2 rows
+                            }`}
+                          >                          <div className="relative h-full">
+                            <Image
+                              src={preview}
+                              alt={`Image preview ${index + 1}`}
+                              width={200}
+                              height={200}
+                              className="w-full h-full object-cover cursor-pointer"
+                              onClick={() => {
+                                setImageViewerIndex(index)
+                                setImageViewerOpen(true)
+                              }}
+                            />
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => removeSelectedMedia(index)}
+                              className="absolute top-1 right-1 h-5 w-5 p-0 rounded-full bg-black/50 hover:bg-black/70 text-white"
+                            >
+                              <X className="h-2 w-2" />
+                            </Button>
+                          </div>
+                          </div>
+                        ))}
+                        
+                        {/* Show "+X more" overlay if there are more than 5 images */}
+                        {mediaPreviews.length > 5 && (
+                          <div 
+                            className="relative bg-black/60 rounded-xl flex flex-col items-center justify-center text-white font-semibold cursor-pointer hover:bg-black/70 transition-colors"
+                            onClick={() => {
+                              setImageViewerIndex(5)
+                              setImageViewerOpen(true)
+                            }}
+                          >
+                            <span className="text-lg font-bold">+{mediaPreviews.length - 5}</span>
+                            <span className="text-xs">more</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {selectedMedia.length > 0 && (
+                      <div className="text-sm text-gray-500 dark:text-gray-400 text-center">
+                        {selectedMedia.some(file => file.type.startsWith("video/")) 
+                          ? `1 video selected` 
+                          : `${selectedMedia.length}/10 images selected`
+                        }
+                      </div>
+                    )}
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -427,6 +495,7 @@ export function CreatePostModal(props: CreatePostModalProps) {
                               type="file"
                               ref={postFileInputRef}
                               accept="image/*,video/*"
+                              multiple
                               className="hidden"
                               onChange={handleMediaSelect}
                               aria-hidden="true"
@@ -434,7 +503,7 @@ export function CreatePostModal(props: CreatePostModalProps) {
                           </motion.button>
                         </TooltipTrigger>
                         <TooltipContent side="bottom" className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm">
-                          <p>Photo/Video</p>
+                          <p>Photos (up to 10) or 1 Video</p>
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
@@ -756,7 +825,7 @@ export function CreatePostModal(props: CreatePostModalProps) {
                 <Button
                   className="w-full py-2 h-auto text-base font-medium shadow-md hover:shadow-lg transition-all duration-200"
                   onClick={handlePostSubmit}
-                  disabled={(!newPostContent.trim() && !mediaPreview) || isPostingContent}
+                  disabled={(!newPostContent.trim() && mediaPreviews.length === 0) || isPostingContent}
                   style={{
                     background: "linear-gradient(to right, hsl(var(--neo-mint)), hsl(var(--purist-blue)))",
                   }}
@@ -787,5 +856,15 @@ export function CreatePostModal(props: CreatePostModalProps) {
         </motion.div>
       )}
     </AnimatePresence>
+    
+    {/* Image Viewer for previews */}
+    <ImageViewer
+      images={mediaPreviews.filter((_, index) => !selectedMedia[index]?.type.startsWith("video/"))}
+      initialIndex={imageViewerIndex}
+      isOpen={imageViewerOpen}
+      onClose={() => setImageViewerOpen(false)}
+      title="Image Preview"
+    />
+    </>
   )
 }

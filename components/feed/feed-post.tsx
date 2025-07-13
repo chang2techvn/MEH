@@ -21,6 +21,7 @@ export default function FeedPost({
   content,
   mediaType,
   mediaUrl,
+  mediaUrls,
   youtubeVideoId,
   textContent,
   likes,
@@ -60,27 +61,30 @@ export default function FeedPost({
         transition={{ duration: 0.3, type: "spring", stiffness: 100 }}
         onHoverStart={() => updateState?.({ isHovered: true })}
         onHoverEnd={() => updateState?.({ isHovered: false })}
-        className={`animation-gpu ${isNew ? "relative z-10 mb-8" : "mb-6"}`}
+        className={`animation-gpu ${isNew ? "relative z-10 mb-8 pt-3" : "mb-6"}`}
       >
         <Card
-          className={`neo-card overflow-hidden border-none bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl shadow-md hover:shadow-2xl transition-shadow duration-300 ${
+          className={`neo-card border-none bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl shadow-md hover:shadow-2xl transition-shadow duration-300 ${
             isNew ? "ring-2 ring-neo-mint dark:ring-purist-blue" : ""
           }`}
+          style={{ 
+            overflow: 'visible' // Allow badge to show outside card
+          }}
         >
           {isNew && (
-            <div className="absolute -top-3 left-4 z-10">
-              <Badge className="bg-gradient-to-r from-neo-mint to-purist-blue text-white border-0 shadow-glow-sm px-3 py-1">
+            <div className="absolute -top-2 left-4 z-20">
+              <Badge className="bg-gradient-to-r from-neo-mint to-purist-blue text-white border-0 shadow-lg px-3 py-1 text-xs font-semibold">
                 <motion.span
                   initial={{ opacity: 0, scale: 0.8 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.2 }}
                 >
-                  New Post
+                  NEW POST
                 </motion.span>
               </Badge>
             </div>
           )}
-          <div className="p-6">
+          <div className="p-6 overflow-hidden">
             <PostHeader
               username={username}
               userImage={userImage}
@@ -104,6 +108,7 @@ export default function FeedPost({
             <PostMedia
               mediaType={mediaType}
               mediaUrl={mediaUrl}
+              mediaUrls={mediaUrls}
               youtubeVideoId={youtubeVideoId}
               textContent={textContent}
               content={content}

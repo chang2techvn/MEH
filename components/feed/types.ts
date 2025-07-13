@@ -24,6 +24,7 @@ export interface FeedPostProps {
   content: string
   mediaType: "video" | "text" | "none" | "ai-submission" | "youtube" | string
   mediaUrl?: string | null
+  mediaUrls?: string[]
   youtubeVideoId?: string
   textContent?: string
   likes: number

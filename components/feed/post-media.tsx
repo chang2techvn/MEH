@@ -4,10 +4,12 @@ import { useRef, useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { Play } from "lucide-react"
 import { useVideoManager } from "@/hooks/use-video-manager"
+import { ImageViewer } from "@/components/ui/image-viewer"
 
 interface PostMediaProps {
   mediaType: string
   mediaUrl?: string | null
+  mediaUrls?: string[]
   youtubeVideoId?: string
   textContent?: string
   content: string
@@ -16,6 +18,7 @@ interface PostMediaProps {
 export function PostMedia({
   mediaType,
   mediaUrl,
+  mediaUrls,
   youtubeVideoId,
   textContent,
   content,
@@ -25,6 +28,8 @@ export function PostMedia({
   const [showPlayButton, setShowPlayButton] = useState(true)
   const [hasUserInteracted, setHasUserInteracted] = useState(false)
   const [isPictureInPicture, setIsPictureInPicture] = useState(false)
+  const [imageViewerOpen, setImageViewerOpen] = useState(false)
+  const [imageViewerIndex, setImageViewerIndex] = useState(0)
   const { setAsActiveVideo, clearActiveVideo } = useVideoManager(videoRef)
 
   // Auto play video when it comes into view (muted)
@@ -204,6 +209,102 @@ export function PostMedia({
       >
         <p className="text-sm">{textContent}</p>
       </motion.div>
+    )
+  }
+
+  // Handle image media type - support both single and multiple images
+  if (mediaType === "image") {
+    const imageUrls = mediaUrls && mediaUrls.length > 0 ? mediaUrls : (mediaUrl ? [mediaUrl] : [])
+    
+    if (imageUrls.length === 0) return null
+
+    // Single image
+    if (imageUrls.length === 1) {
+      return (
+        <>
+          <motion.div
+            className="mt-4 rounded-xl overflow-hidden cursor-pointer"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            onClick={() => {
+              setImageViewerIndex(0)
+              setImageViewerOpen(true)
+            }}
+          >
+            <img
+              src={imageUrls[0]}
+              alt={content}
+              className="w-full h-auto object-contain rounded-xl hover:scale-105 transition-transform duration-300"
+              loading="lazy"
+            />
+          </motion.div>
+          
+          <ImageViewer
+            images={imageUrls}
+            initialIndex={imageViewerIndex}
+            isOpen={imageViewerOpen}
+            onClose={() => setImageViewerOpen(false)}
+            title={content}
+          />
+        </>
+      )
+    }
+
+    // Multiple images - 2 rows x 3 columns layout (max 6 images displayed)
+    return (
+      <>
+        <motion.div
+          className="mt-4 rounded-xl overflow-hidden"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          <div className="grid grid-cols-3 grid-rows-2 gap-2 max-h-80">
+            {imageUrls.slice(0, 5).map((url, index) => (
+              <div
+                key={index}
+                className={`relative overflow-hidden rounded-lg cursor-pointer ${
+                  index === 0 ? 'row-span-2' : '' // First image spans 2 rows
+                }`}
+                onClick={() => {
+                  setImageViewerIndex(index)
+                  setImageViewerOpen(true)
+                }}
+              >
+                <img
+                  src={url}
+                  alt={`${content} - Image ${index + 1}`}
+                  className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                  loading="lazy"
+                />
+              </div>
+            ))}
+            
+            {/* Show "+X more" overlay on the 6th position if there are more than 5 images */}
+            {imageUrls.length > 5 && (
+              <div 
+                className="relative bg-black/60 rounded-lg flex flex-col items-center justify-center text-white font-semibold cursor-pointer hover:bg-black/70 transition-colors"
+                onClick={() => {
+                  setImageViewerIndex(5)
+                  setImageViewerOpen(true)
+                }}
+              >
+                <span className="text-2xl font-bold">+{imageUrls.length - 5}</span>
+                <span className="text-xs">more</span>
+              </div>
+            )}
+          </div>
+        </motion.div>
+        
+        <ImageViewer
+          images={imageUrls}
+          initialIndex={imageViewerIndex}
+          isOpen={imageViewerOpen}
+          onClose={() => setImageViewerOpen(false)}
+          title={content}
+        />
+      </>
     )
   }
 

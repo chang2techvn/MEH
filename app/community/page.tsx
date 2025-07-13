@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { toast } from "@/hooks/use-toast"
+import { uploadVideo, uploadImage, formatFileSize } from "@/lib/file-upload"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { dbHelpers, supabase } from "@/lib/supabase"
@@ -77,8 +78,8 @@ export default function CommunityPage() {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
   const [showTagPeople, setShowTagPeople] = useState(false)
   const [selectedFeeling, setSelectedFeeling] = useState<string | null>(null)
-  const [selectedMedia, setSelectedMedia] = useState<File | null>(null)
-  const [mediaPreview, setMediaPreview] = useState<string | null>(null)
+  const [selectedMedia, setSelectedMedia] = useState<File[]>([])
+  const [mediaPreviews, setMediaPreviews] = useState<string[]>([])
   const [taggedPeople, setTaggedPeople] = useState<string[]>([])
   const postFileInputRef = useRef<HTMLInputElement>(null!)
   const [storyViewers, setStoryViewers] = useState<StoryViewer[]>([])
@@ -216,15 +217,34 @@ export default function CommunityPage() {
             }
           }
 
+          // Get media URLs - support both single and multiple media
+          const mediaUrls = post.media_urls && Array.isArray(post.media_urls) && post.media_urls.length > 0
+            ? post.media_urls
+            : post.media_url ? [post.media_url] : []
+
           // Determine media type with AI submission support
           let mediaType: "video" | "text" | "none" | "ai-submission" | "youtube" | "image" = 'text'
-          if (post.media_url) {
-            if (post.media_url.includes('youtube') || post.post_type === 'youtube') {
+          
+          if (mediaUrls.length > 0) {
+            const firstMediaUrl = mediaUrls[0]
+            if (firstMediaUrl.includes('youtube') || post.post_type === 'youtube') {
               mediaType = 'youtube'
             } else if (videoEvaluation) {
               mediaType = 'ai-submission' // Video with AI evaluation (from challenges)
-            } else {
+            } else if (post.post_type === 'image') {
+              mediaType = 'image' // Image posts
+            } else if (post.post_type === 'video') {
               mediaType = 'video' // Regular video without AI evaluation
+            } else {
+              // Auto-detect based on file extension or URL pattern
+              const url = firstMediaUrl.toLowerCase()
+              if (url.includes('.jpg') || url.includes('.jpeg') || url.includes('.png') || url.includes('.gif') || url.includes('.webp')) {
+                mediaType = 'image'
+              } else if (url.includes('.mp4') || url.includes('.webm') || url.includes('.mov') || url.includes('.avi')) {
+                mediaType = 'video'
+              } else {
+                mediaType = 'video' // Default fallback
+              }
             }
           } else {
             mediaType = 'text' // Text-only posts
@@ -237,15 +257,16 @@ export default function CommunityPage() {
             timeAgo: formatTimeAgo(post.created_at || ''),
             content: post.content || '',
             mediaType,
-            mediaUrl: post.media_url,
-            youtubeVideoId: post.post_type === 'youtube' ? extractYouTubeId(post.media_url || '') : undefined,
+            mediaUrl: mediaUrls[0], // First media URL for backward compatibility
+            mediaUrls: mediaUrls, // All media URLs for new multiple media support
+            youtubeVideoId: post.post_type === 'youtube' ? extractYouTubeId(mediaUrls[0] || '') : undefined,
             textContent: post.post_type === 'text' ? post.content : undefined,
             likes: post.likes_count || 0,          
             comments: post.comments_count || 0,
             title: post.title, // Add title for badge extraction
             submission: videoEvaluation ? {
               type: 'video_submission',
-              videoUrl: post.media_url,
+              videoUrl: mediaUrls[0],
               content: post.content,
               evaluation: videoEvaluation
             } : undefined,
@@ -532,53 +553,140 @@ export default function CommunityPage() {
   }
 
   const handleMediaSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
+    const files = Array.from(e.target.files || [])
+    if (files.length === 0) return
 
-    // Check file size (max 10MB)
-    if (file.size > 10 * 1024 * 1024) {
+    // Separate images and videos
+    const imageFiles = files.filter(file => file.type.startsWith("image/"))
+    const videoFiles = files.filter(file => file.type.startsWith("video/"))
+    
+    // Check if trying to upload multiple videos
+    if (videoFiles.length > 1) {
       toast({
-        title: "File too large",
-        description: "Please select a file smaller than 10MB",
+        title: "Multiple videos not allowed",
+        description: "You can only upload one video per post",
+        variant: "destructive",
+      })
+      return
+    }
+    
+    // Check if trying to mix video with other files
+    if (videoFiles.length > 0 && (imageFiles.length > 0 || selectedMedia.length > 0)) {
+      toast({
+        title: "Cannot mix videos with other files",
+        description: "Please upload either one video OR multiple images, not both",
+        variant: "destructive",
+      })
+      return
+    }
+    
+    // Check if already have video and trying to add more files
+    const hasExistingVideo = selectedMedia.some(file => file.type.startsWith("video/"))
+    if (hasExistingVideo && files.length > 0) {
+      toast({
+        title: "Cannot add more files",
+        description: "You already have a video. Remove it first to add other files",
         variant: "destructive",
       })
       return
     }
 
-    // Check file type
-    if (!file.type.startsWith("image/") && !file.type.startsWith("video/")) {
+    // Combine with existing files
+    const allFiles = [...selectedMedia, ...files]
+    
+    // Check file limits - max 10 images or 1 video
+    if (imageFiles.length > 0 && allFiles.length > 10) {
       toast({
-        title: "Invalid file type",
-        description: "Please select an image or video file",
+        title: "Too many images",
+        description: "You can upload maximum 10 images per post",
         variant: "destructive",
       })
       return
     }
 
-    setSelectedMedia(file)
+    const validFiles: File[] = []
+    const previews: string[] = [...mediaPreviews]
 
-    // Create preview
-    const reader = new FileReader()
-    reader.onload = (event) => {
-      setMediaPreview(event.target?.result as string)
+    for (const file of files) {
+      // Check file size limits
+      const isVideo = file.type.startsWith("video/")
+      const isImage = file.type.startsWith("image/")
+      
+      if (isVideo && file.size > 100 * 1024 * 1024) { // 100MB for videos
+        toast({
+          title: "Video file too large",
+          description: `${file.name} is larger than 100MB`,
+          variant: "destructive",
+        })
+        continue
+      }
+      
+      if (isImage && file.size > 10 * 1024 * 1024) { // 10MB for images
+        toast({
+          title: "Image file too large", 
+          description: `${file.name} is larger than 10MB`,
+          variant: "destructive",
+        })
+        continue
+      }
+
+      // Check file type
+      if (!isImage && !isVideo) {
+        toast({
+          title: "Invalid file type",
+          description: `${file.name} is not an image or video file`,
+          variant: "destructive",
+        })
+        continue
+      }
+
+      validFiles.push(file)
+      
+      // Create preview
+      const reader = new FileReader()
+      reader.onload = (event) => {
+        previews.push(event.target?.result as string)
+        if (previews.length === validFiles.length + mediaPreviews.length) {
+          setMediaPreviews(previews)
+        }
+      }
+      reader.readAsDataURL(file)
     }
-    reader.readAsDataURL(file)
 
-    toast({
-      title: "Media selected",
-      description: `${file.name} has been attached to your post.`,
-    })
+    if (validFiles.length > 0) {
+      setSelectedMedia([...selectedMedia, ...validFiles])
 
-    // Add haptic feedback if available
-    if (navigator.vibrate) {
-      navigator.vibrate(50)
+      console.log("📁 Media files selected:", validFiles.map(f => ({
+        name: f.name,
+        size: formatFileSize(f.size),
+        type: f.type
+      })))
+
+      toast({
+        title: "Media selected",
+        description: `${validFiles.length} file(s) added to your post.`,
+      })
+
+      // Add haptic feedback if available
+      if (navigator.vibrate) {
+        navigator.vibrate(50)
+      }
     }
   }
 
   // Add this function to remove selected media
-  const removeSelectedMedia = () => {
-    setSelectedMedia(null)
-    setMediaPreview(null)
+  const removeSelectedMedia = (index?: number) => {
+    if (index !== undefined) {
+      // Remove specific file
+      const newMedia = selectedMedia.filter((_, i) => i !== index)
+      const newPreviews = mediaPreviews.filter((_, i) => i !== index)
+      setSelectedMedia(newMedia)
+      setMediaPreviews(newPreviews)
+    } else {
+      // Remove all files
+      setSelectedMedia([])
+      setMediaPreviews([])
+    }
   }
 
   // Add this function to handle feeling selection
@@ -609,9 +717,9 @@ export default function CommunityPage() {
   const handlePostSubmit = async () => {
     console.log("🚀 handlePostSubmit called")
     console.log("📝 newPostContent:", newPostContent)
-    console.log("🖼️ mediaPreview:", mediaPreview)
+    console.log("🖼️ mediaPreviews:", mediaPreviews)
     
-    if (!newPostContent.trim() && !mediaPreview) {
+    if (!newPostContent.trim() && mediaPreviews.length === 0) {
       console.log("❌ No content or media, returning early")
       return
     }
@@ -646,26 +754,69 @@ export default function CommunityPage() {
 
       console.log("📝 Clean content:", fullContent)
 
-      // Determine post type
+      // Determine post type and upload media if present
       let postType = 'text'
-      if (mediaPreview && selectedMedia?.type.startsWith("video/")) {
-        postType = 'video'
-      } else if (mediaPreview && selectedMedia?.type.startsWith("image/")) {
-        postType = 'image'
-      }      
+      let uploadedMediaUrls: string[] = []
+
+      if (selectedMedia.length > 0) {
+        console.log("📁 Uploading media files...", selectedMedia.length)
+        
+        try {
+          for (const file of selectedMedia) {
+            if (file.type.startsWith("video/")) {
+              postType = 'video'
+              const uploadResult = await uploadVideo(file)
+              if (uploadResult.error) {
+                throw new Error(uploadResult.error)
+              }
+              uploadedMediaUrls.push(uploadResult.url!)
+            } else if (file.type.startsWith("image/")) {
+              if (postType !== 'video') { // Keep video priority
+                postType = 'image'
+              }
+              const uploadResult = await uploadImage(file)
+              if (uploadResult.error) {
+                throw new Error(uploadResult.error)
+              }
+              uploadedMediaUrls.push(uploadResult.url!)
+            }
+          }
+          console.log("✅ Media uploaded successfully:", uploadedMediaUrls)
+        } catch (uploadError) {
+          console.log("❌ Error uploading media:", uploadError)
+          toast({
+            title: "Error uploading media",
+            description: "Failed to upload your media files. Please try again.",
+            variant: "destructive",
+          })
+          setIsPostingContent(false)
+          return
+        }
+      }
 
       console.log("📄 Post type:", postType)
       console.log("📤 Creating post in Supabase...")
 
-      // Create post in Supabase
-      const { data: newPost, error } = await dbHelpers.createPost({
+      // Create post in Supabase with media URLs
+      const postData: any = {
         title: fullContent.substring(0, 100), // Use first 100 chars as title
         content: fullContent,
         user_id: currentUser.id,
         post_type: postType,
-        media_url: mediaPreview || undefined,
         tags: [] // Could extract hashtags from content
-      })
+      }
+
+      // Handle media URLs - use new media_urls column for multiple files
+      if (uploadedMediaUrls.length > 1) {
+        // Multiple files: use media_urls array
+        postData.media_urls = uploadedMediaUrls
+        postData.media_url = uploadedMediaUrls[0] // Keep first one for backward compatibility
+      } else if (uploadedMediaUrls.length === 1) {
+        // Single file: use traditional media_url
+        postData.media_url = uploadedMediaUrls[0]
+      }
+
+      const { data: newPost, error } = await dbHelpers.createPost(postData)
       
       console.log("📤 Supabase response - data:", newPost)
       console.log("📤 Supabase response - error:", error)
@@ -690,10 +841,11 @@ export default function CommunityPage() {
         userImage: currentUser.avatar || "/placeholder.svg?height=40&width=40", // Từ currentUser
         timeAgo: "Just now",
         content: fullContent,
-        mediaType: postType === 'video' ? 'video' : postType === 'image' ? 'image' : 'text' as "video" | "text" | "none" | "ai-submission" | "youtube",
-        mediaUrl: mediaPreview,
+        mediaType: (postType === 'video' ? 'video' : postType === 'image' ? 'image' : 'text') as "video" | "text" | "none" | "ai-submission" | "youtube" | "image",
+        mediaUrl: uploadedMediaUrls[0], // First media URL for backward compatibility
+        mediaUrls: uploadedMediaUrls, // All media URLs for multiple media support
         youtubeVideoId: undefined,
-        textContent: postType === 'text' && !mediaPreview ? fullContent : undefined,
+        textContent: postType === 'text' && uploadedMediaUrls.length === 0 ? fullContent : undefined,
         likes: 0,
         comments: 0,
         title: newPost.title,
@@ -717,14 +869,14 @@ export default function CommunityPage() {
       console.log("🧹 Resetting form...")
       // Reset form
       setNewPostContent("")
+      setSelectedMedia([])
+      setMediaPreviews([])
       setIsPostingContent(false)
       setShowNewPostForm(false)
       setSelectedFeeling(null)
       setLocation("")
       setTaggedPeople([])
       setSelectedDate(undefined)
-      setSelectedMedia(null)
-      setMediaPreview(null)
 
       console.log("✅ Post published successfully!")
       toast({
@@ -859,6 +1011,7 @@ export default function CommunityPage() {
                           content={post.content}
                           mediaType={post.mediaType}
                           mediaUrl={post.mediaUrl}
+                          mediaUrls={post.mediaUrls}
                           youtubeVideoId={post.youtubeVideoId}
                           textContent={post.textContent}
                           likes={post.likes}
@@ -925,8 +1078,8 @@ export default function CommunityPage() {
           setSelectedDate={setSelectedDate}
           selectedMedia={selectedMedia}
           setSelectedMedia={setSelectedMedia}
-          mediaPreview={mediaPreview}
-          setMediaPreview={setMediaPreview}
+          mediaPreviews={mediaPreviews}
+          setMediaPreviews={setMediaPreviews}
           showEmojiPicker={showEmojiPicker}
           setShowEmojiPicker={setShowEmojiPicker}
           showLocationPicker={showLocationPicker}

@@ -1312,6 +1312,7 @@ export const dbHelpers = {
     user_id: string
     post_type?: string
     media_url?: string
+    media_urls?: string[]
     tags?: string[]
   }) {
     console.log('📤 dbHelpers.createPost called with data:', postData)
@@ -1334,6 +1335,7 @@ export const dbHelpers = {
         user_id: postData.user_id,
         post_type: postData.post_type || 'text',
         media_url: postData.media_url || null,
+        media_urls: postData.media_urls || null,
         tags: postData.tags || null,
         is_public: true,
         likes_count: 0,
