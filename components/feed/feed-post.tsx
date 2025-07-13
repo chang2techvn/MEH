@@ -15,6 +15,7 @@ import EnhancedVideoEvaluationDisplay from "@/components/ai-evaluation-display/v
 import type { FeedPostProps } from "./types"
 
 export default function FeedPost({
+  id,
   username,
   userImage,
   timeAgo,
@@ -37,12 +38,15 @@ export default function FeedPost({
     updateState,
     postRef,
     commentInputRef,
+    comments: commentsData,
+    loadingComments,
     handleLike,
     handleReaction,
     handleComment,
     handleShare,
     focusCommentInput,
-  } = usePostInteractions(likes, comments, isNew)
+    handleShowReactions,
+  } = usePostInteractions(likes, comments, isNew, id)
 
   useEffect(() => {
   }, [isNew, username, content, mediaType, submission])
@@ -112,6 +116,7 @@ export default function FeedPost({
               youtubeVideoId={youtubeVideoId}
               textContent={textContent}
               content={content}
+              parentRef={postRef}
             />
 
             {/* Chỉ hiển thị AI Evaluation cho posts từ challenge (có submission hoặc videoEvaluation) */}
@@ -330,12 +335,13 @@ export default function FeedPost({
                     console.error('handleReaction is undefined!')
                   }
                 }}
-                onShowReactionsChange={(show) => updateState?.({ showReactions: show })}
+                onShowReactionsChange={handleShowReactions}
               />
 
               <PostComments
                 showComments={state?.showComments || false}
                 newComment={state?.newComment || ""}
+                comments={commentsData}
                 onNewCommentChange={(comment) => updateState?.({ newComment: comment })}
                 onSubmitComment={handleComment}
                 onFocusCommentInput={focusCommentInput}

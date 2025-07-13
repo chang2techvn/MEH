@@ -12,14 +12,39 @@ interface ImageViewerProps {
   isOpen: boolean
   onClose: () => void
   title?: string
+  autoCloseOnScroll?: boolean
+  parentElement?: HTMLElement | null
 }
 
-export function ImageViewer({ images, initialIndex, isOpen, onClose, title }: ImageViewerProps) {
+export function ImageViewer({ images, initialIndex, isOpen, onClose, title, autoCloseOnScroll = false, parentElement }: ImageViewerProps) {
   const [currentIndex, setCurrentIndex] = useState(initialIndex)
 
   useEffect(() => {
     setCurrentIndex(initialIndex)
   }, [initialIndex])
+
+  // Auto-close when scrolling completely out of parent post
+  useEffect(() => {
+    if (!isOpen || !autoCloseOnScroll || !parentElement) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          // Close popup when post is completely out of view (0% visible)
+          if (entry.intersectionRatio === 0) {
+            onClose()
+          }
+        })
+      },
+      { 
+        threshold: 0, // Trigger when element is completely out of view
+        rootMargin: '0px' 
+      }
+    )
+
+    observer.observe(parentElement)
+    return () => observer.disconnect()
+  }, [isOpen, autoCloseOnScroll, parentElement, onClose])
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {

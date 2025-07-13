@@ -13,6 +13,7 @@ interface PostMediaProps {
   youtubeVideoId?: string
   textContent?: string
   content: string
+  parentRef?: React.RefObject<HTMLDivElement | null>
 }
 
 export function PostMedia({
@@ -22,6 +23,7 @@ export function PostMedia({
   youtubeVideoId,
   textContent,
   content,
+  parentRef,
 }: PostMediaProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const [isHovered, setIsHovered] = useState(false)
@@ -221,7 +223,7 @@ export function PostMedia({
     // Single image
     if (imageUrls.length === 1) {
       return (
-        <>
+        <div>
           <motion.div
             className="mt-4 rounded-xl overflow-hidden cursor-pointer"
             initial={{ opacity: 0, y: 10 }}
@@ -246,14 +248,16 @@ export function PostMedia({
             isOpen={imageViewerOpen}
             onClose={() => setImageViewerOpen(false)}
             title={content}
+            autoCloseOnScroll={true}
+            parentElement={parentRef?.current || null}
           />
-        </>
+        </div>
       )
     }
 
     // Multiple images - 2 rows x 3 columns layout (max 6 images displayed)
     return (
-      <>
+      <div>
         <motion.div
           className="mt-4 rounded-xl overflow-hidden"
           initial={{ opacity: 0, y: 10 }}
@@ -303,8 +307,10 @@ export function PostMedia({
           isOpen={imageViewerOpen}
           onClose={() => setImageViewerOpen(false)}
           title={content}
+          autoCloseOnScroll={true}
+          parentElement={parentRef?.current || null}
         />
-      </>
+      </div>
     )
   }
 

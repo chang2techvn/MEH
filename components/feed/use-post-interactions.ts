@@ -2,12 +2,24 @@
 
 import { useState, useRef, useEffect } from "react"
 import { toast } from "@/hooks/use-toast"
+import { dbHelpers } from "@/lib/supabase"
+import { addLike, removeLike, addComment, checkUserLikedPost, getCommentsForPost } from "@/lib/likes-comments"
 import type { PostInteractionState } from "./types"
+
+interface Comment {
+  id: string
+  user_id: string
+  content: string
+  created_at: string
+  user_name?: string
+  user_avatar?: string
+}
 
 export function usePostInteractions(
   initialLikes: number,
   initialComments: number,
-  isNew: boolean
+  isNew: boolean,
+  postId?: string
 ) {
   const [state, setState] = useState<PostInteractionState>({
     liked: false,
@@ -23,8 +35,78 @@ export function usePostInteractions(
     hasBeenViewed: false,
   })
 
+  const [comments, setComments] = useState<Comment[]>([])
+  const [loadingComments, setLoadingComments] = useState(false)
+
   const postRef = useRef<HTMLDivElement>(null)
   const commentInputRef = useRef<HTMLTextAreaElement>(null)
+  const hideReactionsTimeout = useRef<NodeJS.Timeout | null>(null)
+
+  // Check if user already liked this post on mount
+  useEffect(() => {
+    if (postId) {
+      checkUserLikeStatus()
+      loadComments()
+    }
+  }, [postId])
+
+  const loadComments = async () => {
+    if (!postId) return
+    
+    try {
+      setLoadingComments(true)
+      const commentsData = await getCommentsForPost(postId)
+      setComments(commentsData || [])
+    } catch (error) {
+      console.error('Error loading comments:', error)
+      setComments([])
+    } finally {
+      setLoadingComments(false)
+    }
+  }
+
+  const checkUserLikeStatus = async () => {
+    if (!postId) return
+    
+    try {
+      const currentUser = await dbHelpers.getCurrentUser()
+      if (!currentUser) return
+      
+      const userLike = await checkUserLikedPost(postId, currentUser.id)
+      if (userLike) {
+        setState(prev => ({
+          ...prev,
+          liked: true,
+          selectedReaction: userLike.reaction_type === 'like' ? null : userLike.reaction_type
+        }))
+      }
+    } catch (error) {
+      console.error('Error checking user like status:', error)
+    }
+  }
+  useEffect(() => {
+    if (!state.hasBeenViewed && postRef.current) {
+      const observer = new IntersectionObserver(
+        (entries) => {
+          if (entries[0].isIntersecting) {
+            setState(prev => ({ ...prev, hasBeenViewed: true }))
+            observer.disconnect()
+          }
+        },
+        { threshold: 0.5 },
+      )
+
+      observer.observe(postRef.current)
+      return () => observer.disconnect()
+    }
+  }, [state.hasBeenViewed])
+
+  // Highlight effect for new posts
+  useEffect(() => {
+    if (isNew && postRef.current) {
+      postRef.current.scrollIntoView({ behavior: "smooth", block: "center" })
+    }
+  }, [isNew])
 
   // Intersection Observer to detect when post is in view
   useEffect(() => {
@@ -51,72 +133,186 @@ export function usePostInteractions(
     }
   }, [isNew])
 
-  const handleLike = () => {
-    console.log('🔥 Like button clicked!', { liked: state.liked, likeCount: state.likeCount })
+  const handleLike = async () => {
+    if (!postId) {
+      console.warn('No postId provided for like action')
+      return
+    }
     
-    // Haptic feedback if available
-    if (navigator.vibrate) {
-      navigator.vibrate(50)
-    }
+    console.log('🔥 Like button clicked!', { postId, liked: state.liked, likeCount: state.likeCount })
+    
+    try {
+      console.log('🔍 Getting current user...')
+      const currentUser = await dbHelpers.getCurrentUser()
+      console.log('👤 getCurrentUser result:', currentUser)
+      
+      if (!currentUser) {
+        console.warn('❌ No current user found')
+        toast({
+          title: "Authentication required",
+          description: "Please log in to like posts",
+          variant: "destructive"
+        })
+        return
+      }
+      
+      console.log('✅ Current user found:', { id: currentUser.id, email: currentUser.email })
+      
+      // Haptic feedback if available
+      if (navigator.vibrate) {
+        navigator.vibrate(50)
+      }
 
-    if (state.liked) {
-      setState(prev => ({ 
-        ...prev, 
-        liked: false,
-        likeCount: prev.likeCount - 1 
-      }))
-    } else {
-      setState(prev => ({ 
-        ...prev, 
+      if (state.liked) {
+        console.log('👎 Removing like...')
+        // Remove like
+        await removeLike(postId, currentUser.id)
+        console.log('✅ Like removed successfully')
+        
+        setState(prev => ({ 
+          ...prev, 
+          liked: false,
+          likeCount: Math.max(0, prev.likeCount - 1),
+          selectedReaction: null
+        }))
+        
+        toast({
+          title: "Like removed",
+          description: "You unliked this post"
+        })
+      } else {
+        console.log('👍 Adding like...')
+        // Add like
+        await addLike(postId, currentUser.id, 'like')
+        console.log('✅ Like added successfully')
+        
+        setState(prev => ({ 
+          ...prev, 
+          liked: true,
+          likeCount: prev.likeCount + 1
+        }))
+
+        // Show a small confetti effect
+        const confetti = document.createElement("div")
+        confetti.className = "absolute z-10 text-2xl"
+        confetti.innerHTML = "❤️"
+        confetti.style.left = `${Math.random() * 80 + 10}%`
+        confetti.style.top = "0"
+        confetti.style.position = "absolute"
+        confetti.style.animation = "float-up 1s ease-out forwards"
+        if (postRef.current) postRef.current.appendChild(confetti)
+
+        setTimeout(() => {
+          if (postRef.current && postRef.current.contains(confetti)) {
+            postRef.current.removeChild(confetti)
+          }
+        }, 1000)
+        
+        toast({
+          title: "Post liked!",
+          description: "You liked this post"
+        })
+      }
+    } catch (error) {
+      console.error('Error handling like:', error)
+      toast({
+        title: "Error",
+        description: "Failed to update like. Please try again.",
+        variant: "destructive"
+      })
+    }
+  }
+
+  const handleReaction = async (reaction: string) => {
+    if (!postId) {
+      console.warn('No postId provided for reaction')
+      return
+    }
+    
+    try {
+      const currentUser = await dbHelpers.getCurrentUser()
+      if (!currentUser) {
+        toast({
+          title: "Authentication required",
+          description: "Please log in to react to posts",
+          variant: "destructive"
+        })
+        return
+      }
+      
+      await addLike(postId, currentUser.id, reaction)
+      
+      setState(prev => ({
+        ...prev,
+        selectedReaction: reaction,
         liked: true,
-        likeCount: prev.likeCount + 1 
+        likeCount: prev.liked ? prev.likeCount : prev.likeCount + 1,
+        showReactions: false,
       }))
 
-      // Show a small confetti effect
-      const confetti = document.createElement("div")
-      confetti.className = "absolute z-10 text-2xl"
-      confetti.innerHTML = "❤️"
-      confetti.style.left = `${Math.random() * 80 + 10}%`
-      confetti.style.top = "0"
-      confetti.style.position = "absolute"
-      confetti.style.animation = "float-up 1s ease-out forwards"
-      if (postRef.current) postRef.current.appendChild(confetti)
-
-      setTimeout(() => {
-        if (postRef.current && postRef.current.contains(confetti)) {
-          postRef.current.removeChild(confetti)
-        }
-      }, 1000)
+      toast({
+        title: "Reaction added",
+        description: `You reacted with ${reaction}`,
+      })
+    } catch (error) {
+      console.error('Error handling reaction:', error)
+      toast({
+        title: "Error",
+        description: "Failed to add reaction. Please try again.",
+        variant: "destructive"
+      })
     }
   }
 
-  const handleReaction = (reaction: string) => {
-    setState(prev => ({
-      ...prev,
-      selectedReaction: reaction,
-      liked: true,
-      likeCount: prev.likeCount + 1,
-      showReactions: false,
-    }))
-
-    toast({
-      title: "Reaction added",
-      description: `You reacted with ${reaction}`,
-    })
-  }
-
-  const handleComment = () => {
-    console.log('💬 Comment button clicked!')
-    if (state.newComment.trim()) {
+  const handleComment = async () => {
+    if (!postId) {
+      console.warn('No postId provided for comment')
+      return
+    }
+    
+    console.log('💬 Comment button clicked!', { content: state.newComment })
+    
+    if (!state.newComment.trim()) {
+      toast({
+        title: "Comment required",
+        description: "Please enter a comment before submitting",
+        variant: "destructive"
+      })
+      return
+    }
+    
+    try {
+      const currentUser = await dbHelpers.getCurrentUser()
+      if (!currentUser) {
+        toast({
+          title: "Authentication required",
+          description: "Please log in to comment on posts",
+          variant: "destructive"
+        })
+        return
+      }
+      
+      await addComment(postId, currentUser.id, state.newComment)
+      
       setState(prev => ({
         ...prev,
         commentCount: prev.commentCount + 1,
         newComment: "",
       }))
 
+      // Reload comments to show the new one
+      await loadComments()
+
       toast({
         title: "Comment added",
         description: "Your comment has been added to the post",
+      })
+    } catch (error) {
+      console.error('Error adding comment:', error)
+      toast({
+        title: "Error",
+        description: "Failed to add comment. Please try again.",
+        variant: "destructive"
       })
     }
   }
@@ -136,6 +332,31 @@ export function usePostInteractions(
     }, 100)
   }
 
+  const handleShowReactions = (show: boolean) => {
+    if (hideReactionsTimeout.current) {
+      clearTimeout(hideReactionsTimeout.current)
+      hideReactionsTimeout.current = null
+    }
+    
+    if (show) {
+      setState(prev => ({ ...prev, showReactions: true }))
+    } else {
+      // Add small delay when hiding to allow mouse movement
+      hideReactionsTimeout.current = setTimeout(() => {
+        setState(prev => ({ ...prev, showReactions: false }))
+      }, 150)
+    }
+  }
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (hideReactionsTimeout.current) {
+        clearTimeout(hideReactionsTimeout.current)
+      }
+    }
+  }, [])
+
   const updateState = (updates: Partial<PostInteractionState>) => {
     setState(prev => ({ ...prev, ...updates }))
   }
@@ -145,10 +366,13 @@ export function usePostInteractions(
     updateState,
     postRef,
     commentInputRef,
+    comments,
+    loadingComments,
     handleLike,
     handleReaction,
     handleComment,
     handleShare,
     focusCommentInput,
+    handleShowReactions,
   }
 }

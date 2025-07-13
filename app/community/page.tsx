@@ -1005,6 +1005,7 @@ export default function CommunityPage() {
                     feedPosts.map((post) => (
                       <div key={post.id} id={`post-${post.id}`}>
                         <FeedPost
+                          id={String(post.id)}
                           username={post.username}
                           userImage={post.userImage}
                           timeAgo={post.timeAgo}

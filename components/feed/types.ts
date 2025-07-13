@@ -18,6 +18,7 @@ export const reactions = [
 ]
 
 export interface FeedPostProps {
+  id: string // Add post ID
   username: string
   userImage: string
   timeAgo: string

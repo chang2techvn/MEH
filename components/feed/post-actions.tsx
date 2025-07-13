@@ -44,14 +44,20 @@ export function PostActions({
 }: PostActionsProps) {
   return (
     <div className="flex justify-between w-full">
-      <div className="relative">
+      {/* Wrapper for like button and reactions */}
+      <div 
+        className="relative"
+        onMouseEnter={() => onShowReactionsChange(true)}
+        onMouseLeave={() => {
+          // Add delay to allow moving between button and reactions
+          setTimeout(() => onShowReactionsChange(false), 300)
+        }}
+      >
         <Button
           variant="ghost"
           size="sm"
           className="flex items-center gap-2 rounded-full px-4 hover:bg-white/20 dark:hover:bg-gray-800/20"
           onClick={onLike}
-          onMouseEnter={() => onShowReactionsChange(true)}
-          onMouseLeave={() => setTimeout(() => onShowReactionsChange(false), 500)}
         >
           {selectedReaction ? (
             <span className="text-lg mr-1">{selectedReaction}</span>
@@ -72,12 +78,15 @@ export function PostActions({
           {showReactions && (
             <motion.div
               initial={{ opacity: 0, y: 10, scale: 0.9 }}
-              animate={{ opacity: 1, y: -50, scale: 1 }}
+              animate={{ opacity: 1, y: -45, scale: 1 }}
               exit={{ opacity: 0, y: 10, scale: 0.9 }}
               transition={{ duration: 0.2 }}
-              className="absolute left-0 -top-2 bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl rounded-full p-1 shadow-lg z-10 flex gap-1"
-              onMouseEnter={() => onShowReactionsChange(true)}
-              onMouseLeave={() => onShowReactionsChange(false)}
+              className="absolute left-0 -top-1 bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl rounded-full p-2 shadow-xl border border-white/20 dark:border-gray-700/30 z-20 flex gap-1"
+              style={{
+                // Extend the hover area to prevent gaps
+                paddingBottom: '8px',
+                marginBottom: '-4px'
+              }}
             >
               {reactions.map((reaction, index) => (
                 <Tooltip key={reaction.label}>

@@ -139,6 +139,7 @@ export function FeedSection({
                         <div className="contain-layout">
                           <FeedPost
                             key={`new-post-${post.id || index}`}
+                            id={String(post.id || `home-post-${index}`)}
                             username={formattedPost.username}
                             userImage={formattedPost.userImage}
                             timeAgo={formattedPost.timeAgo}
@@ -187,6 +188,7 @@ export function FeedSection({
           <TabsContent value="videos" className="space-y-4 mt-6">
             <Suspense fallback={<Skeleton className="h-[300px] w-full rounded-xl" />}>
               <FeedPost
+                id="home-video-1"
                 username="sarah_chen"
                 userImage="/placeholder.svg?height=40&width=40"
                 timeAgo="2 hours ago"
@@ -202,6 +204,7 @@ export function FeedSection({
           <TabsContent value="writings" className="space-y-4 mt-6">
             <Suspense fallback={<Skeleton className="h-[300px] w-full rounded-xl" />}>
               <FeedPost
+                id="home-writing-1"
                 username="mike_johnson"
                 userImage="/placeholder.svg?height=40&width=40"
                 timeAgo="5 hours ago"
@@ -217,6 +220,7 @@ export function FeedSection({
           <TabsContent value="discussions" className="space-y-4 mt-6">
             <Suspense fallback={<Skeleton className="h-[300px] w-full rounded-xl" />}>
               <FeedPost
+                id="home-discussion-1"
                 username="lisa_wong"
                 userImage="/placeholder.svg?height=40&width=40"
                 timeAgo="1 day ago"

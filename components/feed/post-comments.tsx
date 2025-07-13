@@ -1,14 +1,24 @@
 "use client"
 
 import { motion, AnimatePresence } from "framer-motion"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Send } from "lucide-react"
 
+interface Comment {
+  id: string
+  user_id: string
+  content: string
+  created_at: string
+  user_name?: string
+  user_avatar?: string
+}
+
 interface PostCommentsProps {
   showComments: boolean
   newComment: string
+  comments: Comment[]
   onNewCommentChange: (comment: string) => void
   onSubmitComment: () => void
   onFocusCommentInput: () => void
@@ -18,6 +28,7 @@ interface PostCommentsProps {
 export function PostComments({
   showComments,
   newComment,
+  comments,
   onNewCommentChange,
   onSubmitComment,
   onFocusCommentInput,
@@ -35,42 +46,39 @@ export function PostComments({
             transition={{ duration: 0.3 }}
           >
             <div className="space-y-3">
-              <motion.div
-                className="flex items-start gap-3"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 }}
-              >
-                <Avatar className="h-8 w-8 border-2 border-white dark:border-gray-800">
-                  <AvatarFallback className="bg-gradient-to-br from-neo-mint to-purist-blue text-white text-xs">
-                    U1
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1 bg-white/20 dark:bg-gray-800/20 backdrop-blur-sm p-3 rounded-xl">
-                  <p className="text-xs font-medium">user123</p>
-                  <p className="text-xs">
-                    Great job on the pronunciation! I noticed your intonation has improved a lot.
+              {comments.length > 0 ? (
+                comments.map((comment, index) => (
+                  <motion.div
+                    key={comment.id}
+                    className="flex items-start gap-3"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                  >
+                    <Avatar className="h-8 w-8 border-2 border-white dark:border-gray-800">
+                      {comment.user_avatar && (
+                        <AvatarImage src={comment.user_avatar} alt={comment.user_name || 'User'} />
+                      )}
+                      <AvatarFallback className="bg-gradient-to-br from-neo-mint to-purist-blue text-white text-xs">
+                        {comment.user_name ? comment.user_name.charAt(0).toUpperCase() : 'U'}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 bg-white/20 dark:bg-gray-800/20 backdrop-blur-sm p-3 rounded-xl">
+                      <p className="text-xs font-medium">{comment.user_name || 'Anonymous User'}</p>
+                      <p className="text-xs">{comment.content}</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {new Date(comment.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </motion.div>
+                ))
+              ) : (
+                <div className="text-center py-4">
+                  <p className="text-xs text-muted-foreground">
+                    No comments yet. Be the first to comment!
                   </p>
                 </div>
-              </motion.div>
-              <motion.div
-                className="flex items-start gap-3"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-              >
-                <Avatar className="h-8 w-8 border-2 border-white dark:border-gray-800">
-                  <AvatarFallback className="bg-gradient-to-br from-cantaloupe to-cassis text-white text-xs">
-                    U2
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1 bg-white/20 dark:bg-gray-800/20 backdrop-blur-sm p-3 rounded-xl">
-                  <p className="text-xs font-medium">teacher_emma</p>
-                  <p className="text-xs">
-                    Try to slow down a bit when pronouncing technical terms. Otherwise, excellent work!
-                  </p>
-                </div>
-              </motion.div>
+              )}
             </div>
 
             <motion.div

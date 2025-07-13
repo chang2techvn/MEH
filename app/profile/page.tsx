@@ -298,6 +298,7 @@ export default function ProfilePage() {
                 <TabsContent value="submissions" className="mt-6">                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <motion.div whileHover={{ y: -5 }} transition={{ type: "spring" as const, stiffness: 300, damping: 20 }}>
                       <FeedPost
+                        id="profile-post-1"
                         username="John Doe"
                         userImage="/placeholder.svg?height=40&width=40"
                         timeAgo="3 days ago"
@@ -309,6 +310,7 @@ export default function ProfilePage() {
                       />
                     </motion.div>                    <motion.div whileHover={{ y: -5 }} transition={{ type: "spring" as const, stiffness: 300, damping: 20 }}>
                       <FeedPost
+                        id="profile-post-2"
                         username="John Doe"
                         userImage="/placeholder.svg?height=40&width=40"
                         timeAgo="1 week ago"
@@ -320,6 +322,7 @@ export default function ProfilePage() {
                       />
                     </motion.div>                    <motion.div whileHover={{ y: -5 }} transition={{ type: "spring" as const, stiffness: 300, damping: 20 }}>
                       <FeedPost
+                        id="profile-post-3"
                         username="John Doe"
                         userImage="/placeholder.svg?height=40&width=40"
                         timeAgo="2 weeks ago"
@@ -331,6 +334,7 @@ export default function ProfilePage() {
                       />
                     </motion.div>                    <motion.div whileHover={{ y: -5 }} transition={{ type: "spring" as const, stiffness: 300, damping: 20 }}>
                       <FeedPost
+                        id="profile-post-4"
                         username="John Doe"
                         userImage="/placeholder.svg?height=40&width=40"
                         timeAgo="3 weeks ago"
