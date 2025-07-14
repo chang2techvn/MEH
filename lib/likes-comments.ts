@@ -223,29 +223,51 @@ export async function getCommentsForPost(postId: string, currentUserId?: string)
     
     // Get comment likes if currentUserId is provided
     let commentLikesMap = new Map()
+    let commentReactionsMap = new Map()
     if (currentUserId) {
       const commentIds = comments.map(c => c.id)
       const { data: likes, error: likesError } = await supabase
-        .from('comment_likes')
-        .select('comment_id')
+        .from('likes')
+        .select('comment_id, reaction_type')
         .eq('user_id', currentUserId)
         .in('comment_id', commentIds)
       
       if (!likesError && likes) {
         likes.forEach(like => {
           commentLikesMap.set(like.comment_id, true)
+          commentReactionsMap.set(like.comment_id, like.reaction_type)
         })
       }
     }
     
+    // Get reactions summary for all comments
+    const commentIds = comments.map(c => c.id)
+    const reactionsSummary = await getCommentReactionsSummary(commentIds)
+    
     // Transform comments to include user info and like status
     const transformedData = comments.map(comment => {
       const profile = profileMap.get(comment.user_id)
+      const commentReactions = reactionsSummary.get(comment.id) || {}
+      
+      // Find the most popular reaction (excluding 'like')
+      let topReaction = null
+      let topCount = 0
+      Object.entries(commentReactions).forEach(([reaction, count]) => {
+        const reactionCount = Number(count)
+        if (reaction !== 'like' && reactionCount > topCount) {
+          topReaction = reaction
+          topCount = reactionCount
+        }
+      })
+      
       return {
         ...comment,
         user_name: profile?.full_name || profile?.username || 'Anonymous User',
         user_avatar: profile?.avatar_url,
-        liked_by_user: currentUserId ? commentLikesMap.has(comment.id) : false
+        liked_by_user: currentUserId ? commentLikesMap.has(comment.id) : false,
+        user_reaction: currentUserId ? commentReactionsMap.get(comment.id) : null,
+        top_reaction: topReaction,
+        reactions_summary: commentReactions
       }
     })
     
@@ -285,14 +307,14 @@ export async function deleteComment(commentId: string, userId: string) {
 }
 
 // Comment likes functions
-export async function addCommentLike(commentId: string, userId: string) {
-  console.log('📤 Adding comment like to Supabase:', { commentId, userId })
+export async function addCommentLike(commentId: string, userId: string, reactionType: string = 'like') {
+  console.log('📤 Adding comment like to likes table:', { commentId, userId, reactionType })
   
   try {
     // Check if user already liked this comment
     const { data: existingLike, error: checkError } = await supabase
-      .from('comment_likes')
-      .select('id')
+      .from('likes')
+      .select('id, reaction_type')
       .eq('comment_id', commentId)
       .eq('user_id', userId)
       .single()
@@ -303,16 +325,28 @@ export async function addCommentLike(commentId: string, userId: string) {
     }
     
     if (existingLike) {
-      console.log('⚠️ User already liked this comment')
-      return existingLike
+      // Update existing reaction
+      const { data, error } = await supabase
+        .from('likes')
+        .update({ reaction_type: reactionType })
+        .eq('id', existingLike.id)
+        .select()
+        .single()
+      
+      if (error) throw error
+      
+      console.log('✅ Comment reaction updated successfully:', data)
+      return { data, isNew: false }
     }
     
     // Add new comment like
     const { data, error } = await supabase
-      .from('comment_likes')
+      .from('likes')
       .insert([{
         comment_id: commentId,
-        user_id: userId
+        user_id: userId,
+        post_id: null, // No post_id for comment likes
+        reaction_type: reactionType
       }])
       .select()
       .single()
@@ -323,7 +357,7 @@ export async function addCommentLike(commentId: string, userId: string) {
     await updateCommentLikesCount(commentId)
     
     console.log('✅ Comment like added successfully:', data)
-    return data
+    return { data, isNew: true }
   } catch (error) {
     console.error('❌ Error adding comment like:', error)
     throw error
@@ -331,11 +365,11 @@ export async function addCommentLike(commentId: string, userId: string) {
 }
 
 export async function removeCommentLike(commentId: string, userId: string) {
-  console.log('📤 Removing comment like from Supabase:', { commentId, userId })
+  console.log('📤 Removing comment like from likes table:', { commentId, userId })
   
   try {
     const { data, error } = await supabase
-      .from('comment_likes')
+      .from('likes')
       .delete()
       .eq('comment_id', commentId)
       .eq('user_id', userId)
@@ -358,7 +392,7 @@ export async function removeCommentLike(commentId: string, userId: string) {
 export async function checkUserLikedComment(commentId: string, userId: string) {
   try {
     const { data, error } = await supabase
-      .from('comment_likes')
+      .from('likes')
       .select('id')
       .eq('comment_id', commentId)
       .eq('user_id', userId)
@@ -378,7 +412,7 @@ export async function checkUserLikedComment(commentId: string, userId: string) {
 async function updateCommentLikesCount(commentId: string) {
   try {
     const { count, error } = await supabase
-      .from('comment_likes')
+      .from('likes')
       .select('*', { count: 'exact', head: true })
       .eq('comment_id', commentId)
     
@@ -477,5 +511,52 @@ async function updatePostCommentsCount(postId: string) {
     console.log(`✅ Updated post comments_count to ${count}`)
   } catch (error) {
     console.error('❌ Error updating post comments count:', error)
+  }
+}
+
+export async function getUserCommentReaction(commentId: string, userId: string) {
+  try {
+    const { data, error } = await supabase
+      .from('likes')
+      .select('reaction_type')
+      .eq('comment_id', commentId)
+      .eq('user_id', userId)
+      .single()
+    
+    if (error && error.code !== 'PGRST116') {
+      throw error
+    }
+    
+    return data?.reaction_type || null
+  } catch (error) {
+    console.error('❌ Error getting user comment reaction:', error)
+    return null
+  }
+}
+
+export async function getCommentReactionsSummary(commentIds: string[]) {
+  try {
+    const { data: reactions, error } = await supabase
+      .from('likes')
+      .select('comment_id, reaction_type')
+      .in('comment_id', commentIds)
+      .not('comment_id', 'is', null)
+    
+    if (error) throw error
+    
+    // Group reactions by comment_id and count each reaction type
+    const reactionsSummary = new Map()
+    reactions?.forEach(reaction => {
+      if (!reactionsSummary.has(reaction.comment_id)) {
+        reactionsSummary.set(reaction.comment_id, {})
+      }
+      const commentReactions = reactionsSummary.get(reaction.comment_id)
+      commentReactions[reaction.reaction_type] = (commentReactions[reaction.reaction_type] || 0) + 1
+    })
+    
+    return reactionsSummary
+  } catch (error) {
+    console.error('❌ Error getting comment reactions summary:', error)
+    return new Map()
   }
 }

@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react"
 import { toast } from "@/hooks/use-toast"
 import { dbHelpers } from "@/lib/supabase"
-import { addLike, removeLike, addComment, checkUserLikedPost, getCommentsForPost, addCommentLike, removeCommentLike, addReply } from "@/lib/likes-comments"
+import { addLike, removeLike, addComment, checkUserLikedPost, getCommentsForPost, addCommentLike, removeCommentLike, addReply, getCommentReactionsSummary } from "@/lib/likes-comments"
 import type { PostInteractionState } from "./types"
 
 interface Comment {
@@ -17,6 +17,9 @@ interface Comment {
   parent_id?: string | null
   replies?: Comment[]
   liked_by_user?: boolean
+  user_reaction?: string | null
+  top_reaction?: string | null
+  reactions_summary?: Record<string, number>
 }
 
 export function usePostInteractions(
@@ -377,7 +380,7 @@ export function usePostInteractions(
     setState(prev => ({ ...prev, ...updates }))
   }
 
-  const handleLikeComment = async (commentId: string) => {
+  const handleLikeComment = async (commentId: string, reaction?: string) => {
     try {
       const currentUser = await dbHelpers.getCurrentUser()
       if (!currentUser) {
@@ -393,10 +396,20 @@ export function usePostInteractions(
       const comment = comments.find(c => c.id === commentId)
       if (!comment) return
 
-      if (comment.liked_by_user) {
-        await removeCommentLike(commentId, currentUser.id)
+      if (reaction) {
+        // User selected a specific reaction
+        await addCommentLike(commentId, currentUser.id, reaction)
+        toast({
+          title: "Reaction added",
+          description: `You reacted with ${reaction}`,
+        })
       } else {
-        await addCommentLike(commentId, currentUser.id)
+        // Toggle like/unlike
+        if (comment.liked_by_user) {
+          await removeCommentLike(commentId, currentUser.id)
+        } else {
+          await addCommentLike(commentId, currentUser.id, 'like')
+        }
       }
 
       // Reload comments to update like status
