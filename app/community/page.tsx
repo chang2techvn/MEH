@@ -25,6 +25,8 @@ import FeedFilter from "@/components/feed/feed-filter"
 import FeedEmptyState from "@/components/feed/feed-empty-state"
 import SEOMeta from "@/components/optimized/seo-meta"
 import { useMobile } from "@/hooks/use-mobile"
+import { useStories } from "@/hooks/use-stories"
+import type { Story } from "@/hooks/use-stories"
 import { useState, useEffect, useRef } from "react"
 
 // Import community components
@@ -40,7 +42,6 @@ import {
   extractYouTubeId,
   isToday,
   isTomorrow,
-  type Story,
   type Post,
   type Contact,
   type Event,
@@ -50,6 +51,13 @@ import {
 
 export default function CommunityPage() {
   const { isMobile } = useMobile()
+  const { 
+    stories, 
+    loading: storiesLoading, 
+    createStory, 
+    viewStory 
+  } = useStories()
+  
   const [mounted, setMounted] = useState(false)
   const [loading, setLoading] = useState(true)
   const [showNewPostForm, setShowNewPostForm] = useState(false)
@@ -59,11 +67,12 @@ export default function CommunityPage() {
   const [showRightSidebar, setShowRightSidebar] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [activeStory, setActiveStory] = useState<number | string | null>(null)
-  const [viewedStories, setViewedStories] = useState<(number | string)[]>([])
+  const [activeUserStories, setActiveUserStories] = useState<Story[]>([])
+  const [currentStoryIndex, setCurrentStoryIndex] = useState(0)
+  const [progressKey, setProgressKey] = useState(0) // Force progress bar re-render
   const [showScrollToTop, setShowScrollToTop] = useState(false)
   const [activeFilters, setActiveFilters] = useState<string[]>([])
   const [feedPosts, setFeedPosts] = useState<Post[]>([])
-  const [stories, setStories] = useState<Story[]>([])
   const [contacts, setContacts] = useState<Contact[]>([])
   const [events, setEvents] = useState<Event[]>([])
   const [groups, setGroups] = useState<Group[]>([])
@@ -82,7 +91,6 @@ export default function CommunityPage() {
   const [mediaPreviews, setMediaPreviews] = useState<string[]>([])
   const [taggedPeople, setTaggedPeople] = useState<string[]>([])
   const postFileInputRef = useRef<HTMLInputElement>(null!)
-  const [storyViewers, setStoryViewers] = useState<StoryViewer[]>([])
 
   // Extract highlight parameter from URL on mount
   useEffect(() => {
@@ -276,26 +284,7 @@ export default function CommunityPage() {
         }))
       }
 
-      // Transform stories data to include user information
-      setStories([
-        {
-          id: 0,
-          user: "Add Story",
-          userImage: "/placeholder.svg?height=40&width=40",
-          storyImage: "",
-          time: "",
-          viewed: false,
-          isAddStory: true,
-        },        
-        ...storiesData.map((story: any, index: number) => ({
-          id: story.id || `story-${index + 1}`, // Keep UUID as string or use fallback
-          user: story.author?.name || 'Unknown User',
-          userImage: story.author?.avatar || "/placeholder.svg?height=40&width=40",
-          storyImage: story.media_url || "/placeholder.svg?height=200&width=200",
-          time: formatTimeAgo(story.created_at || ''),
-          viewed: viewedStories.includes(story.id || `story-${index + 1}`),
-        }))
-      ])      
+      // Stories data will be handled by useStories hook      
       
       // Transform contacts data (online users)
       if (onlineUsersData.length === 0) {
@@ -384,15 +373,7 @@ export default function CommunityPage() {
       
       // Set empty arrays instead of mock data
       setFeedPosts([])
-      setStories([{
-        id: 0,
-        user: "Add Story",
-        userImage: "/placeholder.svg?height=40&width=40",
-        storyImage: "",
-        time: "",
-        viewed: false,
-        isAddStory: true,
-      }])
+      // Stories data will be handled by useStories hook
       setContacts([
         {
           id: 1,
@@ -524,32 +505,125 @@ export default function CommunityPage() {
     window.addEventListener("scroll", handleScroll)
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
+
+  // Auto-advance stories when viewing multiple stories
+  useEffect(() => {
+    if (activeStory && activeUserStories.length > 0) {
+      const timer = setTimeout(() => {
+        if (currentStoryIndex < activeUserStories.length - 1) {
+          // Move to next story in current user's stories
+          const newIndex = currentStoryIndex + 1
+          setCurrentStoryIndex(newIndex)
+          setActiveStory(activeUserStories[newIndex].id)
+          setProgressKey(prev => prev + 1) // Force progress bar reset
+          viewStory(String(activeUserStories[newIndex].id))
+        } else {
+          // Move to next user's stories
+          moveToNextUser()
+        }
+      }, 5000) // 5 seconds per story
+
+      return () => clearTimeout(timer)
+    }
+  }, [activeStory, currentStoryIndex, activeUserStories, viewStory])
+
+  // Helper function to move to next user's stories
+  const moveToNextUser = () => {
+    const allGroupedStories = getStoriesGroupedByUser()
+    const currentUserIndex = allGroupedStories.findIndex(group => 
+      group.stories.some(s => s.id === activeStory)
+    )
+    
+    if (currentUserIndex !== -1 && currentUserIndex < allGroupedStories.length - 1) {
+      // Move to next user
+      const nextUserGroup = allGroupedStories[currentUserIndex + 1]
+      setActiveUserStories(nextUserGroup.stories)
+      setCurrentStoryIndex(0)
+      setActiveStory(nextUserGroup.stories[0].id)
+      setProgressKey(prev => prev + 1) // Force progress bar reset
+      viewStory(String(nextUserGroup.stories[0].id))
+    } else {
+      // No more users, close story viewer
+      setActiveStory(null)
+      setActiveUserStories([])
+      setCurrentStoryIndex(0)
+      setProgressKey(0)
+    }
+  }
+
+  // Helper function to move to previous user's stories
+  const moveToPreviousUser = () => {
+    const allGroupedStories = getStoriesGroupedByUser()
+    const currentUserIndex = allGroupedStories.findIndex(group => 
+      group.stories.some(s => s.id === activeStory)
+    )
+    
+    if (currentUserIndex > 0) {
+      // Move to previous user
+      const prevUserGroup = allGroupedStories[currentUserIndex - 1]
+      setActiveUserStories(prevUserGroup.stories)
+      setCurrentStoryIndex(prevUserGroup.stories.length - 1) // Start at last story of previous user
+      setActiveStory(prevUserGroup.stories[prevUserGroup.stories.length - 1].id)
+      setProgressKey(prev => prev + 1) // Force progress bar reset
+      viewStory(String(prevUserGroup.stories[prevUserGroup.stories.length - 1].id))
+    }
+  }
+
+  // Navigation functions for stories
+  const goToPreviousStory = () => {
+    if (currentStoryIndex > 0) {
+      // Previous story in current user's stories
+      const newIndex = currentStoryIndex - 1
+      setCurrentStoryIndex(newIndex)
+      setActiveStory(activeUserStories[newIndex].id)
+      setProgressKey(prev => prev + 1) // Force progress bar reset
+      viewStory(String(activeUserStories[newIndex].id))
+    } else {
+      // Move to previous user's stories
+      moveToPreviousUser()
+    }
+  }
+
+  const goToNextStory = () => {
+    if (currentStoryIndex < activeUserStories.length - 1) {
+      // Next story in current user's stories
+      const newIndex = currentStoryIndex + 1
+      setCurrentStoryIndex(newIndex)
+      setActiveStory(activeUserStories[newIndex].id)
+      setProgressKey(prev => prev + 1) // Force progress bar reset
+      viewStory(String(activeUserStories[newIndex].id))
+    } else {
+      // Move to next user's stories
+      moveToNextUser()
+    }
+  }
   
-  const handleStoryClick = (id: number | string) => {
-    if (id === 0) {
-      // This is the "Add Story" button
+  const handleStoryClick = (story: Story) => {
+    // Check if this is from the "Add Story" button (handled in StoriesSection)
+    // or if story.id is 0 for backward compatibility
+    if (String(story.id) === "0" || story.id === "add-story") {
       setShowStoryCreator(true)
       return
     }
 
-    setActiveStory(id)
-    if (!viewedStories.includes(id)) {
-      setViewedStories([...viewedStories, id])
-
-      // In a real app, you would load actual story viewers from the database
-      setStoryViewers([
-        { id: 1, name: "Sarah Chen", image: "/placeholder.svg?height=40&width=40", timeViewed: "5m ago" },
-        { id: 2, name: "John Wilson", image: "/placeholder.svg?height=40&width=40", timeViewed: "10m ago" },
-        { id: 3, name: "Lisa Wong", image: "/placeholder.svg?height=40&width=40", timeViewed: "15m ago" },
-        { id: 4, name: "Mike Johnson", image: "/placeholder.svg?height=40&width=40", timeViewed: "20m ago" },
-        { id: 5, name: "David Kim", image: "/placeholder.svg?height=40&width=40", timeViewed: "25m ago" },
-      ])
+    // Find all stories from the same user
+    const groupedStories = getStoriesGroupedByUser()
+    const userGroup = groupedStories.find(group => 
+      group.stories.some(s => s.id === story.id)
+    )
+    
+    if (userGroup) {
+      // Set all stories from this user
+      setActiveUserStories(userGroup.stories)
+      // Find the index of the clicked story
+      const storyIndex = userGroup.stories.findIndex(s => s.id === story.id)
+      setCurrentStoryIndex(storyIndex)
+      setActiveStory(story.id)
+      setProgressKey(prev => prev + 1) // Force progress bar reset
+      
+      // Mark story as viewed
+      viewStory(String(story.id))
     }
-
-    // Auto close story after 5 seconds
-    setTimeout(() => {
-      setActiveStory(null)
-    }, 5000)
   }
 
   const handleMediaSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -712,6 +786,27 @@ export default function CommunityPage() {
   // Add this function to remove a tagged person
   const removeTaggedPerson = (person: string) => {
     setTaggedPeople(taggedPeople.filter((p) => p !== person))
+  }
+
+  // Helper function to group stories by user
+  const getStoriesGroupedByUser = () => {
+    const grouped = new Map<string, Story[]>()
+    
+    stories.forEach(story => {
+      const userId = story.author_id
+      if (!grouped.has(userId)) {
+        grouped.set(userId, [])
+      }
+      grouped.get(userId)!.push(story)
+    })
+    
+    // Convert to array and sort stories within each group by creation time
+    return Array.from(grouped.entries()).map(([userId, userStories]) => ({
+      userId,
+      stories: userStories.sort((a, b) => 
+        new Date(a.created_at || '').getTime() - new Date(b.created_at || '').getTime()
+      )
+    }))
   }
   
   const handlePostSubmit = async () => {
@@ -977,8 +1072,6 @@ export default function CommunityPage() {
               <div className="flex-1 order-1 lg:order-2 max-w-full lg:max-w-[600px] xl:max-w-[700px]">
                 {/* Stories Section */}
                 <StoriesSection
-                  stories={stories}
-                  loading={loading}
                   setShowStoryCreator={setShowStoryCreator}
                   handleStoryClick={handleStoryClick}
                 />
@@ -1122,80 +1215,158 @@ export default function CommunityPage() {
                 exit={{ scale: 0.9, opacity: 0 }}
                 className="relative w-full max-w-xs sm:max-w-sm md:max-w-md"
               >
-                {/* Story progress bar */}
-                <div className="absolute top-0 left-0 right-0 h-1 bg-white/20">
-                  <motion.div
-                    initial={{ width: "0%" }}
-                    animate={{ width: "100%" }}
-                    transition={{ duration: 5, ease: "linear" }}
-                    className="h-full bg-neo-mint dark:bg-purist-blue"
-                  />
-                </div>
+                {/* Story content */}
+                <div className="relative aspect-[9/16] overflow-hidden rounded-xl bg-gradient-to-br from-neo-mint/20 to-purist-blue/20">
+                  {/* Story Progress Bars */}
+                  {activeUserStories.length > 1 && (
+                    <div className="absolute top-2 left-3 right-3 flex gap-1 z-10">
+                      {activeUserStories.map((_, index) => (
+                        <div 
+                          key={`${progressKey}-${index}`} // Use progressKey to force re-render
+                          className="flex-1 h-1 rounded-full bg-white/30 overflow-hidden"
+                        >
+                          <motion.div
+                            key={`progress-${progressKey}-${index}`} // Unique key for each animation
+                            className="h-full bg-white"
+                            initial={{ width: index < currentStoryIndex ? "100%" : "0%" }}
+                            animate={{ 
+                              width: index < currentStoryIndex ? "100%" : 
+                                     index === currentStoryIndex ? "100%" : "0%" 
+                            }}
+                            transition={{ 
+                              duration: index === currentStoryIndex ? 5 : 0,
+                              ease: "linear",
+                              delay: 0 // No delay to start immediately
+                            }}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
 
-                {/* Story content */}                <div className="relative aspect-[9/16] overflow-hidden rounded-xl bg-gradient-to-br from-neo-mint/20 to-purist-blue/20">
-                  <Image
-                    src={
-                      stories.find((s) => s.id === activeStory)?.storyImage || "/placeholder.svg?height=800&width=450"
+                  {/* Dynamic Media Rendering */}
+                  {(() => {
+                    const currentStory = activeUserStories[currentStoryIndex] || stories.find((s) => s.id === activeStory)
+                    const mediaUrl = currentStory?.media_url || "/placeholder.svg?height=800&width=450"
+                    const mediaType = currentStory?.media_type
+                    
+                    const isVideo = mediaType === 'video' || 
+                      mediaUrl.includes('.mp4') || 
+                      mediaUrl.includes('.webm') || 
+                      mediaUrl.includes('.mov') ||
+                      mediaUrl.includes('video') ||
+                      mediaUrl.includes('.avi')
+                    
+                    if (isVideo) {
+                      return (
+                        <video
+                          key={activeStory} // Force re-render when story changes
+                          src={mediaUrl}
+                          className="w-full h-full object-cover"
+                          autoPlay
+                          muted
+                          loop
+                          playsInline
+                          controls={false}
+                          onLoadedData={(e) => {
+                            // Restart video from beginning when story opens
+                            e.currentTarget.currentTime = 0
+                            e.currentTarget.play()
+                          }}
+                          onClick={(e) => {
+                            // Restart video when clicked
+                            e.currentTarget.currentTime = 0
+                            e.currentTarget.play()
+                          }}
+                        />
+                      )
+                    } else {
+                      return (
+                        <Image
+                          src={mediaUrl}
+                          alt="Story"
+                          fill
+                          priority={true}
+                          className="object-contain" // Changed to contain to show full image
+                          placeholder="blur"
+                          blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R//2Q=="
+                        />
+                      )
                     }
-                    alt="Story"
-                    fill
-                    priority={true}
-                    className="object-cover"
-                    placeholder="blur"
-                    blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R//2Q=="
-                  />
+                  })()}
 
-                  <div className="absolute top-3 sm:top-4 left-3 sm:left-4 flex items-center gap-2">
+                  {/* Navigation Areas and Buttons */}
+                  <>
+                    {/* Previous Story Area (invisible clickable area) */}
+                    <div 
+                      className="absolute left-0 top-0 w-1/3 h-full cursor-pointer z-10"
+                      onClick={goToPreviousStory}
+                    />
+                    
+                    {/* Next Story Area (invisible clickable area) */}
+                    <div 
+                      className="absolute right-0 top-0 w-1/3 h-full cursor-pointer z-10"
+                      onClick={goToNextStory}
+                    />
+
+                    {/* Visible Navigation Buttons */}
+                    <div className="absolute left-2 top-1/2 transform -translate-y-1/2 z-20">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8 rounded-full bg-black/30 backdrop-blur-sm text-white hover:bg-black/50 border border-white/20"
+                        onClick={goToPreviousStory}
+                      >
+                        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                        </svg>
+                      </Button>
+                    </div>
+
+                    <div className="absolute right-2 top-1/2 transform -translate-y-1/2 z-20">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8 rounded-full bg-black/30 backdrop-blur-sm text-white hover:bg-black/50 border border-white/20"
+                        onClick={goToNextStory}
+                      >
+                        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </Button>
+                    </div>
+                  </>
+
+                  <div className="absolute top-3 sm:top-4 left-3 sm:left-4 flex items-center gap-2 z-20">
                     <Avatar className="h-8 w-8 sm:h-10 sm:w-10 border-2 border-white">
-                      <AvatarImage src={stories.find((s) => s.id === activeStory)?.userImage || "/placeholder.svg"} />
+                      <AvatarImage src={
+                        (activeUserStories[currentStoryIndex] || stories.find((s) => s.id === activeStory))?.profiles?.avatar_url || "/placeholder.svg"
+                      } />
                       <AvatarFallback className="bg-gradient-to-br from-neo-mint to-purist-blue text-white">
-                        {stories.find((s) => s.id === activeStory)?.user.substring(0, 2)}
+                        {(activeUserStories[currentStoryIndex] || stories.find((s) => s.id === activeStory))?.profiles?.full_name?.substring(0, 2) || 
+                         (activeUserStories[currentStoryIndex] || stories.find((s) => s.id === activeStory))?.profiles?.username?.substring(0, 2) || "U"}
                       </AvatarFallback>
                     </Avatar>
                     <div>
                       <p className="font-medium text-sm sm:text-base text-white">
-                        {stories.find((s) => s.id === activeStory)?.user}
+                        {(activeUserStories[currentStoryIndex] || stories.find((s) => s.id === activeStory))?.profiles?.full_name || 
+                         (activeUserStories[currentStoryIndex] || stories.find((s) => s.id === activeStory))?.profiles?.username || "Unknown"}
                       </p>
-                      <p className="text-xs text-white/70">{stories.find((s) => s.id === activeStory)?.time}</p>
+                      <p className="text-xs text-white/70">
+                        {(activeUserStories[currentStoryIndex] || stories.find((s) => s.id === activeStory))?.created_at 
+                          ? new Date((activeUserStories[currentStoryIndex] || stories.find((s) => s.id === activeStory))!.created_at!).toLocaleTimeString() 
+                          : ""
+                        }
+                      </p>
                     </div>
                   </div>
 
                   {/* Story viewers */}
                   <div className="absolute top-3 sm:top-4 right-3 sm:right-4">
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-8 rounded-full bg-black/30 text-white px-3">
-                          <Eye className="h-3.5 w-3.5 mr-1.5" />
-                          <span className="text-xs">{storyViewers.length}</span>
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-60 p-0 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm border-white/20 dark:border-gray-700/30">
-                        <div className="p-2">
-                          <h4 className="text-sm font-medium mb-2 px-2">Viewers</h4>
-                          <ScrollArea className="h-[200px]">
-                            <div className="space-y-1">
-                              {storyViewers.map((viewer) => (
-                                <div
-                                  key={viewer.id}
-                                  className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
-                                >
-                                  <Avatar className="h-8 w-8">
-                                    <AvatarImage src={viewer.image || "/placeholder.svg"} />
-                                    <AvatarFallback className="bg-gradient-to-br from-neo-mint to-purist-blue text-white">
-                                      {viewer.name ? viewer.name.split(' ').map(n => n[0]).join('').toUpperCase() : 'U'}
-                                    </AvatarFallback>
-                                  </Avatar>
-                                  <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-medium truncate">{viewer.name}</p>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400">{viewer.timeViewed}</p>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </ScrollArea>
-                        </div>
-                      </PopoverContent>
-                    </Popover>
+                    <div className="h-8 rounded-full bg-black/30 text-white px-3 flex items-center">
+                      <Eye className="h-3.5 w-3.5 mr-1.5" />
+                      <span className="text-xs">0</span>
+                    </div>
                   </div>
 
                   {/* Story interactions */}

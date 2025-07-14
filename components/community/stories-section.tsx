@@ -5,21 +5,21 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Plus } from "lucide-react"
 import { StoryCard } from "./story-card"
 import { StoryCardSkeleton } from "./story-card-skeleton"
-import type { Story } from "./types"
+import { useStories } from "@/hooks/use-stories"
+import type { Story } from "@/hooks/use-stories"
 
 interface StoriesSectionProps {
-  stories: Story[]
-  loading: boolean
   setShowStoryCreator: (show: boolean) => void
-  handleStoryClick: (id: number) => void
+  handleStoryClick: (story: Story) => void
 }
 
 export function StoriesSection({
-  stories,
-  loading,
   setShowStoryCreator,
   handleStoryClick,
 }: StoriesSectionProps) {
+  const { stories, loading, getStoriesGroupedByUser } = useStories()
+  const storiesGrouped = getStoriesGroupedByUser()
+
   return (
     <div className="mb-4 overflow-hidden">
       <div className="mb-2">
@@ -51,11 +51,21 @@ export function StoriesSection({
             ? Array(8)
                 .fill(0)
                 .map((_, i) => <StoryCardSkeleton key={i} />)
-            : stories
-                .filter((story) => !story.isAddStory) // Filter out the "Add Story" item since we're adding it separately
-                .map((story) => (
-                  <StoryCard key={story.id} story={story} onClick={() => handleStoryClick(Number(story.id))} />
-                ))}
+            : storiesGrouped.map((userStories, index) => (
+                <StoryCard 
+                  key={userStories.user?.user_id || index} 
+                  story={{
+                    id: userStories.stories[0].id,
+                    username: userStories.user?.full_name || userStories.user?.username || "Unknown",
+                    userImage: userStories.user?.avatar_url || "/placeholder.svg",
+                    storyImage: userStories.stories[0].media_url || "/placeholder.svg",
+                    isViewed: false,
+                    hasMultiple: userStories.stories.length > 1,
+                    isAddStory: false
+                  }}
+                  onClick={() => handleStoryClick(userStories.stories[0])}
+                />
+              ))}
         </div>
       </ScrollArea>
     </div>

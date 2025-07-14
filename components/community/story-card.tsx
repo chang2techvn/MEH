@@ -17,32 +17,74 @@ export function StoryCard({ story, onClick }: StoryCardProps) {
           </div>
           <p className="text-xs sm:text-sm font-medium">Create Story</p>
         </div>
-      ) : (        <div
-          className="w-[90px] sm:w-[110px] h-[160px] sm:h-[200px] rounded-xl relative overflow-hidden cursor-pointer"
+      ) : (
+        <div
+          className="w-[90px] sm:w-[110px] h-[160px] sm:h-[200px] rounded-xl relative overflow-hidden cursor-pointer bg-gray-100 dark:bg-gray-800"
           onClick={onClick}
-        >          <LazyThumbnailImage 
-            src={story.storyImage || "/placeholder.svg"} 
-            alt={story.user} 
-            fill 
-            className="object-cover" 
-          />
+        >
+          {/* Media Content */}
+          {(() => {
+            const isVideo = story.storyImage && (
+              story.storyImage.includes('.mp4') || 
+              story.storyImage.includes('.webm') || 
+              story.storyImage.includes('.mov') ||
+              story.storyImage.includes('video') ||
+              story.storyImage.includes('.avi')
+            )
+            
+            if (isVideo) {
+              return (
+                <video
+                  src={story.storyImage}
+                  className="w-full h-full object-cover"
+                  autoPlay
+                  muted
+                  loop
+                  playsInline
+                  poster={story.storyImage}
+                />
+              )
+            } else {
+              return (
+                <LazyThumbnailImage 
+                  src={story.storyImage || "/placeholder.svg"} 
+                  alt={story.username} 
+                  fill 
+                  className="object-cover" 
+                />
+              )
+            }
+          })()}
+
+          {/* Gradient Overlay */}
           <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/60"></div>
+          
+          {/* User Avatar */}
           <div className="absolute top-2 left-2">
             <div
-              className={`h-8 w-8 sm:h-10 sm:w-10 rounded-full border-3 sm:border-4 ${story.viewed ? "border-gray-400" : "border-neo-mint dark:border-purist-blue"} overflow-hidden`}
+              className={`h-8 w-8 sm:h-10 sm:w-10 rounded-full border-3 sm:border-4 ${story.isViewed ? "border-gray-400" : "border-neo-mint dark:border-purist-blue"} overflow-hidden`}
             >
               <LazyAvatarImage
                 src={story.userImage || "/placeholder.svg"}
-                alt={story.user}
+                alt={story.username}
                 width={40}
                 height={40}
                 className="object-cover"
               />
             </div>
+            {/* Multiple stories indicator */}
+            {story.hasMultiple && (
+              <div className="absolute -top-1 -right-1 h-4 w-4 bg-neo-mint dark:bg-purist-blue rounded-full flex items-center justify-center">
+                <span className="text-white text-xs font-bold">+</span>
+              </div>
+            )}
           </div>
+          
+          {/* Username */}
           <div className="absolute bottom-2 left-2 right-2">
-            <p className="text-white text-xs sm:text-sm font-medium line-clamp-2">{story.user}</p>
-          </div>        </div>
+            <p className="text-white text-xs sm:text-sm font-medium line-clamp-2 drop-shadow-lg">{story.username}</p>
+          </div>
+        </div>
       )}
     </div>
   )

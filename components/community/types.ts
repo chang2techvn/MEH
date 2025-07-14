@@ -3,11 +3,11 @@ import type { LucideIcon } from "lucide-react"
 
 export interface Story {
   id: number | string
-  user: string
+  username: string
   userImage: string
   storyImage: string
-  time: string
-  viewed: boolean
+  isViewed: boolean
+  hasMultiple?: boolean
   isAddStory?: boolean
 }
 
