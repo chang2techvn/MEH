@@ -15,6 +15,7 @@ export { RightSidebar } from "./right-sidebar"
 export { StoriesSection } from "./stories-section"
 export { CreatePostCard } from "./create-post-card"
 export { CreatePostModal } from "./create-post-modal"
+export { SavedPostsModal } from "./saved-posts-modal"
 
 // Export types and utils
 export * from "./types"

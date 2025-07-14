@@ -40,11 +40,23 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   }
 })
 
+// Cache for user data
+let userCache: any = null
+let userCacheTimestamp = 0
+const USER_CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
+
 // Helper functions for common database operations
 export const dbHelpers = {
   // User operations
   async getCurrentUser() {
     console.log('🔍 dbHelpers.getCurrentUser called')
+    
+    // Check cache first
+    const now = Date.now()
+    if (userCache && (now - userCacheTimestamp) < USER_CACHE_DURATION) {
+      console.log('💾 Using cached user data')
+      return userCache
+    }
     
     try {
       const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -78,6 +90,11 @@ export const dbHelpers = {
         }
         
         console.log('✅ Using fallback user:', enrichedUser.name, enrichedUser.email)
+        
+        // Cache the result
+        userCache = enrichedUser
+        userCacheTimestamp = Date.now()
+        
         return enrichedUser
       }
       
@@ -131,11 +148,22 @@ export const dbHelpers = {
       }
       
       console.log('✅ Found authenticated user:', enrichedUser.name, enrichedUser.email)
+      
+      // Cache the result
+      userCache = enrichedUser
+      userCacheTimestamp = Date.now()
+      
       return enrichedUser
     } catch (err) {
       console.error('💥 Error in getCurrentUser:', err)
       return null
     }
+  },
+
+  // Clear user cache (useful for logout)
+  clearUserCache() {
+    userCache = null
+    userCacheTimestamp = 0
   },
 
   async getUserById(id: string) {

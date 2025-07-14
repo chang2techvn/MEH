@@ -1,22 +1,20 @@
 "use client"
 
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
 import {
   Home,
   Users,
-  Award,
   BookOpen,
-  MessageSquare,
-  ChevronDown,
-  Zap,
-  TrendingUp,
   X,
+  Bookmark,
 } from "lucide-react"
 import { UserProfileCard } from "./user-profile-card"
 import { NavItem } from "./nav-item"
 import { GroupNavItem } from "./group-nav-item"
+import { SavedPostsModal } from "./saved-posts-modal"
 import type { Group } from "./types"
 
 interface LeftSidebarProps {
@@ -26,8 +24,11 @@ interface LeftSidebarProps {
 }
 
 export function LeftSidebar({ showLeftSidebar, setShowLeftSidebar, groups }: LeftSidebarProps) {
+  const [showSavedModal, setShowSavedModal] = useState(false)
+
   return (
-    <aside
+    <>
+      <aside
       className={`
         fixed inset-0 z-50 lg:static lg:z-auto lg:w-[240px] xl:w-[280px]
         ${showLeftSidebar ? "block" : "hidden lg:block"}
@@ -72,6 +73,11 @@ export function LeftSidebar({ showLeftSidebar, setShowLeftSidebar, groups }: Lef
             </h3>
 
             <NavItem icon={Users} label="Events" href="/events" />
+            <NavItem 
+              icon={Bookmark} 
+              label="Saved" 
+              onClick={() => setShowSavedModal(true)}
+            />
 
             <Separator className="my-4" />
 
@@ -82,5 +88,11 @@ export function LeftSidebar({ showLeftSidebar, setShowLeftSidebar, groups }: Lef
         </ScrollArea>
       </div>
     </aside>
+
+    <SavedPostsModal 
+      isOpen={showSavedModal} 
+      onClose={() => setShowSavedModal(false)}
+    />
+  </>
   )
 }

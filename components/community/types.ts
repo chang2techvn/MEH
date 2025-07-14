@@ -68,7 +68,8 @@ export interface StoryViewer {
 export interface NavItemProps {
   icon: LucideIcon
   label: string
-  href: string
+  href?: string
+  onClick?: () => void
   active?: boolean
 }
 

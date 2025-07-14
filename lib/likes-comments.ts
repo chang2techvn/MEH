@@ -30,9 +30,9 @@ export async function addLike(postId: string, userId: string, reactionType: stri
       .select('id, reaction_type')
       .eq('post_id', postId)
       .eq('user_id', userId)
-      .single()
+      .maybeSingle()
     
-    if (checkError && checkError.code !== 'PGRST116') {
+    if (checkError) {
       console.error('Error checking existing like:', checkError)
       throw checkError
     }
@@ -123,9 +123,10 @@ export async function checkUserLikedPost(postId: string, userId: string) {
       .select('reaction_type')
       .eq('post_id', postId)
       .eq('user_id', userId)
-      .single()
+      .maybeSingle()
     
-    if (error && error.code !== 'PGRST116') {
+    if (error) {
+      console.error('❌ Error checking user like:', error)
       throw error
     }
     
@@ -317,9 +318,9 @@ export async function addCommentLike(commentId: string, userId: string, reaction
       .select('id, reaction_type')
       .eq('comment_id', commentId)
       .eq('user_id', userId)
-      .single()
+      .maybeSingle()
     
-    if (checkError && checkError.code !== 'PGRST116') {
+    if (checkError) {
       console.error('Error checking existing comment like:', checkError)
       throw checkError
     }
@@ -374,7 +375,6 @@ export async function removeCommentLike(commentId: string, userId: string) {
       .eq('comment_id', commentId)
       .eq('user_id', userId)
       .select()
-      .single()
     
     if (error) throw error
     
@@ -396,9 +396,10 @@ export async function checkUserLikedComment(commentId: string, userId: string) {
       .select('id')
       .eq('comment_id', commentId)
       .eq('user_id', userId)
-      .single()
+      .maybeSingle()
     
-    if (error && error.code !== 'PGRST116') {
+    if (error) {
+      console.error('❌ Error checking user comment like:', error)
       throw error
     }
     
@@ -521,9 +522,10 @@ export async function getUserCommentReaction(commentId: string, userId: string) 
       .select('reaction_type')
       .eq('comment_id', commentId)
       .eq('user_id', userId)
-      .single()
+      .maybeSingle()
     
-    if (error && error.code !== 'PGRST116') {
+    if (error) {
+      console.error('❌ Error getting user comment reaction:', error)
       throw error
     }
     

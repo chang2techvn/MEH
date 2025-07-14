@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react"
 import { toast } from "@/hooks/use-toast"
 import { dbHelpers } from "@/lib/supabase"
 import { addLike, removeLike, addComment, checkUserLikedPost, getCommentsForPost, addCommentLike, removeCommentLike, addReply, getCommentReactionsSummary } from "@/lib/likes-comments"
+import { useSavedPosts } from "@/hooks/use-saved-posts"
 import type { PostInteractionState } from "./types"
 
 interface Comment {
@@ -28,13 +29,15 @@ export function usePostInteractions(
   isNew: boolean,
   postId?: string
 ) {
+  const { isPostSaved, toggleSavePost } = useSavedPosts()
+  
   const [state, setState] = useState<PostInteractionState>({
     liked: false,
     likeCount: initialLikes,
     commentCount: initialComments,
     showComments: false,
     newComment: "",
-    saved: false,
+    saved: postId ? isPostSaved(postId) : false,
     showEvaluation: false,
     showReactions: false,
     selectedReaction: null,
@@ -53,11 +56,17 @@ export function usePostInteractions(
   // Check if user already liked this post on mount
   useEffect(() => {
     if (postId) {
-      checkUserLikeStatus()
-      loadComments()
       loadCurrentUser()
     }
   }, [postId])
+
+  // Load user data first, then other data
+  useEffect(() => {
+    if (postId && currentUser) {
+      checkUserLikeStatus()
+      loadComments()
+    }
+  }, [postId, currentUser])
 
   const loadCurrentUser = async () => {
     try {
@@ -69,12 +78,11 @@ export function usePostInteractions(
   }
 
   const loadComments = async () => {
-    if (!postId) return
+    if (!postId || !currentUser) return
     
     try {
       setLoadingComments(true)
-      const currentUser = await dbHelpers.getCurrentUser()
-      const commentsData = await getCommentsForPost(postId, currentUser?.id)
+      const commentsData = await getCommentsForPost(postId, currentUser.id)
       setComments(commentsData || [])
     } catch (error) {
       console.error('Error loading comments:', error)
@@ -85,12 +93,9 @@ export function usePostInteractions(
   }
 
   const checkUserLikeStatus = async () => {
-    if (!postId) return
+    if (!postId || !currentUser) return
     
     try {
-      const currentUser = await dbHelpers.getCurrentUser()
-      if (!currentUser) return
-      
       const userLike = await checkUserLikedPost(postId, currentUser.id)
       if (userLike) {
         setState(prev => ({
@@ -161,10 +166,6 @@ export function usePostInteractions(
     console.log('🔥 Like button clicked!', { postId, liked: state.liked, likeCount: state.likeCount })
     
     try {
-      console.log('🔍 Getting current user...')
-      const currentUser = await dbHelpers.getCurrentUser()
-      console.log('👤 getCurrentUser result:', currentUser)
-      
       if (!currentUser) {
         console.warn('❌ No current user found')
         toast({
@@ -249,7 +250,6 @@ export function usePostInteractions(
     }
     
     try {
-      const currentUser = await dbHelpers.getCurrentUser()
       if (!currentUser) {
         toast({
           title: "Authentication required",
@@ -301,7 +301,6 @@ export function usePostInteractions(
     }
     
     try {
-      const currentUser = await dbHelpers.getCurrentUser()
       if (!currentUser) {
         toast({
           title: "Authentication required",
@@ -382,7 +381,6 @@ export function usePostInteractions(
 
   const handleLikeComment = async (commentId: string, reaction?: string) => {
     try {
-      const currentUser = await dbHelpers.getCurrentUser()
       if (!currentUser) {
         toast({
           title: "Authentication required",
@@ -429,7 +427,6 @@ export function usePostInteractions(
     if (!postId) return
     
     try {
-      const currentUser = await dbHelpers.getCurrentUser()
       if (!currentUser) {
         toast({
           title: "Authentication required",
@@ -459,6 +456,25 @@ export function usePostInteractions(
     }
   }
 
+  // Update saved state when savedPostIds changes
+  useEffect(() => {
+    if (postId) {
+      setState(prev => ({
+        ...prev,
+        saved: isPostSaved(postId)
+      }))
+    }
+  }, [postId, isPostSaved])
+
+  const handleSaveToggle = async () => {
+    if (!postId) return
+    
+    const success = await toggleSavePost(postId)
+    if (success) {
+      // State will be updated by the useEffect above
+    }
+  }
+
   return {
     state,
     updateState,
@@ -473,6 +489,7 @@ export function usePostInteractions(
     handleLikeComment,
     handleReplyComment,
     handleShare,
+    handleSaveToggle,
     focusCommentInput,
     handleShowReactions,
   }
