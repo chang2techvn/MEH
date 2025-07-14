@@ -40,9 +40,12 @@ export default function FeedPost({
     commentInputRef,
     comments: commentsData,
     loadingComments,
+    currentUser,
     handleLike,
     handleReaction,
     handleComment,
+    handleLikeComment,
+    handleReplyComment,
     handleShare,
     focusCommentInput,
     handleShowReactions,
@@ -342,9 +345,12 @@ export default function FeedPost({
                 showComments={state?.showComments || false}
                 newComment={state?.newComment || ""}
                 comments={commentsData}
+                currentUser={currentUser}
                 onNewCommentChange={(comment) => updateState?.({ newComment: comment })}
                 onSubmitComment={handleComment}
                 onFocusCommentInput={focusCommentInput}
+                onLikeComment={handleLikeComment}
+                onReplyComment={handleReplyComment}
                 commentInputRef={commentInputRef}
               />
             </div>

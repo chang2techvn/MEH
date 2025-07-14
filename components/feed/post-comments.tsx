@@ -19,9 +19,12 @@ interface PostCommentsProps {
   showComments: boolean
   newComment: string
   comments: Comment[]
+  currentUser?: any
   onNewCommentChange: (comment: string) => void
   onSubmitComment: () => void
   onFocusCommentInput: () => void
+  onLikeComment?: (commentId: string) => void
+  onReplyComment?: (commentId: string, content: string) => void
   commentInputRef: React.RefObject<HTMLTextAreaElement | null>
 }
 
@@ -29,9 +32,12 @@ export function PostComments({
   showComments,
   newComment,
   comments,
+  currentUser,
   onNewCommentChange,
   onSubmitComment,
   onFocusCommentInput,
+  onLikeComment,
+  onReplyComment,
   commentInputRef,
 }: PostCommentsProps) {
   return (
@@ -88,8 +94,11 @@ export function PostComments({
               transition={{ delay: 0.3 }}
             >
               <Avatar className="h-8 w-8 border-2 border-white dark:border-gray-800">
+                {currentUser?.avatar && (
+                  <AvatarImage src={currentUser.avatar} alt={currentUser.name || 'User'} />
+                )}
                 <AvatarFallback className="bg-gradient-to-br from-neo-mint to-purist-blue text-white text-xs">
-                  JD
+                  {currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : 'U'}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1 relative">

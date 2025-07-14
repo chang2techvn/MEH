@@ -175,8 +175,8 @@ export async function addComment(postId: string, userId: string, content: string
   }
 }
 
-export async function getCommentsForPost(postId: string) {
-  console.log('📥 Getting comments for post:', postId)
+export async function getCommentsForPost(postId: string, currentUserId?: string) {
+  console.log('📥 Getting comments for post:', postId, 'currentUserId:', currentUserId)
   
   try {
     // First, get comments
@@ -221,13 +221,31 @@ export async function getCommentsForPost(postId: string) {
       profileMap.set(profile.user_id, profile)
     })
     
-    // Transform comments to include user info
+    // Get comment likes if currentUserId is provided
+    let commentLikesMap = new Map()
+    if (currentUserId) {
+      const commentIds = comments.map(c => c.id)
+      const { data: likes, error: likesError } = await supabase
+        .from('comment_likes')
+        .select('comment_id')
+        .eq('user_id', currentUserId)
+        .in('comment_id', commentIds)
+      
+      if (!likesError && likes) {
+        likes.forEach(like => {
+          commentLikesMap.set(like.comment_id, true)
+        })
+      }
+    }
+    
+    // Transform comments to include user info and like status
     const transformedData = comments.map(comment => {
       const profile = profileMap.get(comment.user_id)
       return {
         ...comment,
         user_name: profile?.full_name || profile?.username || 'Anonymous User',
-        user_avatar: profile?.avatar_url
+        user_avatar: profile?.avatar_url,
+        liked_by_user: currentUserId ? commentLikesMap.has(comment.id) : false
       }
     })
     
@@ -262,6 +280,157 @@ export async function deleteComment(commentId: string, userId: string) {
     return data
   } catch (error) {
     console.error('❌ Error deleting comment:', error)
+    throw error
+  }
+}
+
+// Comment likes functions
+export async function addCommentLike(commentId: string, userId: string) {
+  console.log('📤 Adding comment like to Supabase:', { commentId, userId })
+  
+  try {
+    // Check if user already liked this comment
+    const { data: existingLike, error: checkError } = await supabase
+      .from('comment_likes')
+      .select('id')
+      .eq('comment_id', commentId)
+      .eq('user_id', userId)
+      .single()
+    
+    if (checkError && checkError.code !== 'PGRST116') {
+      console.error('Error checking existing comment like:', checkError)
+      throw checkError
+    }
+    
+    if (existingLike) {
+      console.log('⚠️ User already liked this comment')
+      return existingLike
+    }
+    
+    // Add new comment like
+    const { data, error } = await supabase
+      .from('comment_likes')
+      .insert([{
+        comment_id: commentId,
+        user_id: userId
+      }])
+      .select()
+      .single()
+    
+    if (error) throw error
+    
+    // Update comment likes count
+    await updateCommentLikesCount(commentId)
+    
+    console.log('✅ Comment like added successfully:', data)
+    return data
+  } catch (error) {
+    console.error('❌ Error adding comment like:', error)
+    throw error
+  }
+}
+
+export async function removeCommentLike(commentId: string, userId: string) {
+  console.log('📤 Removing comment like from Supabase:', { commentId, userId })
+  
+  try {
+    const { data, error } = await supabase
+      .from('comment_likes')
+      .delete()
+      .eq('comment_id', commentId)
+      .eq('user_id', userId)
+      .select()
+      .single()
+    
+    if (error) throw error
+    
+    // Update comment likes count
+    await updateCommentLikesCount(commentId)
+    
+    console.log('✅ Comment like removed successfully:', data)
+    return data
+  } catch (error) {
+    console.error('❌ Error removing comment like:', error)
+    throw error
+  }
+}
+
+export async function checkUserLikedComment(commentId: string, userId: string) {
+  try {
+    const { data, error } = await supabase
+      .from('comment_likes')
+      .select('id')
+      .eq('comment_id', commentId)
+      .eq('user_id', userId)
+      .single()
+    
+    if (error && error.code !== 'PGRST116') {
+      throw error
+    }
+    
+    return !!data
+  } catch (error) {
+    console.error('❌ Error checking user comment like:', error)
+    return false
+  }
+}
+
+async function updateCommentLikesCount(commentId: string) {
+  try {
+    const { count, error } = await supabase
+      .from('comment_likes')
+      .select('*', { count: 'exact', head: true })
+      .eq('comment_id', commentId)
+    
+    if (error) throw error
+    
+    const { error: updateError } = await supabase
+      .from('comments')
+      .update({ likes_count: count || 0 })
+      .eq('id', commentId)
+    
+    if (updateError) throw updateError
+    
+    console.log(`✅ Updated comment likes_count to ${count}`)
+  } catch (error) {
+    console.error('❌ Error updating comment likes count:', error)
+  }
+}
+
+export async function addReply(parentCommentId: string, userId: string, content: string, postId: string) {
+  console.log('📤 Adding reply to Supabase:', { parentCommentId, userId, content, postId })
+  
+  try {
+    const { data, error } = await supabase
+      .from('comments')
+      .insert([{
+        post_id: postId,
+        user_id: userId,
+        content: content.trim(),
+        parent_id: parentCommentId,
+        likes_count: 0
+      }])
+      .select(`
+        id,
+        post_id,
+        user_id,
+        content,
+        parent_id,
+        likes_count,
+        created_at,
+        updated_at
+      `)
+      .single()
+    
+    if (error) throw error
+    
+    // Update comments_count in posts table
+    await updatePostCommentsCount(postId)
+    
+    console.log('✅ Reply added successfully:', data)
+    return data
+  } catch (error) {
+    console.error('❌ Error adding reply:', error)
     throw error
   }
 }

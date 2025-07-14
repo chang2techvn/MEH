@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react"
 import { toast } from "@/hooks/use-toast"
 import { dbHelpers } from "@/lib/supabase"
-import { addLike, removeLike, addComment, checkUserLikedPost, getCommentsForPost } from "@/lib/likes-comments"
+import { addLike, removeLike, addComment, checkUserLikedPost, getCommentsForPost, addCommentLike, removeCommentLike, addReply } from "@/lib/likes-comments"
 import type { PostInteractionState } from "./types"
 
 interface Comment {
@@ -13,6 +13,10 @@ interface Comment {
   created_at: string
   user_name?: string
   user_avatar?: string
+  likes_count: number
+  parent_id?: string | null
+  replies?: Comment[]
+  liked_by_user?: boolean
 }
 
 export function usePostInteractions(
@@ -37,6 +41,7 @@ export function usePostInteractions(
 
   const [comments, setComments] = useState<Comment[]>([])
   const [loadingComments, setLoadingComments] = useState(false)
+  const [currentUser, setCurrentUser] = useState<any>(null)
 
   const postRef = useRef<HTMLDivElement>(null)
   const commentInputRef = useRef<HTMLTextAreaElement>(null)
@@ -47,15 +52,26 @@ export function usePostInteractions(
     if (postId) {
       checkUserLikeStatus()
       loadComments()
+      loadCurrentUser()
     }
   }, [postId])
+
+  const loadCurrentUser = async () => {
+    try {
+      const user = await dbHelpers.getCurrentUser()
+      setCurrentUser(user)
+    } catch (error) {
+      console.error('Error loading current user:', error)
+    }
+  }
 
   const loadComments = async () => {
     if (!postId) return
     
     try {
       setLoadingComments(true)
-      const commentsData = await getCommentsForPost(postId)
+      const currentUser = await dbHelpers.getCurrentUser()
+      const commentsData = await getCommentsForPost(postId, currentUser?.id)
       setComments(commentsData || [])
     } catch (error) {
       console.error('Error loading comments:', error)
@@ -361,6 +377,75 @@ export function usePostInteractions(
     setState(prev => ({ ...prev, ...updates }))
   }
 
+  const handleLikeComment = async (commentId: string) => {
+    try {
+      const currentUser = await dbHelpers.getCurrentUser()
+      if (!currentUser) {
+        toast({
+          title: "Authentication required",
+          description: "Please log in to like comments",
+          variant: "destructive"
+        })
+        return
+      }
+
+      // Find the comment and toggle its like status
+      const comment = comments.find(c => c.id === commentId)
+      if (!comment) return
+
+      if (comment.liked_by_user) {
+        await removeCommentLike(commentId, currentUser.id)
+      } else {
+        await addCommentLike(commentId, currentUser.id)
+      }
+
+      // Reload comments to update like status
+      await loadComments()
+      
+    } catch (error) {
+      console.error('Error handling comment like:', error)
+      toast({
+        title: "Error",
+        description: "Failed to update comment like. Please try again.",
+        variant: "destructive"
+      })
+    }
+  }
+
+  const handleReplyComment = async (parentCommentId: string, content: string) => {
+    if (!postId) return
+    
+    try {
+      const currentUser = await dbHelpers.getCurrentUser()
+      if (!currentUser) {
+        toast({
+          title: "Authentication required",
+          description: "Please log in to reply to comments",
+          variant: "destructive"
+        })
+        return
+      }
+
+      await addReply(parentCommentId, currentUser.id, content, postId)
+      
+      // Reload comments to show the new reply
+      await loadComments()
+      
+      toast({
+        title: "Reply added",
+        description: "Your reply has been added"
+      })
+      
+    } catch (error) {
+      console.error('Error adding reply:', error)
+      toast({
+        title: "Error",
+        description: "Failed to add reply. Please try again.",
+        variant: "destructive"
+      })
+    }
+  }
+
   return {
     state,
     updateState,
@@ -368,9 +453,12 @@ export function usePostInteractions(
     commentInputRef,
     comments,
     loadingComments,
+    currentUser,
     handleLike,
     handleReaction,
     handleComment,
+    handleLikeComment,
+    handleReplyComment,
     handleShare,
     focusCommentInput,
     handleShowReactions,
