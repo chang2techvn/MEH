@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
@@ -17,6 +18,7 @@ import { ContactItem } from "./contact-item"
 import { ContactSkeleton } from "./contact-skeleton"
 import { EventCard } from "./event-card"
 import { EventSkeleton } from "./event-skeleton"
+import { EventsModal } from "./events-modal"
 import type { Contact, Event } from "./types"
 
 interface RightSidebarProps {
@@ -36,6 +38,18 @@ export function RightSidebar({
   trendingTopics,
   loading,
 }: RightSidebarProps) {
+  const [showEventsModal, setShowEventsModal] = useState(false)
+  const [highlightEventId, setHighlightEventId] = useState<string | undefined>(undefined)
+
+  const handleEventClick = (eventId: number) => {
+    setHighlightEventId(eventId.toString())
+    setShowEventsModal(true)
+  }
+
+  const handleSeeAllEvents = () => {
+    setHighlightEventId(undefined)
+    setShowEventsModal(true)
+  }
   return (
     <aside
       className={`
@@ -117,19 +131,24 @@ export function RightSidebar({
                       .fill(0)
                       .map((_, i) => <EventSkeleton key={i} />)
                   : events.map((event) => (
-                      <EventCard
-                        key={event.id}
-                        title={event.title}
-                        date={event.date}
-                        time={event.time}
-                        location={event.location}
-                        attendees={event.attendees}
-                        badge={event.badge}
-                      />
+                      <div key={event.id} onClick={() => handleEventClick(event.id)}>
+                        <EventCard
+                          title={event.title}
+                          date={event.date}
+                          time={event.time}
+                          location={event.location}
+                          attendees={event.attendees}
+                          badge={event.badge}
+                        />
+                      </div>
                     ))}
               </div>
 
-              <Button variant="ghost" className="w-full justify-start text-xs sm:text-sm mt-2 sm:mt-3">
+              <Button 
+                variant="ghost" 
+                className="w-full justify-start text-xs sm:text-sm mt-2 sm:mt-3"
+                onClick={handleSeeAllEvents}
+              >
                 <ChevronRight className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                 See All Events
               </Button>
@@ -137,6 +156,12 @@ export function RightSidebar({
           </div>
         </ScrollArea>
       </div>
+      
+      <EventsModal 
+        isOpen={showEventsModal} 
+        onClose={() => setShowEventsModal(false)}
+        highlightEventId={highlightEventId}
+      />
     </aside>
   )
 }

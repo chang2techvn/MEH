@@ -122,10 +122,11 @@ export function StoryCard({ story, onClick }: StoryCardProps) {
           {/* Gradient Overlay */}
           <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/40 pointer-events-none z-10"></div>
           
-          {/* User Avatar */}
+          {/* User Avatar with status border: gray if all stories viewed, green if not */}
           <div className="absolute top-2 left-2 z-20">
             <div
               className={`h-8 w-8 sm:h-10 sm:w-10 rounded-full border-3 sm:border-4 ${story.isViewed ? "border-gray-400" : "border-neo-mint dark:border-purist-blue"} overflow-hidden`}
+              // border-gray-400: all stories viewed, border-neo-mint: has new/unviewed stories
             >
               <LazyAvatarImage
                 src={story.userImage || "/placeholder.svg"}
@@ -135,12 +136,6 @@ export function StoryCard({ story, onClick }: StoryCardProps) {
                 className="object-cover"
               />
             </div>
-            {/* Multiple stories indicator */}
-            {story.hasMultiple && (
-              <div className="absolute -top-1 -right-1 h-4 w-4 bg-neo-mint dark:bg-purist-blue rounded-full flex items-center justify-center">
-                <span className="text-white text-xs font-bold">+</span>
-              </div>
-            )}
           </div>
           
           {/* Username */}

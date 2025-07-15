@@ -10,11 +10,13 @@ import {
   BookOpen,
   X,
   Bookmark,
+  Calendar,
 } from "lucide-react"
 import { UserProfileCard } from "./user-profile-card"
 import { NavItem } from "./nav-item"
 import { GroupNavItem } from "./group-nav-item"
 import { SavedPostsModal } from "./saved-posts-modal"
+import { EventsModal } from "./events-modal"
 import type { Group } from "./types"
 
 interface LeftSidebarProps {
@@ -25,6 +27,7 @@ interface LeftSidebarProps {
 
 export function LeftSidebar({ showLeftSidebar, setShowLeftSidebar, groups }: LeftSidebarProps) {
   const [showSavedModal, setShowSavedModal] = useState(false)
+  const [showEventsModal, setShowEventsModal] = useState(false)
 
   return (
     <>
@@ -72,7 +75,7 @@ export function LeftSidebar({ showLeftSidebar, setShowLeftSidebar, groups }: Lef
               Explore
             </h3>
 
-            <NavItem icon={Users} label="Events" href="/events" />
+            <NavItem icon={Calendar} label="Events" onClick={() => setShowEventsModal(true)} />
             <NavItem 
               icon={Bookmark} 
               label="Saved" 
@@ -92,6 +95,11 @@ export function LeftSidebar({ showLeftSidebar, setShowLeftSidebar, groups }: Lef
     <SavedPostsModal 
       isOpen={showSavedModal} 
       onClose={() => setShowSavedModal(false)}
+    />
+    
+    <EventsModal 
+      isOpen={showEventsModal} 
+      onClose={() => setShowEventsModal(false)}
     />
   </>
   )
