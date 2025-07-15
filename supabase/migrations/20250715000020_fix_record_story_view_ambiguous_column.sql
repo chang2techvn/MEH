@@ -1,24 +1,9 @@
--- Create increment_story_views function and improve view logic
--- This migration adds the missing function and prevents self-viewing
+-- Fix ambiguous column reference in record_story_view function
+-- Replace the function with proper parameter naming to avoid conflicts
 
--- Create function to increment story views count
-CREATE OR REPLACE FUNCTION public.increment_story_views(story_id UUID)
-RETURNS void
-LANGUAGE plpgsql
-SECURITY DEFINER
-AS $$
-BEGIN
-  UPDATE public.stories 
-  SET views_count = views_count + 1,
-      updated_at = NOW()
-  WHERE id = story_id;
-END;
-$$;
+DROP FUNCTION IF EXISTS public.record_story_view(UUID, UUID);
 
--- Grant execute permission
-GRANT EXECUTE ON FUNCTION public.increment_story_views(UUID) TO authenticated;
-
--- Create function to record story view (with author check)
+-- Create function to record story view (with author check) - Fixed version
 CREATE OR REPLACE FUNCTION public.record_story_view(p_story_id UUID, p_viewer_id UUID)
 RETURNS boolean
 LANGUAGE plpgsql

@@ -1,30 +1,17 @@
--- Create increment_story_views function and improve view logic
--- This migration adds the missing function and prevents self-viewing
+-- Fix parameter names in record_story_view function to match client expectations
+-- Keep original parameter names but use aliases inside function to avoid ambiguity
 
--- Create function to increment story views count
-CREATE OR REPLACE FUNCTION public.increment_story_views(story_id UUID)
-RETURNS void
-LANGUAGE plpgsql
-SECURITY DEFINER
-AS $$
-BEGIN
-  UPDATE public.stories 
-  SET views_count = views_count + 1,
-      updated_at = NOW()
-  WHERE id = story_id;
-END;
-$$;
+DROP FUNCTION IF EXISTS public.record_story_view(UUID, UUID);
 
--- Grant execute permission
-GRANT EXECUTE ON FUNCTION public.increment_story_views(UUID) TO authenticated;
-
--- Create function to record story view (with author check)
-CREATE OR REPLACE FUNCTION public.record_story_view(p_story_id UUID, p_viewer_id UUID)
+-- Create function to record story view with original parameter names but aliases inside
+CREATE OR REPLACE FUNCTION public.record_story_view(story_id UUID, viewer_id UUID)
 RETURNS boolean
 LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
 DECLARE
+  p_story_id ALIAS FOR record_story_view.story_id;
+  p_viewer_id ALIAS FOR record_story_view.viewer_id;
   story_author_id UUID;
   existing_view_id UUID;
 BEGIN
@@ -41,8 +28,8 @@ BEGIN
   -- Check if already viewed
   SELECT id INTO existing_view_id 
   FROM public.story_views 
-  WHERE story_id = p_story_id 
-    AND viewer_id = p_viewer_id;
+  WHERE story_views.story_id = p_story_id 
+    AND story_views.viewer_id = p_viewer_id;
   
   -- If not already viewed, record the view
   IF existing_view_id IS NULL THEN

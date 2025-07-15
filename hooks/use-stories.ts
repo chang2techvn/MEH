@@ -11,6 +11,10 @@ export interface Story {
   media_type: 'image' | 'video'
   background_color: string
   text_color: string
+  background_image?: string
+  text_elements?: any[]
+  media_transform?: any
+  images?: string[]
   duration: number
   is_active: boolean
   views_count: number
@@ -66,6 +70,10 @@ export function useStories() {
         media_type: story.media_type,
         background_color: story.background_color,
         text_color: story.text_color,
+        background_image: story.background_image,
+        text_elements: story.text_elements,
+        media_transform: story.media_transform,
+        images: story.images,
         duration: story.duration,
         is_active: story.is_active,
         views_count: story.views_count,
@@ -121,7 +129,11 @@ export function useStories() {
     media_url?: string
     media_type: 'image' | 'video'
     background_color?: string
+    background_image?: string
     text_color?: string
+    text_elements?: any[]
+    media_transform?: any
+    images?: string[]
     duration?: number
   }) => {
     if (!user) {
@@ -143,7 +155,11 @@ export function useStories() {
             media_url: storyData.media_url,
             media_type: storyData.media_type,
             background_color: storyData.background_color || '#000000',
+            background_image: storyData.background_image,
             text_color: storyData.text_color || '#ffffff',
+            text_elements: storyData.text_elements || [],
+            media_transform: storyData.media_transform,
+            images: storyData.images || [],
             duration: storyData.duration || 24,
             expires_at: new Date(Date.now() + (storyData.duration || 24) * 60 * 60 * 1000).toISOString()
           }

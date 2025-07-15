@@ -26,6 +26,7 @@ import FeedEmptyState from "@/components/feed/feed-empty-state"
 import SEOMeta from "@/components/optimized/seo-meta"
 import { useMobile } from "@/hooks/use-mobile"
 import { useStories } from "@/hooks/use-stories"
+import { useAuth } from "@/contexts/auth-context"
 import type { Story } from "@/hooks/use-stories"
 import { useState, useEffect, useRef } from "react"
 
@@ -49,8 +50,30 @@ import {
   type StoryViewer,
 } from "@/components/community"
 
+// Format story time to show hours (e.g., "21h") or "now" for recent stories
+const formatStoryTime = (dateString: string): string => {
+  const now = new Date()
+  const storyDate = new Date(dateString)
+  const diffInMinutes = Math.floor((now.getTime() - storyDate.getTime()) / (1000 * 60))
+  
+  if (diffInMinutes < 5) {
+    return "now"
+  } else if (diffInMinutes < 60) {
+    return `${diffInMinutes}m`
+  } else {
+    const diffInHours = Math.floor(diffInMinutes / 60)
+    if (diffInHours < 24) {
+      return `${diffInHours}h`
+    } else {
+      // Story should expire after 24 hours, but just in case
+      return "1d"
+    }
+  }
+}
+
 export default function CommunityPage() {
   const { isMobile } = useMobile()
+  const { user } = useAuth()
   const { 
     stories, 
     loading: storiesLoading, 
@@ -1244,55 +1267,113 @@ export default function CommunityPage() {
                     </div>
                   )}
 
-                  {/* Dynamic Media Rendering */}
+                  {/* Enhanced Story Content Rendering */}
                   {(() => {
                     const currentStory = activeUserStories[currentStoryIndex] || stories.find((s) => s.id === activeStory)
-                    const mediaUrl = currentStory?.media_url || "/placeholder.svg?height=800&width=450"
+                    if (!currentStory) return null
+
+                    const mediaUrl = currentStory?.media_url || (currentStory?.images?.[0])
                     const mediaType = currentStory?.media_type
+                    const backgroundColor = currentStory?.background_color || '#000000'
+                    const backgroundImage = currentStory?.background_image
+                    const textElements = currentStory?.text_elements || []
+                    const mediaTransform = currentStory?.media_transform
                     
                     const isVideo = mediaType === 'video' || 
-                      mediaUrl.includes('.mp4') || 
+                      (mediaUrl && (mediaUrl.includes('.mp4') || 
                       mediaUrl.includes('.webm') || 
                       mediaUrl.includes('.mov') ||
                       mediaUrl.includes('video') ||
-                      mediaUrl.includes('.avi')
-                    
-                    if (isVideo) {
-                      return (
-                        <video
-                          key={activeStory} // Force re-render when story changes
-                          src={mediaUrl}
-                          className="w-full h-full object-cover"
-                          autoPlay
-                          muted
-                          loop
-                          playsInline
-                          controls={false}
-                          onLoadedData={(e) => {
-                            // Restart video from beginning when story opens
-                            e.currentTarget.currentTime = 0
-                            e.currentTarget.play()
-                          }}
-                          onClick={(e) => {
-                            // Restart video when clicked
-                            e.currentTarget.currentTime = 0
-                            e.currentTarget.play()
-                          }}
-                        />
-                      )
-                    } else {
-                      return (
-                        <Image
-                          src={mediaUrl}
-                          alt="Story"
-                          fill
-                          priority={true}
-                          className="object-contain" // Changed to contain to show full image
-                          placeholder="blur"
-                          blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R//2Q=="
-                        />
-                      )
-                    }
+                      mediaUrl.includes('.avi')))
+
+                    return (
+                      <div 
+                        className="w-full h-full relative overflow-hidden"
+                        style={{
+                          ...(backgroundImage 
+                            ? {
+                                backgroundImage: `url(${backgroundImage})`,
+                                backgroundSize: 'cover',
+                                backgroundPosition: 'center',
+                                backgroundRepeat: 'no-repeat'
+                              }
+                            : backgroundColor.includes('gradient') 
+                              ? { backgroundImage: backgroundColor }
+                              : { backgroundColor: backgroundColor }
+                          )
+                        }}
+                      >
+                        {/* Background Media */}
+                        {mediaUrl && (
+                          <div 
+                            className="absolute inset-0 overflow-hidden"
+                            style={{
+                              transform: mediaTransform ? 
+                                `scale(${mediaTransform.scale || 1}) translate(${mediaTransform.x || 0}px, ${mediaTransform.y || 0}px) rotate(${mediaTransform.rotation || 0}deg)` :
+                                undefined
+                            }}
+                          >
+                            {isVideo ? (
+                              <video
+                                key={activeStory} // Force re-render when story changes
+                                src={mediaUrl}
+                                className="w-full h-full object-cover"
+                                autoPlay
+                                muted
+                                loop
+                                playsInline
+                                controls={false}
+                                onLoadedData={(e) => {
+                                  // Restart video from beginning when story opens
+                                  e.currentTarget.currentTime = 0
+                                  e.currentTarget.play()
+                                }}
+                                onClick={(e) => {
+                                  // Restart video when clicked
+                                  e.currentTarget.currentTime = 0
+                                  e.currentTarget.play()
+                                }}
+                              />
+                            ) : (
+                              <Image
+                                src={mediaUrl}
+                                alt="Story"
+                                fill
+                                priority={true}
+                                className="object-cover"
+                                placeholder="blur"
+                                blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R//2Q=="
+                              />
+                            )}
+                          </div>
+                        )}
+
+                        {/* Text Elements */}
+                        {textElements.map((textElement: any, index: number) => (
+                          <div
+                            key={textElement.id || index}
+                            className="absolute select-none pointer-events-none z-10"
+                            style={{
+                              left: `${textElement.x}%`,
+                              top: `${textElement.y}%`,
+                              transform: 'translate(-50%, -50%)',
+                              fontSize: `${textElement.fontSize}px`,
+                              color: textElement.color,
+                              fontFamily: textElement.fontFamily,
+                              fontWeight: textElement.fontWeight,
+                              fontStyle: textElement.fontStyle,
+                              textAlign: textElement.textAlign as any,
+                              backgroundColor: textElement.backgroundColor !== 'transparent' ? textElement.backgroundColor : undefined,
+                              padding: textElement.backgroundColor !== 'transparent' ? '4px 8px' : undefined,
+                              borderRadius: textElement.backgroundColor !== 'transparent' ? '4px' : undefined,
+                              textShadow: '1px 1px 2px rgba(0,0,0,0.5)', // Add shadow for better readability
+                            }}
+                          >
+                            {textElement.text}
+                          </div>
+                        ))}
+                      </div>
+                    )
                   })()}
 
                   {/* Navigation Areas and Buttons */}
@@ -1354,20 +1435,22 @@ export default function CommunityPage() {
                       </p>
                       <p className="text-xs text-white/70">
                         {(activeUserStories[currentStoryIndex] || stories.find((s) => s.id === activeStory))?.created_at 
-                          ? new Date((activeUserStories[currentStoryIndex] || stories.find((s) => s.id === activeStory))!.created_at!).toLocaleTimeString() 
-                          : ""
+                          ? formatStoryTime((activeUserStories[currentStoryIndex] || stories.find((s) => s.id === activeStory))!.created_at!) 
+                          : "now"
                         }
                       </p>
                     </div>
                   </div>
 
-                  {/* Story viewers */}
-                  <div className="absolute top-3 sm:top-4 right-3 sm:right-4">
-                    <div className="h-8 rounded-full bg-black/30 text-white px-3 flex items-center">
-                      <Eye className="h-3.5 w-3.5 mr-1.5" />
-                      <span className="text-xs">0</span>
+                  {/* Story viewers - Only show for story author */}
+                  {user && (activeUserStories[currentStoryIndex] || stories.find((s) => s.id === activeStory))?.author_id === user.id && (
+                    <div className="absolute top-3 sm:top-4 right-3 sm:right-4">
+                      <div className="h-8 rounded-full bg-black/30 text-white px-3 flex items-center cursor-pointer hover:bg-black/40 transition-colors">
+                        <Eye className="h-3.5 w-3.5 mr-1.5" />
+                        <span className="text-xs">{(activeUserStories[currentStoryIndex] || stories.find((s) => s.id === activeStory))?.views_count || 0}</span>
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   {/* Story interactions */}
                   <div className="absolute bottom-3 sm:bottom-4 left-0 right-0 px-3 sm:px-4">
