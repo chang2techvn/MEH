@@ -59,9 +59,17 @@ export function StoriesSection({
                     username: userStories.user?.full_name || userStories.user?.username || "Unknown",
                     userImage: userStories.user?.avatar_url || "/placeholder.svg",
                     storyImage: userStories.stories[0].media_url || "/placeholder.svg",
+                    mediaType: userStories.stories[0].media_type as "image" | "video",
                     isViewed: false,
                     hasMultiple: userStories.stories.length > 1,
-                    isAddStory: false
+                    isAddStory: false,
+                    content: userStories.stories[0].content,
+                    textElements: userStories.stories[0].text_elements,
+                    backgroundColor: userStories.stories[0].background_color,
+                    textColor: userStories.stories[0].text_color,
+                    backgroundImage: userStories.stories[0].background_image,
+                    mediaTransform: userStories.stories[0].media_transform,
+                    images: userStories.stories[0].images
                   }}
                   onClick={() => handleStoryClick(userStories.stories[0])}
                 />

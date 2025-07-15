@@ -6,9 +6,22 @@ export interface Story {
   username: string
   userImage: string
   storyImage: string
+  mediaType?: "image" | "video"
   isViewed: boolean
   hasMultiple?: boolean
   isAddStory?: boolean
+  content?: string
+  textElements?: any[]
+  backgroundColor?: string
+  textColor?: string
+  backgroundImage?: string
+  mediaTransform?: {
+    x: number
+    y: number
+    scale: number
+    rotation: number
+  }
+  images?: string[]
 }
 
 export interface Post {

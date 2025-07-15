@@ -49,6 +49,7 @@ import {
   type Group,
   type StoryViewer,
 } from "@/components/community"
+import { StoryViewersModal } from "@/components/community/story-viewers-modal"
 
 // Format story time to show hours (e.g., "21h") or "now" for recent stories
 const formatStoryTime = (dateString: string): string => {
@@ -101,6 +102,9 @@ export default function CommunityPage() {
   const [groups, setGroups] = useState<Group[]>([])
   const [trendingTopics, setTrendingTopics] = useState<{ name: string; count: number }[]>([])
   const [showStoryCreator, setShowStoryCreator] = useState(false)
+  const [showStoryViewers, setShowStoryViewers] = useState(false)
+  const [selectedStoryForViewers, setSelectedStoryForViewers] = useState<string | null>(null)
+  const [storyPaused, setStoryPaused] = useState(false)
   const [windowWidth, setWindowWidth] = useState<number>(typeof window !== "undefined" ? window.innerWidth : 0)
   const [highlightPostId, setHighlightPostId] = useState<string | null>(null)
 
@@ -531,7 +535,7 @@ export default function CommunityPage() {
 
   // Auto-advance stories when viewing multiple stories
   useEffect(() => {
-    if (activeStory && activeUserStories.length > 0) {
+    if (activeStory && activeUserStories.length > 0 && !storyPaused) {
       const timer = setTimeout(() => {
         if (currentStoryIndex < activeUserStories.length - 1) {
           // Move to next story in current user's stories
@@ -540,6 +544,15 @@ export default function CommunityPage() {
           setActiveStory(activeUserStories[newIndex].id)
           setProgressKey(prev => prev + 1) // Force progress bar reset
           viewStory(String(activeUserStories[newIndex].id))
+          
+          // Update story viewers modal if open and user is story author
+          if (showStoryViewers && user && activeUserStories[newIndex]?.author_id === user.id) {
+            setSelectedStoryForViewers(activeUserStories[newIndex].id)
+          } else if (showStoryViewers) {
+            // Close modal if new story is not authored by current user
+            setShowStoryViewers(false)
+            setStoryPaused(false)
+          }
         } else {
           // Move to next user's stories
           moveToNextUser()
@@ -548,7 +561,7 @@ export default function CommunityPage() {
 
       return () => clearTimeout(timer)
     }
-  }, [activeStory, currentStoryIndex, activeUserStories, viewStory])
+  }, [activeStory, currentStoryIndex, activeUserStories, viewStory, storyPaused])
 
   // Helper function to move to next user's stories
   const moveToNextUser = () => {
@@ -565,12 +578,26 @@ export default function CommunityPage() {
       setActiveStory(nextUserGroup.stories[0].id)
       setProgressKey(prev => prev + 1) // Force progress bar reset
       viewStory(String(nextUserGroup.stories[0].id))
+      
+      // Update story viewers modal if open and user is story author
+      if (showStoryViewers && user && nextUserGroup.stories[0]?.author_id === user.id) {
+        setSelectedStoryForViewers(nextUserGroup.stories[0].id)
+      } else if (showStoryViewers) {
+        // Close modal if new story is not authored by current user
+        setShowStoryViewers(false)
+        setStoryPaused(false)
+      }
     } else {
       // No more users, close story viewer
       setActiveStory(null)
       setActiveUserStories([])
       setCurrentStoryIndex(0)
       setProgressKey(0)
+      // Close viewers modal if open
+      if (showStoryViewers) {
+        setShowStoryViewers(false)
+        setStoryPaused(false)
+      }
     }
   }
 
@@ -584,11 +611,21 @@ export default function CommunityPage() {
     if (currentUserIndex > 0) {
       // Move to previous user
       const prevUserGroup = allGroupedStories[currentUserIndex - 1]
+      const lastStoryIndex = prevUserGroup.stories.length - 1
       setActiveUserStories(prevUserGroup.stories)
-      setCurrentStoryIndex(prevUserGroup.stories.length - 1) // Start at last story of previous user
-      setActiveStory(prevUserGroup.stories[prevUserGroup.stories.length - 1].id)
+      setCurrentStoryIndex(lastStoryIndex) // Start at last story of previous user
+      setActiveStory(prevUserGroup.stories[lastStoryIndex].id)
       setProgressKey(prev => prev + 1) // Force progress bar reset
-      viewStory(String(prevUserGroup.stories[prevUserGroup.stories.length - 1].id))
+      viewStory(String(prevUserGroup.stories[lastStoryIndex].id))
+      
+      // Update story viewers modal if open and user is story author
+      if (showStoryViewers && user && prevUserGroup.stories[lastStoryIndex]?.author_id === user.id) {
+        setSelectedStoryForViewers(prevUserGroup.stories[lastStoryIndex].id)
+      } else if (showStoryViewers) {
+        // Close modal if new story is not authored by current user
+        setShowStoryViewers(false)
+        setStoryPaused(false)
+      }
     }
   }
 
@@ -601,6 +638,15 @@ export default function CommunityPage() {
       setActiveStory(activeUserStories[newIndex].id)
       setProgressKey(prev => prev + 1) // Force progress bar reset
       viewStory(String(activeUserStories[newIndex].id))
+      
+      // Update story viewers modal if open and user is story author
+      if (showStoryViewers && user && activeUserStories[newIndex]?.author_id === user.id) {
+        setSelectedStoryForViewers(activeUserStories[newIndex].id)
+      } else if (showStoryViewers) {
+        // Close modal if new story is not authored by current user
+        setShowStoryViewers(false)
+        setStoryPaused(false)
+      }
     } else {
       // Move to previous user's stories
       moveToPreviousUser()
@@ -615,6 +661,15 @@ export default function CommunityPage() {
       setActiveStory(activeUserStories[newIndex].id)
       setProgressKey(prev => prev + 1) // Force progress bar reset
       viewStory(String(activeUserStories[newIndex].id))
+      
+      // Update story viewers modal if open and user is story author
+      if (showStoryViewers && user && activeUserStories[newIndex]?.author_id === user.id) {
+        setSelectedStoryForViewers(activeUserStories[newIndex].id)
+      } else if (showStoryViewers) {
+        // Close modal if new story is not authored by current user
+        setShowStoryViewers(false)
+        setStoryPaused(false)
+      }
     } else {
       // Move to next user's stories
       moveToNextUser()
@@ -1031,6 +1086,23 @@ export default function CommunityPage() {
     setActiveFilters(filters)
   }
 
+  // Handle story viewers modal
+  const handleStoryViewersClick = (e: React.MouseEvent) => {
+    e.stopPropagation() // Prevent event bubbling to story navigation
+    const currentStory = activeUserStories[currentStoryIndex] || stories.find((s) => s.id === activeStory)
+    if (currentStory && user && currentStory.author_id === user.id) {
+      setSelectedStoryForViewers(currentStory.id)
+      setShowStoryViewers(true)
+      setStoryPaused(true) // Pause story progression
+    }
+  }
+
+  // Handle closing story viewers
+  const handleCloseStoryViewers = () => {
+    setShowStoryViewers(false)
+    setStoryPaused(false) // Resume story progression
+  }
+
   if (!mounted) return null
 
   // Helper function to toggle right sidebar on mobile
@@ -1257,7 +1329,7 @@ export default function CommunityPage() {
                                      index === currentStoryIndex ? "100%" : "0%" 
                             }}
                             transition={{ 
-                              duration: index === currentStoryIndex ? 5 : 0,
+                              duration: index === currentStoryIndex ? (storyPaused ? 0 : 5) : 0,
                               ease: "linear",
                               delay: 0 // No delay to start immediately
                             }}
@@ -1384,9 +1456,9 @@ export default function CommunityPage() {
                       onClick={goToPreviousStory}
                     />
                     
-                    {/* Next Story Area (invisible clickable area) */}
+                    {/* Next Story Area (invisible clickable area) - excluding top area for eye button */}
                     <div 
-                      className="absolute right-0 top-0 w-1/3 h-full cursor-pointer z-10"
+                      className="absolute right-0 top-16 w-1/3 bottom-0 cursor-pointer z-10"
                       onClick={goToNextStory}
                     />
 
@@ -1444,12 +1516,25 @@ export default function CommunityPage() {
 
                   {/* Story viewers - Only show for story author */}
                   {user && (activeUserStories[currentStoryIndex] || stories.find((s) => s.id === activeStory))?.author_id === user.id && (
-                    <div className="absolute top-3 sm:top-4 right-3 sm:right-4">
-                      <div className="h-8 rounded-full bg-black/30 text-white px-3 flex items-center cursor-pointer hover:bg-black/40 transition-colors">
-                        <Eye className="h-3.5 w-3.5 mr-1.5" />
-                        <span className="text-xs">{(activeUserStories[currentStoryIndex] || stories.find((s) => s.id === activeStory))?.views_count || 0}</span>
+                    <>
+                      <div className="absolute top-3 sm:top-4 right-3 sm:right-4 z-30">
+                        <div 
+                          className="h-8 rounded-full bg-black/30 text-white px-3 flex items-center cursor-pointer hover:bg-black/40 transition-colors"
+                          onClick={handleStoryViewersClick}
+                        >
+                          <Eye className="h-3.5 w-3.5 mr-1.5" />
+                          <span className="text-xs">{(activeUserStories[currentStoryIndex] || stories.find((s) => s.id === activeStory))?.views_count || 0}</span>
+                        </div>
                       </div>
-                    </div>
+
+                      {/* Story Viewers Overlay */}
+                      <StoryViewersModal 
+                        isOpen={showStoryViewers}
+                        onClose={handleCloseStoryViewers}
+                        storyId={selectedStoryForViewers || ''}
+                        storyAuthorId={user?.id || ''}
+                      />
+                    </>
                   )}
 
                   {/* Story interactions */}
