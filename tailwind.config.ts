@@ -60,6 +60,7 @@ const config = {
         cantaloupe: "hsl(var(--cantaloupe))",
         "mellow-yellow": "hsl(var(--mellow-yellow))",
         "dark-blue": "hsl(var(--dark-blue))",
+        "vibrant-orange": "hsl(var(--vibrant-orange))",
       },
       borderRadius: {
         lg: "var(--radius)",

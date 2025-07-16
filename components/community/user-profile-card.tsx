@@ -24,7 +24,7 @@ export function UserProfileCard() {
     return (
       <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer mb-2">
         <Avatar className="h-9 w-9">
-          <AvatarFallback className="bg-gradient-to-br from-neo-mint to-purist-blue text-white">
+          <AvatarFallback className="bg-gradient-to-br from-vibrant-orange to-cantaloupe text-white">
             ?
           </AvatarFallback>
         </Avatar>
@@ -67,7 +67,7 @@ export function UserProfileCard() {
             alt={user.name || "User avatar"}
           />
         )}
-        <AvatarFallback className="bg-gradient-to-br from-neo-mint to-purist-blue text-white">
+        <AvatarFallback className="bg-gradient-to-br from-vibrant-orange to-cantaloupe text-white">
           {getInitials(user.name)}
         </AvatarFallback>
       </Avatar>

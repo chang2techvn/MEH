@@ -36,9 +36,9 @@ interface ThemeContextType {
 
 const defaultTheme: ThemeSettings = {
   mode: "system",
-  primaryColor: "purist-blue",
-  secondaryColor: "neo-mint",
-  accentColor: "cassis",
+  primaryColor: "vibrant-orange",
+  secondaryColor: "vibrant-orange", 
+  accentColor: "cantaloupe",
   fontSize: "medium",
   borderRadius: 8,
   shadowIntensity: 50,

@@ -335,12 +335,63 @@ export function usePostInteractions(
     }
   }
 
-  const handleShare = () => {
-    console.log('📤 Share button clicked!')
-    toast({
-      title: "Link copied",
-      description: "Post link has been copied to clipboard",
-    })
+  const handleShare = async () => {
+    if (!postId) {
+      toast({
+        title: "Error",
+        description: "Cannot share this post",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      // Generate share URL
+      const shareUrl = `${window.location.origin}/community/post/${postId}`
+      
+      // Try to use Web Share API first (for mobile devices)
+      if (navigator.share) {
+        await navigator.share({
+          title: 'Check out this post from EnglishMastery Community',
+          text: 'I found this interesting post on EnglishMastery Community',
+          url: shareUrl,
+        })
+        
+        toast({
+          title: "Shared successfully",
+          description: "Post has been shared",
+        })
+      } else {
+        // Fallback to clipboard API
+        await navigator.clipboard.writeText(shareUrl)
+        
+        toast({
+          title: "Link copied",
+          description: "Post link has been copied to clipboard",
+        })
+      }
+    } catch (error) {
+      console.error('Error sharing post:', error)
+      
+      // Final fallback - try to copy URL manually
+      try {
+        const shareUrl = `${window.location.origin}/community/post/${postId}`
+        await navigator.clipboard.writeText(shareUrl)
+        
+        toast({
+          title: "Link copied",
+          description: "Post link has been copied to clipboard",
+        })
+      } catch (clipboardError) {
+        console.error('Clipboard error:', clipboardError)
+        
+        toast({
+          title: "Share failed",
+          description: "Unable to share or copy link. Please try again.",
+          variant: "destructive",
+        })
+      }
+    }
   }
 
   const focusCommentInput = () => {
