@@ -1541,8 +1541,9 @@ export default function CommunityPage() {
                   <div className="absolute bottom-3 sm:bottom-4 left-0 right-0 px-3 sm:px-4">
                     <div className="flex items-center gap-2 bg-black/30 backdrop-blur-sm rounded-full p-1.5 sm:p-2">
                       <Avatar className="h-7 w-7 sm:h-8 sm:w-8 border-2 border-white">
+                        <AvatarImage src={user?.avatar} />
                         <AvatarFallback className="bg-gradient-to-br from-neo-mint to-purist-blue text-white">
-                          JD
+                          {user?.name?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || 'U'}
                         </AvatarFallback>
                       </Avatar>
                       <Input
