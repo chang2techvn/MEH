@@ -68,6 +68,11 @@ export function LeftSidebar({ showLeftSidebar, setShowLeftSidebar, groups }: Lef
 
             <NavItem icon={Home} label="Challenges" href="/" />
             <NavItem icon={BookOpen} label="Al Learning Hub" href="/resources" />
+            <NavItem 
+              icon={Bookmark} 
+              label="Saved" 
+              onClick={() => setShowSavedModal(true)}
+            />
 
             <Separator className="my-4" />
 
@@ -76,11 +81,7 @@ export function LeftSidebar({ showLeftSidebar, setShowLeftSidebar, groups }: Lef
             </h3>
 
             <NavItem icon={Calendar} label="Events" onClick={() => setShowEventsModal(true)} />
-            <NavItem 
-              icon={Bookmark} 
-              label="Saved" 
-              onClick={() => setShowSavedModal(true)}
-            />
+
 
             <Separator className="my-4" />
 
