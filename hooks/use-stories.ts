@@ -292,6 +292,76 @@ export function useStories() {
     return story.story_views.some(view => view.viewer_id === user.id)
   }, [user])
 
+  // Add story reply
+  const addStoryReply = useCallback(async (storyId: string, replyContent: string) => {
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please sign in to reply to stories",
+        variant: "destructive"
+      })
+      return false
+    }
+
+    if (!replyContent.trim()) {
+      toast({
+        title: "Reply Required",
+        description: "Please enter a reply message",
+        variant: "destructive"
+      })
+      return false
+    }
+
+    try {
+      const { data, error } = await supabase
+        .rpc('add_story_reply', {
+          p_story_id: storyId,
+          p_viewer_id: user.id,
+          p_reply_content: replyContent.trim()
+        })
+
+      if (error) throw error
+
+      if (data.success) {
+        toast({
+          title: "Reply Sent",
+          description: "Your reply has been sent to the story author"
+        })
+        return true
+      } else {
+        throw new Error(data.error || 'Failed to send reply')
+      }
+    } catch (err: any) {
+      console.error('Error adding story reply:', err)
+      toast({
+        title: "Error Sending Reply",
+        description: err.message,
+        variant: "destructive"
+      })
+      return false
+    }
+  }, [user])
+
+  // Get story replies (for story author)
+  const getStoryReplies = useCallback(async (storyId: string) => {
+    if (!user) return []
+
+    try {
+      const { data, error } = await supabase
+        .rpc('get_story_replies', {
+          p_story_id: storyId,
+          p_author_id: user.id
+        })
+
+      if (error) throw error
+
+      return data || []
+    } catch (err: any) {
+      console.error('Error fetching story replies:', err)
+      return []
+    }
+  }, [user])
+
   // Get stories grouped by user
   const getStoriesGroupedByUser = useCallback(() => {
     const grouped = stories.reduce((acc, story) => {
@@ -332,6 +402,8 @@ export function useStories() {
     deleteStory,
     uploadStoryMedia,
     isStoryViewed,
+    addStoryReply,
+    getStoryReplies,
     getStoriesGroupedByUser,
     refreshStories: fetchStories
   }

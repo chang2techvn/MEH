@@ -13,6 +13,7 @@ import { supabase, dbHelpers } from "@/lib/supabase"
 import type { Database } from "@/lib/database.types"
 import { toast } from "@/hooks/use-toast"
 import { useAuthState } from "@/contexts/auth-context"
+import { useChat } from "@/contexts/chat-context-realtime"
 import { subscribeToNotifications, markNotificationAsRead, markAllNotificationsAsRead } from "@/lib/notification-utils"
 
 // Types from Supabase schema
@@ -37,6 +38,7 @@ interface NotificationItem {
 
 export default function NotificationsDropdown() {
   const { user, isAuthenticated } = useAuthState()
+  const { openChatWindow } = useChat()
   const router = useRouter()
   const [isOpen, setIsOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
@@ -71,21 +73,57 @@ export default function NotificationsDropdown() {
         return
       }
 
-      const mappedNotifications: NotificationItem[] = notificationData?.map((notification) => ({
-        id: notification.id,
-        type: notification.notification_type,
-        title: notification.title,
-        message: notification.message,
-        time: new Date(notification.created_at || Date.now()),
-        read: notification.is_read || false,
-        avatar: "/placeholder.svg?height=40&width=40",
-        link: (notification.data as any)?.action_url || undefined,
-        sender: {
-          name: "System",
-          avatar: "/placeholder.svg?height=40&width=40",
-          status: "system",
-        },
-      })) || []
+      // Get unique replier IDs from story_reply notifications
+      const replierIds = notificationData
+        ?.filter(n => n.notification_type === 'story_reply' && n.data?.replier_id)
+        .map(n => (n.data as any).replier_id)
+        .filter((id, index, arr) => arr.indexOf(id) === index) || []
+
+      // Fetch profiles for repliers
+      let replierProfiles: any[] = []
+      if (replierIds.length > 0) {
+        const { data: profilesData, error: profilesError } = await supabase
+          .from('profiles')
+          .select('user_id, username, full_name, avatar_url')
+          .in('user_id', replierIds)
+
+        if (!profilesError && profilesData) {
+          replierProfiles = profilesData
+        }
+      }
+
+      const mappedNotifications: NotificationItem[] = notificationData?.map((notification) => {
+        const notificationData = notification.data as any
+        let avatar = "/placeholder.svg?height=40&width=40"
+        let senderName = "System"
+
+        // For story_reply notifications, get replier's avatar
+        if (notification.notification_type === 'story_reply' && notificationData?.replier_id) {
+          const replierProfile = replierProfiles.find(p => p.user_id === notificationData.replier_id)
+          if (replierProfile) {
+            avatar = replierProfile.avatar_url || "/placeholder.svg?height=40&width=40"
+            senderName = replierProfile.full_name || replierProfile.username || notificationData.replier_name || "Unknown"
+          } else {
+            senderName = notificationData.replier_name || "Unknown"
+          }
+        }
+
+        return {
+          id: notification.id,
+          type: notification.notification_type,
+          title: notification.title,
+          message: notification.message,
+          time: new Date(notification.created_at || Date.now()),
+          read: notification.is_read || false,
+          avatar: avatar,
+          link: notificationData?.action_url || undefined,
+          sender: {
+            name: senderName,
+            avatar: avatar,
+            status: "online",
+          },
+        }
+      }) || []
 
       setNotifications(mappedNotifications)
       setUnreadCount(mappedNotifications.filter(n => !n.read).length)
@@ -290,10 +328,97 @@ export default function NotificationsDropdown() {
     setUnreadCount(0)
   }
 
-  const handleNotificationClick = (notification: NotificationItem) => {
+  const handleNotificationClick = async (notification: NotificationItem) => {
     markAsRead(notification.id)
     
-    // Navigate to link if provided using Next.js router
+    // Special handling for story reply notifications
+    if (notification.type === 'story_reply') {
+      try {
+        // Extract replier user ID from notification data (stored when notification was created)
+        const { data: notificationData, error: notifError } = await supabase
+          .from('notifications')
+          .select('data')
+          .eq('id', notification.id)
+          .single()
+        
+        if (!notifError && notificationData?.data?.replier_id) {
+          const replierId = notificationData.data.replier_id
+          const replierName = notificationData.data.replier_name || 'User'
+          
+          // Find or create conversation with the replier
+          let conversationId: string | null = null
+
+          // First try to find existing conversation
+          const { data: existingConversations, error: findError } = await supabase
+            .from('conversations')
+            .select(`
+              id,
+              conversation_participants!inner (user_id)
+            `)
+            .eq('type', 'direct')
+            .eq('conversation_participants.user_id', user?.id)
+
+          if (!findError && existingConversations) {
+            // Find conversation where both users are participants
+            for (const conv of existingConversations) {
+              const { data: participants } = await supabase
+                .from('conversation_participants')
+                .select('user_id')
+                .eq('conversation_id', conv.id)
+
+              if (participants) {
+                const userIds = participants.map(p => p.user_id)
+                if (userIds.includes(user?.id!) && userIds.includes(replierId) && userIds.length === 2) {
+                  conversationId = conv.id
+                  break
+                }
+              }
+            }
+          }
+
+          // If no conversation exists, create one
+          if (!conversationId) {
+            const { data: newConversation, error: createError } = await supabase
+              .from('conversations')
+              .insert({
+                title: `Chat with ${replierName}`,
+                status: 'active',
+                type: 'direct'
+              })
+              .select()
+              .single()
+
+            if (!createError && newConversation) {
+              conversationId = newConversation.id
+
+              // Add participants
+              await supabase
+                .from('conversation_participants')
+                .insert([
+                  { conversation_id: conversationId, user_id: user?.id, role: 'participant' },
+                  { conversation_id: conversationId, user_id: replierId, role: 'participant' }
+                ])
+            }
+          }
+
+          // Open chat window if we have a conversation
+          if (conversationId) {
+            openChatWindow(conversationId)
+            setIsOpen(false)
+            return
+          }
+        }
+      } catch (error) {
+        console.error('Error opening chat for story reply:', error)
+        toast({
+          title: "Error",
+          description: "Failed to open chat",
+          variant: "destructive"
+        })
+      }
+    }
+    
+    // Default behavior for other notifications
     if (notification.link) {
       try {
         // Check if it's an internal link (starts with / or is relative)

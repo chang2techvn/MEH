@@ -7,6 +7,7 @@ import MainHeader from "@/components/ui/main-header"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { toast } from "@/hooks/use-toast"
 import { uploadVideo, uploadImage, formatFileSize } from "@/lib/file-upload"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -19,6 +20,7 @@ import {
   X,
   Send,
   Eye,
+  Heart,
 } from "lucide-react"
 import FeedPost from "@/components/feed/feed-post"
 import FeedFilter from "@/components/feed/feed-filter"
@@ -79,7 +81,8 @@ export default function CommunityPage() {
     stories, 
     loading: storiesLoading, 
     createStory, 
-    viewStory 
+    viewStory,
+    addStoryReply 
   } = useStories()
   
   const [mounted, setMounted] = useState(false)
@@ -105,6 +108,10 @@ export default function CommunityPage() {
   const [showStoryViewers, setShowStoryViewers] = useState(false)
   const [selectedStoryForViewers, setSelectedStoryForViewers] = useState<string | null>(null)
   const [storyPaused, setStoryPaused] = useState(false)
+  const [storyReplyText, setStoryReplyText] = useState("")
+  const [isSubmittingReply, setIsSubmittingReply] = useState(false)
+  const [showStoryReactions, setShowStoryReactions] = useState(false)
+  const [storyReactionAnimations, setStoryReactionAnimations] = useState<Array<{id: string, emoji: string, x: number, y: number}>>([])
   const [windowWidth, setWindowWidth] = useState<number>(typeof window !== "undefined" ? window.innerWidth : 0)
   const [highlightPostId, setHighlightPostId] = useState<string | null>(null)
 
@@ -1103,6 +1110,135 @@ export default function CommunityPage() {
     setStoryPaused(false) // Resume story progression
   }
 
+  // Handle story reply submission
+  const handleStoryReplySubmit = async () => {
+    if (!storyReplyText.trim() || !activeStory || isSubmittingReply) return
+
+    setIsSubmittingReply(true)
+    setStoryPaused(true) // Pause story while sending reply
+
+    try {
+      const success = await addStoryReply(String(activeStory), storyReplyText.trim())
+      
+      if (success) {
+        setStoryReplyText("")
+        // Keep story paused for a moment to show success
+        setTimeout(() => {
+          setStoryPaused(false)
+        }, 1500)
+      } else {
+        setStoryPaused(false) // Resume if failed
+      }
+    } catch (error) {
+      setStoryPaused(false) // Resume if failed
+    } finally {
+      setIsSubmittingReply(false)
+    }
+  }
+
+  // Handle story reply input key press
+  const handleStoryReplyKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      handleStoryReplySubmit()
+    }
+  }
+
+  // Handle story reaction submission
+  const handleStoryReaction = async (emoji: string) => {
+    if (!activeStory || !user) return
+
+    try {
+      // Add floating animation
+      const animationId = Date.now().toString()
+      const buttonRect = document.querySelector('.story-reactions-button')?.getBoundingClientRect()
+      
+      setStoryReactionAnimations(prev => [...prev, {
+        id: animationId,
+        emoji,
+        x: buttonRect ? buttonRect.left + buttonRect.width / 2 : window.innerWidth / 2,
+        y: buttonRect ? buttonRect.top : window.innerHeight / 2
+      }])
+
+      // Remove animation after 3 seconds
+      setTimeout(() => {
+        setStoryReactionAnimations(prev => prev.filter(anim => anim.id !== animationId))
+      }, 3000)
+
+      // Close reactions popup
+      setShowStoryReactions(false)
+
+      // Add reaction to database using story_views table
+      // Add reaction to existing reactions array or create new record
+      const timestamp = new Date().toISOString()
+      
+      // First, try to get existing reaction record
+      const { data: existingRecord } = await supabase
+        .from('story_views')
+        .select('id, reactions')
+        .eq('story_id', activeStory)
+        .eq('viewer_id', user.id)
+        .eq('interaction_type', 'reaction')
+        .single()
+
+      let reactions = []
+      if (existingRecord) {
+        // Update existing record - add new reaction to array
+        reactions = existingRecord.reactions || []
+        
+        // Check if this emoji already exists - if so, update timestamp
+        const existingReactionIndex = reactions.findIndex((r: any) => r.emoji === emoji)
+        if (existingReactionIndex >= 0) {
+          reactions[existingReactionIndex].timestamp = timestamp
+        } else {
+          // Add new reaction
+          reactions.push({ emoji, timestamp })
+        }
+
+        const { error: updateError } = await supabase
+          .from('story_views')
+          .update({
+            reactions,
+            reacted_at: timestamp,
+            viewed_at: timestamp
+          })
+          .eq('id', existingRecord.id)
+        
+        if (updateError) throw updateError
+      } else {
+        // Create new reaction record
+        reactions = [{ emoji, timestamp }]
+        const { error: insertError } = await supabase
+          .from('story_views')
+          .insert({
+            story_id: activeStory,
+            viewer_id: user.id,
+            interaction_type: 'reaction',
+            reactions,
+            reacted_at: timestamp,
+            viewed_at: timestamp
+          })
+        
+        if (insertError) throw insertError
+      }
+
+      toast({
+        title: "Reaction Added",
+        description: `You reacted with ${emoji}`
+      })
+    } catch (error: any) {
+      console.error('Error adding story reaction:', error)
+      toast({
+        title: "Error",
+        description: "Failed to add reaction",
+        variant: "destructive"
+      })
+    }
+  }
+
+  // Available story reactions
+  const storyReactions = ['❤️', '😂', '😮', '😢', '😡', '👍']
+
   if (!mounted) return null
 
   // Helper function to toggle right sidebar on mobile
@@ -1450,15 +1586,15 @@ export default function CommunityPage() {
 
                   {/* Navigation Areas and Buttons */}
                   <>
-                    {/* Previous Story Area (invisible clickable area) */}
+                    {/* Previous Story Area (invisible clickable area) - excluding bottom reply area */}
                     <div 
-                      className="absolute left-0 top-0 w-1/3 h-full cursor-pointer z-10"
+                      className="absolute left-0 top-0 w-1/3 bottom-16 cursor-pointer z-10"
                       onClick={goToPreviousStory}
                     />
                     
-                    {/* Next Story Area (invisible clickable area) - excluding top area for eye button */}
+                    {/* Next Story Area (invisible clickable area) - excluding top area for eye button and bottom reply area */}
                     <div 
-                      className="absolute right-0 top-16 w-1/3 bottom-0 cursor-pointer z-10"
+                      className="absolute right-0 top-16 w-1/3 bottom-16 cursor-pointer z-10"
                       onClick={goToNextStory}
                     />
 
@@ -1538,21 +1674,101 @@ export default function CommunityPage() {
                   )}
 
                   {/* Story interactions */}
-                  <div className="absolute bottom-3 sm:bottom-4 left-0 right-0 px-3 sm:px-4">
-                    <div className="flex items-center gap-2 bg-black/30 backdrop-blur-sm rounded-full p-1.5 sm:p-2">
-                      <Avatar className="h-7 w-7 sm:h-8 sm:w-8 border-2 border-white">
+                  <div className="absolute bottom-3 sm:bottom-4 left-0 right-0 px-3 sm:px-4 z-20">
+                    <div className="flex items-center gap-1.5 bg-black/30 backdrop-blur-sm rounded-full p-1.5 sm:p-2">
+                      <Avatar className="h-7 w-7 sm:h-8 sm:w-8 border-2 border-white flex-shrink-0">
                         <AvatarImage src={user?.avatar} />
                         <AvatarFallback className="bg-gradient-to-br from-neo-mint to-purist-blue text-white">
                           {user?.name?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || 'U'}
                         </AvatarFallback>
                       </Avatar>
-                      <Input
-                        placeholder="Reply to story..."
-                        className="bg-transparent border-none text-white placeholder:text-white/70 focus-visible:ring-0 focus-visible:ring-offset-0 text-sm"
-                      />
-                      <Button size="icon" variant="ghost" className="text-white h-7 w-7 sm:h-8 sm:w-8">
-                        <Send className="h-4 w-4 sm:h-5 sm:w-5" />
-                      </Button>
+                      
+                      {(() => {
+                        const currentStory = activeUserStories[currentStoryIndex] || stories.find((s) => s.id === activeStory)
+                        const isOwnStory = currentStory && user && currentStory.author_id === user.id
+                        
+                        if (isOwnStory) {
+                          return (
+                            <div className="flex-1 flex items-center justify-center text-white/70 text-sm">
+                              <span>This is your story</span>
+                            </div>
+                          )
+                        }
+                        
+                        return (
+                          <div className="flex gap-1 items-center flex-1 min-w-0">
+                            {/* Maximized Story Reply Input with integrated Send button */}
+                            <div className="relative flex-1 min-w-0">
+                              <Input
+                                placeholder="Reply to story..."
+                                className="w-full bg-white/20 backdrop-blur-sm border border-white/30 text-white placeholder:text-white/70 focus-visible:ring-1 focus-visible:ring-white/50 focus-visible:ring-offset-0 text-sm rounded-full px-4 py-2 pr-12"
+                                value={storyReplyText}
+                                onChange={(e) => setStoryReplyText(e.target.value)}
+                                onKeyDown={handleStoryReplyKeyPress}
+                                onFocus={() => setStoryPaused(true)} // Pause story when focusing on input
+                                onBlur={() => {
+                                  // Only resume if not submitting reply
+                                  if (!isSubmittingReply) {
+                                    setStoryPaused(false)
+                                  }
+                                }}
+                                disabled={isSubmittingReply}
+                              />
+                              
+                              {/* Send Button inside input */}
+                              <Button 
+                                size="icon" 
+                                variant="ghost" 
+                                className="absolute right-1 top-1/2 -translate-y-1/2 text-white h-8 w-8 rounded-full bg-transparent hover:bg-white/20 disabled:opacity-50 transition-all duration-200"
+                                onClick={handleStoryReplySubmit}
+                                disabled={!storyReplyText.trim() || isSubmittingReply}
+                              >
+                                {isSubmittingReply ? (
+                                  <svg className="animate-spin h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                                  </svg>
+                                ) : (
+                                  <Send className="h-4 w-4" />
+                                )}
+                              </Button>
+                            </div>
+                            
+                            {/* Story Reactions Button - compact and right-aligned */}
+                            <Popover open={showStoryReactions} onOpenChange={setShowStoryReactions}>
+                              <PopoverTrigger asChild>
+                                <Button 
+                                  size="icon" 
+                                  variant="ghost" 
+                                  className="story-reactions-button h-9 w-9 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 text-white hover:bg-white/30 transition-all duration-200 flex-shrink-0"
+                                  onClick={() => setStoryPaused(true)}
+                                >
+                                  <Heart className="h-4 w-4" />
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent 
+                                className="w-auto p-1 bg-black/30 backdrop-blur-sm border border-white/20 rounded-3xl shadow-2xl"
+                                align="end"
+                                side="top"
+                                sideOffset={10}
+                              >
+                                <div className="flex gap-1">
+                                  {storyReactions.map((emoji) => (
+                                    <Button
+                                      key={emoji}
+                                      variant="ghost"
+                                      size="sm"
+                                      className="text-lg p-1 h-auto hover:scale-110 transition-transform duration-200 hover:bg-white/10 rounded-xl min-w-0"
+                                      onClick={() => handleStoryReaction(emoji)}
+                                    >
+                                      {emoji}
+                                    </Button>
+                                  ))}
+                                </div>
+                              </PopoverContent>
+                            </Popover>
+                          </div>
+                        )
+                      })()}
                     </div>
                   </div>
                 </div>
@@ -1582,6 +1798,36 @@ export default function CommunityPage() {
               </Button>
             </motion.div>
           )}
+        </AnimatePresence>
+
+        {/* Floating Story Reaction Animations */}
+        <AnimatePresence>
+          {storyReactionAnimations.map((reaction) => (
+            <motion.div
+              key={reaction.id}
+              initial={{ 
+                opacity: 1, 
+                scale: 1, 
+                x: reaction.x - 20, 
+                y: reaction.y - 20 
+              }}
+              animate={{ 
+                opacity: 0, 
+                scale: 1.5, 
+                y: reaction.y - 120,
+                x: reaction.x - 20 + (Math.random() - 0.5) * 40
+              }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 3, ease: "easeOut" }}
+              className="fixed pointer-events-none z-[9999] text-3xl"
+              style={{
+                left: 0,
+                top: 0,
+              }}
+            >
+              {reaction.emoji}
+            </motion.div>
+          ))}
         </AnimatePresence>
       </div>
     </>
