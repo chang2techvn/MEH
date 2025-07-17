@@ -19,28 +19,35 @@ export function useLeaderboard() {
   useEffect(() => {
     const loadLeaderboard = async () => {
       try {
-        setLeaderboardLoading(true)
-        const result = await dbHelpers.getLeaderboard()
-        const rawData = result.data || []
-        console.log('📊 Raw leaderboard data loaded:', rawData) // Debug log
+        // Set loading to false immediately to show skeleton
+        setLeaderboardLoading(false)
         
-        // Transform data to match LeaderboardUser interface
-        const transformedData: LeaderboardUser[] = rawData.map((user: any, index: number) => ({
-          id: user.id,
-          name: user.profiles?.[0]?.full_name || 'Unknown User',
-          avatar: user.profiles?.[0]?.avatar_url,
-          rank: index + 1, // Assign rank based on order
-          points: user.points || 0,
-          level: user.level || 'Beginner',
-          streak: user.streak_days || 0
-        }))
-        
-        console.log('📊 Transformed leaderboard data:', transformedData) // Debug log
-        setLeaderboardData(transformedData)
+        // Load data in background
+        dbHelpers.getLeaderboard()
+          .then(result => {
+            const rawData = result.data || []
+            console.log('📊 Raw leaderboard data loaded:', rawData) // Debug log
+            
+            // Transform data to match LeaderboardUser interface
+            const transformedData: LeaderboardUser[] = rawData.map((user: any, index: number) => ({
+              id: user.id,
+              name: user.profiles?.full_name || 'Unknown User',
+              avatar: user.profiles?.avatar_url,
+              rank: index + 1, // Assign rank based on order
+              points: user.points || 0,
+              level: user.level || 'Beginner',
+              streak: user.streak_days || 0
+            }))
+            
+            console.log('📊 Transformed leaderboard data:', transformedData) // Debug log
+            setLeaderboardData(transformedData)
+          })
+          .catch(error => {
+            console.error('❌ Error loading leaderboard:', error)
+            setLeaderboardData([]) // Set empty array on error
+          })
       } catch (error) {
-        console.error('❌ Error loading leaderboard:', error)
-        setLeaderboardData([]) // Set empty array on error
-      } finally {
+        console.error('❌ Error in loadLeaderboard:', error)
         setLeaderboardLoading(false)
       }
     }

@@ -87,6 +87,7 @@ export default function CommunityPage() {
   
   const [mounted, setMounted] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [initialLoad, setInitialLoad] = useState(true)
   const [showNewPostForm, setShowNewPostForm] = useState(false)
   const [newPostContent, setNewPostContent] = useState("")
   const [isPostingContent, setIsPostingContent] = useState(false)
@@ -143,8 +144,7 @@ export default function CommunityPage() {
   // Load real data from Supabase
   const loadData = async () => {
     try {
-      setLoading(true)
-    
+      // Don't set loading state - let component show skeletons while data loads
       
       // Check authentication state first
       const { data: { session }, error: authError } = await supabase.auth.getSession()
@@ -435,12 +435,21 @@ export default function CommunityPage() {
       setGroups([])
       setTrendingTopics([])
     } finally {
-      setLoading(false)
+      // Loading state is managed by initialLoad instead
     }
   }
 
   useEffect(() => {
-    loadData()
+    // Set loading to false immediately to show skeleton states
+    setLoading(false)
+    
+    // Load data in background without blocking UI
+    loadData().then(() => {
+      setInitialLoad(false)
+    }).catch(error => {
+      console.error('Error loading community data:', error)
+      setInitialLoad(false)
+    })
 
     // Handle window resize
     const handleResize = () => {
@@ -1290,8 +1299,8 @@ export default function CommunityPage() {
           </div>
         </div>        {/* Main Content */}
         <main className="flex-1 relative">
-          <div className="container mx-auto px-2 sm:px-4 py-4">
-            <div className="flex flex-col lg:flex-row lg:gap-4 xl:gap-6">
+          <div className="w-full max-w-none px-2 sm:px-4 lg:px-6 xl:px-8 2xl:px-12 py-4">
+            <div className="flex flex-col lg:flex-row lg:gap-4 xl:gap-6 2xl:gap-8">
               {/* Left Sidebar */}
               <LeftSidebar 
                 showLeftSidebar={showLeftSidebar}
@@ -1300,7 +1309,7 @@ export default function CommunityPage() {
               />
 
               {/* Main Feed */}
-              <div className="flex-1 order-1 lg:order-2 max-w-full lg:max-w-[600px] xl:max-w-[700px]">
+              <div className="flex-1 order-1 lg:order-2 max-w-full lg:max-w-[600px] xl:max-w-[800px] 2xl:max-w-[900px]">
                 {/* Stories Section */}
                 <StoriesSection
                   setShowStoryCreator={setShowStoryCreator}
@@ -1321,7 +1330,7 @@ export default function CommunityPage() {
 
                 {/* Feed Posts */}
                 <div className="space-y-4">
-                  {loading ? (
+                  {initialLoad ? (
                     Array(3)
                       .fill(0)
                       .map((_, i) => <PostSkeleton key={i} />)

@@ -23,7 +23,7 @@ export function GeminiIntegration() {
     try {
       // Make a real API call to Gemini
       const apiResponse = await fetch(
-        "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=AIzaSyABciaGKcsOTGrELi8PgmJtDteZ77hTuTw",
+        "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=AIzaSyABciaGKcsOTGrELi8PgmJtDteZ77hTuTw",
         {
           method: "POST",
           headers: {

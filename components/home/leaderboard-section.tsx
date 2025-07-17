@@ -63,16 +63,16 @@ export function LeaderboardSection({ users = [], loading = false, onViewAll }: L
                 >
                   <div className="flex items-center gap-3">
                     <div className="relative">
-                      <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-neo-mint to-purist-blue blur-sm opacity-70"></div>
+                      <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-vibrant-orange to-cantaloupe blur-sm opacity-70"></div>
                       <div className="relative flex">
                         <Avatar className="border-2 border-white dark:border-gray-800">
                           <AvatarImage src={user.avatar || "/placeholder.svg?height=40&width=40"} alt={user.name} />
-                          <AvatarFallback className="bg-gradient-to-br from-neo-mint to-purist-blue text-white">
+                          <AvatarFallback className="bg-gradient-to-br from-vibrant-orange to-cantaloupe text-white">
                             {user.name ? user.name.split(' ').map((n: string) => n[0]).join('').toUpperCase() : 'U'}
                           </AvatarFallback>
                         </Avatar>
                         <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-white dark:bg-gray-800 flex items-center justify-center shadow-md">
-                          <span className="text-[10px] font-bold text-neo-mint dark:text-purist-blue">
+                          <span className="text-[10px] font-bold text-vibrant-orange dark:text-cantaloupe">
                             #{user.rank}
                           </span>
                         </div>

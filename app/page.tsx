@@ -47,9 +47,12 @@ export default function Home() {
     setSidebarCollapsed(false)
     setIsInitialLoad(true)
     
-    // Auto-collapse after 5 seconds
+    // Auto-collapse after 5 seconds only on desktop (lg screens and up)
     const autoCollapseTimer = setTimeout(() => {
-      setSidebarCollapsed(true)
+      // Check if screen is desktop size before auto-collapsing
+      if (window.innerWidth >= 1024) { // lg breakpoint
+        setSidebarCollapsed(true)
+      }
       setIsInitialLoad(false) // Mark as no longer initial load
     }, 5000)
     
@@ -106,12 +109,12 @@ export default function Home() {
         {/* Background decorations - optimized with contain property */}
         <div className="absolute top-20 left-10 w-64 h-64 rounded-full bg-neo-mint/10 dark:bg-purist-blue/10 blur-3xl -z-10 animate-blob contain-paint"></div>
         <div className="absolute bottom-20 right-10 w-64 h-64 rounded-full bg-cantaloupe/10 dark:bg-cassis/10 blur-3xl -z-10 animate-blob animation-delay-2000 contain-paint"></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full bg-mellow-yellow/5 dark:bg-mellow-yellow/5 blur-3xl -z-10 animate-blob animation-delay-4000 contain-paint"></div>        <div className="container py-8">
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full bg-mellow-yellow/5 dark:bg-mellow-yellow/5 blur-3xl -z-10 animate-blob animation-delay-4000 contain-paint"></div>        <div className="w-full max-w-none px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-8">
           {/* Top section: Main Content + Sidebar with dynamic layout */}
-          <div className={`grid gap-6 mb-8 transition-all duration-500 ease-in-out ${
+          <div className={`flex flex-col lg:flex-row gap-6 mb-8 transition-all duration-500 ease-in-out ${
             sidebarCollapsed 
-              ? "grid-cols-1" // Full width when collapsed
-              : "grid-cols-1 md:grid-cols-3" // Normal layout when expanded
+              ? "justify-center" // Center content when collapsed
+              : "justify-between" // Distribute when expanded
           }`}>            {/* Main Content - critical above-the-fold */}
             <MainContent 
               newPostAdded={newPostAdded}
@@ -123,10 +126,10 @@ export default function Home() {
             />
 
             {/* Sidebar with conditional rendering and animation */}
-            <div className={`transition-all duration-500 ease-in-out ${
+            <div className={`transition-all duration-500 ease-in-out w-full lg:w-[400px] xl:w-[450px] 2xl:w-[500px] lg:flex-shrink-0 ${
               sidebarCollapsed 
-                ? "hidden" // Hide completely when collapsed
-                : "block" // Show normally
+                ? "lg:hidden" // Hide only on desktop when collapsed
+                : "block" // Show normally on all screen sizes
             }`}>
               <Suspense fallback={<LoadingFallback />}>
                 <Sidebar 

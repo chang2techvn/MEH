@@ -12,6 +12,7 @@ import {
   Bot,
   X,
   Minimize2,
+  Maximize2,
   Send,
   Loader2,
   ArrowRight,
@@ -35,7 +36,18 @@ interface AIChatBoxProps {
 export function AIChatBox({ onClose, onMinimize, buttonPosition, initialPosition }: AIChatBoxProps) {
   // Calculate position based on button position
   const calculateInitialPosition = () => {
-    // Position the chat box above the button
+    // Check if mobile/small screen
+    const isMobile = window.innerWidth < 768
+    
+    if (isMobile) {
+      // On mobile, center the chat box
+      return {
+        x: Math.max(0, (window.innerWidth - 350) / 2),
+        y: Math.max(0, (window.innerHeight - 450) / 2)
+      }
+    }
+    
+    // Desktop positioning
     const x = Math.max(0, buttonPosition.x - 300) // Align right edge with button
     const y = Math.max(0, buttonPosition.y - 450) // Position above the button
 
@@ -51,6 +63,7 @@ export function AIChatBox({ onClose, onMinimize, buttonPosition, initialPosition
 
   const defaultPosition = initialPosition || calculateInitialPosition()
   const [position, setPosition] = useState(defaultPosition)
+  const [isMaximized, setIsMaximized] = useState(false)
   const { messages, input, setInput, handleSubmit, isLoading, isTyping, handleQuickResponse } = useGeminiAI()
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const [isDragging, setIsDragging] = useState(false)
@@ -76,6 +89,9 @@ export function AIChatBox({ onClose, onMinimize, buttonPosition, initialPosition
 
   // Draggable functionality
   const handleMouseDown = (e: React.MouseEvent) => {
+    // Don't allow dragging when maximized
+    if (isMaximized) return
+    
     // Only start dragging if clicking on the header (not the buttons)
     if ((e.target as HTMLElement).closest("button")) return
 
@@ -136,6 +152,44 @@ export function AIChatBox({ onClose, onMinimize, buttonPosition, initialPosition
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
   }, [handleSubmit])
+
+  // Handle maximize/minimize toggle
+  const handleMaximize = () => {
+    setIsMaximized(!isMaximized)
+  }
+
+  // Auto-maximize on small screens and handle window resize
+  useEffect(() => {
+    const handleResize = () => {
+      const isMobile = window.innerWidth < 768
+      
+      if (isMobile) {
+        // On mobile, auto-maximize for better UX
+        if (!isMaximized) {
+          setIsMaximized(true)
+        }
+      } else {
+        // On desktop/tablet, update position if chat box is out of bounds
+        if (!isMaximized) {
+          setPosition(prevPosition => {
+            const maxX = window.innerWidth - 350
+            const maxY = window.innerHeight - 450
+            
+            return {
+              x: Math.min(prevPosition.x, Math.max(0, maxX)),
+              y: Math.min(prevPosition.y, Math.max(0, maxY))
+            }
+          })
+        }
+      }
+    }
+
+    // Check on mount
+    handleResize()
+    
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [isMaximized])
 
   // Cycle through themes
   const cycleTheme = () => {
@@ -205,20 +259,32 @@ export function AIChatBox({ onClose, onMinimize, buttonPosition, initialPosition
   return (
     <motion.div
       ref={chatBoxRef}
-      className="fixed z-50 shadow-xl rounded-lg overflow-hidden"
+      className={`fixed z-50 shadow-xl overflow-hidden ${
+        isMaximized ? "rounded-none" : "rounded-lg"
+      }`}
       style={{
-        top: `${position.y}px`,
-        left: `${position.x}px`,
-        width: "350px",
+        top: isMaximized ? "0px" : `${position.y}px`,
+        left: isMaximized ? "0px" : `${position.x}px`,
+        width: isMaximized ? "100vw" : "min(350px, calc(100vw - 20px))",
+        height: isMaximized ? "100vh" : "auto",
+        maxHeight: isMaximized ? "100vh" : "min(80vh, 600px)",
       }}
       initial={{ opacity: 0, scale: 0.9, y: 20 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
+      animate={{ 
+        opacity: 1, 
+        scale: 1, 
+        y: 0,
+        width: isMaximized ? "100vw" : "min(350px, calc(100vw - 20px))",
+        height: isMaximized ? "100vh" : "auto",
+      }}
       exit={{ opacity: 0, scale: 0.9, y: 20 }}
-      transition={{ duration: 0.2 }}
+      transition={{ duration: 0.3, type: "spring", stiffness: 300, damping: 30 }}
     >
       <div
-        className={`p-3 flex items-center justify-between cursor-move ${getHeaderClass()}`}
-        onMouseDown={handleMouseDown}
+        className={`p-3 flex items-center justify-between ${
+          isMaximized ? "cursor-default" : "cursor-move"
+        } ${getHeaderClass()}`}
+        onMouseDown={isMaximized ? undefined : handleMouseDown}
       >
         <div className="flex items-center gap-2">
           <motion.div
@@ -246,10 +312,12 @@ export function AIChatBox({ onClose, onMinimize, buttonPosition, initialPosition
             variant="ghost"
             size="icon"
             className="h-6 w-6 text-current hover:bg-white/20 dark:hover:bg-black/20"
-            onClick={onMinimize}
+            onClick={handleMaximize}
+            title={isMaximized ? "Restore window" : "Maximize window"}
           >
-            <Minimize2 className="h-4 w-4" />
+            {isMaximized ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
           </Button>
+
           <Button
             variant="ghost"
             size="icon"
@@ -261,7 +329,13 @@ export function AIChatBox({ onClose, onMinimize, buttonPosition, initialPosition
         </div>
       </div>
       <div className={getBodyClass()}>
-        <ScrollArea className="h-[350px] p-3">
+        <ScrollArea 
+          className={`p-3 ${
+            isMaximized 
+              ? "h-[calc(100vh-140px)]" 
+              : "h-[min(350px,calc(80vh-140px))]"
+          }`}
+        >
           <div className="space-y-4">
             <AnimatePresence>
               {messages.length === 0 ? (

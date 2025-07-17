@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { MessageSquare, Search } from "lucide-react"
-import { formatNewPost } from "@/utils/post-helpers"
+import { formatNewPost } from "@/lib/utils/post-helpers"
 import { useInfiniteScroll } from "@/hooks/use-infinite-scroll"
 
 const FeedPost = lazy(() => import("@/components/feed/feed-post"))

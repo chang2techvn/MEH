@@ -7,7 +7,7 @@ import VirtualScroll from "@/components/ui/virtual-scroll"
 import LazyComponent from "@/components/optimized/lazy-component"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Challenge } from "@/utils/challenge-constants"
+import { Challenge } from "@/lib/utils/challenge-constants"
 
 interface ChallengeGridProps {
   challenges: Challenge[]

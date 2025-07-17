@@ -4,7 +4,7 @@ import { Suspense, lazy, useEffect, useState } from "react"
 import { Card } from "@/components/ui/card"
 import { Clock } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
-import { type Challenge } from "@/utils/challenge-constants"
+import { type Challenge } from "@/lib/utils/challenge-constants"
 import { getVideoSettings } from "@/app/actions/admin-settings"
 import { formatTime } from "@/components/youtube/youtube-api"
 import { useChallenge } from "@/contexts/challenge-context"
@@ -63,10 +63,14 @@ export function CurrentChallengeSection({
   if (!currentChallenge) {
     return (
       <Card className="neo-card p-6 bg-white/40 dark:bg-gray-900/40 backdrop-blur-xl border-none shadow-neo">
-        <div className="text-center py-8">
-          <Clock className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-          <h3 className="text-lg font-medium mb-2">No Active Challenge</h3>
-          <p className="text-muted-foreground">Check back later for new challenges!</p>
+        <div className="space-y-4">
+          <Skeleton className="h-8 w-3/4" />
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-32 w-full" />
+          <div className="flex space-x-2">
+            <Skeleton className="h-10 w-24" />
+            <Skeleton className="h-10 w-24" />
+          </div>
         </div>
       </Card>
     )

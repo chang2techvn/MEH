@@ -3,7 +3,7 @@
 import { useState, useCallback, useMemo, useEffect } from "react"
 import { toast } from "@/hooks/use-toast"
 import { dbHelpers, supabase } from "@/lib/supabase"
-import { formatNewPost } from "@/utils/post-helpers"
+import { formatNewPost } from "@/lib/utils/post-helpers"
 
 // Helper function to format time ago
 const formatTimeAgo = (dateString: string) => {

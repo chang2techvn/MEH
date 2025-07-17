@@ -1,8 +1,8 @@
 "use server"
 
 import { fetchRandomYoutubeVideo, type VideoData } from "./youtube-video"
-import { classifyChallengeDifficulty } from "@/utils/challenge-classifier"
-import { challengeTopics, type Challenge } from '@/utils/challenge-constants'
+import { classifyChallengeDifficulty } from "@/lib/utils/challenge-classifier"
+import { challengeTopics, type Challenge } from '@/lib/utils/challenge-constants'
 import { saveChallengeToDatabase, getTodaysChallengesFromDatabase } from './challenge-database'
 
 // Function to get today's date as batch identifier
@@ -59,8 +59,8 @@ const searchTopics = [
   "Innovation stories"
 ]
 
-// Function to generate daily challenges
-export async function generateDailyChallenges(count: number = 10): Promise<Challenge[]> {
+// Function to generate daily challenges (reduced to 1 per day)
+export async function generateDailyChallenges(count: number = 1): Promise<Challenge[]> {
   const todayBatch = getTodayBatch()
   
   try {
@@ -77,18 +77,22 @@ export async function generateDailyChallenges(count: number = 10): Promise<Chall
     const challenges: Challenge[] = []
     const usedVideoIds = new Set<string>()
     
+    // API key failure tracking
+    let apiKeyFailures = 0
+    const maxApiKeyFailures = 5
+    
     // Generate challenges with retry logic
     let attempts = 0
-    const maxAttempts = count * 3 // Allow more attempts to avoid duplicates
+    const maxAttempts = count * 5 // Allow more attempts for 1 challenge
 
-    while (challenges.length < count && attempts < maxAttempts) {
+    while (challenges.length < count && attempts < maxAttempts && apiKeyFailures < maxApiKeyFailures) {
       attempts++
       
       try {
         // Pick a random search topic
         const randomTopic = searchTopics[Math.floor(Math.random() * searchTopics.length)]
         
-        console.log(`📺 Attempt ${attempts}: Fetching video for topic "${randomTopic}"`)
+        console.log(`📺 Attempt ${attempts}: Fetching video for topic "${randomTopic}" (API failures: ${apiKeyFailures}/${maxApiKeyFailures})`)
         
         // Fetch a random YouTube video
         const videoData = await fetchRandomYoutubeVideo(
@@ -120,21 +124,47 @@ export async function generateDailyChallenges(count: number = 10): Promise<Chall
       } catch (error) {
         console.log(`⚠️ Failed to fetch video on attempt ${attempts}:`, error instanceof Error ? error.message : error)
         
-        // If we can't fetch videos, try again with a different approach
-        if (attempts > count) {
-          // Use fallback videos if available
-          console.log('🔄 Using fallback video generation...')
+        // Check if error is related to API key issues
+        const errorMessage = error instanceof Error ? error.message : String(error)
+        if (errorMessage.includes('API key') || 
+            errorMessage.includes('403') || 
+            errorMessage.includes('401') ||
+            errorMessage.includes('quota') ||
+            errorMessage.includes('overloaded') ||
+            errorMessage.includes('503')) {
+          apiKeyFailures++
+          console.log(`🔄 API key related error detected. Failures: ${apiKeyFailures}/${maxApiKeyFailures}`)
+          
+          if (apiKeyFailures >= maxApiKeyFailures) {
+            console.log(`❌ Maximum API key failures reached (${maxApiKeyFailures}). Stopping challenge generation for today.`)
+            break
+          }
+        }
+        
+        // If we can't fetch videos and haven't hit API key limit, try fallback
+        if (attempts > count && apiKeyFailures < maxApiKeyFailures) {
           try {
+            console.log('🔄 Using fallback video generation with real transcript extraction...')
             const fallbackChallenge = await createFallbackChallenge(todayBatch, challenges.length + 1)
             if (fallbackChallenge) {
               const saveResult = await saveChallengeToDatabase(fallbackChallenge, true)
               if (saveResult.success) {
                 challenges.push(fallbackChallenge)
-                console.log(`✅ Fallback challenge ${challenges.length}/${count} created`)
+                console.log(`✅ Fallback challenge ${challenges.length}/${count} created with real transcript`)
               }
             }
           } catch (fallbackError) {
-            console.log('❌ Fallback challenge creation failed:', fallbackError)
+            console.log('❌ Fallback challenge creation also failed:', fallbackError)
+            const fallbackErrorMessage = fallbackError instanceof Error ? fallbackError.message : String(fallbackError)
+            if (fallbackErrorMessage.includes('API key') || 
+                fallbackErrorMessage.includes('403') || 
+                fallbackErrorMessage.includes('401') ||
+                fallbackErrorMessage.includes('quota') ||
+                fallbackErrorMessage.includes('overloaded') ||
+                fallbackErrorMessage.includes('503')) {
+              apiKeyFailures++
+              console.log(`🔄 API key failure in fallback. Total failures: ${apiKeyFailures}/${maxApiKeyFailures}`)
+            }
           }
         }
       }
@@ -145,8 +175,11 @@ export async function generateDailyChallenges(count: number = 10): Promise<Chall
       }
     }
 
-    if (challenges.length < count) {
-      console.log(`⚠️ Warning: Only generated ${challenges.length}/${count} challenges`)
+    // Check final status
+    if (apiKeyFailures >= maxApiKeyFailures) {
+      console.log(`⛔ Challenge generation stopped due to API key failures. Generated ${challenges.length}/${count} challenges.`)
+    } else if (challenges.length < count) {
+      console.log(`⚠️ Warning: Only generated ${challenges.length}/${count} challenges after ${attempts} attempts`)
     }
 
     console.log(`🎉 Daily challenges generation completed: ${challenges.length} challenges created`)
@@ -202,18 +235,30 @@ async function createFallbackChallenge(dailyBatch: string, index: number): Promi
   try {
     const fallbackData = fallbackVideos[(index - 1) % fallbackVideos.length]
     
+    // Try to extract real transcript from the fallback video
+    let transcript = "Transcript not available.";
+    try {
+      const { extractYouTubeTranscript } = await import('../../lib/utils/video-processor');
+      transcript = await extractYouTubeTranscript(fallbackData.id);
+      console.log(`✅ Successfully extracted real transcript for fallback video ${fallbackData.id}`);
+    } catch (transcriptError) {
+      console.log(`❌ Failed to extract transcript for fallback video ${fallbackData.id}:`, transcriptError);
+      // Don't create challenge if we can't get real transcript
+      throw new Error(`Failed to extract real transcript for fallback video ${fallbackData.id}`);
+    }
+    
     const videoData: VideoData = {
       ...fallbackData,
       videoUrl: `https://www.youtube.com/watch?v=${fallbackData.id}`,
       embedUrl: `https://www.youtube.com/embed/${fallbackData.id}`,
       thumbnailUrl: `https://img.youtube.com/vi/${fallbackData.id}/maxresdefault.jpg`,
-      transcript: "Transcript not available for fallback video."
+      transcript
     }
 
     return videoDataToChallenge(videoData, dailyBatch)
   } catch (error) {
     console.error('Error creating fallback challenge:', error)
-    return null
+    throw error; // Re-throw to prevent creation of challenge without real transcript
   }
 }
 
@@ -242,7 +287,7 @@ export async function checkDailyChallengesStatus(): Promise<{
   }
 }
 
-// Manual trigger for generating daily challenges (for testing)
+
 export async function manuallyRefreshDailyChallenges(): Promise<{
   success: boolean
   challenges: Challenge[]
@@ -250,7 +295,7 @@ export async function manuallyRefreshDailyChallenges(): Promise<{
 }> {
   try {
     console.log('🔄 Manually refreshing daily challenges...')
-    const challenges = await generateDailyChallenges(10)
+    const challenges = await generateDailyChallenges(1) // Changed to 1 challenge per day
     
     return {
       success: true,
@@ -264,5 +309,33 @@ export async function manuallyRefreshDailyChallenges(): Promise<{
       challenges: [],
       message: `Failed to refresh challenges: ${error instanceof Error ? error.message : 'Unknown error'}`
     }
+  }
+}
+
+// Function to get 20 challenges for display from database
+export async function getPracticeChallenges(limit: number = 20): Promise<Challenge[]> {
+  try {
+    console.log(`📚 Fetching ${limit} practice challenges from database...`)
+    
+    // Import the database function
+    const { getChallengesFromDatabase } = await import('./challenge-database')
+    
+    // Get challenges from database
+    const result = await getChallengesFromDatabase(limit, 0)
+    
+    if (result && result.data && result.data.length > 0) {
+      console.log(`✅ Found ${result.data.length} practice challenges`)
+      return result.data
+    } else {
+      console.log(`⚠️ No challenges found in database, generating new ones...`)
+      // If no challenges exist, generate some initial ones
+      await generateDailyChallenges(3)
+      const newResult = await getChallengesFromDatabase(limit, 0)
+      return newResult?.data || []
+    }
+    
+  } catch (error) {
+    console.error('Error fetching practice challenges:', error)
+    return []
   }
 }

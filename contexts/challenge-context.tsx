@@ -1,7 +1,7 @@
 "use client"
 
 import { createContext, useContext, useState, ReactNode } from "react"
-import { type Challenge } from "@/utils/challenge-constants"
+import { type Challenge } from "@/lib/utils/challenge-constants"
 
 interface ChallengeContextType {
   challengeMode: 'daily' | 'practice'

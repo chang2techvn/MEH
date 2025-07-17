@@ -41,7 +41,7 @@ export default function MainHeader({ mobileMenuOpen, setMobileMenuOpen }: MainHe
           scrolled ? "bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl shadow-sm" : "bg-transparent"
         }`}
       >
-        <div className="container flex h-20 items-center justify-between">
+        <div className="w-full max-w-none px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 flex h-20 items-center justify-between">
           <div className="flex items-center gap-3">
             <Link href="/" prefetch={true} className="flex items-center gap-3">
               <motion.div
@@ -69,10 +69,11 @@ export default function MainHeader({ mobileMenuOpen, setMobileMenuOpen }: MainHe
             <Menu className="h-6 w-6" />
           </Button>
 
-          <nav className="hidden md:flex items-center gap-8">            <Link
+          <nav className="hidden md:flex items-center gap-6 lg:gap-8 xl:gap-12 2xl:gap-16">
+            <Link
               href="/"
               prefetch={true}
-              className="text-sm font-medium text-neo-mint dark:text-purist-blue transition-colors hover:text-neo-mint/80 dark:hover:text-purist-blue/80 relative group"
+              className="text-sm lg:text-base font-medium text-neo-mint dark:text-purist-blue transition-colors hover:text-neo-mint/80 dark:hover:text-purist-blue/80 relative group px-2"
             >
               <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-neo-mint to-purist-blue group-hover:w-full transition-all duration-300"></span>
               Challenges
@@ -80,7 +81,7 @@ export default function MainHeader({ mobileMenuOpen, setMobileMenuOpen }: MainHe
             <Link
               href="/community"
               prefetch={true}
-              className="text-sm font-medium transition-colors hover:text-neo-mint dark:hover:text-purist-blue relative group"
+              className="text-sm lg:text-base font-medium transition-colors hover:text-neo-mint dark:hover:text-purist-blue relative group px-2"
             >
               <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-neo-mint to-purist-blue group-hover:w-full transition-all duration-300"></span>
               Community
@@ -88,14 +89,14 @@ export default function MainHeader({ mobileMenuOpen, setMobileMenuOpen }: MainHe
             <Link
               href="/resources"
               prefetch={true}
-              className="text-sm font-medium transition-colors hover:text-neo-mint dark:hover:text-purist-blue relative group"
+              className="text-sm lg:text-base font-medium transition-colors hover:text-neo-mint dark:hover:text-purist-blue relative group px-2"
             >
               <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-neo-mint to-purist-blue group-hover:w-full transition-all duration-300"></span>
               AI Learning Hub
             </Link>
           </nav>
 
-          <div className="flex items-center gap-2 md:gap-4">
+          <div className="flex items-center gap-2 md:gap-3 lg:gap-4 xl:gap-6">
             {/* Mobile view - show only essential buttons */}
             <div className="md:hidden flex items-center gap-2">
               <NotificationsDropdown />
@@ -104,7 +105,7 @@ export default function MainHeader({ mobileMenuOpen, setMobileMenuOpen }: MainHe
             </div>
             
             {/* Desktop view - show all features */}
-            <div className="hidden md:flex items-center gap-4">
+            <div className="hidden md:flex items-center gap-3 lg:gap-4 xl:gap-6">
               <div className="relative">
                 <div className="flex items-center bg-white/20 dark:bg-gray-800/20 backdrop-blur-sm rounded-full pl-3 pr-1 py-1">
                   <Search className="h-4 w-4 text-muted-foreground mr-2" />

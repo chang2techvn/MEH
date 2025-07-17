@@ -39,11 +39,9 @@ export default function UserMenu() {
     return (
       <div className="flex gap-2">
         <Button
-          variant="outline"
           size="sm"
           onClick={handleLogin}
-          className="bg-white/20 dark:bg-gray-800/20 backdrop-blur-sm"
-        >
+          className="bg-white/20 dark:bg-gray-800/20 backdrop-blur-sm border border-input transition-colors text-black dark:text-white"        >
           Sign In
         </Button>
         <Button

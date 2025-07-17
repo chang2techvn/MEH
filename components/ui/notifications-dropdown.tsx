@@ -305,27 +305,79 @@ export default function NotificationsDropdown() {
           hint: error.hint,
           code: error.code
         })
-        // Fallback to local state update only
-        setNotifications(prev => prev.map(n => ({ ...n, read: true })))
-        setUnreadCount(0)
+        toast({
+          title: "Error",
+          description: "Failed to mark all notifications as read",
+          variant: "destructive"
+        })
         return
       }
 
       // Update local state
       setNotifications(prev => prev.map(n => ({ ...n, read: true })))
       setUnreadCount(0)
+      
+      toast({
+        title: "Success",
+        description: "All notifications marked as read"
+      })
     } catch (error) {
       console.error('Error marking all notifications as read:', error instanceof Error ? error.message : String(error))
-      // Fallback to local state update only
-      setNotifications(prev => prev.map(n => ({ ...n, read: true })))
-      setUnreadCount(0)
+      toast({
+        title: "Error", 
+        description: "Failed to mark all notifications as read",
+        variant: "destructive"
+      })
     }
   }
 
   // Clear all notifications
-  const clearAll = () => {
-    setNotifications([])
-    setUnreadCount(0)
+  const clearAll = async () => {
+    try {
+      if (!user?.id) {
+        // Just update local state if not authenticated
+        setNotifications([])
+        setUnreadCount(0)
+        return
+      }
+
+      // Delete all notifications for this user from database
+      const { error } = await supabase
+        .from('notifications')
+        .delete()
+        .eq('user_id', user.id)
+
+      if (error) {
+        console.error('Error clearing all notifications:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
+        })
+        toast({
+          title: "Error",
+          description: "Failed to clear all notifications",
+          variant: "destructive"
+        })
+        return
+      }
+
+      // Update local state
+      setNotifications([])
+      setUnreadCount(0)
+      
+      toast({
+        title: "Success",
+        description: "All notifications cleared"
+      })
+    } catch (error) {
+      console.error('Error clearing all notifications:', error instanceof Error ? error.message : String(error))
+      toast({
+        title: "Error",
+        description: "Failed to clear all notifications", 
+        variant: "destructive"
+      })
+    }
   }
 
   const handleNotificationClick = async (notification: NotificationItem) => {
@@ -545,7 +597,7 @@ export default function NotificationsDropdown() {
                             src={notification.sender.avatar || "/placeholder.svg"}
                             alt={notification.sender.name}
                           />
-                          <AvatarFallback className="bg-gradient-to-br from-neo-mint to-purist-blue text-white">
+                          <AvatarFallback className="bg-gradient-to-br from-vibrant-orange to-cantaloupe text-white">
                             {notification.sender.name ? notification.sender.name.split(' ').map(n => n[0]).join('').toUpperCase() : 'U'}
                           </AvatarFallback>
                         </Avatar>
@@ -571,7 +623,7 @@ export default function NotificationsDropdown() {
                         <div className="flex items-center gap-1">
                           <p className="text-xs text-muted-foreground truncate">{notification.message}</p>
                           {!notification.read && (
-                            <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-gradient-to-r from-neo-mint to-purist-blue text-[10px] text-white px-1.5">
+                            <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-gradient-to-r from-vibrant-orange to-cantaloupe text-[10px] text-white px-1.5">
                               New
                             </span>
                           )}

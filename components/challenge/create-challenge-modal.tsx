@@ -19,9 +19,9 @@ import { extractVideoFromUrl } from "@/app/actions/youtube-video"
 import { Loader2, AlertCircle } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { toast } from "@/hooks/use-toast"
-import {type Challenge } from '@/utils/challenge-constants'
+import {type Challenge } from '@/lib/utils/challenge-constants'
 import {supabase} from "@/lib/supabase"
-import { extractYouTubeTranscriptForDuration } from "@/utils/video-processor"
+import { extractVideoTranscript, validateVideoId } from "@/app/actions/video-processing"
 import { set, update } from "lodash"
 
 
@@ -69,7 +69,7 @@ export default function CreateChallengeModal({ open, onOpenChange, onChallengeCr
         else if (difficulty === "intermediate") maxSeconds = 180;
         else if (difficulty === "advanced") maxSeconds = 240;
         try {
-          const transcriptInfo = await extractYouTubeTranscriptForDuration(videoId, 0,maxSeconds);
+          const transcriptInfo = await extractVideoTranscript(videoId, 0, maxSeconds);
           if (transcriptInfo && transcriptInfo.transcript && transcriptInfo.transcript.length > 0) {
             await supabase.from('user_challenges').update(
               {

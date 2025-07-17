@@ -28,7 +28,6 @@ export function MainContent({ newPostAdded, setNewPostAdded, isExpanded = false,
     challengeLoading 
   } = useCurrentChallenge()
 
-
   const container = {
     hidden: { opacity: 0 },
     show: {
@@ -47,8 +46,8 @@ export function MainContent({ newPostAdded, setNewPostAdded, isExpanded = false,
     <motion.div
       className={`space-y-6 transition-all duration-500 ease-in-out ${
         isExpanded 
-          ? "col-span-1" // Take full width when expanded (sidebar collapsed)
-          : "md:col-span-2" // Normal responsive layout when sidebar is shown
+          ? "flex-1 max-w-full" // Take available width when expanded (sidebar collapsed)
+          : "flex-1 max-w-none" // Flexible width when sidebar is shown
       }`}
       variants={container}
       initial="hidden"
