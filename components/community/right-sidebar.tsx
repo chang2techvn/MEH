@@ -53,7 +53,8 @@ export function RightSidebar({
   return (
     <aside
       className={`
-        fixed inset-0 z-50 lg:static lg:z-auto lg:w-[280px] xl:w-[320px] lg:order-3
+        fixed inset-0 z-50 lg:static lg:z-auto lg:w-[280px] xl:w-[320px] 2xl:w-[360px] lg:order-3
+        lg:ml-auto lg:mr-0
         ${showRightSidebar ? "block" : "hidden lg:block"}
       `}
     >
@@ -82,25 +83,25 @@ export function RightSidebar({
           </div>
         )}
 
-        <ScrollArea className="h-full py-4 px-4 lg:px-0">
-          <div className="space-y-4 sm:space-y-6">
+        <ScrollArea className="h-full py-4 2xl:py-6 px-4 lg:px-0">
+          <div className="space-y-4 sm:space-y-6 2xl:space-y-8">
             {/* Contacts Section */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-3 sm:p-4">
-              <div className="flex items-center justify-between mb-3 sm:mb-4">
-                <h3 className="font-semibold text-gray-700 dark:text-gray-300 text-sm sm:text-base">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-3 sm:p-4 2xl:p-6">
+              <div className="flex items-center justify-between mb-3 sm:mb-4 2xl:mb-6">
+                <h3 className="font-semibold text-gray-700 dark:text-gray-300 text-sm sm:text-base 2xl:text-lg">
                   Contacts
                 </h3>
-                <div className="flex gap-1">
-                  <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 rounded-full">
-                    <Search className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                <div className="flex gap-1 2xl:gap-2">
+                  <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 2xl:h-9 2xl:w-9 rounded-full">
+                    <Search className="h-3.5 w-3.5 sm:h-4 sm:w-4 2xl:h-5 2xl:w-5" />
                   </Button>
-                  <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 rounded-full">
-                    <MoreVertical className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 2xl:h-9 2xl:w-9 rounded-full">
+                    <MoreVertical className="h-3.5 w-3.5 sm:h-4 sm:w-4 2xl:h-5 2xl:w-5" />
                   </Button>
                 </div>
               </div>
 
-              <div className="space-y-1 sm:space-y-2 max-h-[240px] sm:max-h-[320px] overflow-y-auto pr-1">
+              <div className="space-y-1 sm:space-y-2 2xl:space-y-3 max-h-[240px] sm:max-h-[320px] 2xl:max-h-[400px] overflow-y-auto pr-1">
                 {loading
                   ? Array(5)
                       .fill(0)
@@ -118,14 +119,14 @@ export function RightSidebar({
             </div>
 
             {/* Upcoming Events */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-3 sm:p-4">
-              <div className="flex items-center justify-between mb-3 sm:mb-4">
-                <h3 className="font-semibold text-gray-700 dark:text-gray-300 text-sm sm:text-base">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-3 sm:p-4 2xl:p-6">
+              <div className="flex items-center justify-between mb-3 sm:mb-4 2xl:mb-6">
+                <h3 className="font-semibold text-gray-700 dark:text-gray-300 text-sm sm:text-base 2xl:text-lg">
                   Upcoming Events
                 </h3>
               </div>
 
-              <div className="space-y-2 sm:space-y-3 max-h-[240px] sm:max-h-[320px] overflow-y-auto pr-1">
+              <div className="space-y-2 sm:space-y-3 2xl:space-y-4 max-h-[240px] sm:max-h-[320px] 2xl:max-h-[400px] overflow-y-auto pr-1">
                 {loading
                   ? Array(2)
                       .fill(0)
@@ -146,10 +147,10 @@ export function RightSidebar({
 
               <Button 
                 variant="ghost" 
-                className="w-full justify-start text-xs sm:text-sm mt-2 sm:mt-3"
+                className="w-full justify-start text-xs sm:text-sm 2xl:text-base mt-2 sm:mt-3 2xl:mt-4 2xl:p-3"
                 onClick={handleSeeAllEvents}
               >
-                <ChevronRight className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                <ChevronRight className="h-3.5 w-3.5 sm:h-4 sm:w-4 2xl:h-5 2xl:w-5 mr-1 sm:mr-2 2xl:mr-3" />
                 See All Events
               </Button>
             </div>

@@ -1300,7 +1300,7 @@ export default function CommunityPage() {
         </div>        {/* Main Content */}
         <main className="flex-1 relative">
           <div className="w-full max-w-none px-2 sm:px-4 lg:px-6 xl:px-8 2xl:px-12 py-4">
-            <div className="flex flex-col lg:flex-row lg:gap-4 xl:gap-6 2xl:gap-8">
+            <div className="flex flex-col lg:flex-row lg:gap-4 xl:gap-6 2xl:gap-8 2xl:justify-center 2xl:max-w-[1800px] 2xl:mx-auto">
               {/* Left Sidebar */}
               <LeftSidebar 
                 showLeftSidebar={showLeftSidebar}
@@ -1309,7 +1309,7 @@ export default function CommunityPage() {
               />
 
               {/* Main Feed */}
-              <div className="flex-1 order-1 lg:order-2 max-w-full lg:max-w-[600px] xl:max-w-[800px] 2xl:max-w-[900px]">
+              <div className="flex-1 order-1 lg:order-2 max-w-full lg:max-w-[600px] xl:max-w-[800px] 2xl:max-w-[800px] 2xl:ml-32 2xl:mr-8">
                 {/* Stories Section */}
                 <StoriesSection
                   setShowStoryCreator={setShowStoryCreator}

@@ -33,7 +33,8 @@ export function LeftSidebar({ showLeftSidebar, setShowLeftSidebar, groups }: Lef
     <>
       <aside
       className={`
-        fixed inset-0 z-50 lg:static lg:z-auto lg:w-[240px] xl:w-[280px]
+        fixed inset-0 z-50 lg:static lg:z-auto lg:w-[240px] xl:w-[280px] 2xl:w-[320px]
+        2xl:-ml-6
         ${showLeftSidebar ? "block" : "hidden lg:block"}
       `}
     >
@@ -62,8 +63,8 @@ export function LeftSidebar({ showLeftSidebar, setShowLeftSidebar, groups }: Lef
           </div>
         )}
 
-        <ScrollArea className="h-full py-4">
-          <div className="space-y-1 px-2">
+        <ScrollArea className="h-full py-4 2xl:py-6">
+          <div className="space-y-1 px-2 2xl:px-3">
             <UserProfileCard />
 
             <NavItem icon={Home} label="Challenges" href="/" />
@@ -74,18 +75,18 @@ export function LeftSidebar({ showLeftSidebar, setShowLeftSidebar, groups }: Lef
               onClick={() => setShowSavedModal(true)}
             />
 
-            <Separator className="my-4" />
+            <Separator className="my-4 2xl:my-6" />
 
-            <h3 className="font-semibold text-gray-500 dark:text-gray-400 text-xs uppercase px-4 mb-2">
+            <h3 className="font-semibold text-gray-500 dark:text-gray-400 text-xs 2xl:text-sm uppercase px-4 2xl:px-6 mb-2 2xl:mb-3">
               Explore
             </h3>
 
             <NavItem icon={Calendar} label="Events" onClick={() => setShowEventsModal(true)} />
 
 
-            <Separator className="my-4" />
+            <Separator className="my-4 2xl:my-6" />
 
-            <div className="px-4 text-xs text-gray-500 dark:text-gray-400">
+            <div className="px-4 2xl:px-6 text-xs 2xl:text-sm text-gray-500 dark:text-gray-400">
               <p>Privacy · Terms · Advertising · Cookies · More · EnglishMastery © 2025</p>
             </div>
           </div>
