@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect } from "react"
+import { useAuthState } from "@/contexts/auth-context"
 import { motion } from "framer-motion"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -50,6 +51,7 @@ export default function FeedPost({
     focusCommentInput,
     handleShowReactions,
   } = usePostInteractions(likes, comments, isNew, id)
+  const { user: authUser } = useAuthState()
 
   useEffect(() => {
   }, [isNew, username, content, mediaType, submission])
@@ -345,7 +347,7 @@ export default function FeedPost({
                 showComments={state?.showComments || false}
                 newComment={state?.newComment || ""}
                 comments={commentsData}
-                currentUser={currentUser}
+                currentUser={authUser}
                 onNewCommentChange={(comment) => updateState?.({ newComment: comment })}
                 onSubmitComment={handleComment}
                 onFocusCommentInput={focusCommentInput}

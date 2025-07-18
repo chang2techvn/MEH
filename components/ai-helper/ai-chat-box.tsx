@@ -79,12 +79,35 @@ export function AIChatBox({ onClose, onMinimize, buttonPosition, initialPosition
     }
   }, [messages])
 
-  // Auto-resize textarea based on content
+  // Auto-resize textarea based on content with debounce
   useEffect(() => {
-    if (textareaRef.current) {
-      textareaRef.current.style.height = "60px"
-      textareaRef.current.style.height = `${Math.min(120, textareaRef.current.scrollHeight)}px`
+    const resizeTextarea = () => {
+      if (textareaRef.current) {
+        // Store current scroll position to prevent jumping
+        const scrollTop = textareaRef.current.scrollTop
+        
+        // Reset height to calculate correct scrollHeight
+        textareaRef.current.style.height = "auto"
+        
+        // Calculate new height with constraints
+        const scrollHeight = textareaRef.current.scrollHeight
+        const minHeight = 60
+        const maxHeight = 120
+        const newHeight = Math.max(minHeight, Math.min(maxHeight, scrollHeight))
+        
+        // Set the new height smoothly
+        textareaRef.current.style.height = `${newHeight}px`
+        
+        // Restore scroll position if needed
+        if (newHeight === maxHeight && scrollTop > 0) {
+          textareaRef.current.scrollTop = scrollTop
+        }
+      }
     }
+
+    // Small delay to ensure DOM has updated
+    const timeoutId = setTimeout(resizeTextarea, 0)
+    return () => clearTimeout(timeoutId)
   }, [input])
 
   // Draggable functionality
@@ -408,7 +431,7 @@ export function AIChatBox({ onClose, onMinimize, buttonPosition, initialPosition
                     <div
                       className={`max-w-[85%] rounded-2xl p-3 ${
                         message.role === "user"
-                          ? "bg-gradient-to-br from-neo-mint/90 to-purist-blue/90 text-white dark:from-purist-blue/90 dark:to-neo-mint/90"
+                          ? "bg-orange-50 dark:bg-orange-900/20 text-orange-900 dark:text-orange-100 border border-orange-200 dark:border-orange-800"
                           : "bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
                       }`}
                     >
@@ -422,34 +445,42 @@ export function AIChatBox({ onClose, onMinimize, buttonPosition, initialPosition
           </div>
         </ScrollArea>
         <div className="p-3 border-t border-gray-200 dark:border-gray-800">
-          <form onSubmit={handleSubmit} className="flex gap-2">
-            <Textarea
-              ref={textareaRef}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Type your message..."
-              className="min-h-[60px] max-h-[120px] resize-none bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:ring-neo-mint dark:focus:ring-purist-blue transition-all"
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault()
-                  handleSubmit()
-                }
-              }}
-            />
-            <Button
-              type="submit"
-              size="icon"
-              disabled={isLoading || !input.trim()}
-              className="bg-gradient-to-r from-neo-mint to-purist-blue hover:opacity-90 transition-opacity"
-            >
-              {isLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin text-white" />
-              ) : (
-                <Send className="h-4 w-4 text-white" />
-              )}
-            </Button>
+          <form onSubmit={handleSubmit} className="relative">
+            <div className="relative">
+              <Textarea
+                ref={textareaRef}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder="Type your message..."
+                className="min-h-[60px] max-h-[120px] resize-none bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:ring-neo-mint dark:focus:ring-purist-blue rounded-3xl pr-16 pl-5 py-4 [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-gray-300 [&::-webkit-scrollbar-thumb]:rounded-full dark:[&::-webkit-scrollbar-thumb]:bg-gray-600"
+                style={{
+                  scrollbarWidth: 'thin',
+                  scrollbarColor: '#d1d5db transparent',
+                  overflowY: 'auto',
+                  lineHeight: '1.5'
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault()
+                    handleSubmit()
+                  }
+                }}
+              />
+              <Button
+                type="submit"
+                size="icon"
+                disabled={isLoading || !input.trim()}
+                className="absolute right-3 bottom-3 h-9 w-9 rounded-full hover:from-blue-600 hover:via-purple-600 hover:to-pink-600 transition-all duration-300 disabled:opacity-40 shadow-xl hover:shadow-2xl hover:scale-105 border-2 border-white dark:border-gray-800"
+              >
+                {isLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin text-white" />
+                ) : (
+                  <Send className="h-4 w-4 text-white" />
+                )}
+              </Button>
+            </div>
           </form>
-          <div className="flex justify-between items-center mt-2 text-xs text-muted-foreground">
+          <div className="flex justify-between items-center mt-3 text-xs text-muted-foreground">
             <span className="flex items-center">
               <Sparkles className="h-3 w-3 mr-1 text-yellow-500" />
               Powered by Gemini AI

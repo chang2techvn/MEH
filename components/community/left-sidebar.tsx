@@ -11,12 +11,14 @@ import {
   X,
   Bookmark,
   Calendar,
+  MessageCircle,
 } from "lucide-react"
 import { UserProfileCard } from "./user-profile-card"
 import { NavItem } from "./nav-item"
 import { GroupNavItem } from "./group-nav-item"
 import { SavedPostsModal } from "./saved-posts-modal"
 import { EventsModal } from "./events-modal"
+import { AIChatBox } from "@/components/ai-helper/ai-chat-box"
 import type { Group } from "./types"
 
 interface LeftSidebarProps {
@@ -28,6 +30,7 @@ interface LeftSidebarProps {
 export function LeftSidebar({ showLeftSidebar, setShowLeftSidebar, groups }: LeftSidebarProps) {
   const [showSavedModal, setShowSavedModal] = useState(false)
   const [showEventsModal, setShowEventsModal] = useState(false)
+  const [showAiChatbox, setShowAiChatbox] = useState(false)
 
   return (
     <>
@@ -70,6 +73,11 @@ export function LeftSidebar({ showLeftSidebar, setShowLeftSidebar, groups }: Lef
             <NavItem icon={Home} label="Challenges" href="/" />
             <NavItem icon={BookOpen} label="Al Learning Hub" href="/resources" />
             <NavItem 
+              icon={MessageCircle} 
+              label="AI Chat" 
+              onClick={() => setShowAiChatbox(true)}
+            />
+            <NavItem 
               icon={Bookmark} 
               label="Saved" 
               onClick={() => setShowSavedModal(true)}
@@ -103,6 +111,15 @@ export function LeftSidebar({ showLeftSidebar, setShowLeftSidebar, groups }: Lef
       isOpen={showEventsModal} 
       onClose={() => setShowEventsModal(false)}
     />
+
+    {showAiChatbox && (
+      <AIChatBox
+        onClose={() => setShowAiChatbox(false)}
+        onMinimize={() => setShowAiChatbox(false)}
+        buttonPosition={{ x: 50, y: 100 }}
+        initialPosition={{ x: 150, y: 350 }}
+      />
+    )}
   </>
   )
 }
