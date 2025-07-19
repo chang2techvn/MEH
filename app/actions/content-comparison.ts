@@ -43,44 +43,31 @@ export async function compareVideoContentWithUserContent(
     let videoData: any = null
     let error: any = null
     
-    // First try daily_videos table (for daily challenges)
-    console.log(`🔍 Checking daily_videos table for video: ${videoId}`)
-    const { data: dailyVideoData, error: dailyVideoError } = await supabaseServer
-      .from('daily_videos')
-      .select('transcript, id, title')
+    // Check unified challenges table for video
+    console.log(`🔍 Checking challenges table for video: ${videoId}`)
+    const { data: challengeData, error: challengeError } = await supabaseServer
+      .from('challenges')
+      .select('transcript, id, title, challenge_type')
       .eq('id', videoId)
       .single()
     
-    if (dailyVideoData && !dailyVideoError && dailyVideoData.transcript) {
-      videoData = dailyVideoData
-      console.log(`✅ Found transcript in daily_videos table`)
+    if (challengeData && !challengeError && challengeData.transcript) {
+      videoData = challengeData
+      error = null
+      console.log(`✅ Found transcript in challenges table (type: ${challengeData.challenge_type})`)
+      console.log(`📝 Transcript length: ${challengeData.transcript.length} characters`)
     } else {
-      // If not found in daily_videos, try daily_challenges table (for practice challenges)
-      console.log(`🔍 Not found in daily_videos, checking daily_challenges table...`)
-      const { data: dailyChallengeData, error: dailyChallengeError } = await supabaseServer
-        .from('daily_challenges')
-        .select('transcript, id, title')
-        .eq('id', videoId)
-        .single()
-      
-      if (dailyChallengeData && !dailyChallengeError && dailyChallengeData.transcript) {
-        videoData = dailyChallengeData
-        error = null
-        console.log(`✅ Found transcript in daily_challenges table`)
-        console.log(`📝 Transcript length: ${dailyChallengeData.transcript.length} characters`)
-      } else {
-        error = dailyChallengeError
-        console.log(`❌ No transcript found in either table`)
-        console.log(`Error details:`, dailyChallengeError)
-      }
+      error = challengeError
+      console.log(`❌ No transcript found in challenges table`)
+      console.log(`Error details:`, challengeError)
     }
       if (error || !videoData || !videoData.transcript) {
       return {
         similarityScore: 0,
         isAboveThreshold: false,
-        feedback: `Video transcript not found in database for video ${videoId}`,
+        feedback: `Video transcript not found in challenges table for video ${videoId}`,
         keyMatches: [],
-        suggestions: ["Please ensure the video has been processed and transcript is available"],
+        suggestions: ["Please ensure the video has been processed and transcript is available in the challenges table"],
         detailedAnalysis: {
           originalTranscript: "",
           matchedConcepts: [],
@@ -96,7 +83,8 @@ export async function compareVideoContentWithUserContent(
     const videoTranscript = videoData.transcript
     
     // Print detailed comparison info to terminal
-    console.log(`Video Transcript Length (from database): ${videoTranscript.length} characters`)
+    console.log(`Video Transcript Length (from challenges table): ${videoTranscript.length} characters`)
+    console.log(`Challenge Type: ${videoData.challenge_type}`)
     console.log(`\n📝 --- USER CONTENT ---`)
     console.log(userContent)
     console.log(`\n📺 --- LIMITED VIDEO TRANSCRIPT (${minWatchTimeSeconds}s) ---`)
@@ -126,12 +114,10 @@ export async function compareVideoContentWithUserContent(
       """
       
       STRICT SCORING GUIDELINES:
-      - 90-100: EXCEPTIONAL - Covers all main concepts with specific details, technical terms, and deep understanding
-      - 80-89: EXCELLENT - Covers most key concepts with good specificity and clear understanding  
-      - 70-79: GOOD - Shows solid understanding with some specific details and concepts
-      - 50-69: FAIR - Limited understanding, some relevant content but lacks specificity
-      - 30-49: POOR - Minimal understanding, mostly generic or vague statements
-      - 0-29: FAILING - No evidence of watching video, generic content, or completely irrelevant
+      - 81-100: OVER 80% MATCH — user content matches the transcript word-for-word and in the same order.
+      - 21-80: PARTIAL MATCH — content includes correct concepts and phrases but not exact word-for-word order.
+      - 1-20: GENERIC/VAGUE — minimal specificity, vague or generic statements (0–20% similarity).
+      - 0: NO MATCH — content unrelated, random, or indicates guessing without watching (0% similarity).
       
       AUTOMATIC PENALTY CRITERIA:
       - Content under 50 words: Automatic score under 20%

@@ -79,6 +79,8 @@ export const challengeTopics = {
 // Định nghĩa kiểu dữ liệu cho thử thách
 export interface Challenge {
   id: string
+  databaseId?: string // Original database ID for transcript lookup
+  videoId?: string // YouTube video ID extracted from URL for player functionality
   title: string
   description: string
   thumbnailUrl?: string

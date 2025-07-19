@@ -15,6 +15,8 @@ export interface YouTubePlayer {
   unMute: () => void
   isMuted: () => boolean
   destroy: () => void
+  loadVideoById: (videoId: string) => void
+  cueVideoById: (videoId: string) => void
 }
 
 // Define window with YouTube
@@ -24,6 +26,7 @@ declare global {
       Player: new (
         elementId: string,
         config: {
+          host?: string
           videoId?: string
           playerVars?: Record<string, any>
           events?: Record<string, (event: any) => void>

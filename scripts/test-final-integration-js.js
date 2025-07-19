@@ -108,7 +108,7 @@ async function getAllKeys(serviceName) {
 async function testGeminiAPI(apiKey) {
   try {
     const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta"
-    const GEMINI_MODEL = "gemini-1.5-flash"
+    const GEMINI_MODEL = "gemini-2.5-flash"
     
     const response = await fetch(`${GEMINI_API_URL}/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`, {
       method: "POST",

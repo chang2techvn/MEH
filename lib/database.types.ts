@@ -345,71 +345,73 @@ export type Database = {
       }
       challenges: {
         Row: {
-          challenge_type: string
-          content: Json | null
-          correct_answer: Json | null
-          created_at: string | null
-          created_by: string | null
-          description: string | null
-          difficulty_level: string | null
           id: string
-          is_active: boolean | null
-          learning_path_id: string | null
-          order_index: number | null
-          points: number | null
-          time_limit: number | null
           title: string
+          description: string | null
+          video_url: string
+          thumbnail_url: string | null
+          embed_url: string | null
+          duration: number | null
+          topics: string[] | null
+          transcript: string | null
+          challenge_type: string
+          difficulty: string
+          user_id: string | null
+          batch_id: string | null
+          is_active: boolean
+          featured: boolean
+          date: string
+          created_at: string | null
           updated_at: string | null
         }
         Insert: {
-          challenge_type: string
-          content?: Json | null
-          correct_answer?: Json | null
-          created_at?: string | null
-          created_by?: string | null
-          description?: string | null
-          difficulty_level?: string | null
           id?: string
-          is_active?: boolean | null
-          learning_path_id?: string | null
-          order_index?: number | null
-          points?: number | null
-          time_limit?: number | null
           title: string
+          description?: string | null
+          video_url: string
+          thumbnail_url?: string | null
+          embed_url?: string | null
+          duration?: number | null
+          topics?: string[] | null
+          transcript?: string | null
+          challenge_type?: string
+          difficulty?: string
+          user_id?: string | null
+          batch_id?: string | null
+          is_active?: boolean
+          featured?: boolean
+          date?: string
+          created_at?: string | null
           updated_at?: string | null
         }
         Update: {
-          challenge_type?: string
-          content?: Json | null
-          correct_answer?: Json | null
-          created_at?: string | null
-          created_by?: string | null
-          description?: string | null
-          difficulty_level?: string | null
           id?: string
-          is_active?: boolean | null
-          learning_path_id?: string | null
-          order_index?: number | null
-          points?: number | null
-          time_limit?: number | null
           title?: string
+          description?: string | null
+          video_url?: string
+          thumbnail_url?: string | null
+          embed_url?: string | null
+          duration?: number | null
+          topics?: string[] | null
+          transcript?: string | null
+          challenge_type?: string
+          difficulty?: string
+          user_id?: string | null
+          batch_id?: string | null
+          is_active?: boolean
+          featured?: boolean
+          date?: string
+          created_at?: string | null
           updated_at?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "challenges_created_by_fkey"
-            columns: ["created_by"]
+            foreignKeyName: "challenges_user_id_fkey"
+            columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "challenges_learning_path_id_fkey"
-            columns: ["learning_path_id"]
-            isOneToOne: false
-            referencedRelation: "learning_paths"
-            referencedColumns: ["id"]
-          },
+          }
         ]
       }
       comments: {
@@ -587,57 +589,6 @@ export type Database = {
           status?: string | null
           title?: string | null
           updated_at?: string | null
-        }
-        Relationships: []
-      }
-      daily_challenges: {
-        Row: {
-          created_at: string | null
-          date: string
-          description: string | null
-          difficulty: string
-          duration: number | null
-          embed_url: string | null
-          featured: boolean | null
-          id: string
-          thumbnail_url: string | null
-          title: string
-          topics: string[] | null
-          transcript: string | null
-          updated_at: string | null
-          video_url: string
-        }
-        Insert: {
-          created_at?: string | null
-          date: string
-          description?: string | null
-          difficulty: string
-          duration?: number | null
-          embed_url?: string | null
-          featured?: boolean | null
-          id: string
-          thumbnail_url?: string | null
-          title: string
-          topics?: string[] | null
-          transcript?: string | null
-          updated_at?: string | null
-          video_url: string
-        }
-        Update: {
-          created_at?: string | null
-          date?: string
-          description?: string | null
-          difficulty?: string
-          duration?: number | null
-          embed_url?: string | null
-          featured?: boolean | null
-          id?: string
-          thumbnail_url?: string | null
-          title?: string
-          topics?: string[] | null
-          transcript?: string | null
-          updated_at?: string | null
-          video_url?: string
         }
         Relationships: []
       }
@@ -1340,51 +1291,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      user_challenges: {
-        Row: {
-          challenge_type: string
-          content: Json | null
-          created_at: string | null
-          description: string | null
-          difficulty_level: string | null
-          id: string
-          is_active: boolean | null
-          points: number | null
-          title: string
-          transcript: string | null
-          updated_at: string | null
-          user_id: string | null
-        }
-        Insert: {
-          challenge_type?: string
-          content?: Json | null
-          created_at?: string | null
-          description?: string | null
-          difficulty_level?: string | null
-          id?: string
-          is_active?: boolean | null
-          points?: number | null
-          title: string
-          transcript?: string | null
-          updated_at?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          challenge_type?: string
-          content?: Json | null
-          created_at?: string | null
-          description?: string | null
-          difficulty_level?: string | null
-          id?: string
-          is_active?: boolean | null
-          points?: number | null
-          title?: string
-          transcript?: string | null
-          updated_at?: string | null
-          user_id?: string | null
-        }
-        Relationships: []
       }
       user_progress: {
         Row: {

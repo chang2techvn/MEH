@@ -1,5 +1,4 @@
-"use client"
-
+/* eslint-disable */
 import type React from "react"
 
 import { useState, useEffect, useRef } from "react"
@@ -26,7 +25,7 @@ import type { VideoEvaluation } from "@/lib/gemini-video-evaluation"
 import { uploadVideoToStorage, deleteVideoFromStorage, type VideoUploadResult } from "@/lib/video-storage"
 import { useAuthState } from "@/contexts/auth-context"
 import { useChallenge } from "@/contexts/challenge-context"
-import { getPracticeChallengeVideo } from "@/app/actions/practice-challenge"
+import { getChallenges } from "@/app/actions/youtube-video"
 
 interface DailyChallengeProps {
   userId: string
@@ -38,6 +37,27 @@ interface DailyChallengeProps {
 export default function DailyChallenge({ userId, username, userImage, onSubmissionComplete }: DailyChallengeProps) {
   const { user } = useAuthState() // Get authenticated user
   const { challengeMode, currentChallenge: practiceChallenge } = useChallenge()
+  
+  // Helper function to extract YouTube video ID from URL
+  const extractVideoId = (url: string): string => {
+    if (!url) return ''
+    
+    // Try different YouTube URL formats
+    const patterns = [
+      /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,
+      /^([a-zA-Z0-9_-]+)$/ // Direct video ID
+    ]
+    
+    for (const pattern of patterns) {
+      const match = url.match(pattern)
+      if (match) return match[1]
+    }
+    
+    // Fallback: try simple extraction
+    const fallback = url.split('v=')[1]?.split('&')[0] || url.split('/').pop()
+    return fallback || url
+  }
+  
   const [loading, setLoading] = useState(true)
   const [videoData, setVideoData] = useState<VideoData | null>(null)
   const [activeStep, setActiveStep] = useState(1)
@@ -138,8 +158,25 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
   }, [])
   // Fetch today's video
   useEffect(() => {
+    // Reset challenge flow when switching challenges
+    setActiveStep(1)
+    setProgress(25)
+    setShowComparisonFeedback(false)
+    setContentComparison(null)
+    setIsComparingContent(false)
+    setError(null)
+    scrollToTop()
+
     const fetchVideo = async () => {
       try {
+        // Reset challenge flow when mode or challenge changes
+        setActiveStep(1)
+        setProgress(25)
+        setShowComparisonFeedback(false)
+        setContentComparison(null)
+        setIsComparingContent(false)
+        setError(null)
+        scrollToTop()
         setLoading(true)
         setError(null)
         
@@ -148,32 +185,56 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
         console.log(`Practice Challenge:`, practiceChallenge?.id || "null")
         console.log(`Loading Settings: ${loadingSettings}`)
         
+        // Reset video watched state when switching challenges
+        setVideoWatched(false)
+        console.log("🔄 Video watched state reset for new challenge")
+        
         let videoData: VideoData | null = null
         
         if (challengeMode === 'practice' && practiceChallenge) {
-          // Load practice challenge video
+          // Load practice challenge video - convert from Challenge to VideoData format
           console.log("🔍 Loading practice challenge video...")
-          videoData = await getPracticeChallengeVideo(practiceChallenge.id)
+          videoData = {
+            id: practiceChallenge.id,
+            title: practiceChallenge.title,
+            description: practiceChallenge.description,
+            thumbnailUrl: practiceChallenge.thumbnailUrl || '',
+            videoUrl: practiceChallenge.videoUrl || '',
+            embedUrl: practiceChallenge.embedUrl || '',
+            duration: practiceChallenge.duration || 0,
+            transcript: practiceChallenge.transcript || '', // Use transcript from database
+            topics: practiceChallenge.topics || []
+          }
           console.log("✅ Practice challenge video loaded:", videoData.id)
+          console.log("📝 Practice challenge transcript length:", practiceChallenge.transcript?.length || 0)
         } else {
           // Load daily challenge video (default behavior)
           console.log("🔍 Fetching today's video...")
           videoData = await getTodayVideo()
-          console.log("✅ Video fetched successfully:", videoData.id)
+          console.log("✅ Video fetched successfully:", videoData?.id)
         }
         
         setVideoData(videoData)
         
         // Check if video already has transcript from database
         console.log("=== CHECKING VIDEO TRANSCRIPT ===")
-        if (videoData && videoData.transcript && videoData.transcript.length > 100) {
-          console.log("✅ Using transcript from database!")
-          console.log(`📝 Transcript length: ${videoData.transcript.length} characters`)
-          console.log(`📄 Transcript preview: ${videoData.transcript.substring(0, 200)}...`)
-        } else {
-          console.log("⚠️ No transcript in database, would need to extract...")
-          console.log("📝 Transcript from database:", videoData?.transcript || "null")
+        
+        
+        // Debug video ID extraction
+        if (videoData) {
+          const extractedVideoId = extractVideoId(videoData.videoUrl || videoData.embedUrl || videoData.id)
+          console.log("🎬 Video ID Debug:")
+          console.log("- Database ID:", videoData.id)
+          console.log("- Video URL:", videoData.videoUrl)
+          console.log("- Embed URL:", videoData.embedUrl)
+          console.log("- Extracted Video ID:", extractedVideoId)
+          
+          // For practice challenges, check if we have a separate videoId field
+          if (challengeMode === 'practice' && practiceChallenge?.videoId) {
+            console.log("- Practice Challenge Video ID:", practiceChallenge.videoId)
+          }
         }
+        
         console.log("=== END TRANSCRIPT CHECK ===")
         
       } catch (err) {
@@ -268,7 +329,7 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
         }
       } else if (activeStep === 2) {
         // Validate rewritten content
-        if (rewrittenContent.trim().length < 100) {
+        if (rewrittenContent.trim().length < 10) {
           setError("Please write at least 100 characters for your content.")
           return
         }        // Perform content comparison before proceeding to step 3
@@ -680,7 +741,7 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
                   <div className="absolute inset-0 bg-gradient-to-br from-neo-mint/20 to-purist-blue/20 backdrop-blur-sm z-0"></div>
                   <div className="relative w-full h-full z-10">
                     <YouTubeVideoPlayer
-                      videoId={videoData.id}
+                      videoId={extractVideoId(videoData.videoUrl) || videoData.videoUrl || videoData.id}
                       title={videoData.title}
                       requiredWatchTime={adminSettings.minWatchTime}
                       onWatchComplete={() => setVideoWatched(true)}

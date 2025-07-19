@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { fetchRandomYoutubeVideo } from '@/app/actions/youtube-video'
-import { generateDailyChallenges } from '@/app/actions/daily-challenges'
-import { supabaseServer } from '@/lib/supabase-server'
-import { getActiveApiKey, incrementUsage, markKeyAsInactive } from '@/lib/api-key-manager'
+import { createChallenge } from '@/app/actions/youtube-video'
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,309 +11,153 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    console.log('🚀 Starting daily refresh at 23:59 (video + challenges)...')
+    console.log('🚀 Starting daily auto-generation at 23:59...')
     const startTime = Date.now()
     const today = new Date().toISOString().split('T')[0] // YYYY-MM-DD format
 
-    type VideoResult = {
-      existing: boolean;
-      videoId?: string;
-      videoTitle?: string;
-      videoUrl?: string;
-      error?: string;
+    const logData = {
+      dailyChallenge: null as any,
+      practiceChallenges: [] as any[],
+      errors: [] as string[]
     }
 
-    type ChallengesResult = {
-      existing: boolean;
-      challengeCount?: number;
-      challengeIds?: string[];
-      challengeTitles?: string[];
-      error?: string;
-    }
-
-    const results: {
-      video: VideoResult | null;
-      challenges: ChallengesResult | null;
-    } = {
-      video: null,
-      challenges: null
-    }
-
-    // 1. Refresh daily video for homepage "/"
-    console.log('1. Refreshing daily video for homepage...')
+    // 1. Generate daily challenge (1 video for "Your Current Challenge")
+    console.log('\n🎯 === GENERATING DAILY CHALLENGE ===')
     try {
-      const { data: existingVideo } = await supabaseServer
-        .from('daily_videos')
-        .select('id')
-        .eq('date', today)
-        .single()
-
-      if (existingVideo) {
-        console.log('📺 Video already exists for today')
-        results.video = { existing: true, videoId: existingVideo.id }
+      const dailyResult = await createChallenge('daily', {
+        minDuration: 180,  // 3 minutes
+        maxDuration: 600,  // 10 minutes
+        preferredTopics: ['english learning', 'ted talk', 'communication', 'business']
+      })
+      
+      if (dailyResult && !Array.isArray(dailyResult)) {
+        logData.dailyChallenge = {
+          id: dailyResult.id,
+          title: dailyResult.title,
+          difficulty: dailyResult.difficulty,
+          challenge_type: 'daily'
+        }
+        console.log(`✅ Daily challenge generated: ${dailyResult.title}`)
       } else {
-        console.log('🎯 Fetching new video with transcript...')
-        
-        // Retry video fetching until we get one with a successful transcript
-        const maxVideoRetries = 3
-        let videoAttempt = 0
-        let successfulVideo = null
-        
-        while (videoAttempt < maxVideoRetries && !successfulVideo) {
-          try {
-            videoAttempt++
-            console.log(`🔄 Video fetch attempt ${videoAttempt}/${maxVideoRetries}`)
-            
-            const newVideo = await fetchRandomYoutubeVideo(
-              120,  // min 2 minutes
-              1800, // max 30 minutes
-              ["english learning", "education", "ted talk", "communication", "business", "technology"]
-            )
+        console.log('✅ Daily challenge already exists for today')
+      }
+    } catch (dailyError) {
+      console.error('❌ Daily challenge generation failed:', dailyError)
+      logData.errors.push(`Daily: ${dailyError}`)
+    }
 
-            // Extract transcript using Gemini AI with API key rotation
-            console.log(`🎬 Extracting transcript for video: ${newVideo.id}`)
-            let transcript = newVideo.transcript
-            
-            if (!transcript || transcript === "Transcript unavailable" || transcript.length < 100) {
-              try {
-                transcript = await extractTranscriptWithApiKeyRotation(newVideo.id, newVideo.title, newVideo.description)
-              } catch (transcriptError) {
-                console.error(`❌ Failed to extract transcript for video ${newVideo.id}:`, transcriptError)
-                // Try with a different video
-                if (videoAttempt < maxVideoRetries) {
-                  console.log(`🔄 Trying different video due to transcript extraction failure...`)
-                  continue
-                } else {
-                  throw new Error(`Failed to extract transcript after trying ${maxVideoRetries} different videos`)
-                }
-              }
-            }
-            
-            // If we reach here, we have a video with a valid transcript
-            successfulVideo = { ...newVideo, transcript }
-            console.log(`✅ Successfully found video with transcript: ${successfulVideo.id}`)
-            
-          } catch (videoFetchError) {
-            console.error(`❌ Video fetch attempt ${videoAttempt} failed:`, videoFetchError)
-            if (videoAttempt >= maxVideoRetries) {
-              throw videoFetchError
-            }
-          }
-        }
+    // 2. Generate practice challenges (3 per day: 1 beginner + 1 intermediate + 1 advanced)
+    console.log('\n📚 === GENERATING PRACTICE CHALLENGES (3 difficulties) ===')
+    
+    const difficulties: ('beginner' | 'intermediate' | 'advanced')[] = ['beginner', 'intermediate', 'advanced']
+    
+    for (const difficulty of difficulties) {
+      try {
+        console.log(`\n🔄 Generating ${difficulty} practice challenge...`)
         
-        if (!successfulVideo) {
-          throw new Error('Failed to find a video with valid transcript after all attempts')
-        }
-
-        const { error } = await supabaseServer
-          .from('daily_videos')
-          .insert({
-            id: successfulVideo.id,
-            title: successfulVideo.title,
-            description: successfulVideo.description,
-            video_url: successfulVideo.videoUrl,
-            thumbnail_url: successfulVideo.thumbnailUrl,
-            embed_url: successfulVideo.embedUrl,
-            duration: successfulVideo.duration,
-            topics: successfulVideo.topics,
-            transcript: successfulVideo.transcript, // Save transcript to database
-            date: today,
-            created_at: new Date().toISOString()
+        const practiceResult = await createChallenge('practice', {
+          difficulty: difficulty,
+          minDuration: 120,  // 2 minutes
+          maxDuration: 480,  // 8 minutes
+          count: 1, // Only 1 video per difficulty
+          preferredTopics: getTopicsForDifficulty(difficulty)
+        })
+        
+        const practiceArray = Array.isArray(practiceResult) ? practiceResult : [practiceResult]
+        
+        if (practiceArray.length > 0) {
+          const challenge = practiceArray[0]
+          logData.practiceChallenges.push({
+            id: challenge.id,
+            title: challenge.title,
+            difficulty: challenge.difficulty,
+            challenge_type: 'practice'
           })
-
-        if (error) throw error
-
-        results.video = {
-          existing: false,
-          videoId: successfulVideo.id,
-          videoTitle: successfulVideo.title,
-          videoUrl: successfulVideo.videoUrl
+          console.log(`✅ ${difficulty} practice challenge generated: ${challenge.title}`)
+        } else {
+          console.log(`✅ ${difficulty} practice challenge already exists for today`)
         }
-        console.log('✅ New video saved for homepage with transcript')
-        console.log(`📝 Transcript length: ${successfulVideo.transcript.length} characters`)
-      }
-    } catch (videoError) {
-      console.error('❌ Error refreshing video:', videoError)
-      results.video = { 
-        existing: false,
-        error: videoError instanceof Error ? videoError.message : 'Unknown error' 
+        
+        // Add small delay between requests to avoid rate limiting
+        if (difficulty !== 'advanced') {
+          await new Promise(resolve => setTimeout(resolve, 2000))
+        }
+        
+      } catch (practiceError) {
+        console.error(`❌ ${difficulty} practice challenge generation failed:`, practiceError)
+        logData.errors.push(`Practice ${difficulty}: ${practiceError}`)
       }
     }
 
-    // 2. Refresh daily challenges for "/challenges"
-    console.log('2. Refreshing daily challenges for /challenges page...')
-    try {
-      const { data: existingChallenges } = await supabaseServer
-        .from('daily_challenges')
-        .select('id')
-        .eq('date', today)
+    const endTime = Date.now()
+    const duration = endTime - startTime
 
-      if (existingChallenges && existingChallenges.length > 0) {
-        console.log(`📺 ${existingChallenges.length} challenges already exist for today`)
-        results.challenges = { 
-          existing: true, 
-          challengeCount: existingChallenges.length,
-          challengeIds: existingChallenges.map(c => c.id)
-        }
-      } else {
-        const newChallenges = await generateDailyChallenges(1) // Generate only 1 challenge per day
-        results.challenges = {
-          existing: false,
-          challengeCount: newChallenges.length,
-          challengeIds: newChallenges.map(c => c.id),
-          challengeTitles: newChallenges.map(c => c.title)
-        }
-        console.log('✅ New challenges saved for /challenges page')
-      }
-    } catch (challengesError) {
-      console.error('❌ Error refreshing challenges:', challengesError)
-      results.challenges = { 
-        existing: false,
-        error: challengesError instanceof Error ? challengesError.message : 'Unknown error' 
-      }
-    }
+    console.log(`\n🏁 === CRON JOB COMPLETED ===`)
+    console.log(`Duration: ${duration}ms`)
+    console.log(`Date: ${today}`)
+    console.log(`Daily Challenge: ${logData.dailyChallenge ? 'Generated' : 'Existed'}`)
+    console.log(`Practice Challenges: ${logData.practiceChallenges.length}/3 generated`)
+    console.log(`Errors: ${logData.errors.length}`)
 
-    const executionTime = Date.now() - startTime
-
-    const response = {
+    return NextResponse.json({
       success: true,
-      message: 'Daily refresh completed successfully at 23:59',
-      data: {
-        video: results.video,
-        challenges: results.challenges,
-        date: today,
-        refreshTime: new Date().toISOString(),
-        executionTimeMs: executionTime
-      }
-    }
-
-    console.log('✅ Daily refresh completed successfully:', response.data)
-    return NextResponse.json(response)
+      date: today,
+      duration: `${duration}ms`,
+      generatedAt: new Date().toISOString(),
+      dailyChallenge: logData.dailyChallenge,
+      practiceChallenges: {
+        count: logData.practiceChallenges.length,
+        challenges: logData.practiceChallenges
+      },
+      errors: logData.errors,
+      message: `Auto-generated ${logData.practiceChallenges.length}/3 practice challenges + ${logData.dailyChallenge ? '1' : '0'} daily challenge`
+    })
 
   } catch (error) {
-    console.error('❌ Daily video refresh failed:', error)
-    
-    return NextResponse.json(
-      { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error',
-        refreshTime: new Date().toISOString()
-      },
-      { status: 500 }
-    )
+    console.error('❌ Cron job failed:', error)
+    return NextResponse.json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      generatedAt: new Date().toISOString()
+    }, { status: 500 })
   }
 }
 
+// GET endpoint for manual testing
 export async function GET(request: NextRequest) {
   return POST(request)
 }
 
 /**
- * Extract transcript using Gemini AI with automatic API key rotation
- * Tries different API keys until successful or all keys are exhausted
+ * Get appropriate topics based on difficulty level
  */
-async function extractTranscriptWithApiKeyRotation(
-  videoId: string, 
-  videoTitle: string, 
-  videoDescription: string
-): Promise<string> {
-  const maxRetries = 5 // Try up to 5 different API keys
-  let currentAttempt = 0
-  
-  while (currentAttempt < maxRetries) {
-    try {
-      currentAttempt++
-      console.log(`🔄 Transcript extraction attempt ${currentAttempt}/${maxRetries}`)
-      
-      // Get active API key for this attempt
-      const apiKeyData = await getActiveApiKey('gemini')
-      if (!apiKeyData) {
-        throw new Error('No active API key found in database')
-      }
-      
-      console.log(`🔑 Using API key: ${apiKeyData.key_name} for transcript extraction`)
-      
-      const { GoogleGenerativeAI } = await import('@google/generative-ai')
-      const genAI = new GoogleGenerativeAI(apiKeyData.decrypted_key)
-      const model = genAI.getGenerativeModel({ 
-        model: "gemini-1.5-flash" // Use flash to save quota
-      })
-
-      const youtubeUrl = `https://www.youtube.com/watch?v=${videoId}`
-      console.log(`🤖 Using Gemini AI to extract transcript for video: ${videoId}`)
-
-      const result = await model.generateContent([
-        {
-          fileData: {
-            mimeType: "video/*",
-            fileUri: youtubeUrl
-          }
-        },
-        `Please provide the COMPLETE and ACCURATE transcript of this YouTube video.
-
-REQUIREMENTS:
-- Extract 100% of all spoken words from the entire video
-- Include every single word that is spoken  
-- Format as clean paragraphs with proper punctuation
-- Do NOT summarize or paraphrase - give exact spoken words
-- If there are multiple speakers, indicate speaker changes
-
-Please transcribe the ENTIRE audio content word-for-word:`
-      ])
-
-      const response = await result.response
-      const geminiTranscript = response.text()
-      
-      // Increment API key usage on successful response
-      await incrementUsage(apiKeyData.id)
-      console.log(`📊 API key usage incremented for: ${apiKeyData.key_name}`)
-      
-      if (geminiTranscript && geminiTranscript.length > 50) {
-        const finalTranscript = geminiTranscript.trim()
-        console.log(`✅ Gemini AI transcript extracted: ${finalTranscript.length} characters`)
-        return finalTranscript
-      } else {
-        throw new Error('Gemini AI returned short or empty transcript')
-      }
-      
-    } catch (error) {
-      console.error(`❌ Transcript extraction attempt ${currentAttempt} failed:`, error)
-      
-      // Handle specific error cases for API key management
-      if (error instanceof Error && currentAttempt < maxRetries) {
-        if (error.message.includes('403') || error.message.includes('Invalid API key')) {
-          console.log(`🚫 API key invalid (403), marking as inactive and trying next key`)
-          const currentApiKeyData = await getActiveApiKey('gemini').catch(() => null)
-          if (currentApiKeyData) {
-            await markKeyAsInactive(currentApiKeyData.id, 'Invalid API key (403 Forbidden)')
-          }
-          continue // Try with next API key
-        } else if (error.message.includes('429') || error.message.includes('quota')) {
-          console.log(`⚠️ API key quota exceeded (429), marking as inactive and trying next key`)
-          const currentApiKeyData = await getActiveApiKey('gemini').catch(() => null)
-          if (currentApiKeyData) {
-            await markKeyAsInactive(currentApiKeyData.id, 'Quota exceeded (429)')
-          }
-          continue // Try with next API key
-        } else if (error.message.includes('500') || error.message.includes('503') || error.message.includes('overloaded')) {
-          console.log(`🔄 Server error (${error.message.includes('503') ? '503' : '500'}), marking key as inactive and trying next key`)
-          const currentApiKeyData = await getActiveApiKey('gemini').catch(() => null)
-          if (currentApiKeyData) {
-            await markKeyAsInactive(currentApiKeyData.id, `Server error (${error.message})`)
-          }
-          continue // Try with next API key
-        }
-      }
-      
-      // If it's the last attempt or not an API key issue, move to final attempt
-      if (currentAttempt >= maxRetries) {
-        console.error("❌ All transcript extraction attempts exhausted")
-        break
-      }
-    }
+function getTopicsForDifficulty(difficulty: 'beginner' | 'intermediate' | 'advanced'): string[] {
+  switch (difficulty) {
+    case 'beginner':
+      return [
+        'basic english vocabulary',
+        'english for beginners', 
+        'simple english conversation',
+        'english pronunciation basics',
+        'daily english expressions'
+      ]
+    case 'intermediate':
+      return [
+        'business english',
+        'english idioms',
+        'english presentation skills',
+        'english conversation practice',
+        'english for work'
+      ]
+    case 'advanced':
+      return [
+        'advanced english vocabulary',
+        'professional english communication',
+        'english public speaking',
+        'english academic writing',
+        'english debate techniques'
+      ]
+    default:
+      return ['english learning']
   }
-  
-  // If all API key attempts failed, throw an error instead of using fallback
-  throw new Error(`Failed to extract transcript after trying ${maxRetries} different API keys. No fallback content will be used.`)
 }
-

@@ -18,6 +18,28 @@ export type VideoData = {
   topics?: string[]
 }
 
+// Types for challenge data based on the new unified schema
+export type ChallengeData = {
+  id?: string
+  title: string
+  description: string | null
+  video_url: string
+  thumbnail_url: string | null
+  embed_url: string | null
+  duration: number | null
+  topics: string[] | null
+  transcript: string | null
+  challenge_type: string
+  difficulty: string
+  user_id: string | null
+  batch_id: string | null
+  is_active: boolean
+  featured: boolean
+  date: string
+  created_at?: string | null
+  updated_at?: string | null
+}
+
 // Function to get today's date as a string (YYYY-MM-DD format)
 const getTodayDate = () => {
   const today = new Date()
@@ -25,6 +47,252 @@ const getTodayDate = () => {
   const month = String(today.getMonth() + 1).padStart(2, '0')
   const day = String(today.getDate()).padStart(2, '0')
   return `${year}-${month}-${day}`
+}
+
+// Main function to create challenges for all types
+export async function createChallenge(
+  challengeType: 'daily' | 'practice' | 'user_generated',
+  options: {
+    videoUrl?: string // For user_generated type
+    userId?: string // For user_generated type
+    difficulty?: 'beginner' | 'intermediate' | 'advanced'
+    minDuration?: number
+    maxDuration?: number
+    preferredTopics?: string[]
+    count?: number // For practice type to create multiple challenges
+  } = {}
+): Promise<ChallengeData | ChallengeData[]> {
+  const supabase = supabaseServer
+  const today = getTodayDate()
+  
+  try {
+    if (challengeType === 'user_generated') {
+      if (!options.videoUrl || !options.userId) {
+        throw new Error("Video URL and User ID are required for user-generated challenges")
+      }
+      
+      // Extract video data from URL
+      const videoData = await extractVideoFromUrl(options.videoUrl)
+      if (!videoData) {
+        throw new Error("Could not extract video information from the provided URL")
+      }
+      
+      // Create user-generated challenge
+      const challengeData: ChallengeData = {
+        title: videoData.title,
+        description: videoData.description,
+        video_url: videoData.videoUrl,
+        thumbnail_url: videoData.thumbnailUrl,
+        embed_url: videoData.embedUrl,
+        duration: videoData.duration,
+        topics: videoData.topics || [],
+        transcript: videoData.transcript,
+        challenge_type: 'user_generated',
+        difficulty: options.difficulty || 'intermediate',
+        user_id: options.userId,
+        batch_id: null,
+        is_active: true,
+        featured: false,
+        date: today
+      }
+      
+      const { data, error } = await supabase
+        .from('challenges')
+        .insert(challengeData)
+        .select()
+        .single()
+        
+      if (error) throw error
+      return data
+      
+    } else if (challengeType === 'daily') {
+      // Check if daily challenge already exists for today
+      const { data: existing } = await supabase
+        .from('challenges')
+        .select('*')
+        .eq('challenge_type', 'daily')
+        .eq('date', today)
+        .single()
+        
+      if (existing) {
+        return existing
+      }
+      
+      // Create new daily challenge
+      const videoData = await fetchRandomYoutubeVideo(
+        options.minDuration || 180,
+        options.maxDuration || 600,
+        options.preferredTopics || []
+      )
+      
+      const challengeData: ChallengeData = {
+        title: videoData.title,
+        description: videoData.description,
+        video_url: videoData.videoUrl,
+        thumbnail_url: videoData.thumbnailUrl,
+        embed_url: videoData.embedUrl,
+        duration: videoData.duration,
+        topics: videoData.topics || [],
+        transcript: videoData.transcript,
+        challenge_type: 'daily',
+        difficulty: options.difficulty || 'intermediate',
+        user_id: null,
+        batch_id: null,
+        is_active: true,
+        featured: true,
+        date: today
+      }
+      
+      const { data, error } = await supabase
+        .from('challenges')
+        .insert(challengeData)
+        .select()
+        .single()
+        
+      if (error) throw error
+      return data
+      
+    } else if (challengeType === 'practice') {
+      const challenges: ChallengeData[] = []
+      
+      // Check how many practice challenges exist for today (should be 3: beginner, intermediate, advanced)
+      const { data: existing } = await supabase
+        .from('challenges')
+        .select('*')
+        .eq('challenge_type', 'practice')
+        .eq('date', today)
+        
+      const existingCount = existing?.length || 0
+      const difficultyLevels = ['beginner', 'intermediate', 'advanced'] as const
+      
+      // Check which difficulties are missing
+      const existingDifficulties = existing?.map(c => c.difficulty) || []
+      const missingDifficulties = difficultyLevels.filter(level => !existingDifficulties.includes(level))
+      
+      if (missingDifficulties.length === 0) {
+        // All 3 difficulties exist for today, return existing
+        return existing || []
+      }
+      
+      // Create missing practice challenges (one for each missing difficulty)
+      for (const difficulty of missingDifficulties) {
+        try {
+          const videoData = await fetchRandomYoutubeVideo(
+            options.minDuration || 120,
+            options.maxDuration || 480,
+            options.preferredTopics || []
+          )
+          
+          const challengeData: ChallengeData = {
+            title: videoData.title,
+            description: videoData.description,
+            video_url: videoData.videoUrl,
+            thumbnail_url: videoData.thumbnailUrl,
+            embed_url: videoData.embedUrl,
+            duration: videoData.duration,
+            topics: videoData.topics || [],
+            transcript: videoData.transcript,
+            challenge_type: 'practice',
+            difficulty: difficulty,
+            user_id: null,
+            batch_id: `practice_${today}_batch`,
+            is_active: true,
+            featured: false,
+            date: today
+          }
+          
+          const { data, error } = await supabase
+            .from('challenges')
+            .insert(challengeData)
+            .select()
+            .single()
+            
+          if (error) throw error
+          challenges.push(data)
+          
+          console.log(`✅ Created ${difficulty} practice challenge for ${today}`)
+          
+          // Add delay between requests to avoid rate limiting
+          if (missingDifficulties.indexOf(difficulty) < missingDifficulties.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 2000))
+          }
+        } catch (error) {
+          console.error(`Error creating ${difficulty} practice challenge:`, error)
+          // Continue with next difficulty
+        }
+      }
+      
+      // Return all challenges for today (existing + new)
+      const { data: allChallenges } = await supabase
+        .from('challenges')
+        .select('*')
+        .eq('challenge_type', 'practice')
+        .eq('date', today)
+        .order('difficulty', { ascending: true }) // beginner, intermediate, advanced
+        
+      return allChallenges || []
+    }
+    
+    throw new Error(`Invalid challenge type: ${challengeType}`)
+    
+  } catch (error) {
+    console.error(`Error creating ${challengeType} challenge:`, error)
+    throw error
+  }
+}
+
+// Helper function to get challenges by type
+export async function getChallenges(
+  challengeType: 'daily' | 'practice' | 'user_generated',
+  options: {
+    date?: string
+    userId?: string
+    limit?: number
+    difficulty?: string
+  } = {}
+): Promise<ChallengeData[]> {
+  const supabase = supabaseServer
+  const date = options.date || getTodayDate()
+  
+  let query = supabase
+    .from('challenges')
+    .select('*')
+    .eq('challenge_type', challengeType)
+    .eq('is_active', true)
+    
+  if (challengeType === 'user_generated' && options.userId) {
+    query = query.eq('user_id', options.userId)
+  } else if (challengeType === 'daily') {
+    // Daily challenges: only today's challenge
+    query = query.eq('date', date)
+  } else if (challengeType === 'practice') {
+    // Practice challenges: get latest 15 videos (5 days × 3 difficulties)
+    // Don't filter by specific date, get the most recent ones
+    query = query.order('date', { ascending: false })
+                 .order('difficulty', { ascending: true }) // beginner, intermediate, advanced
+                 .limit(options.limit || 15)
+  }
+  
+  if (options.difficulty && challengeType !== 'practice') {
+    query = query.eq('difficulty', options.difficulty)
+  }
+  
+  if (options.limit && challengeType !== 'practice') {
+    query = query.limit(options.limit)
+  }
+  
+  if (challengeType !== 'practice') {
+    query = query.order('created_at', { ascending: false })
+  }
+  
+  const { data, error } = await query
+  
+  if (error) {
+    console.error(`Error fetching ${challengeType} challenges:`, error)
+    throw error
+  }
+  
+  return data || []
 }
 
 // Function to fetch random YouTube video
@@ -385,9 +653,10 @@ export async function getTodayVideo(): Promise<VideoData> {
     
     // 1. Check Supabase for today's video first
     const { data, error } = await supabaseServer
-      .from('daily_videos')
+      .from('challenges')
       .select('*')
       .eq('date', today)
+      .eq('challenge_type', 'daily')
       .single()
       
     if (data && !error) {
@@ -402,12 +671,12 @@ export async function getTodayVideo(): Promise<VideoData> {
       }
       
       return {
-        id: data.id,
+        id: data.id, // Use database UUID for challenge lookup
         title: data.title,
         description: data.description || "Educational video",
-        thumbnailUrl: data.thumbnail_url || `https://img.youtube.com/vi/${data.id}/hqdefault.jpg`,
+        thumbnailUrl: data.thumbnail_url || `https://img.youtube.com/vi/${data.video_url?.split('v=')[1] || data.id}/hqdefault.jpg`,
         videoUrl: data.video_url,
-        embedUrl: data.embed_url || `https://www.youtube.com/embed/${data.id}`,
+        embedUrl: data.embed_url || `https://www.youtube.com/embed/${data.video_url?.split('v=')[1] || data.id}`,
         duration: data.duration || 300,
         transcript: data.transcript || "",
         topics: data.topics || []
@@ -431,11 +700,10 @@ export async function getTodayVideo(): Promise<VideoData> {
         if (videoData.transcript && videoData.transcript.length >= 100) {
           console.log(`✅ Found video with valid transcript: ${videoData.transcript.length} characters`)
           
-          // Save successful video with transcript to database
-          const { error: insertError } = await supabaseServer
-            .from('daily_videos')
+          // Save successful video with transcript to unified challenges table and retrieve DB record
+          const { data: saved, error: insertError } = await supabaseServer
+            .from('challenges')
             .upsert({
-              id: videoData.id,
               title: videoData.title,
               description: videoData.description,
               video_url: videoData.videoUrl,
@@ -444,16 +712,35 @@ export async function getTodayVideo(): Promise<VideoData> {
               duration: videoData.duration,
               topics: videoData.topics,
               transcript: videoData.transcript,
+              challenge_type: 'daily',
+              difficulty: 'intermediate',
+              user_id: null,
+              batch_id: `daily_${today}_batch`,
+              is_active: true,
+              featured: false,
               date: today,
-              created_at: new Date().toISOString()
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
             })
+            .select()
+            .single()
           
-          if (!insertError) {
-            console.log("✅ New video with transcript saved to Supabase:", videoData.id)
-            return videoData
+          if (!insertError && saved) {
+            console.log("✅ New video with transcript saved to Supabase:", saved.id)
+            return {
+              id: saved.id,
+              title: saved.title,
+              description: saved.description || "Educational video",
+              thumbnailUrl: saved.thumbnail_url || `https://img.youtube.com/vi/${saved.video_url?.split('v=')[1] || saved.id}/hqdefault.jpg`,
+              videoUrl: saved.video_url,
+              embedUrl: saved.embed_url || `https://www.youtube.com/embed/${saved.video_url?.split('v=')[1] || saved.id}`,
+              duration: saved.duration || 300,
+              transcript: saved.transcript || "",
+              topics: saved.topics || []
+            }
           } else {
             console.error("❌ Error saving video to Supabase:", insertError)
-            // Continue trying with other videos even if save fails
+            // Continue trying with other videos
           }
         } else {
           console.log(`⚠️ No valid transcript for video ${videoData.id} (${videoData.transcript?.length || 0} chars), trying next video...`)
@@ -480,11 +767,10 @@ export async function setAdminSelectedVideo(videoData: VideoData | null): Promis
   
   if (videoData) {
     try {
-      // Save admin-selected video to Supabase
+      // Save admin-selected video to unified challenges table
       const { error } = await supabaseServer
-        .from('daily_videos')
+        .from('challenges')
         .upsert({
-          id: videoData.id,
           title: videoData.title,
           description: videoData.description,
           video_url: videoData.videoUrl,
@@ -492,8 +778,16 @@ export async function setAdminSelectedVideo(videoData: VideoData | null): Promis
           embed_url: videoData.embedUrl,
           duration: videoData.duration,
           topics: videoData.topics,
+          transcript: videoData.transcript || "",
+          challenge_type: 'daily',
+          difficulty: 'intermediate',
+          user_id: null,
+          batch_id: `daily_${today}_admin`,
+          is_active: true,
+          featured: false,
           date: today,
-          created_at: new Date().toISOString()
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
         })
       
       if (error) {
@@ -510,9 +804,10 @@ export async function setAdminSelectedVideo(videoData: VideoData | null): Promis
     try {
       // Clear today's video from Supabase
       const { error } = await supabaseServer
-        .from('daily_videos')
+        .from('challenges')
         .delete()
         .eq('date', today)
+        .eq('challenge_type', 'daily')
       
       if (error) {
         console.error("❌ Error clearing video from Supabase:", error)
@@ -533,9 +828,10 @@ export async function shouldRefreshVideo(): Promise<boolean> {
   
   try {
     const { data } = await supabaseServer
-      .from('daily_videos')
+      .from('challenges')
       .select('date')
       .eq('date', today)
+      .eq('challenge_type', 'daily')
       .single()
       
     return !data // Return true if no video exists for today

@@ -15,14 +15,12 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { extractVideoFromUrl } from "@/app/actions/youtube-video"
+import { extractVideoFromUrl, createChallenge } from "@/app/actions/youtube-video"
 import { Loader2, AlertCircle } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { toast } from "@/hooks/use-toast"
 import {type Challenge } from '@/lib/utils/challenge-constants'
 import {supabase} from "@/lib/supabase"
-import { extractVideoTranscript, validateVideoId } from "@/app/actions/video-processing"
-import { set, update } from "lodash"
 
 
 interface CreateChallengeModalProps {
@@ -56,62 +54,19 @@ export default function CreateChallengeModal({ open, onOpenChange, onChallengeCr
         return
       }
 
-      // Extract video data from YouTube URL
-      const videoData = await extractVideoFromUrl(youtubeUrl)
+      // Create user-generated challenge using the new API
+      const challenge = await createChallenge('user_generated', {
+        videoUrl: youtubeUrl,
+        userId: user.id,
+        difficulty: difficulty as 'beginner' | 'intermediate' | 'advanced'
+      })
 
-      if (!videoData) {
-        throw new Error("Could not extract video information from the provided URL")
-      }
-
-      async function fetchAndUpdateTranscriptBackground(challengeId: string, videoId: string, difficulty: string, oldContent: any) {
-        let maxSeconds = 180;
-        if (difficulty === "beginner") maxSeconds = 120;
-        else if (difficulty === "intermediate") maxSeconds = 180;
-        else if (difficulty === "advanced") maxSeconds = 240;
-        try {
-          const transcriptInfo = await extractVideoTranscript(videoId, 0, maxSeconds);
-          if (transcriptInfo && transcriptInfo.transcript && transcriptInfo.transcript.length > 0) {
-            await supabase.from('user_challenges').update(
-              {
-                content: { ...oldContent, transcript: transcriptInfo.transcript },
-                updated_at: new Date().toISOString(),
-              }).eq('id', challengeId);
-          }
-        } catch (error) {
-          
-        }
-      }
-
-      const {data, error:dbError} = await supabase.from('challenges').insert({
-        title: videoData.title,
-        description: videoData.description,
-        challenge_type: "video",
-        difficulty_level: difficulty,
-        content:{
-          videoUrl: videoData.videoUrl,
-          embedUrl: videoData.embedUrl,
-          thumbnailUrl: videoData.thumbnailUrl,
-          duration: videoData.duration,
-          topic: videoData.topics || [],
-          transcript: null,
-        },
-        points: 10,
-        is_active: true,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      }).select().single()
-
-      if (dbError) {
-        throw new Error(dbError.message)
-      }
       // Reset form
       setYoutubeUrl("")
       setDifficulty("intermediate")
 
       // Close modal
       onOpenChange(false)
-
-      fetchAndUpdateTranscriptBackground(data.id, videoData.id, difficulty, data.content)
 
       // Show success toast
       toast({

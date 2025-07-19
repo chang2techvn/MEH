@@ -35,6 +35,8 @@ export function useYouTubePlayer(
   const initializePlayer = useCallback(() => {
     if (!playerContainerRef.current || playerInitialized.current) return
 
+    console.log("🎬 Initializing YouTube player with videoId:", videoId)
+
     try {
       playerContainerRef.current.innerHTML = ""
 
@@ -45,6 +47,7 @@ export function useYouTubePlayer(
 
       playerRef.current = new window.YT.Player(playerElement.id, {
         videoId: videoId,
+        host: 'https://www.youtube-nocookie.com',
         playerVars: {
           autoplay: 0,
           controls: 1,
@@ -62,52 +65,77 @@ export function useYouTubePlayer(
           origin: window.location.origin,
         },
         events: {
-          onReady: () => {
+          onReady: (event: any) => {
+            console.log("🎬 YouTube player ready for:", videoId)
             playerReadyRef.current = true
             setPlayerState(prev => ({ ...prev, loading: false }))
+            
+            // Ensure video is properly loaded and paused
+            try {
+              event.target.cueVideoById(videoId)
+              event.target.pauseVideo()
+              console.log("🎬 Video cued and paused successfully:", videoId)
+            } catch (err) {
+              console.error("Error loading video:", err)
+            }
           },
           onStateChange: (event: any) => {
+            console.log("🎬 Player state changed:", event.data)
             setPlayerState(prev => ({ ...prev, isPlaying: event.data === 1 }))
           },
-          onError: () => {
+          onError: (event: any) => {
+            console.error("🎬 YouTube player error:", event.data)
             setPlayerState(prev => ({ ...prev, error: true, loading: false }))
           },
         },
       })
 
       playerInitialized.current = true
+      console.log("🎬 Player initialization completed for:", videoId)
     } catch (err) {
       console.error("Error initializing YouTube player:", err)
       setPlayerState(prev => ({ ...prev, error: true, loading: false }))
     }
   }, [videoId])
 
-  // ✅ Load YouTube API with optimization
+  // Setup and reinitialize player on videoId change
   useEffect(() => {
-    const setupPlayer = async () => {
+    let cancelled = false
+    const setup = async () => {
+      // Destroy old player
+      if (playerRef.current) {
+        try { playerRef.current.destroy() } catch {}
+        playerRef.current = null
+      }
+      playerInitialized.current = false
+      playerReadyRef.current = false
+      // Reset state
+      setPlayerState({
+        loading: true,
+        error: false,
+        watchTime: 0,
+        isPlaying: false,
+        completed: false,
+        playbackRate: 1,
+        showPlaybackRateMenu: false,
+        currentTime: 0,
+        duration: 0,
+        volume: 100,
+        isMuted: false,
+        showVolumeSlider: false,
+      })
       try {
         await getYouTubeAPI()
-        if (playerContainerRef.current && !playerInitialized.current) {
-          initializePlayer()
-        }
+        if (!cancelled) initializePlayer()
       } catch (err) {
-        console.error("Error loading YouTube API:", err)
-        setPlayerState(prev => ({ ...prev, error: true, loading: false }))
+        console.error("Error initializing YouTube API:", err)
+        if (!cancelled) setPlayerState(prev => ({ ...prev, error: true, loading: false }))
       }
     }
+    setup()
+    return () => { cancelled = true }
+  }, [videoId, initializePlayer])
 
-    setupPlayer()
-
-    return () => {
-      if (playerRef.current) {
-        try {
-          playerRef.current.destroy()
-        } catch (e) {
-          // Ignore cleanup errors
-        }
-      }
-    }
-  }, [initializePlayer])
   // ✅ Optimized time update
   const updateCurrentTime = useCallback(() => {
     if (playerRef.current && playerReadyRef.current) {
@@ -191,10 +219,69 @@ export function useYouTubePlayer(
   }, [playerState.watchTime, requiredWatchTime, playerState.completed, playerState.isPlaying, onWatchComplete])
 
   // Player control functions
+  const reloadVideo = useCallback(() => {
+    setPlayerState(prev => ({ 
+      ...prev, 
+      loading: true, 
+      error: false 
+    }))
+    playerInitialized.current = false
+    playerReadyRef.current = false
+
+    if (window.YT && window.YT.Player) {
+      setTimeout(() => {
+        initializePlayer()
+      }, 500)
+    }
+  }, [initializePlayer])
+
   const handlePlayPause = useCallback(() => {
-    if (!playerRef.current || !playerReadyRef.current) return
+    console.log("🎮 [handlePlayPause] Called")
+    console.log("🎮 playerRef.current:", !!playerRef.current)
+    console.log("🎮 playerReadyRef.current:", playerReadyRef.current)
+    console.log("🎮 playerState.isPlaying:", playerState.isPlaying)
+    
+    if (!playerRef.current || !playerReadyRef.current) {
+      console.error("❌ [handlePlayPause] Player not ready:", {
+        hasPlayer: !!playerRef.current,
+        isReady: playerReadyRef.current
+      })
+      return
+    }
 
     try {
+      // Additional check for player state before calling methods
+      const playerStateValue = playerRef.current.getPlayerState()
+      console.log("🎮 YouTube Player State:", playerStateValue)
+      
+      // Check if player methods are available
+      if (typeof playerRef.current.playVideo !== 'function' || 
+          typeof playerRef.current.pauseVideo !== 'function') {
+        console.warn("⚠️ Player methods not available, waiting for initialization...")
+        return
+      }
+      
+      // Check if player has loaded data (-1 = unstarted, 0 = ended, 1 = playing, 2 = paused, 3 = buffering, 5 = cued)
+      if (playerStateValue === -1) {
+        console.log("🎮 Player not ready yet, trying to cue video first")
+        try {
+          playerRef.current.loadVideoById(videoId)
+           // Wait a bit then try to play
+           setTimeout(() => {
+             if (playerRef.current && playerReadyRef.current) {
+               try {
+                 playerRef.current.playVideo()
+               } catch (playErr) {
+                 console.error("Error playing after load:", playErr)
+               }
+             }
+           }, 1000)
+         } catch (cueErr) {
+           console.error("Error loading video:", cueErr)
+         }
+         return
+       }
+      
       if (playerState.isPlaying) {
         playerRef.current.pauseVideo()
       } else {
@@ -202,8 +289,10 @@ export function useYouTubePlayer(
       }
     } catch (err) {
       console.error("Error controlling YouTube player:", err)
+      console.log("🔧 Player error detected, not reloading to avoid loop")
+      // Don't reload automatically to avoid infinite loops
     }
-  }, [playerState.isPlaying])
+  }, [playerState.isPlaying, videoId])
 
   const handleRewind = useCallback(() => {
     if (!playerRef.current || !playerReadyRef.current) return
@@ -292,21 +381,6 @@ export function useYouTubePlayer(
   const setShowVolumeSlider = useCallback((show: boolean) => {
     setPlayerState(prev => ({ ...prev, showVolumeSlider: show }))
   }, [])
-
-  const reloadVideo = useCallback(() => {
-    setPlayerState(prev => ({ 
-      ...prev, 
-      loading: true, 
-      error: false 
-    }))
-    playerInitialized.current = false
-
-    if (window.YT && window.YT.Player) {
-      setTimeout(() => {
-        initializePlayer()
-      }, 500)
-    }
-  }, [initializePlayer])
 
   const setShowPlaybackRateMenu = useCallback((show: boolean) => {
     setPlayerState(prev => ({ ...prev, showPlaybackRateMenu: show }))

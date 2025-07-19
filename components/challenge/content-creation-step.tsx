@@ -31,10 +31,10 @@ export default function ContentCreationStep({
   }
 
   const handleSave = () => {
-    if (content.trim().length < 100) {
+    if (content.trim().length < 1) {
       toast({
         title: "Content too short",
-        description: "Please write at least 100 characters for your content.",
+        description: "Please write at least 1 character for your content.",
         variant: "destructive",
       })
       return

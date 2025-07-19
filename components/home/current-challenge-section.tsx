@@ -87,7 +87,9 @@ export function CurrentChallengeSection({
         onToggleSidebar={onToggleSidebar}
       >
       <Suspense fallback={<LoadingFallback />}>
+        {/* Remount AssignedTask on challenge change to reset step state */}
         <AssignedTask
+          key={`${challengeMode}-${currentChallenge.id}`}
           title={currentChallenge.title}
           description={currentChallenge.description}
           videoUrl={currentChallenge.videoUrl}
