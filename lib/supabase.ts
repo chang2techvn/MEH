@@ -1251,26 +1251,34 @@ export const dbHelpers = {
 
   async getExtendedLeaderboard(limit: number = 50) {
     try {
-      // Get user data with profiles
-      const { data: userData, error: userError } = await supabase
+      // Step 1: Get users data first
+      const { data: usersData, error: usersError } = await supabase
         .from('users')
-        .select(`
-          id, 
-          points, 
-          level,
-          profiles!inner(full_name, avatar_url)
-        `)
+        .select('id, points, level')
         .order('points', { ascending: false })
         .limit(limit)
 
-      if (userError) {
-        console.error('Error fetching user data:', userError)
-        return { data: [], error: userError }
+      if (usersError) {
+        console.error('Error fetching users data:', usersError)
+        return { data: [], error: usersError }
       }
 
-      // Get challenge completion counts and Daily posts for each user
-      const userIds = userData?.map(user => user.id) || []
-      
+      console.log('🔍 Users data:', usersData)
+
+      // Step 2: Get profiles for these users
+      const userIds = usersData?.map(user => user.id) || []
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('user_id, full_name, avatar_url')
+        .in('user_id', userIds)
+
+      if (profilesError) {
+        console.error('Error fetching profiles data:', profilesError)
+      }
+
+      console.log('🔍 Profiles data:', profilesData)
+
+      // Step 3: Get challenge completion counts and Daily posts for each user
       const { data: challengeData, error: challengeError } = await supabase
         .from('posts')
         .select('user_id, created_at, title')
@@ -1281,11 +1289,14 @@ export const dbHelpers = {
         console.error('Error fetching challenge data:', challengeError)
       }
 
-      // Calculate metrics for each user
+      // Step 4: Calculate metrics for each user
       const now = new Date()
       const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
 
-      const enhancedData = userData?.map(user => {
+      const enhancedData = usersData?.map(user => {
+        // Find profile for this user
+        const profile = profilesData?.find(p => p.user_id === user.id)
+        
         const userChallenges = challengeData?.filter(challenge => challenge.user_id === user.id) || []
         const weekChallenges = userChallenges.filter(challenge => 
           new Date(challenge.created_at) >= weekAgo
@@ -1319,12 +1330,16 @@ export const dbHelpers = {
           }
         }
 
-        return {
+        const result = {
           ...user,
+          profiles: profile ? [profile] : [], // Keep original format for compatibility
           challenges_completed: userChallenges.length,
           week_points: weekChallenges.length * 100, // Assuming 100 points per challenge
           streak_days: streak // Use calculated daily streak
         }
+        
+        console.log('🔍 Enhanced user:', result)
+        return result
       }) || []
 
       return { data: enhancedData, error: null }

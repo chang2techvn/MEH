@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect } from "react"
-import { motion } from "framer-motion"
+import { motion, AnimatePresence } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { 
   RewindIcon, 
@@ -16,6 +16,7 @@ import {
   Settings
 } from "lucide-react"
 import { formatTime } from "./youtube-api"
+import { useMobile } from "@/hooks/use-mobile"
 import type { PlayerState } from "./types"
 
 interface VideoControlsProps {
@@ -47,6 +48,8 @@ export function VideoControls({
   onShowVolumeSliderChange,
   playbackRateMenuRef,
 }: VideoControlsProps) {
+  const { isMobile } = useMobile()
+  
   const {
     isPlaying,
     currentTime,
@@ -77,59 +80,81 @@ export function VideoControls({
   }, [playbackRateMenuRef, onShowPlaybackRateMenuChange])
 
   return (
-    <div className="absolute bottom-0 left-0 right-0 bg-black/80 backdrop-blur-sm p-2 rounded-b-xl">
-      <div className="flex items-center gap-2 mb-1 text-white">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8 rounded-full text-white hover:bg-white/20"
-          onClick={onRewind}
-        >
-          <RewindIcon className="h-4 w-4" />
-          <span className="sr-only">Rewind 5s</span>
-        </Button>
+    <motion.div 
+      className={`absolute bottom-0 left-0 right-0 bg-black/80 backdrop-blur-sm rounded-b-xl ${
+        isMobile ? 'p-1 sm:p-2' : 'p-2'
+      }`}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 20 }}
+      transition={{ duration: 0.3, ease: "easeInOut" }}
+    >
+      <div className={`flex items-center gap-1 sm:gap-2 mb-1 text-white`}>
+        {/* Left controls group */}
+        <div className="flex items-center gap-1 sm:gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            className={`${isMobile ? 'h-6 w-6 sm:h-8 sm:w-8' : 'h-8 w-8'} rounded-full text-white hover:bg-white/20`}
+            onClick={onRewind}
+          >
+            <RewindIcon className={`${isMobile ? 'h-3 w-3 sm:h-4 sm:w-4' : 'h-4 w-4'}`} />
+            <span className="sr-only">Rewind 5s</span>
+          </Button>
 
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8 rounded-full text-white hover:bg-white/20"
-          onClick={onPlayPause}
-        >
-          {isPlaying ? <PauseIcon className="h-4 w-4" /> : <PlayIcon className="h-4 w-4 ml-0.5" />}
-          <span className="sr-only">{isPlaying ? "Pause" : "Play"}</span>
-        </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className={`${isMobile ? 'h-6 w-6 sm:h-8 sm:w-8' : 'h-8 w-8'} rounded-full text-white hover:bg-white/20`}
+            onClick={onPlayPause}
+          >
+            {isPlaying ? (
+              <PauseIcon className={`${isMobile ? 'h-3 w-3 sm:h-4 sm:w-4' : 'h-4 w-4'}`} />
+            ) : (
+              <PlayIcon className={`${isMobile ? 'h-3 w-3 sm:h-4 sm:w-4 ml-0.5' : 'h-4 w-4 ml-0.5'}`} />
+            )}
+            <span className="sr-only">{isPlaying ? "Pause" : "Play"}</span>
+          </Button>
 
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8 rounded-full text-white hover:bg-white/20"
-          onClick={onForward}
-        >
-          <FastForwardIcon className="h-4 w-4" />
-          <span className="sr-only">Forward 5s</span>
-        </Button>        <div className="flex items-center gap-2 ml-2">
-          <Clock className="h-4 w-4 text-white/80" />
-          <div className="text-sm font-medium">
-            {formatTime(Math.floor(currentTime))} /{" "}
-            {formatTime(Math.floor(duration > 0 ? duration : requiredWatchTime))}
+          <Button
+            variant="ghost"
+            size="icon"
+            className={`${isMobile ? 'h-6 w-6 sm:h-8 sm:w-8' : 'h-8 w-8'} rounded-full text-white hover:bg-white/20`}
+            onClick={onForward}
+          >
+            <FastForwardIcon className={`${isMobile ? 'h-3 w-3 sm:h-4 sm:w-4' : 'h-4 w-4'}`} />
+            <span className="sr-only">Forward 5s</span>
+          </Button>
+
+          {/* Time display với khoảng cách rõ ràng - hiển thị trên tất cả kích thước */}
+          <div className="flex items-center gap-1 sm:gap-2 ml-3 sm:ml-4">
+            <Clock className={`${isMobile ? 'h-3 w-3 sm:h-4 sm:w-4' : 'h-4 w-4'} text-white/80`} />
+            <div className={`${isMobile ? 'text-xs sm:text-sm' : 'text-sm'} font-medium whitespace-nowrap`}>
+              {formatTime(Math.floor(currentTime))} /{" "}
+              {formatTime(Math.floor(duration > 0 ? duration : requiredWatchTime))}
+            </div>
           </div>
         </div>
 
-        {/* Volume Controls */}
-        <div className="ml-auto flex items-center gap-2">
-          <div className="relative flex items-center">
+        {/* Spacer để đẩy right controls sang bên phải */}
+        <div className="flex-1"></div>
+
+        {/* Right controls group */}
+        <div className="flex items-center gap-1 sm:gap-2">
+          {/* Volume Controls - hiển thị trên mobile từ sm breakpoint */}
+          <div className="hidden xs:block relative flex items-center">
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 rounded-full text-white hover:bg-white/20"
+              className={`${isMobile ? 'h-6 w-6 sm:h-8 sm:w-8' : 'h-8 w-8'} rounded-full text-white hover:bg-white/20`}
               onClick={onMuteToggle}
               onMouseEnter={() => onShowVolumeSliderChange(true)}
               onMouseLeave={() => onShowVolumeSliderChange(false)}
             >
               {isMuted || volume === 0 ? (
-                <VolumeX className="h-4 w-4" />
+                <VolumeX className={`${isMobile ? 'h-3 w-3 sm:h-4 sm:w-4' : 'h-4 w-4'}`} />
               ) : (
-                <Volume2 className="h-4 w-4" />
+                <Volume2 className={`${isMobile ? 'h-3 w-3 sm:h-4 sm:w-4' : 'h-4 w-4'}`} />
               )}
               <span className="sr-only">{isMuted ? "Unmute" : "Mute"}</span>
             </Button>
@@ -163,11 +188,13 @@ export function VideoControls({
               </motion.div>
             )}
           </div>
-          <div className="relative">
+
+          {/* Playback Rate - hide chỉ trên mobile rất nhỏ */}
+          <div className="hidden sm:block relative">
             <Button
               variant="ghost"
               size="sm"
-              className="h-8 rounded-full text-white hover:bg-white/20"
+              className={`${isMobile ? 'h-6 sm:h-8 text-xs sm:text-sm' : 'h-8'} rounded-full text-white hover:bg-white/20`}
               onClick={() => onShowPlaybackRateMenuChange(!showPlaybackRateMenu)}
             >
               {playbackRate}x
@@ -193,23 +220,27 @@ export function VideoControls({
             )}
           </div>
 
+          {/* Fullscreen button */}
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8 rounded-full text-white hover:bg-white/20"
+            className={`${isMobile ? 'h-6 w-6 sm:h-8 sm:w-8' : 'h-8 w-8'} rounded-full text-white hover:bg-white/20`}
             onClick={onFullscreen}
           >
-            <MaximizeIcon className="h-4 w-4" />
+            <MaximizeIcon className={`${isMobile ? 'h-3 w-3 sm:h-4 sm:w-4' : 'h-4 w-4'}`} />
             <span className="sr-only">Fullscreen</span>
-          </Button>          {completed && (
+          </Button>
+
+          {/* Completed badge */}
+          {completed && (
             <motion.div
               initial={{ scale: 0, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ type: "spring", stiffness: 300, damping: 20 }}
-              className="flex items-center gap-1 bg-green-500/20 backdrop-blur-sm px-3 py-1 rounded-full"
+              className="flex items-center gap-1 bg-green-500/20 backdrop-blur-sm px-2 sm:px-3 py-1 rounded-full ml-1 sm:ml-2"
             >
-              <CheckCircle className="h-4 w-4 text-green-500" />
-              <span className="text-sm font-medium text-green-500">
+              <CheckCircle className={`${isMobile ? 'h-3 w-3 sm:h-4 sm:w-4' : 'h-4 w-4'} text-green-500`} />
+              <span className={`${isMobile ? 'text-xs sm:text-sm' : 'text-sm'} font-medium text-green-500`}>
                 completed
               </span>
             </motion.div>
@@ -218,7 +249,7 @@ export function VideoControls({
       </div>
 
       {/* Progress bar */}
-      <div className="relative h-2 bg-white/20 rounded-full overflow-hidden">
+      <div className={`relative ${isMobile ? 'h-1.5 sm:h-2' : 'h-2'} bg-white/20 rounded-full overflow-hidden`}>
         <motion.div
           className={`absolute left-0 top-0 h-full ${
             completed ? "bg-green-500" : "bg-gradient-to-r from-blue-500 to-purple-600"
@@ -228,8 +259,8 @@ export function VideoControls({
           transition={{ duration: 0.3 }}
         />
       </div>      
-      <div className="mt-1 flex justify-between items-center">
-        <div className="text-xs text-white/80">
+      <div className={`mt-1 flex justify-between items-center ${isMobile ? 'flex-col xs:flex-row gap-1 xs:gap-0' : ''}`}>
+        <div className={`${isMobile ? 'text-xs' : 'text-xs'} text-white/80 text-center xs:text-left`}>
           {completed ? (
             <span className="text-green-400 font-medium">
               🎉 Required watch time reached! Video auto-paused.
@@ -238,8 +269,10 @@ export function VideoControls({
             <span>Watch {formatTime(requiredWatchTime - watchTime)} more to continue</span>
           )}
         </div>
-        <div className="text-xs font-medium text-white/80">{Math.round(progressPercentage)}%</div>
+        <div className={`${isMobile ? 'text-xs' : 'text-xs'} font-medium text-white/80`}>
+          {Math.round(progressPercentage)}%
+        </div>
       </div>
-    </div>
+    </motion.div>
   )
 }

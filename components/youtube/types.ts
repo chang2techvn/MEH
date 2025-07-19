@@ -62,4 +62,5 @@ export interface PlayerState {
   volume: number
   isMuted: boolean
   showVolumeSlider: boolean
+  showMobileControls: boolean  // New: controls visibility on mobile
 }

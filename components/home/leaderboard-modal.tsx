@@ -51,17 +51,34 @@ export function LeaderboardModal({ isOpen, onClose }: LeaderboardModalProps) {
           return
         }
 
-        const transformedData: LeaderboardUser[] = (rawData || []).map((user: any, index: number) => ({
-          id: user.id,
-          name: user.profiles?.[0]?.full_name || 'Unknown User',
-          avatar: user.profiles?.[0]?.avatar_url,
-          rank: index + 1,
-          points: user.points || 0,
-          level: user.level || 'Beginner',
-          streak: user.streak_days || 0,
-          challengesCompleted: user.challenges_completed || 0,
-          weekPoints: user.week_points || 0
-        }))
+        const transformedData: LeaderboardUser[] = (rawData || []).map((user: any, index: number) => {
+          console.log('🔍 Processing user:', user)
+          
+          // Handle different possible profile structures
+          let profile = null
+          if (user.profiles && Array.isArray(user.profiles) && user.profiles.length > 0) {
+            profile = user.profiles[0]
+          } else if (user.profiles && !Array.isArray(user.profiles)) {
+            profile = user.profiles
+          }
+          
+          const fullName = profile?.full_name || 'Unknown User'
+          const avatarUrl = profile?.avatar_url
+          
+          console.log('🔍 Extracted profile data:', { fullName, avatarUrl, profile })
+
+          return {
+            id: user.id,
+            name: fullName,
+            avatar: avatarUrl,
+            rank: index + 1,
+            points: user.points || 0,
+            level: user.level || 'Beginner',
+            streak: user.streak_days || 0,
+            challengesCompleted: user.challenges_completed || 0,
+            weekPoints: user.week_points || 0
+          }
+        })
 
         setUsers(transformedData)
       } catch (error) {
@@ -138,11 +155,11 @@ export function LeaderboardModal({ isOpen, onClose }: LeaderboardModalProps) {
   const getMetricValue = (user: LeaderboardUser) => {
     switch (activeTab) {
       case "top10":
-        return `${user.streak} day streak • ${user.points} pts`
+        return `${user.points} pts`
       case "totalPoints":
         return `${user.points} points`
       case "weekPoints":
-        return `${user.weekPoints} pts this week`
+        return `${user.weekPoints} pts`
       default:
         return ""
     }
@@ -150,9 +167,9 @@ export function LeaderboardModal({ isOpen, onClose }: LeaderboardModalProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl border-white/20 dark:border-gray-800/20">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-3 text-xl">
+      <DialogContent className="max-w-2xl h-[85vh] flex flex-col overflow-hidden bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl border-white/20 dark:border-gray-800/20 mx-2 sm:mx-4">
+        <DialogHeader className="flex-shrink-0">
+          <DialogTitle className="flex items-center gap-3 text-xl sm:text-2xl font-bold bg-gradient-to-r from-neo-mint to-purist-blue bg-clip-text text-transparent">
             <div className="relative">
               <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-mellow-yellow to-cantaloupe blur-sm opacity-70"></div>
               <TrendingUp className="relative h-6 w-6 text-mellow-yellow dark:text-cantaloupe" />
@@ -161,115 +178,159 @@ export function LeaderboardModal({ isOpen, onClose }: LeaderboardModalProps) {
           </DialogTitle>
         </DialogHeader>
 
-        {/* Tab Navigation */}
-        <div className="flex gap-2 mb-4">
-          {(["top10", "totalPoints", "weekPoints"] as LeaderboardTab[]).map((tab) => (
-            <Button
-              key={tab}
-              variant={activeTab === tab ? "default" : "outline"}
-              size="sm"
-              className={`flex items-center gap-2 ${
-                activeTab === tab
-                  ? "bg-gradient-to-r from-neo-mint to-purist-blue text-white"
-                  : "bg-white/20 dark:bg-gray-800/20 backdrop-blur-sm border-white/20 dark:border-gray-700/20"
-              }`}
-              onClick={() => setActiveTab(tab)}
-            >
-              {getTabIcon(tab)}
-              {getTabLabel(tab)}
-            </Button>
-          ))}
-        </div>
+        {/* Content Area - Scrollable */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {/* Tab Navigation */}
+          <div className="flex flex-wrap gap-2 mb-4 flex-shrink-0">
+            {(["top10", "totalPoints", "weekPoints"] as LeaderboardTab[]).map((tab) => (
+              <Button
+                key={tab}
+                variant={activeTab === tab ? "default" : "outline"}
+                size="sm"
+                className={`flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3 ${
+                  activeTab === tab
+                    ? "bg-gradient-to-r from-neo-mint to-purist-blue text-white"
+                    : "bg-white/20 dark:bg-gray-800/20 backdrop-blur-sm border-white/20 dark:border-gray-700/20"
+                }`}
+                onClick={() => setActiveTab(tab)}
+              >
+                {getTabIcon(tab)}
+                <span className="hidden sm:inline">{getTabLabel(tab)}</span>
+                <span className="sm:hidden">{getTabLabel(tab).split(' ')[0]}</span>
+              </Button>
+            ))}
+          </div>
 
-        {/* Description */}
-        <div className="mb-4 p-3 rounded-lg bg-white/10 dark:bg-gray-800/10">
-          <p className="text-sm text-muted-foreground">
-            {activeTab === "top10" && 
-              "Top performers ranked by Daily Streak (primary), Total Points (secondary), and Challenges Completed (tertiary)"}
-            {activeTab === "totalPoints" && 
-              "Users ranked by their total accumulated points from all challenges"}
-            {activeTab === "weekPoints" && 
-              "Weekly leaderboard showing points earned in the last 7 days"}
-          </p>
-        </div>
+          {/* Description */}
+          <div className="mb-4 p-3 rounded-lg bg-white/10 dark:bg-gray-800/10 flex-shrink-0">
+            <p className="text-sm text-muted-foreground">
+              {activeTab === "top10" && 
+                "Top performers ranked by Daily Streak (primary), Total Points (secondary), and Challenges Completed (tertiary)"}
+              {activeTab === "totalPoints" && 
+                "Users ranked by their total accumulated points from all challenges"}
+              {activeTab === "weekPoints" && 
+                "Weekly leaderboard showing points earned in the last 7 days"}
+            </p>
+          </div>
 
-        {/* Leaderboard List */}
-        <ScrollArea className="h-[400px] pr-4">
-          <div className="space-y-3">
-            {loading ? (
-              // Loading skeleton
-              Array.from({ length: 10 }).map((_, i) => (
-                <div key={i} className="flex items-center gap-4 p-4 rounded-xl bg-white/10 dark:bg-gray-800/10">
-                  <Skeleton className="w-10 h-10 rounded-full" />
-                  <div className="flex-1 space-y-2">
-                    <Skeleton className="h-4 w-32" />
-                    <Skeleton className="h-3 w-24" />
-                  </div>
-                  <Skeleton className="h-4 w-16" />
-                </div>
-              ))
-            ) : sortedUsers.length > 0 ? (
-              <AnimatePresence mode="wait">
-                {sortedUsers.map((user, index) => (
-                  <motion.div
-                    key={`${activeTab}-${user.id}`}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    transition={{ delay: index * 0.05 }}
-                    className="flex items-center gap-4 p-4 rounded-xl bg-white/10 dark:bg-gray-800/10 hover:bg-white/20 dark:hover:bg-gray-800/20 transition-colors"
-                  >
-                    {/* Rank */}
-                    <div className="flex items-center justify-center w-10 h-10">
-                      {getRankIcon(index + 1)}
+          {/* Leaderboard List - Scrollable Area */}
+          <ScrollArea className="flex-1 pr-4">
+            <div className="space-y-3 pb-4">
+              {loading ? (
+                // Loading skeleton
+                Array.from({ length: 10 }).map((_, i) => (
+                  <div key={i} className="flex items-center gap-4 p-4 rounded-xl bg-white/10 dark:bg-gray-800/10">
+                    <Skeleton className="w-10 h-10 rounded-full" />
+                    <div className="flex-1 space-y-2">
+                      <Skeleton className="h-4 w-32" />
+                      <Skeleton className="h-3 w-24" />
                     </div>
+                    <Skeleton className="h-4 w-16" />
+                  </div>
+                ))
+              ) : sortedUsers.length > 0 ? (
+                <AnimatePresence mode="wait">
+                  {sortedUsers.map((user, index) => (
+                    <motion.div
+                      key={`${activeTab}-${user.id}`}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                      transition={{ delay: index * 0.05 }}
+                      className="group flex items-center gap-4 p-4 rounded-xl bg-white/10 dark:bg-gray-800/10 hover:bg-white/20 dark:hover:bg-gray-800/20 transition-all duration-200 hover:scale-[1.02] hover:shadow-lg"
+                    >
+                      {/* Rank */}
+                      <div className="flex items-center justify-center w-10 h-10">
+                        {getRankIcon(index + 1)}
+                      </div>
 
-                    {/* User Info */}
-                    <div className="flex items-center gap-3 flex-1">
-                      <Avatar className="h-12 w-12 border-2 border-white dark:border-gray-800">
-                        <AvatarImage src={user.avatar || "/placeholder.svg"} alt={user.name} />
-                        <AvatarFallback className="bg-gradient-to-br from-neo-mint to-purist-blue text-white">
-                          {user.name.split(' ').map(n => n[0]).join('').toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1">
-                        <p className="font-medium">{user.name}</p>
-                        <div className="flex items-center gap-2">
-                          <Badge
-                            variant="outline"
-                            className="text-xs px-2 py-0 h-5 bg-white/20 dark:bg-gray-800/20"
-                          >
-                            {user.level}
-                          </Badge>
-                          <span className="text-xs text-muted-foreground">
-                            {user.challengesCompleted} challenges
-                          </span>
+                      {/* User Info */}
+                      <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+                        <Avatar className="h-10 w-10 sm:h-12 sm:w-12 border-2 border-white dark:border-gray-800 shrink-0">
+                          <AvatarImage src={user.avatar || "/placeholder.svg"} alt={user.name} />
+                          <AvatarFallback className="bg-gradient-to-br from-neo-mint to-purist-blue text-white text-xs sm:text-sm">
+                            {user.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-sm sm:text-base truncate">{user.name}</p>
+                          <div className="flex items-center gap-1 sm:gap-2 mt-1">
+                            <Badge
+                              variant="outline"
+                              className="text-xs px-1.5 sm:px-2 py-0.5 h-4 sm:h-5 bg-white/20 dark:bg-gray-800/20 shrink-0"
+                            >
+                              {user.level}
+                            </Badge>
+                            <span className="text-xs text-muted-foreground truncate">
+                              {user.challengesCompleted} challenges
+                            </span>
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    {/* Metric */}
-                    <div className="text-right">
-                      <p className="text-sm font-medium">{getMetricValue(user)}</p>
-                      {activeTab === "top10" && (
-                        <p className="text-xs text-muted-foreground">
-                          Rank #{index + 1}
-                        </p>
-                      )}
-                    </div>
-                  </motion.div>
-                ))}
-              </AnimatePresence>
-            ) : (
-              <div className="text-center py-8">
-                <p className="text-muted-foreground">No leaderboard data available</p>
-              </div>
-            )}
-          </div>
-        </ScrollArea>
+                      {/* Metric - Compact UI */}
+                      <div className="flex flex-col items-end gap-0.5">
+                        {/* Points */}
+                        <div className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/30 group-hover:from-amber-500/30 group-hover:to-orange-500/30 transition-all duration-200">
+                          <Trophy className="h-2.5 w-2.5 text-amber-500" />
+                          <span className="text-xs font-semibold text-amber-600 dark:text-amber-400">
+                            {getMetricValue(user)}
+                          </span>
+                        </div>
+                        
+                        {/* Day Streak (only for top10 tab) */}
+                        {activeTab === "top10" && (
+                          <div className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-gradient-to-r from-emerald-500/20 to-green-500/20 border border-emerald-500/30 group-hover:from-emerald-500/30 group-hover:to-green-500/30 transition-all duration-200">
+                            <Flame className="h-2.5 w-2.5 text-emerald-500" />
+                            <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                              <span className="hidden sm:inline">{user.streak} day streak</span>
+                              <span className="sm:hidden">{user.streak}d</span>
+                            </span>
+                          </div>
+                        )}
+                        
+                        {/* Week indicator for weekPoints tab */}
+                        {activeTab === "weekPoints" && (
+                          <div className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-gradient-to-r from-blue-500/20 to-indigo-500/20 border border-blue-500/30 group-hover:from-blue-500/30 group-hover:to-indigo-500/30 transition-all duration-200">
+                            <Calendar className="h-2.5 w-2.5 text-blue-500" />
+                            <span className="text-xs font-medium text-blue-600 dark:text-blue-400">
+                              <span className="hidden sm:inline">This week</span>
+                              <span className="sm:hidden">Week</span>
+                            </span>
+                          </div>
+                        )}
+                        
+                        {/* Total indicator for totalPoints tab */}
+                        {activeTab === "totalPoints" && (
+                          <div className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/30 group-hover:from-purple-500/30 group-hover:to-pink-500/30 transition-all duration-200">
+                            <Target className="h-2.5 w-2.5 text-purple-500" />
+                            <span className="text-xs font-medium text-purple-600 dark:text-purple-400">
+                              <span className="hidden sm:inline">All time</span>
+                              <span className="sm:hidden">Total</span>
+                            </span>
+                          </div>
+                        )}
+                        
+                        {/* Rank indicator */}
+                        <div className="text-xs text-muted-foreground font-medium group-hover:text-foreground transition-colors duration-200">
+                          <span className="hidden sm:inline">Rank #{index + 1}</span>
+                          <span className="sm:hidden">#{index + 1}</span>
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground">No leaderboard data available</p>
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+        </div>
 
-        {/* Footer */}
-        <div className="flex justify-between items-center pt-4 border-t border-white/10 dark:border-gray-800/10">
+        {/* Footer - Fixed at bottom */}
+        <div className="flex-shrink-0 flex justify-between items-center pt-4 border-t border-white/10 dark:border-gray-800/10">
           <p className="text-xs text-muted-foreground">
             Updated every hour • {sortedUsers.length} users shown
           </p>

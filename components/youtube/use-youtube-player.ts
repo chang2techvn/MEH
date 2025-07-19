@@ -3,13 +3,17 @@
 import { useState, useRef, useEffect, useCallback } from "react"
 import { toast } from "@/hooks/use-toast"
 import { getYouTubeAPI } from "./youtube-api"
+import { useMobile } from "@/hooks/use-mobile"
 import type { YouTubePlayer, PlayerState } from "./types"
 
 export function useYouTubePlayer(
   videoId: string,
   requiredWatchTime: number,
   onWatchComplete?: () => void
-) {  const [playerState, setPlayerState] = useState<PlayerState>({
+) {
+  const { isMobile } = useMobile()
+  
+  const [playerState, setPlayerState] = useState<PlayerState>({
     loading: true,
     error: false,
     watchTime: 0,
@@ -22,6 +26,7 @@ export function useYouTubePlayer(
     volume: 100,
     isMuted: false,
     showVolumeSlider: false,
+    showMobileControls: true, // Initially show controls
   })
 
   const timerRef = useRef<NodeJS.Timeout | null>(null)
@@ -30,6 +35,7 @@ export function useYouTubePlayer(
   const playerReadyRef = useRef(false)
   const playerInitialized = useRef(false)
   const playbackRateMenuRef = useRef<HTMLDivElement>(null)
+  const mobileControlsTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   // ✅ Optimized player initialization
   const initializePlayer = useCallback(() => {
@@ -123,6 +129,7 @@ export function useYouTubePlayer(
         volume: 100,
         isMuted: false,
         showVolumeSlider: false,
+        showMobileControls: true, // Reset to show controls
       })
       try {
         await getYouTubeAPI()
@@ -189,6 +196,98 @@ export function useYouTubePlayer(
 
     return () => clearInterval(timeUpdateInterval)
   }, [updateCurrentTime, playerState.isPlaying])
+
+  // 🎯 Mobile/Desktop controls auto-hide logic
+  useEffect(() => {
+    // Always show controls when completed AND paused (video stopped)
+    if (playerState.completed && !playerState.isPlaying) {
+      setPlayerState(prev => ({ ...prev, showMobileControls: true }))
+      
+      // Clear any existing timeout
+      if (mobileControlsTimeoutRef.current) {
+        clearTimeout(mobileControlsTimeoutRef.current)
+        mobileControlsTimeoutRef.current = null
+      }
+      return
+    }
+
+    // Auto-hide controls when playing (both mobile and desktop)
+    if (playerState.isPlaying) {
+      // Only set timeout if controls are currently visible
+      if (playerState.showMobileControls) {
+        const hideTimeout = setTimeout(() => {
+          setPlayerState(prev => ({ ...prev, showMobileControls: false }))
+        }, 3000) // Hide after 3 seconds of playing
+
+        mobileControlsTimeoutRef.current = hideTimeout
+
+        return () => {
+          clearTimeout(hideTimeout)
+          if (mobileControlsTimeoutRef.current) {
+            clearTimeout(mobileControlsTimeoutRef.current)
+            mobileControlsTimeoutRef.current = null
+          }
+        }
+      }
+    } else {
+      // Show controls when paused
+      setPlayerState(prev => ({ ...prev, showMobileControls: true }))
+      
+      // Clear existing timeout
+      if (mobileControlsTimeoutRef.current) {
+        clearTimeout(mobileControlsTimeoutRef.current)
+        mobileControlsTimeoutRef.current = null
+      }
+    }
+  }, [playerState.isPlaying, playerState.completed, playerState.showMobileControls])
+
+  // 🎯 Handle controls visibility toggle (Mobile: touch, Desktop: hover)
+  const handleMobileControlsToggle = useCallback(() => {
+    // Show controls
+    setPlayerState(prev => ({ ...prev, showMobileControls: true }))
+
+    // Clear existing timeout
+    if (mobileControlsTimeoutRef.current) {
+      clearTimeout(mobileControlsTimeoutRef.current)
+      mobileControlsTimeoutRef.current = null
+    }
+
+    // Don't auto-hide if completed AND paused (video stopped)
+    if (playerState.completed && !playerState.isPlaying) {
+      return
+    }
+
+    // Auto-hide after 3 seconds if playing
+    if (playerState.isPlaying) {
+      mobileControlsTimeoutRef.current = setTimeout(() => {
+        setPlayerState(prev => ({ ...prev, showMobileControls: false }))
+      }, 3000)
+    }
+  }, [playerState.isPlaying, playerState.completed])
+
+  // 🎯 Handle video container hover (for both mobile and desktop)
+  const handleVideoHover = useCallback(() => {
+    // Both mobile and desktop now use same toggle logic
+    handleMobileControlsToggle()
+  }, [handleMobileControlsToggle])
+
+  // 🎯 Handle video container leave (for both mobile and desktop)
+  const handleVideoLeave = useCallback(() => {
+    // Don't auto-hide if completed AND paused (video stopped)
+    if (playerState.completed && !playerState.isPlaying) return
+
+    // Clear any existing timeout
+    if (mobileControlsTimeoutRef.current) {
+      clearTimeout(mobileControlsTimeoutRef.current)
+    }
+
+    // Auto-hide after 3 seconds when leaving video area (if playing)
+    if (playerState.isPlaying) {
+      mobileControlsTimeoutRef.current = setTimeout(() => {
+        setPlayerState(prev => ({ ...prev, showMobileControls: false }))
+      }, 3000)
+    }
+  }, [playerState.isPlaying, playerState.completed])
   // ✅ Completion handling with auto-pause
   useEffect(() => {
     if (playerState.watchTime >= requiredWatchTime && !playerState.completed) {
@@ -399,5 +498,8 @@ export function useYouTubePlayer(
     reloadVideo,
     setShowPlaybackRateMenu,
     setShowVolumeSlider,
+    handleMobileControlsToggle, // Mobile controls toggle
+    handleVideoHover, // Video hover handler
+    handleVideoLeave, // Video leave handler
   }
 }
