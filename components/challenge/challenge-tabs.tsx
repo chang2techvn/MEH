@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback, useMemo } from "react"
+import { useState, useEffect, useCallback, useMemo, useTransition } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import OptimizedChallengeGrid from "@/components/optimized/optimized-challenge-grid"
 import CreateChallengeModal from "@/components/challenge/create-challenge-modal"
@@ -18,15 +18,22 @@ interface ChallengeTabsProps {
 export default function ChallengeTabs({
   searchTerm,
   onSelectedChallengeChange
-}: ChallengeTabsProps) {  const [challenges, setChallenges] = useState<Challenge[]>([])
+}: ChallengeTabsProps) {  
+  const [challenges, setChallenges] = useState<Challenge[]>([])
   const [userChallenges, setUserChallenges] = useState<Challenge[]>([])
   const [activeTab, setActiveTab] = useState("all")
   const [loading, setLoading] = useState(true)
   const [createModalOpen, setCreateModalOpen] = useState(false)
   const { setChallengeMode, setCurrentChallenge } = useChallenge()
   
-  // Debounced search term using hook
-  const debouncedSearchTerm = useDebounce(searchTerm, 300)
+  // Use React 18 useTransition for smoother updates
+  const [isPending, startTransition] = useTransition()
+  
+  // Optimize search term processing
+  const effectiveSearchTerm = useMemo(() => searchTerm.trim(), [searchTerm])
+  
+  // Debounced version for very smooth filtering
+  const debouncedSearchTerm = useDebounce(effectiveSearchTerm, 150) // Faster debounce for responsiveness
 
   // Debounced localStorage save function
   const saveToLocalStorage = useCallback((key: string, data: any) => {
@@ -184,32 +191,63 @@ export default function ChallengeTabs({
   useEffect(() => {
     loadChallenges()
   }, [loadChallenges])
-  // Filter challenges when tab or search term changes - optimized with useMemo
+
+  // Auto-switch to "all" tab when search starts with smooth transition
+  useEffect(() => {
+    if (effectiveSearchTerm && activeTab !== "all") {
+      startTransition(() => {
+        setActiveTab("all")
+      })
+    }
+  }, [effectiveSearchTerm, activeTab])
+
+  // Stable filter function to prevent recreations
+  const filterChallenges = useCallback((
+    allChallenges: Challenge[], 
+    userOnlyChallenges: Challenge[], 
+    searchTerm: string, 
+    tabFilter: string
+  ) => {
+    // Use search term if available
+    if (searchTerm) {
+      const lowerSearchTerm = searchTerm.toLowerCase()
+      return allChallenges.filter(challenge => {
+        const titleMatch = challenge.title.toLowerCase().includes(lowerSearchTerm)
+        const descMatch = challenge.description.toLowerCase().includes(lowerSearchTerm)
+        const topicMatch = challenge.topics?.some(topic => 
+          topic.toLowerCase().includes(lowerSearchTerm)
+        )
+        return titleMatch || descMatch || topicMatch
+      })
+    }
+
+    // No search - filter by tab
+    switch (tabFilter) {
+      case "user":
+        return userOnlyChallenges
+      case "all":
+        return allChallenges
+      case "beginner":
+      case "intermediate":
+      case "advanced":
+        return allChallenges.filter(challenge => challenge.difficulty === tabFilter)
+      default:
+        return allChallenges
+    }
+  }, [])
+  // Optimized filtering with stable dependencies and smooth updates
   const filteredChallenges = useMemo(() => {
-    let filtered: Challenge[] = []
-
-    // Determine which challenges to filter based on active tab
-    if (activeTab === "user") {
-      filtered = userChallenges
-    } else if (activeTab === "all") {
-      filtered = challenges
-    } else {
-      // Filter by difficulty (beginner, intermediate, advanced)
-      filtered = challenges.filter((challenge) => challenge.difficulty === activeTab)
-    }
-
-    // Apply search filter only if debounced search term exists
-    if (debouncedSearchTerm) {
-      const lowerSearchTerm = debouncedSearchTerm.toLowerCase()
-      filtered = filtered.filter(
-        (challenge) =>
-          challenge.title.toLowerCase().includes(lowerSearchTerm) ||
-          challenge.description.toLowerCase().includes(lowerSearchTerm),
-      )
-    }
+    // Use debounced search for smoother filtering
+    const searchTermToUse = debouncedSearchTerm || effectiveSearchTerm
     
-    return filtered
-  }, [challenges, userChallenges, debouncedSearchTerm, activeTab])
+    return filterChallenges(challenges, userChallenges, searchTermToUse, activeTab)
+  }, [challenges, userChallenges, debouncedSearchTerm, effectiveSearchTerm, activeTab, filterChallenges])
+
+  // Stable grid key to prevent unnecessary re-mounts
+  const gridKey = useMemo(() => {
+    const searchKey = debouncedSearchTerm ? `search-${debouncedSearchTerm}` : `tab-${activeTab}`
+    return `${searchKey}-${filteredChallenges.length}`
+  }, [debouncedSearchTerm, activeTab, filteredChallenges.length])
 
   // Handle challenge creation - optimized
   const handleChallengeCreated = useCallback((newChallenge: Challenge) => {
@@ -270,99 +308,155 @@ export default function ChallengeTabs({
   }, [challenges, onSelectedChallengeChange, setChallengeMode, setCurrentChallenge])
 
   return (
-    <>      <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab} className="w-full">
+    <>      
+      <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="all">All</TabsTrigger>
-          <TabsTrigger value="user">Your Challenges</TabsTrigger>
-          <TabsTrigger value="beginner">Beginner</TabsTrigger>
-          <TabsTrigger value="intermediate">Intermediate</TabsTrigger>
-          <TabsTrigger value="advanced">Advanced</TabsTrigger>
-        </TabsList>        <TabsContent value="user" className="mt-6">
-          <div className="mb-4">
+          <TabsTrigger 
+            value="all" 
+            className={`challenge-tab-trigger transition-all duration-200 ${effectiveSearchTerm ? "bg-blue-100 text-blue-800" : ""}`}
+          >
+            All {effectiveSearchTerm && "🔍"}
+          </TabsTrigger>
+          <TabsTrigger value="user" disabled={!!effectiveSearchTerm} className="challenge-tab-trigger">Your Challenges</TabsTrigger>
+          <TabsTrigger value="beginner" disabled={!!effectiveSearchTerm} className="challenge-tab-trigger">Beginner</TabsTrigger>
+          <TabsTrigger value="intermediate" disabled={!!effectiveSearchTerm} className="challenge-tab-trigger">Intermediate</TabsTrigger>
+          <TabsTrigger value="advanced" disabled={!!effectiveSearchTerm} className="challenge-tab-trigger">Advanced</TabsTrigger>
+        </TabsList>        
+        
+        <TabsContent value="user" className="challenge-tab-content mt-6">
+          <div className="mb-4 transition-opacity duration-200" style={{ opacity: isPending ? 0.7 : 1 }}>
             <h3 className="text-lg font-semibold text-foreground">Your Created Challenges</h3>
-            <p className="text-sm text-muted-foreground">Challenges you've created • {userChallenges.length} available</p>
+            <p className="text-sm text-muted-foreground">Challenges you've created • {filteredChallenges.length} available</p>
           </div>
           
-
-          <OptimizedChallengeGrid
-            challenges={userChallenges}
-            onStartChallenge={handleStartChallenge}
-            loading={loading}
-            emptyMessage="You haven't created any challenges yet"
-            emptyAction={() => setCreateModalOpen(true)}
-            emptyActionLabel="Create Your First Challenge"
-            useVirtualScroll={userChallenges.length > 20}
-          />
-
+          <div 
+            key={gridKey}
+            className="challenge-filter-transition transition-all duration-300 ease-in-out"
+            style={{ 
+              opacity: isPending ? 0.8 : 1,
+              transform: isPending ? 'translateY(4px)' : 'translateY(0px)'
+            }}
+          >
+            <OptimizedChallengeGrid
+              challenges={filteredChallenges}
+              onStartChallenge={handleStartChallenge}
+              loading={loading}
+              emptyMessage="You haven't created any challenges yet"
+              emptyAction={() => setCreateModalOpen(true)}
+              emptyActionLabel="Create Your First Challenge"
+              useVirtualScroll={filteredChallenges.length > 20}
+            />
+          </div>
         </TabsContent>          
-        <TabsContent value="all" className="mt-6">
-          <div className="mb-4">
-            <h3 className="text-lg font-semibold text-foreground">All Challenges</h3>
-            <p className="text-sm text-muted-foreground">Auto-generated + User challenges • {challenges.length} total</p>
+        <TabsContent value="all" className="challenge-tab-content mt-6">
+          <div className="mb-4 transition-opacity duration-200" style={{ opacity: isPending ? 0.7 : 1 }}>
+            <h3 className="text-lg font-semibold text-foreground">
+              {effectiveSearchTerm ? `Search Results for "${effectiveSearchTerm}"` : "All Challenges"}
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              {effectiveSearchTerm 
+                ? `Found ${filteredChallenges.length} challenges matching your search`
+                : `Auto-generated + User challenges • ${filteredChallenges.length} total`
+              }
+            </p>
           </div>
           
-
-          <OptimizedChallengeGrid
-            challenges={filteredChallenges}
-            onStartChallenge={handleStartChallenge}
-            loading={loading}
-            emptyMessage="No challenges found matching your criteria"
-            emptyAction={() => setCreateModalOpen(true)}
-            emptyActionLabel="Create a Challenge"
-            useVirtualScroll={filteredChallenges.length > 20}
-            useInfiniteScroll={false}
-          />
-
+          <div 
+            key={gridKey}
+            className="challenge-filter-transition transition-all duration-300 ease-in-out"
+            style={{ 
+              opacity: isPending ? 0.8 : 1,
+              transform: isPending ? 'translateY(4px)' : 'translateY(0px)'
+            }}
+          >
+            <OptimizedChallengeGrid
+              challenges={filteredChallenges}
+              onStartChallenge={handleStartChallenge}
+              loading={loading}
+              emptyMessage={effectiveSearchTerm 
+                ? `No challenges found matching "${effectiveSearchTerm}"`
+                : "No challenges found matching your criteria"
+              }
+              emptyAction={() => setCreateModalOpen(true)}
+              emptyActionLabel="Create a Challenge"
+              useVirtualScroll={false}
+              useInfiniteScroll={false}
+            />
+          </div>
         </TabsContent>
-          <TabsContent value="beginner" className="mt-6">
-          <div className="mb-4">
+        <TabsContent value="beginner" className="challenge-tab-content mt-6">
+          <div className="mb-4 transition-opacity duration-200" style={{ opacity: isPending ? 0.7 : 1 }}>
             <h3 className="text-lg font-semibold text-foreground">Beginner Challenges</h3>
             <p className="text-sm text-muted-foreground">Perfect for starting your English journey • {filteredChallenges.length} available</p>
           </div>
 
-          <OptimizedChallengeGrid
-            challenges={filteredChallenges}
-            onStartChallenge={handleStartChallenge}
-            loading={loading}
-            emptyMessage="No beginner challenges found"
-            emptyAction={() => setCreateModalOpen(true)}
-            emptyActionLabel="Create a Beginner Challenge"
-            useVirtualScroll={filteredChallenges.length > 20}
-          />
-
-        </TabsContent>        
-        <TabsContent value="intermediate" className="mt-6">
-          <div className="mb-4">
+          <div 
+            key={gridKey}
+            className="challenge-filter-transition transition-all duration-300 ease-in-out"
+            style={{ 
+              opacity: isPending ? 0.8 : 1,
+              transform: isPending ? 'translateY(4px)' : 'translateY(0px)'
+            }}
+          >
+            <OptimizedChallengeGrid
+              challenges={filteredChallenges}
+              onStartChallenge={handleStartChallenge}
+              loading={loading}
+              emptyMessage="No beginner challenges found"
+              emptyAction={() => setCreateModalOpen(true)}
+              emptyActionLabel="Create a Beginner Challenge"
+              useVirtualScroll={filteredChallenges.length > 20}
+            />
+          </div>
+        </TabsContent>        <TabsContent value="intermediate" className="challenge-tab-content mt-6">
+          <div className="mb-4 transition-opacity duration-200" style={{ opacity: isPending ? 0.7 : 1 }}>
             <h3 className="text-lg font-semibold text-foreground">Intermediate Challenges</h3>
             <p className="text-sm text-muted-foreground">Level up your skills • {filteredChallenges.length} available</p>
           </div>
 
-          <OptimizedChallengeGrid
-            challenges={filteredChallenges}
-            onStartChallenge={handleStartChallenge}
-            loading={loading}
-            emptyMessage="No intermediate challenges found"
-            emptyAction={() => setCreateModalOpen(true)}
-            emptyActionLabel="Create an Intermediate Challenge"
-            useVirtualScroll={filteredChallenges.length > 20}
-          />
-
+          <div 
+            key={gridKey}
+            className="challenge-filter-transition transition-all duration-300 ease-in-out"
+            style={{ 
+              opacity: isPending ? 0.8 : 1,
+              transform: isPending ? 'translateY(4px)' : 'translateY(0px)'
+            }}
+          >
+            <OptimizedChallengeGrid
+              challenges={filteredChallenges}
+              onStartChallenge={handleStartChallenge}
+              loading={loading}
+              emptyMessage="No intermediate challenges found"
+              emptyAction={() => setCreateModalOpen(true)}
+              emptyActionLabel="Create an Intermediate Challenge"
+              useVirtualScroll={filteredChallenges.length > 20}
+            />
+          </div>
         </TabsContent>
-          <TabsContent value="advanced" className="mt-6">
-          <div className="mb-4">
+        <TabsContent value="advanced" className="challenge-tab-content mt-6">
+          <div className="mb-4 transition-opacity duration-200" style={{ opacity: isPending ? 0.7 : 1 }}>
             <h3 className="text-lg font-semibold text-foreground">Advanced Challenges</h3>
             <p className="text-sm text-muted-foreground">Master-level challenges • {filteredChallenges.length} available</p>
           </div>
-
-          <OptimizedChallengeGrid
-            challenges={filteredChallenges}
-            onStartChallenge={handleStartChallenge}
-            loading={loading}
-            emptyMessage="No advanced challenges found"
-            emptyAction={() => setCreateModalOpen(true)}
-            emptyActionLabel="Create an Advanced Challenge"
-            useVirtualScroll={filteredChallenges.length > 20}
-          />
+          
+          <div 
+            key={gridKey}
+            className="challenge-filter-transition transition-all duration-300 ease-in-out"
+            style={{ 
+              opacity: isPending ? 0.8 : 1,
+              transform: isPending ? 'translateY(4px)' : 'translateY(0px)'
+            }}
+          >
+            <OptimizedChallengeGrid
+              challenges={filteredChallenges}
+              onStartChallenge={handleStartChallenge}
+              loading={loading}
+              emptyMessage="No advanced challenges found"
+              emptyAction={() => setCreateModalOpen(true)}
+              emptyActionLabel="Create an Advanced Challenge"
+              useVirtualScroll={filteredChallenges.length > 20}
+            />
+          </div>
         </TabsContent>
       </Tabs>
 

@@ -67,15 +67,26 @@ export async function createChallenge(
   
   try {
     if (challengeType === 'user_generated') {
+      console.log("🎯 === CREATE USER GENERATED CHALLENGE ===")
+      console.log("📹 Video URL:", options.videoUrl)
+      console.log("👤 User ID:", options.userId)
+      console.log("🎚️ Difficulty:", options.difficulty)
+      
       if (!options.videoUrl || !options.userId) {
+        console.error("❌ Missing required parameters")
         throw new Error("Video URL and User ID are required for user-generated challenges")
       }
       
       // Extract video data from URL
+      console.log("🔍 Extracting video data from URL...")
       const videoData = await extractVideoFromUrl(options.videoUrl)
       if (!videoData) {
-        throw new Error("Could not extract video information from the provided URL")
+        console.error("❌ Could not extract video information")
+        throw new Error("Could not extract video information from the provided URL. This might be due to: 1) Invalid YouTube URL, 2) Video is private/unavailable, 3) API key issues for transcript extraction, or 4) Network connectivity problems.")
       }
+      
+      console.log("✅ Video data extracted successfully")
+      console.log("📝 Video has transcript:", !!videoData.transcript, videoData.transcript?.length || 0, "chars")
       
       // Create user-generated challenge
       const challengeData: ChallengeData = {
@@ -96,13 +107,19 @@ export async function createChallenge(
         date: today
       }
       
+      console.log("💾 Inserting challenge into database...")
       const { data, error } = await supabase
         .from('challenges')
         .insert(challengeData)
         .select()
         .single()
         
-      if (error) throw error
+      if (error) {
+        console.error("❌ Database insert error:", error)
+        throw error
+      }
+      
+      console.log("✅ Challenge saved to database:", data.id)
       return data
       
     } else if (challengeType === 'daily') {
@@ -493,7 +510,7 @@ function extractVideoIds(html: string): string[] {
 }
 
 // Function to get video details
-async function getVideoDetails(videoId: string, minDuration: number, maxDuration: number): Promise<VideoData> {
+async function getVideoDetails(videoId: string, minDuration: number, maxDuration: number, isUserGenerated: boolean = false): Promise<VideoData> {
   try {
     // Fetch video details from YouTube
     const response = await fetch(`https://www.youtube.com/watch?v=${videoId}`, {
@@ -551,11 +568,18 @@ async function getVideoDetails(videoId: string, minDuration: number, maxDuration
       } catch (error) {
         console.error("Error parsing duration:", error)
       }
-    }    // Extract transcript using admin settings for time limit
+    }    // Extract transcript using appropriate time limit based on challenge type
     const videoSettings = await getVideoSettings()
-    const maxWatchTimeSeconds = videoSettings.minWatchTime || 300 // Default 5 minutes
+    let maxWatchTimeSeconds = videoSettings.minWatchTime || 300 // Default 5 minutes
     
-    console.log(`🎬 Extracting transcript with admin time limit: ${maxWatchTimeSeconds} seconds`)
+    // For user-generated challenges, use longer time limit to ensure better transcript extraction
+    if (isUserGenerated) {
+      maxWatchTimeSeconds = Math.min(duration, 300) // Use up to 5 minutes or full video duration
+      console.log(`🎬 User-generated challenge: Using extended time limit: ${maxWatchTimeSeconds} seconds`)
+    } else {
+      console.log(`🎬 Practice challenge: Using admin time limit: ${maxWatchTimeSeconds} seconds`)
+    }
+    
     const transcriptResult = await extractYouTubeTranscriptForDuration(videoId, duration, maxWatchTimeSeconds)
     const transcript = transcriptResult.transcript
 
@@ -848,28 +872,92 @@ export async function resetCachedVideo(): Promise<void> {
 // Thêm hàm để trích xuất video từ URL YouTube
 export async function extractVideoFromUrl(url: string): Promise<VideoData | null> {
   try {
+    console.log("🎯 === EXTRACT VIDEO FROM URL ===")
+    console.log("📹 Input URL:", url)
+    
     // Trích xuất video ID từ URL
     const videoId = extractYoutubeId(url)
 
     if (!videoId) {
+      console.error("❌ Invalid YouTube URL - no video ID extracted")
       throw new Error("Invalid YouTube URL")
     }
 
-    console.log("Extracted video ID:", videoId)
+    console.log("✅ Extracted video ID:", videoId)
 
-    // Lấy thông tin video
-    const videoDetails = await getVideoDetails(videoId, 0, 9999)
+    // Lấy thông tin video với transcript
+    console.log("🔍 Getting video details with transcript...")
+    const videoDetails = await getVideoDetails(videoId, 0, 9999, true) // true = isUserGenerated
+    
+    console.log("✅ Video details extracted:")
+    console.log("- Title:", videoDetails.title)
+    console.log("- Duration:", videoDetails.duration, "seconds")
+    console.log("- Transcript length:", videoDetails.transcript?.length || 0, "characters")
+    console.log("- Topics:", videoDetails.topics?.join(", ") || "None")
+    
     return videoDetails
   } catch (error) {
-    console.error("Error extracting video from URL:", error)
+    console.error("❌ Error extracting video from URL:", error)
     return null
   }
 }
 
-// Hàm trích xuất YouTube ID từ URL
+// Hàm trích xuất YouTube ID từ URL với hỗ trợ nhiều định dạng
 function extractYoutubeId(url: string): string | null {
-  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/
-  const match = url.match(regExp)
-
-  return match && match[2].length === 11 ? match[2] : null
+  console.log("🔍 Extracting YouTube ID from URL:", url)
+  
+  // Normalize URL
+  const normalizedUrl = url.trim()
+  
+  try {
+    // Handle youtu.be short URLs (with or without query parameters)
+    if (normalizedUrl.includes('youtu.be/')) {
+      const parts = normalizedUrl.split('youtu.be/')[1]
+      if (parts) {
+        // Extract video ID before any query parameters
+        const videoId = parts.split(/[?&#]/)[0]
+        if (videoId && videoId.length === 11) {
+          console.log("✅ Extracted video ID from youtu.be:", videoId)
+          return videoId
+        }
+      }
+    }
+    
+    // Handle regular youtube.com URLs
+    if (normalizedUrl.includes('youtube.com/watch')) {
+      const urlObj = new URL(normalizedUrl)
+      const videoId = urlObj.searchParams.get('v')
+      if (videoId && videoId.length === 11) {
+        console.log("✅ Extracted video ID from youtube.com:", videoId)
+        return videoId
+      }
+    }
+    
+    // Handle embed URLs
+    if (normalizedUrl.includes('youtube.com/embed/')) {
+      const parts = normalizedUrl.split('youtube.com/embed/')[1]
+      if (parts) {
+        const videoId = parts.split(/[?&#]/)[0]
+        if (videoId && videoId.length === 11) {
+          console.log("✅ Extracted video ID from embed:", videoId)
+          return videoId
+        }
+      }
+    }
+    
+    // Fallback to regex pattern
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/
+    const match = normalizedUrl.match(regExp)
+    
+    if (match && match[2] && match[2].length === 11) {
+      console.log("✅ Extracted video ID from regex fallback:", match[2])
+      return match[2]
+    }
+    
+  } catch (error) {
+    console.error("❌ Error parsing URL:", error)
+  }
+  
+  console.error("❌ Could not extract valid YouTube video ID from URL:", normalizedUrl)
+  return null
 }

@@ -91,13 +91,10 @@ async function fetchUserProgressData(userId: string) {
     throw userError
   }
 
-  // Get challenge submissions to count different types
+  // Fetch challenge submissions and then lookup their types
   const { data: submissions, error: submissionsError } = await supabase
     .from('challenge_submissions')
-    .select(`
-      challenge_id,
-      challenges(challenge_type)
-    `)
+    .select('challenge_id')
     .eq('user_id', userId)
     .eq('is_correct', true)
 
@@ -105,17 +102,35 @@ async function fetchUserProgressData(userId: string) {
     throw submissionsError
   }
 
-  // Count submissions by challenge_type
-  const videoSubmissions = submissions?.filter((s: any) => 
-    s.challenges?.challenge_type === 'video' || s.challenges?.challenge_type === 'speaking'
-  ).length || 0
-  
-  const writingSubmissions = submissions?.filter((s: any) => 
-    s.challenges?.challenge_type === 'writing' || s.challenges?.challenge_type === 'text'
-  ).length || 0
+  // Map submissions safely and fetch corresponding challenge types
+  const subs = submissions || []
+  const challengeIds = subs.map((s: any) => s.challenge_id)
+  let submissionsWithType: Array<{ challenge_id: string; challenge_type: string }> = []
+  if (challengeIds.length > 0) {
+    const { data: challengesData, error: challengesError } = await supabase
+      .from('challenges')
+      .select('id, challenge_type')
+      .in('id', challengeIds)
+    if (challengesError && challengesError.code !== 'PGRST116') {
+      throw challengesError
+    }
+    const typeMap: Record<string, string> = {};
+    (challengesData || []).forEach((c: any) => { typeMap[c.id] = c.challenge_type })
+    submissionsWithType = subs.map((s: any) => ({
+      challenge_id: s.challenge_id,
+      challenge_type: typeMap[s.challenge_id] || ''
+    }))
+  }
 
-  const speakingSubmissions = submissions?.filter((s: any) => 
-    s.challenges?.challenge_type === 'speaking' || s.challenges?.challenge_type === 'pronunciation'
+  // Count submissions by challenge_type
+  const videoSubmissions = submissionsWithType.filter(s =>
+    s.challenge_type === 'video' || s.challenge_type === 'speaking'
+  ).length || 0
+  const writingSubmissions = submissionsWithType.filter(s =>
+    s.challenge_type === 'writing' || s.challenge_type === 'text'
+  ).length || 0
+  const speakingSubmissions = submissionsWithType.filter(s =>
+    s.challenge_type === 'speaking' || s.challenge_type === 'pronunciation'
   ).length || 0
 
   // Get total available challenges by challenge_type

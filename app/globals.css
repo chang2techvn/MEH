@@ -399,6 +399,71 @@ button:active {
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
+  
+  /* Smooth grid animations for challenge filtering */
+  .challenge-grid-container {
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    perspective: 1000px;
+    will-change: transform, opacity;
+  }
+  
+  .challenge-grid-item {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transform: translateZ(0);
+    backface-visibility: hidden;
+  }
+  
+  .challenge-grid-item:hover {
+    transform: translateY(-2px) translateZ(0);
+  }
+  
+  /* Prevent layout shift during filtering */
+  .challenge-tab-content {
+    min-height: 400px;
+    contain: layout;
+  }
+  
+  /* Smooth tab transitions */
+  .challenge-tab-trigger {
+    transition: all 0.2s ease-in-out;
+  }
+  
+  /* Smooth grid animations for challenge filtering */
+  .challenge-grid-container {
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    perspective: 1000px;
+    will-change: transform, opacity;
+  }
+  
+  .challenge-grid-item {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transform: translateZ(0);
+    backface-visibility: hidden;
+  }
+  
+  .challenge-grid-item:hover {
+    transform: translateY(-2px) translateZ(0);
+  }
+  
+  /* Prevent layout shift during filtering */
+  .challenge-tab-content {
+    min-height: 400px;
+    contain: layout;
+  }
+  
+  /* Smooth tab transitions */
+  .challenge-tab-trigger {
+    transition: all 0.2s ease-in-out;
+  }
+  
+  /* GPU acceleration for better performance */
+  .challenge-filter-transition {
+    transform: translate3d(0, 0, 0);
+    backface-visibility: hidden;
+    perspective: 1000px;
+  }
 
   .line-clamp-4 {
     display: -webkit-box;

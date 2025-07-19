@@ -64,9 +64,9 @@ const ChallengeGrid = memo(function ChallengeGrid({
   onStartChallenge: (id: string) => void 
 }) {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 w-full">
+    <div className="challenge-grid-container grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 w-full">
       {challenges.map((challenge, index) => (
-        <div key={challenge.id} className="h-full">
+        <div key={challenge.id} className="challenge-grid-item h-full">
           <LazyComponent
             threshold={0.1}
             rootMargin="200px"

@@ -31,14 +31,29 @@ export async function extractYouTubeTranscriptForDuration(
       console.log(`✅ Successfully extracted LIMITED transcript for video ${videoId}`);
       console.log(`📊 Limited transcript length: ${transcriptResult.transcript.length} characters`);
       
-      return {
-        videoId,
-        title: `Video ${videoId}`,
-        duration: `${maxWatchTimeSeconds}s`, // Duration as limited time
-        transcript: transcriptResult.transcript,
-        transcriptItems: transcriptResult.items || [],
-        hasRealTranscript: true
-      };
+      // More lenient validation for multilingual content
+      const minLength = maxWatchTimeSeconds >= 60 ? 50 : 20; // Lower threshold for shorter videos
+      
+      if (transcriptResult.transcript.length >= minLength) {
+        return {
+          videoId,
+          title: `Video ${videoId}`,
+          duration: `${maxWatchTimeSeconds}s`, // Duration as limited time
+          transcript: transcriptResult.transcript,
+          transcriptItems: transcriptResult.items || [],
+          hasRealTranscript: true
+        };
+      } else {
+        console.log(`⚠️ Transcript too short (${transcriptResult.transcript.length} chars), but attempting to use it anyway for user-generated content`);
+        return {
+          videoId,
+          title: `Video ${videoId}`,
+          duration: `${maxWatchTimeSeconds}s`,
+          transcript: transcriptResult.transcript,
+          transcriptItems: transcriptResult.items || [],
+          hasRealTranscript: true
+        };
+      }
     } else {
       console.log(`❌ No real limited transcript found for video ${videoId}`);
       throw new Error(`Failed to extract real transcript for video ${videoId}`);
@@ -59,38 +74,72 @@ async function fetchRealTranscriptWithApiKeyRotation(videoId: string, maxWatchTi
   transcript: string;
   items: TranscriptItem[];
 }> {
-  const maxRetries = 5;
+  const maxRetries = 3; // Giảm từ 5 xuống 3 để nhanh hơn
   let lastError: unknown = null;
   
+  console.log(`🚀 Starting LIMITED transcript extraction for ${videoId} (max ${maxWatchTimeSeconds}s, ${maxRetries} max retries)`)
+  
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    const attemptStart = Date.now()
+    
     try {
-      console.log(`🤖 Using Gemini AI for LIMITED transcript extraction (attempt ${attempt}/${maxRetries}) for video: ${videoId} (max ${maxWatchTimeSeconds}s)`);
+      console.log(`🤖 Attempt ${attempt}/${maxRetries}: Getting API key...`);
       
       // Get fresh API key for each attempt
       const activeKey = await getActiveApiKey('gemini');
       
+      console.log(`🔑 Using API key: ${activeKey.key_name} (attempt ${attempt}/${maxRetries})`);
+      
       try {
         // Try to get transcript with this API key
+        console.log(`📡 Sending request to Gemini AI...`);
         const geminiResult = await tryGeminiTranscriptWithKey(videoId, maxWatchTimeSeconds, activeKey.decrypted_key);
         
-        if (geminiResult.success && geminiResult.transcript && geminiResult.transcript.length > 100) {
-          console.log(`✅ Limited Gemini transcript received: ${geminiResult.transcript.length} characters`);
+        const attemptTime = Date.now() - attemptStart
+        console.log(`⏱️ Attempt ${attempt} completed in ${attemptTime}ms`);
+        
+        if (geminiResult.success && geminiResult.transcript && geminiResult.transcript.length > 0) {
+          // More lenient validation - accept shorter content for multilingual videos
+          const minLength = maxWatchTimeSeconds >= 60 ? 50 : 20; // Lower threshold for shorter videos
           
-          // Increment usage for successful API call
-          await incrementUsage(activeKey.id);
-          
-          return {
-            success: true,
-            transcript: geminiResult.transcript,
-            items: [] // Gemini doesn't provide timing info
-          };
+          if (geminiResult.transcript.length >= minLength) {
+            console.log(`✅ SUCCESS: Limited Gemini transcript received: ${geminiResult.transcript.length} characters`);
+            
+            // Increment usage for successful API call
+            await incrementUsage(activeKey.id);
+            
+            return {
+              success: true,
+              transcript: geminiResult.transcript,
+              items: [] // Gemini doesn't provide timing info
+            };
+          } else {
+            console.log(`⚠️ Short transcript (${geminiResult.transcript.length} chars) but may be valid multilingual content`);
+            
+            // For very short videos or multilingual content, accept even shorter transcripts
+            if (maxWatchTimeSeconds <= 30 || geminiResult.transcript.trim().length >= 10) {
+              console.log(`✅ ACCEPTING short transcript for brief video or multilingual content`);
+              
+              await incrementUsage(activeKey.id);
+              
+              return {
+                success: true,
+                transcript: geminiResult.transcript,
+                items: []
+              };
+            } else {
+              console.log(`❌ Attempt ${attempt} failed: Transcript too short (${geminiResult.transcript?.length || 0} chars)`);
+              lastError = new Error(`Transcript content too short: ${geminiResult.transcript?.length || 0} characters`);
+            }
+          }
         } else {
-          console.log(`❌ Gemini AI failed to extract transcript for video: ${videoId} (attempt ${attempt})`);
-          lastError = new Error(`Insufficient transcript content received`);
+          console.log(`❌ Attempt ${attempt} failed: No transcript content received`);
+          lastError = new Error(`No transcript content received`);
         }
         
       } catch (apiError: unknown) {
-        console.error(`❌ API error on attempt ${attempt}:`, apiError);
+        const attemptTime = Date.now() - attemptStart
+        console.error(`❌ API error on attempt ${attempt} (${attemptTime}ms):`, apiError);
         lastError = apiError;
         
         const errorMessage = apiError instanceof Error ? apiError.message : String(apiError);
@@ -111,20 +160,21 @@ async function fetchRealTranscriptWithApiKeyRotation(videoId: string, maxWatchTi
           continue;
         }
         
-        // For non-API key errors, wait before retry
+        // For non-API key errors, wait before retry (reduced delay)
         if (attempt < maxRetries) {
-          const delay = Math.min(1000 * Math.pow(2, attempt - 1), 10000);
+          const delay = Math.min(500 * attempt, 2000); // Giảm delay từ exponential xuống linear, max 2s
           console.log(`⏳ Waiting ${delay}ms before retry...`);
           await new Promise(resolve => setTimeout(resolve, delay));
         }
       }
       
     } catch (keyError) {
-      console.error(`❌ Failed to get API key on attempt ${attempt}:`, keyError);
+      const attemptTime = Date.now() - attemptStart
+      console.error(`❌ Failed to get API key on attempt ${attempt} (${attemptTime}ms):`, keyError);
       lastError = keyError;
       
       if (attempt < maxRetries) {
-        const delay = 2000;
+        const delay = 1000; // Giảm từ 2000ms xuống 1000ms
         console.log(`⏳ Waiting ${delay}ms before retry...`);
         await new Promise(resolve => setTimeout(resolve, delay));
       }
@@ -144,12 +194,15 @@ async function tryGeminiTranscriptWithKey(videoId: string, maxWatchTimeSeconds: 
   transcript: string;
   items: TranscriptItem[];
 }> {
+  const requestStart = Date.now()
+  
   try {
     if (!apiKey) {
       console.log(`❌ No Gemini API key provided`);
       return { success: false, transcript: '', items: [] };
     }
     
+    console.log(`🤖 Initializing Gemini AI client...`);
     // Initialize Gemini AI with specific API key
     const genAI = new GoogleGenerativeAI(apiKey);
     
@@ -158,29 +211,30 @@ async function tryGeminiTranscriptWithKey(videoId: string, maxWatchTimeSeconds: 
       model: "gemini-2.5-flash",
       generationConfig: {
         temperature: 0.1, // Low temperature for more accurate transcription
-        maxOutputTokens: 8192,
+        maxOutputTokens: 4096, // Giảm từ 8192 để nhanh hơn
       }
     });
     
     // Use YouTube URL directly with fileData as per documentation
     const youtubeUrl = `https://www.youtube.com/watch?v=${videoId}`;
     
-    console.log(`🤖 Requesting LIMITED transcript from Gemini for: ${youtubeUrl} (${maxWatchTimeSeconds}s)`);
+    console.log(`📡 Requesting LIMITED transcript from Gemini for: ${youtubeUrl} (${maxWatchTimeSeconds}s)`);
     
-    // Create content using the proper format with time limit
-    const prompt = `Please transcribe ONLY the first ${maxWatchTimeSeconds} seconds of this YouTube video.
+    // Tối ưu prompt để ngắn gọn hơn
+    const prompt = `Transcribe ONLY the first ${maxWatchTimeSeconds} seconds of this YouTube video.
 
-IMPORTANT REQUIREMENTS:
-- Extract spoken words from ONLY the first ${maxWatchTimeSeconds} seconds (${Math.floor(maxWatchTimeSeconds/60)} minutes ${maxWatchTimeSeconds%60} seconds)
-- Do NOT transcribe beyond ${maxWatchTimeSeconds} seconds
-- Provide the transcript exactly as spoken within this time limit
-- Format as continuous paragraphs with proper punctuation
-- Do not summarize, do not add commentary, just transcribe what is actually spoken in the first ${maxWatchTimeSeconds} seconds
+Requirements:
+- Extract spoken words from ONLY the first ${maxWatchTimeSeconds} seconds
+- Provide exact transcript as spoken
+- Format with proper punctuation
+- Do not summarize or add commentary
 
 Video URL: ${youtubeUrl}
-Time limit: First ${maxWatchTimeSeconds} seconds only`;
+Time limit: ${maxWatchTimeSeconds} seconds`;
     
-    console.log(`🤖 Sending LIMITED video transcription request to Gemini AI...`);
+    const requestSendTime = Date.now()
+    console.log(`📤 Sending request to Gemini API... (prep time: ${requestSendTime - requestStart}ms)`);
+    
     const result = await model.generateContent([
       {
         fileData: {
@@ -191,13 +245,17 @@ Time limit: First ${maxWatchTimeSeconds} seconds only`;
       prompt
     ]);
     
+    const responseTime = Date.now()
+    console.log(`📥 Gemini API response received (API time: ${responseTime - requestSendTime}ms)`);
+    
     const response = await result.response;
     const text = response.text();
     
-    console.log(`🤖 Gemini response received: ${text.length} characters`);
-    console.log(`🤖 Preview: "${text.substring(0, 200)}..."`);
+    const totalTime = Date.now() - requestStart
+    console.log(`🎯 Gemini response processed: ${text.length} characters (total time: ${totalTime}ms)`);
+    console.log(`📄 Preview: "${text.substring(0, 150)}..."`);
 
-    // Check if Gemini couldn't access the video
+    // Check if Gemini couldn't access the video - be more lenient with length requirements
     if (text.includes('CANNOT_ACCESS_VIDEO') || 
         text.includes('cannot access') || 
         text.includes('unable to access') ||
@@ -205,9 +263,14 @@ Time limit: First ${maxWatchTimeSeconds} seconds only`;
         text.includes('I don\'t have') ||
         text.includes('I can\'t access') ||
         text.includes('I\'m unable to') ||
-        text.includes('I am unable to') ||
-        text.length < 100) {
-      console.log(`❌ Gemini cannot access this YouTube video or provided insufficient content`);
+        text.includes('I am unable to')) {
+      console.log(`❌ Gemini cannot access this YouTube video`);
+      return { success: false, transcript: '', items: [] };
+    }
+    
+    // More lenient length check - some videos may have brief content
+    if (text.length < 10) {
+      console.log(`❌ Response too short: ${text.length} characters`);
       return { success: false, transcript: '', items: [] };
     }
 
@@ -223,22 +286,27 @@ Time limit: First ${maxWatchTimeSeconds} seconds only`;
       .replace(/\s+/g, ' ') // Normalize whitespace
       .trim();
 
-    // Validate we have substantial, real content
-    if (cleanTranscript.length > 100 && !cleanTranscript.toLowerCase().includes('i cannot') && !cleanTranscript.toLowerCase().includes('unable to access')) {
+    // Validate we have meaningful content - more lenient for multilingual videos
+    const minLength = maxWatchTimeSeconds >= 60 ? 30 : 15; // Lower threshold
+    
+    if (cleanTranscript.length >= minLength && 
+        !cleanTranscript.toLowerCase().includes('i cannot') && 
+        !cleanTranscript.toLowerCase().includes('unable to access')) {
       
       // Create transcript items by splitting into meaningful chunks (sentences/phrases)
       const sentences = cleanTranscript
         .split(/(?<=[.!?])\s+/)
         .filter((s: string) => s.trim().length > 0);
       
+      const avgDuration = Math.min(6, maxWatchTimeSeconds / Math.max(sentences.length, 1)); // Giới hạn 6s/câu
+      
       const items: TranscriptItem[] = sentences.map((sentence: string, index: number) => ({
         text: sentence.trim(),
-        duration: Math.max(2, Math.min(8, sentence.length / 15)), // Dynamic duration based on length
-        offset: index * 4 // Approximate timing
+        duration: Math.max(1.5, Math.min(avgDuration, sentence.length / 12)), // Tối ưu duration
+        offset: index * avgDuration // Timing tốt hơn
       }));
 
-      console.log(`✅ Successfully extracted REAL transcript from Gemini!`);
-      console.log(`📊 Content: ${cleanTranscript.length} chars, ${items.length} segments`);
+      console.log(`✅ Gemini success: ${cleanTranscript.length} chars, ${items.length} segments (${totalTime}ms)`);
       
       return {
         success: true,
@@ -247,12 +315,13 @@ Time limit: First ${maxWatchTimeSeconds} seconds only`;
       };
     }
 
-    console.log(`❌ Gemini transcript validation failed - length: ${cleanTranscript.length}`);
+    console.log(`❌ Gemini transcript validation failed - length: ${cleanTranscript.length} (${totalTime}ms)`);
     return { success: false, transcript: '', items: [] };
     
   } catch (error: unknown) {
+    const errorTime = Date.now() - requestStart
     const errorMessage = error instanceof Error ? error.message : String(error);
-    console.log(`❌ Gemini AI transcription error:`, errorMessage);
+    console.log(`❌ Gemini API error (${errorTime}ms):`, errorMessage.substring(0, 100));
     throw error; // Re-throw to allow retry logic to handle API key rotation
   }
 }

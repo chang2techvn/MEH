@@ -46,6 +46,11 @@ export default function VirtualScroll<T>({
 
   // Handle scroll events
   const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    // Add null check to prevent errors during unmounting or edge cases
+    if (!e.currentTarget) {
+      return
+    }
+    
     const newScrollTop = e.currentTarget.scrollTop
     setScrollTop(newScrollTop)
     onScroll?.(newScrollTop)
@@ -65,6 +70,11 @@ export default function VirtualScroll<T>({
     (() => {
       let timeoutId: NodeJS.Timeout | null = null
       return (e: React.UIEvent<HTMLDivElement>) => {
+        // Add safety check to prevent errors during unmounting
+        if (!e.currentTarget) {
+          return
+        }
+        
         if (timeoutId) clearTimeout(timeoutId)
         timeoutId = setTimeout(() => handleScroll(e), 16) // ~60fps
       }
