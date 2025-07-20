@@ -20,6 +20,7 @@ interface MainHeaderProps {
 export default function MainHeader({ mobileMenuOpen, setMobileMenuOpen }: MainHeaderProps) {
   const [scrolled, setScrolled] = useState(false)
   const [notificationsOpen, setNotificationsOpen] = useState(false)
+  const [showMenuIcon, setShowMenuIcon] = useState(false)
 
   useEffect(() => {
     const handleScroll = () => {
@@ -34,6 +35,15 @@ export default function MainHeader({ mobileMenuOpen, setMobileMenuOpen }: MainHe
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
 
+  // Mobile logo animation effect - switch between logo and menu icon every 1.5s
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setShowMenuIcon(prev => !prev)
+    }, 1500)
+
+    return () => clearInterval(interval)
+  }, [])
+
   return (
     <TooltipProvider>
       <header
@@ -43,7 +53,43 @@ export default function MainHeader({ mobileMenuOpen, setMobileMenuOpen }: MainHe
       >
         <div className="w-full max-w-none px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 flex h-20 items-center justify-between">
           <div className="flex items-center gap-3">
-            <Link href="/" prefetch={true} className="flex items-center gap-3">
+            {/* Mobile: Animated logo/menu combo */}
+            <div className="md:hidden">
+              <motion.button
+                onClick={() => setMobileMenuOpen(true)}
+                className="flex items-center p-2 rounded-lg transition-colors hover:bg-white/10 dark:hover:bg-gray-800/10"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <motion.div
+                  className="relative"
+                  animate={{ 
+                    rotate: showMenuIcon ? [0, 180] : [180, 0],
+                    scale: showMenuIcon ? [1, 0.8, 1] : [1, 0.8, 1]
+                  }}
+                  transition={{ duration: 0.5, ease: "easeInOut" }}
+                >
+                  <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-neo-mint to-purist-blue blur-sm opacity-70"></div>
+                  <motion.div
+                    animate={{ opacity: showMenuIcon ? 0 : 1 }}
+                    transition={{ duration: 0.3 }}
+                    className="relative"
+                  >
+                    <BookOpen className="relative h-6 w-6 text-neo-mint dark:text-purist-blue" />
+                  </motion.div>
+                  <motion.div
+                    animate={{ opacity: showMenuIcon ? 1 : 0 }}
+                    transition={{ duration: 0.3 }}
+                    className="absolute inset-0 flex items-center justify-center"
+                  >
+                    <Menu className="h-6 w-6 text-neo-mint dark:text-purist-blue" />
+                  </motion.div>
+                </motion.div>
+              </motion.button>
+            </div>
+
+            {/* Desktop: Static logo link */}
+            <Link href="/" prefetch={true} className="hidden md:flex items-center gap-3">
               <motion.div
                 initial={{ rotate: 0 }}
                 animate={{ rotate: [0, 10, -10, 0] }}
@@ -63,11 +109,6 @@ export default function MainHeader({ mobileMenuOpen, setMobileMenuOpen }: MainHe
               </motion.span>
             </Link>
           </div>
-
-          <Button variant="ghost" size="icon" className="md:hidden relative" onClick={() => setMobileMenuOpen(true)}>
-            <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-neo-mint to-purist-blue blur-sm opacity-0 group-hover:opacity-70 transition-opacity"></div>
-            <Menu className="h-6 w-6" />
-          </Button>
 
           <nav className="hidden md:flex items-center gap-6 lg:gap-8 xl:gap-12 2xl:gap-16">
             <Link

@@ -126,32 +126,32 @@ export default function RegisterPage() {
       <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full bg-mellow-yellow/5 dark:bg-mellow-yellow/5 blur-3xl -z-10 animate-blob animation-delay-4000"></div>
 
       {/* Logo and back link */}
-      <div className="container flex justify-between items-center py-8">
+      <div className="container flex justify-between items-center py-4 sm:py-8 px-4 sm:px-6">
         <Link href="/" className="flex items-center gap-2">
           <div className="relative">
             <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-neo-mint to-purist-blue blur-sm opacity-70"></div>
-            <BookOpen className="relative h-6 w-6 text-neo-mint dark:text-purist-blue" />
+            <BookOpen className="relative h-5 w-5 sm:h-6 sm:w-6 text-neo-mint dark:text-purist-blue" />
           </div>
-          <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-neo-mint to-purist-blue">
+          <span className="text-lg sm:text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-neo-mint to-purist-blue">
             EnglishMastery
           </span>
         </Link>
-        <Link href="/" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+        <Link href="/" className="text-xs sm:text-sm text-muted-foreground hover:text-foreground transition-colors">
           Back to Home
         </Link>
       </div>
 
-      <div className="flex-1 flex items-center justify-center px-4 py-12">
+      <div className="flex-1 flex items-center justify-center px-4 sm:px-6 py-8 sm:py-12">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="w-full max-w-md"
+          className="w-full max-w-sm sm:max-w-md"
         >
-          <div className="neo-card overflow-hidden border-none bg-white/40 dark:bg-gray-900/40 backdrop-blur-xl shadow-neo rounded-2xl p-8">
-            <div className="text-center mb-8">
-              <h1 className="text-3xl font-bold mb-2">Create Account</h1>
-              <p className="text-muted-foreground">Join our community of English learners</p>
+          <div className="neo-card overflow-hidden border-none bg-white/40 dark:bg-gray-900/40 backdrop-blur-xl shadow-neo rounded-2xl p-6 sm:p-8">
+            <div className="text-center mb-6 sm:mb-8">
+              <h1 className="text-2xl sm:text-3xl font-bold mb-2">Create Account</h1>
+              <p className="text-sm sm:text-base text-muted-foreground">Join our community of English learners</p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">

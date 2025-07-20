@@ -77,6 +77,9 @@ export async function createChallenge(
         throw new Error("Video URL and User ID are required for user-generated challenges")
       }
       
+      // Set difficulty level globally so getVideoDetails can access it for transcript duration
+      (globalThis as any).currentChallengeDifficulty = options.difficulty || 'intermediate'
+      
       // Extract video data from URL
       console.log("🔍 Extracting video data from URL...")
       const videoData = await extractVideoFromUrl(options.videoUrl)
@@ -85,8 +88,28 @@ export async function createChallenge(
         throw new Error("Could not extract video information from the provided URL. This might be due to: 1) Invalid YouTube URL, 2) Video is private/unavailable, 3) API key issues for transcript extraction, or 4) Network connectivity problems.")
       }
       
+      // Clean up global variable
+      delete (globalThis as any).currentChallengeDifficulty
+      
       console.log("✅ Video data extracted successfully")
       console.log("📝 Video has transcript:", !!videoData.transcript, videoData.transcript?.length || 0, "chars")
+      
+      // Calculate transcript duration based on difficulty level
+      const difficulty = options.difficulty || 'intermediate'
+      let transcriptDuration: number
+      
+      if (difficulty === 'beginner') {
+        transcriptDuration = Math.min(videoData.duration, 120) // 2 minutes for beginners
+      } else if (difficulty === 'intermediate') {
+        transcriptDuration = Math.min(videoData.duration, 180) // 3 minutes for intermediate
+      } else if (difficulty === 'advanced') {
+        transcriptDuration = Math.min(videoData.duration, 300) // 5 minutes for advanced
+      } else {
+        transcriptDuration = Math.min(videoData.duration, 180) // Default to intermediate
+      }
+      
+      console.log(`🎯 Challenge duration for ${difficulty} level: ${transcriptDuration} seconds (transcript time)`)
+      console.log(`📹 Original video duration: ${videoData.duration} seconds`)
       
       // Create user-generated challenge
       const challengeData: ChallengeData = {
@@ -95,7 +118,7 @@ export async function createChallenge(
         video_url: videoData.videoUrl,
         thumbnail_url: videoData.thumbnailUrl,
         embed_url: videoData.embedUrl,
-        duration: videoData.duration,
+        duration: transcriptDuration, // Use transcript duration instead of full video duration
         topics: videoData.topics || [],
         transcript: videoData.transcript,
         challenge_type: 'user_generated',
@@ -568,14 +591,32 @@ async function getVideoDetails(videoId: string, minDuration: number, maxDuration
       } catch (error) {
         console.error("Error parsing duration:", error)
       }
-    }    // Extract transcript using appropriate time limit based on challenge type
+    }    
+    
+    // Extract transcript using appropriate time limit based on challenge type and difficulty
     const videoSettings = await getVideoSettings()
     let maxWatchTimeSeconds = videoSettings.minWatchTime || 300 // Default 5 minutes
     
-    // For user-generated challenges, use longer time limit to ensure better transcript extraction
+    // For user-generated challenges, adjust time limit based on difficulty level
     if (isUserGenerated) {
-      maxWatchTimeSeconds = Math.min(duration, 300) // Use up to 5 minutes or full video duration
-      console.log(`🎬 User-generated challenge: Using extended time limit: ${maxWatchTimeSeconds} seconds`)
+      // Get difficulty from challenge options (passed through from createChallenge)
+      const difficulty = (globalThis as any).currentChallengeDifficulty || 'intermediate'
+      
+      // Adjust transcript duration based on difficulty level
+      if (difficulty === 'beginner') {
+        maxWatchTimeSeconds = Math.min(duration, 120) // 2 minutes for beginners
+        console.log(`🎬 User-generated BEGINNER challenge: Using 2-minute time limit: ${maxWatchTimeSeconds} seconds`)
+      } else if (difficulty === 'intermediate') {
+        maxWatchTimeSeconds = Math.min(duration, 180) // 3 minutes for intermediate
+        console.log(`🎬 User-generated INTERMEDIATE challenge: Using 3-minute time limit: ${maxWatchTimeSeconds} seconds`)
+      } else if (difficulty === 'advanced') {
+        maxWatchTimeSeconds = Math.min(duration, 300) // 5 minutes for advanced
+        console.log(`🎬 User-generated ADVANCED challenge: Using 5-minute time limit: ${maxWatchTimeSeconds} seconds`)
+      } else {
+        // Fallback to intermediate
+        maxWatchTimeSeconds = Math.min(duration, 180)
+        console.log(`🎬 User-generated challenge (fallback): Using 3-minute time limit: ${maxWatchTimeSeconds} seconds`)
+      }
     } else {
       console.log(`🎬 Practice challenge: Using admin time limit: ${maxWatchTimeSeconds} seconds`)
     }

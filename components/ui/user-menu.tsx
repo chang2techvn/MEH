@@ -38,19 +38,34 @@ export default function UserMenu() {
   if (!isAuthenticated || !user) {
     return (
       <div className="flex gap-2">
-        <Button
-          size="sm"
-          onClick={handleLogin}
-          className="bg-white/20 dark:bg-gray-800/20 backdrop-blur-sm border border-input transition-colors text-black dark:text-white"        >
-          Sign In
-        </Button>
-        <Button
-          size="sm"
-          onClick={handleRegister}
-          className="bg-gradient-to-r from-neo-mint to-purist-blue hover:from-neo-mint/90 hover:to-purist-blue/90 text-white border-0"
-        >
-          Sign Up
-        </Button>
+        {/* Desktop: Show both Sign In and Sign Up */}
+        <div className="hidden md:flex gap-2">
+          <Button
+            size="sm"
+            onClick={handleLogin}
+            className="bg-white/20 dark:bg-gray-800/20 backdrop-blur-sm border border-input transition-colors text-black dark:text-white"
+          >
+            Sign In
+          </Button>
+          <Button
+            size="sm"
+            onClick={handleRegister}
+            className="bg-gradient-to-r from-neo-mint to-purist-blue hover:from-neo-mint/90 hover:to-purist-blue/90 text-white border-0"
+          >
+            Sign Up
+          </Button>
+        </div>
+
+        {/* Mobile: Show only Sign In button with gradient style */}
+        <div className="md:hidden">
+          <Button
+            size="sm"
+            onClick={handleLogin}
+            className="bg-gradient-to-r from-neo-mint to-purist-blue hover:from-neo-mint/90 hover:to-purist-blue/90 text-white border-0"
+          >
+            Sign In
+          </Button>
+        </div>
       </div>
     )
   }

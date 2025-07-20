@@ -1,12 +1,30 @@
 "use client"
 
-import React, { memo, useCallback, useMemo } from "react"
+import React, { memo, useCallback, useMemo, useState } from "react"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { BookOpen, Clock } from "lucide-react"
+import { BookOpen, Clock, Trash2, MoreVertical } from "lucide-react"
 import { getDifficultyBadgeColor, getDifficultyDisplayName, getDifficultyBadgeStyle } from "@/lib/utils/challenge-classifier"
 import OptimizedImage from "@/components/optimized/optimized-image"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { deleteChallenge } from "@/app/actions/delete-challenge"
+import { toast } from "@/hooks/use-toast"
 
 interface ChallengeCardProps {
   id: string
@@ -16,6 +34,13 @@ interface ChallengeCardProps {
   duration: number
   difficulty: string
   onStart: (id: string) => void
+  isUserGenerated?: boolean
+  userId?: string
+  onDelete?: (id: string) => void
+  challenge?: {
+    challenge_type?: string
+    user_id?: string
+  }
 }
 
 const ChallengeCard = memo(function ChallengeCard({
@@ -26,7 +51,26 @@ const ChallengeCard = memo(function ChallengeCard({
   duration,
   difficulty,
   onStart,
+  isUserGenerated = false,
+  userId,
+  onDelete,
+  challenge,
 }: ChallengeCardProps) {
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+  // Control dropdown menu open state to ensure it closes properly
+  const [menuOpen, setMenuOpen] = useState(false)
+
+  // Determine if delete button should be shown
+  const canDelete = useMemo(() => {
+    // Show delete button only for user-generated challenges
+    const isUserGeneratedChallenge = challenge?.challenge_type === 'user_generated' || isUserGenerated
+    // And only if the current user is the owner
+    const isOwner = userId && challenge?.user_id === userId
+    
+    return isUserGeneratedChallenge && isOwner
+  }, [challenge?.challenge_type, challenge?.user_id, userId, isUserGenerated])
+
   // Memoize formatted duration to avoid recalculation
   const formattedDuration = useMemo(() => {
     const minutes = Math.floor(duration / 60)
@@ -48,6 +92,39 @@ const ChallengeCard = memo(function ChallengeCard({
   const handleStart = useCallback(() => {
     onStart(id)
   }, [onStart, id])
+
+  // Handle delete action
+  const handleDelete = useCallback(async () => {
+    setIsDeleting(true)
+    try {
+      const result = await deleteChallenge(id, userId)
+      
+      if (result.success) {
+        toast({
+          title: "Challenge deleted",
+          description: "Your challenge has been successfully deleted.",
+        })
+        // Call onDelete callback to update parent component
+        onDelete?.(id)
+      } else {
+        toast({
+          title: "Error",
+          description: result.error || "Failed to delete challenge",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error("Error deleting challenge:", error)
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred while deleting the challenge",
+        variant: "destructive",
+      })
+    } finally {
+      setIsDeleting(false)
+      setDeleteDialogOpen(false)
+    }
+  }, [id, userId, onDelete])
   return (
     <Card className="h-full min-h-[320px] flex flex-col">
       <CardContent className="p-0 flex-1 flex flex-col">        
@@ -76,6 +153,31 @@ const ChallengeCard = memo(function ChallengeCard({
               {difficultyDisplayName}
             </div>
           </div>
+          {/* Add delete button for user-generated challenges */}
+          {canDelete && (
+            <div className="absolute top-2 left-2">
+              <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="h-8 w-8 p-0 bg-black/50 hover:bg-black/70 backdrop-blur-sm border-0"
+                  >
+                    <MoreVertical className="h-4 w-4 text-white" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start">
+                  <DropdownMenuItem
+                    className="text-red-600 focus:text-red-600 focus:bg-red-50"
+                    onClick={() => { setMenuOpen(false); setDeleteDialogOpen(true) }}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete Challenge
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          )}
         </div>
         <div className="p-4 flex-1 flex flex-col justify-between">
           <div className="flex-1">
@@ -98,6 +200,30 @@ const ChallengeCard = memo(function ChallengeCard({
           Start Challenge
         </Button>
       </CardFooter>
+
+      {/* Delete confirmation dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Challenge</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this challenge? This action cannot be undone.
+              <br />
+              <strong>Challenge:</strong> {title}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
+            >
+              {isDeleting ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   )
 })

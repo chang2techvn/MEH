@@ -21,17 +21,26 @@ interface ChallengeGridProps {
   onLoadMore?: () => Promise<void>
   hasMore?: boolean
   containerHeight?: number
+  showDeleteButton?: boolean
+  userId?: string
+  onChallengeDeleted?: (id: string) => void
 }
 
 // Single challenge item component for virtual scrolling
 const ChallengeItem = memo(function ChallengeItem({ 
   challenge, 
   onStart,
-  index
+  index,
+  showDeleteButton = false,
+  userId,
+  onChallengeDeleted
 }: { 
   challenge: Challenge
   onStart: (id: string) => void
   index: number
+  showDeleteButton?: boolean
+  userId?: string
+  onChallengeDeleted?: (id: string) => void
 }) {
   return (
     <div className="p-2">
@@ -49,6 +58,10 @@ const ChallengeItem = memo(function ChallengeItem({
           duration={challenge.duration}
           difficulty={challenge.difficulty}
           onStart={onStart}
+          isUserGenerated={showDeleteButton}
+          userId={userId}
+          onDelete={onChallengeDeleted}
+          challenge={challenge}
         />
       </LazyComponent>
     </div>
@@ -58,10 +71,16 @@ const ChallengeItem = memo(function ChallengeItem({
 // Grid layout for regular display
 const ChallengeGrid = memo(function ChallengeGrid({ 
   challenges, 
-  onStartChallenge 
+  onStartChallenge,
+  showDeleteButton = false,
+  userId,
+  onChallengeDeleted
 }: { 
   challenges: Challenge[]
-  onStartChallenge: (id: string) => void 
+  onStartChallenge: (id: string) => void
+  showDeleteButton?: boolean
+  userId?: string
+  onChallengeDeleted?: (id: string) => void
 }) {
   return (
     <div className="challenge-grid-container grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 w-full">
@@ -80,6 +99,10 @@ const ChallengeGrid = memo(function ChallengeGrid({
               duration={challenge.duration}
               difficulty={challenge.difficulty}
               onStart={onStartChallenge}
+              isUserGenerated={showDeleteButton}
+              userId={userId}
+              onDelete={onChallengeDeleted}
+              challenge={challenge}
             />
           </LazyComponent>
         </div>
@@ -100,6 +123,9 @@ export default memo(function OptimizedChallengeGrid({
   onLoadMore,
   hasMore = false,
   containerHeight = 600,
+  showDeleteButton = false,
+  userId,
+  onChallengeDeleted,
 }: ChallengeGridProps) {
   
   // Memoize render item function for virtual scroll
@@ -109,8 +135,11 @@ export default memo(function OptimizedChallengeGrid({
       challenge={challenge}
       onStart={onStartChallenge}
       index={index}
+      showDeleteButton={showDeleteButton}
+      userId={userId}
+      onChallengeDeleted={onChallengeDeleted}
     />
-  ), [onStartChallenge])
+  ), [onStartChallenge, showDeleteButton, userId, onChallengeDeleted])
 
   // Empty state
   const EmptyState = useMemo(() => (
@@ -172,11 +201,25 @@ export default memo(function OptimizedChallengeGrid({
           </div>
         }
       >
-        <ChallengeGrid challenges={challenges} onStartChallenge={onStartChallenge} />
+        <ChallengeGrid 
+          challenges={challenges} 
+          onStartChallenge={onStartChallenge}
+          showDeleteButton={showDeleteButton}
+          userId={userId}
+          onChallengeDeleted={onChallengeDeleted}
+        />
       </InfiniteScroll>
     )
   }
 
   // Regular grid display
-  return <ChallengeGrid challenges={challenges} onStartChallenge={onStartChallenge} />
+  return (
+    <ChallengeGrid 
+      challenges={challenges} 
+      onStartChallenge={onStartChallenge}
+      showDeleteButton={showDeleteButton}
+      userId={userId}
+      onChallengeDeleted={onChallengeDeleted}
+    />
+  )
 })

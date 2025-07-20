@@ -53,8 +53,8 @@ export default function HeroSection({ title, description, children, showToggle, 
                     </Button>
                   </div>
 
-                  {/* Mobile Toggle Button */}
-                  <div className="md:hidden fixed top-16 sm:top-20 right-3 sm:right-4 z-50">
+                  {/* Mobile Toggle Button - Hidden on mobile as sidebar is auto-hidden */}
+                  <div className="hidden lg:block fixed top-16 sm:top-20 right-3 sm:right-4 z-50">
                     <Button
                       variant="outline"
                       size="icon"

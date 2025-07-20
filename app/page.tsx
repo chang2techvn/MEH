@@ -1,9 +1,15 @@
 "use client"
 
 import { useState, useEffect, Suspense, lazy, useCallback } from "react"
-import { Search, Plus, Sparkles } from "lucide-react"
+import { Search, Plus, Sparkles, Filter, ChevronDown } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { toast } from "@/hooks/use-toast"
 import { useMobile } from "@/hooks/use-mobile"
 
@@ -33,11 +39,35 @@ export default function Home() {
   const [leaderboardModalOpen, setLeaderboardModalOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [isInitialLoad, setIsInitialLoad] = useState(true)
+  const [filterTab, setFilterTab] = useState("all")
   const isMobile = useMobile()
   // Handle selected challenge change from ChallengeTabs
   const handleSelectedChallengeChange = useCallback((challenge: any) => {
     setSelectedChallenge(challenge)
   }, [])
+
+  // Handle filter tab change
+  const handleFilterTabChange = useCallback((tab: string) => {
+    setFilterTab(tab)
+  }, [])
+
+  // Get filter tab display name
+  const getFilterDisplayName = useCallback((tab: string) => {
+    switch(tab) {
+      case "user": return "Your Challenges"
+      case "beginner": return "Beginner"
+      case "intermediate": return "Intermediate"
+      case "advanced": return "Advanced"
+      default: return searchTerm ? `All 🔍` : "All"
+    }
+  }, [searchTerm])
+
+  // Auto-switch filter to "all" when search starts
+  useEffect(() => {
+    if (searchTerm && filterTab !== "all") {
+      setFilterTab("all")
+    }
+  }, [searchTerm, filterTab])
 
   // Hydration and auto-collapse logic
   useEffect(() => {
@@ -109,9 +139,9 @@ export default function Home() {
         {/* Background decorations - optimized with contain property */}
         <div className="absolute top-20 left-10 w-64 h-64 rounded-full bg-neo-mint/10 dark:bg-purist-blue/10 blur-3xl -z-10 animate-blob contain-paint"></div>
         <div className="absolute bottom-20 right-10 w-64 h-64 rounded-full bg-cantaloupe/10 dark:bg-cassis/10 blur-3xl -z-10 animate-blob animation-delay-2000 contain-paint"></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full bg-mellow-yellow/5 dark:bg-mellow-yellow/5 blur-3xl -z-10 animate-blob animation-delay-4000 contain-paint"></div>        <div className="w-full max-w-none px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-8">
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full bg-mellow-yellow/5 dark:bg-mellow-yellow/5 blur-3xl -z-10 animate-blob animation-delay-4000 contain-paint"></div>        <div className="w-full max-w-none px-4 sm:px-6 lg:px-6 xl:px-8 2xl:px-12 py-8">
           {/* Top section: Main Content + Sidebar with dynamic layout */}
-          <div className={`flex flex-col lg:flex-row gap-6 mb-8 transition-all duration-500 ease-in-out ${
+          <div className={`flex flex-col lg:flex-row gap-4 lg:gap-6 mb-8 transition-all duration-500 ease-in-out ${
             sidebarCollapsed 
               ? "justify-center" // Center content when collapsed
               : "justify-between" // Distribute when expanded
@@ -126,7 +156,7 @@ export default function Home() {
             />
 
             {/* Sidebar with conditional rendering and animation */}
-            <div className={`transition-all duration-500 ease-in-out w-full lg:w-[400px] xl:w-[450px] 2xl:w-[500px] lg:flex-shrink-0 ${
+            <div className={`transition-all duration-500 ease-in-out w-full lg:w-80 xl:w-96 2xl:w-[420px] lg:flex-shrink-0 lg:max-w-[35%] lg:-mt-5 ${
               sidebarCollapsed 
                 ? "lg:hidden" // Hide only on desktop when collapsed
                 : "block" // Show normally on all screen sizes
@@ -156,18 +186,66 @@ export default function Home() {
                   <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input
                     type="search"
-                    placeholder="Search challenges..."
+                    placeholder={isMobile ? "Search..." : "Search challenges..."}
                     className="pl-8 w-full"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                   />
                 </div>
+                
+                {/* Mobile Filter Button */}
+                <div className="md:hidden flex-shrink-0">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm" className="h-10 px-3">
+                        <Filter className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48">
+                      <DropdownMenuItem 
+                        onClick={() => handleFilterTabChange("all")}
+                        className={filterTab === "all" ? "bg-accent" : ""}
+                      >
+                        All {searchTerm && "🔍"}
+                      </DropdownMenuItem>
+                      {!searchTerm && (
+                        <>
+                          <DropdownMenuItem 
+                            onClick={() => handleFilterTabChange("user")}
+                            className={filterTab === "user" ? "bg-accent" : ""}
+                          >
+                            Your Challenges
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={() => handleFilterTabChange("beginner")}
+                            className={filterTab === "beginner" ? "bg-accent" : ""}
+                          >
+                            Beginner
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={() => handleFilterTabChange("intermediate")}
+                            className={filterTab === "intermediate" ? "bg-accent" : ""}
+                          >
+                            Intermediate
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={() => handleFilterTabChange("advanced")}
+                            className={filterTab === "advanced" ? "bg-accent" : ""}
+                          >
+                            Advanced
+                          </DropdownMenuItem>
+                        </>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+                
                 <Button
                   onClick={() => setCreateModalOpen(true)}
-                  className="bg-gradient-to-r from-neo-mint to-purist-blue text-white"
+                  className="bg-gradient-to-r from-neo-mint to-purist-blue text-white flex-shrink-0"
                 >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create
+                  <Plus className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Create</span>
                 </Button>
               </div>
             </div>
@@ -176,6 +254,8 @@ export default function Home() {
               <ChallengeTabs
                 searchTerm={searchTerm}
                 onSelectedChallengeChange={handleSelectedChallengeChange}
+                filterTab={filterTab}
+                onFilterTabChange={handleFilterTabChange}
               />
             </Suspense>
           </div>
