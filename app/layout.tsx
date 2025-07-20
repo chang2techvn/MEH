@@ -11,6 +11,7 @@ import { ThemeProvider } from "@/contexts/theme-context"
 import { ChallengeProvider } from "@/contexts/challenge-context"
 import Script from "next/script"
 import ServiceWorkerRegistration from "@/components/service-worker-registration"
+import { ScrollToTopButton } from "@/components/ui/scroll-to-top-button"
 
 
 // Tối ưu font loading
@@ -125,6 +126,7 @@ export default function RootLayout({
                   {children}
                   <ChatWindowsManager />
                   <MinimizedChatBar />
+                  <ScrollToTopButton showOnMobileOnly={true} threshold={500} />
                 </div>
                 <Toaster />
 

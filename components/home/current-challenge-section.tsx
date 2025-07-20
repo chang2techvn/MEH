@@ -22,9 +22,9 @@ interface CurrentChallengeSectionProps {
 
 
 const LoadingFallback = () => (
-  <div className="space-y-4">
-    <Skeleton className="h-8 w-3/4" />
-    <Skeleton className="h-32 w-full" />
+  <div className="space-y-3 sm:space-y-4">
+    <Skeleton className="h-6 sm:h-8 w-3/4" />
+    <Skeleton className="h-20 sm:h-24 lg:h-32 w-full" />
   </div>
 )
 
@@ -54,7 +54,7 @@ export function CurrentChallengeSection({
   }, [])
   if (challengeLoading) {
     return (
-      <Card className="neo-card p-6 bg-white/40 dark:bg-gray-900/40 backdrop-blur-xl border-none shadow-neo">
+      <Card className="neo-card p-4 sm:p-6 bg-white/40 dark:bg-gray-900/40 backdrop-blur-xl border-none shadow-neo">
         <LoadingFallback />
       </Card>
     )
@@ -62,14 +62,14 @@ export function CurrentChallengeSection({
 
   if (!currentChallenge) {
     return (
-      <Card className="neo-card p-6 bg-white/40 dark:bg-gray-900/40 backdrop-blur-xl border-none shadow-neo">
-        <div className="space-y-4">
-          <Skeleton className="h-8 w-3/4" />
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-32 w-full" />
-          <div className="flex space-x-2">
-            <Skeleton className="h-10 w-24" />
-            <Skeleton className="h-10 w-24" />
+      <Card className="neo-card p-4 sm:p-6 bg-white/40 dark:bg-gray-900/40 backdrop-blur-xl border-none shadow-neo">
+        <div className="space-y-3 sm:space-y-4">
+          <Skeleton className="h-6 sm:h-8 w-3/4" />
+          <Skeleton className="h-3 sm:h-4 w-full" />
+          <Skeleton className="h-24 sm:h-32 w-full" />
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+            <Skeleton className="h-8 sm:h-10 w-20 sm:w-24" />
+            <Skeleton className="h-8 sm:h-10 w-20 sm:w-24" />
           </div>
         </div>
       </Card>
@@ -77,30 +77,28 @@ export function CurrentChallengeSection({
   }
 
   return (
-
     <Suspense fallback={<LoadingFallback />}>      
-    <HeroSection
+      <HeroSection
         title={challengeMode === 'practice' ? "Your Practice Challenge" : "Your Current Challenge"}
         description={`Watch this ${watchTimeText} video about how technology is changing our daily lives and follow the 4-skill process.`}
         showToggle={showToggle}
         sidebarCollapsed={sidebarCollapsed}
         onToggleSidebar={onToggleSidebar}
       >
-      <Suspense fallback={<LoadingFallback />}>
-        {/* Remount AssignedTask on challenge change to reset step state */}
-        <AssignedTask
-          key={`${challengeMode}-${currentChallenge.id}`}
-          title={currentChallenge.title}
-          description={currentChallenge.description}
-          videoUrl={currentChallenge.videoUrl}
-          dueDate={new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
-          userId="current-user"
-          username="You"
-          userImage="/placeholder.svg?height=40&width=40"
-        />
-      </Suspense>
+        <Suspense fallback={<LoadingFallback />}>
+          {/* Remount AssignedTask on challenge change to reset step state */}
+          <AssignedTask
+            key={`${challengeMode}-${currentChallenge.id}`}
+            title={currentChallenge.title}
+            description={currentChallenge.description}
+            videoUrl={currentChallenge.videoUrl}
+            dueDate={new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
+            userId="current-user"
+            username="You"
+            userImage="/placeholder.svg?height=40&width=40"
+          />
+        </Suspense>
       </HeroSection>
     </Suspense>
-    
   )
 }

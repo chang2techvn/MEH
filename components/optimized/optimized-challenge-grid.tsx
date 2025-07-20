@@ -47,7 +47,7 @@ const ChallengeItem = memo(function ChallengeItem({
       <LazyComponent
         threshold={0.1}
         rootMargin="200px"
-        fallbackMinHeight="320px"
+        fallbackMinHeight="280px"
       >
         <ChallengeCard
           key={challenge.id}
@@ -83,13 +83,13 @@ const ChallengeGrid = memo(function ChallengeGrid({
   onChallengeDeleted?: (id: string) => void
 }) {
   return (
-    <div className="challenge-grid-container grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 w-full">
+    <div className="challenge-grid-container grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 md:gap-6 w-full px-2 sm:px-0">
       {challenges.map((challenge, index) => (
         <div key={challenge.id} className="challenge-grid-item h-full">
           <LazyComponent
             threshold={0.1}
             rootMargin="200px"
-            fallbackMinHeight="320px"
+            fallbackMinHeight="280px"
           >
             <ChallengeCard
               id={challenge.id}
@@ -155,9 +155,9 @@ export default memo(function OptimizedChallengeGrid({
   // Loading state
   if (loading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 md:gap-6 px-2 sm:px-0">
         {Array.from({ length: 8 }).map((_, index) => (
-          <div key={index} className="h-[320px] bg-gray-200 dark:bg-gray-800 animate-pulse rounded-lg" />
+          <div key={index} className="h-[280px] sm:h-[320px] bg-gray-200 dark:bg-gray-800 animate-pulse rounded-lg" />
         ))}
       </div>
     )
@@ -172,7 +172,7 @@ export default memo(function OptimizedChallengeGrid({
     return (
       <VirtualScroll
         items={challenges}
-        itemHeight={320}
+        itemHeight={280}
         containerHeight={containerHeight}
         renderItem={renderChallengeItem}
         overscan={3}

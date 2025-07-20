@@ -16,9 +16,9 @@ interface MainContentProps {
 }
 
 const LoadingFallback = () => (
-  <div className="space-y-6">
-    <Skeleton className="h-300 w-full rounded-xl" />
-    <Skeleton className="h-600 w-full rounded-xl" />
+  <div className="space-y-4 sm:space-y-6">
+    <Skeleton className="h-72 sm:h-80 lg:h-96 w-full rounded-xl" />
+    <Skeleton className="h-96 sm:h-[32rem] lg:h-[40rem] w-full rounded-xl" />
   </div>
 )
 
@@ -44,7 +44,7 @@ export function MainContent({ newPostAdded, setNewPostAdded, isExpanded = false,
 
   return (
     <motion.div
-      className={`space-y-6 transition-all duration-500 ease-in-out ${
+      className={`space-y-4 sm:space-y-6 transition-all duration-500 ease-in-out ${
         isExpanded 
           ? "flex-1 max-w-full" // Take available width when expanded (sidebar collapsed)
           : "flex-1 max-w-none" // Flexible width when sidebar is shown
@@ -56,7 +56,7 @@ export function MainContent({ newPostAdded, setNewPostAdded, isExpanded = false,
       layoutRoot
     >
       <motion.div variants={item} layout>        
-        <Suspense fallback={<Skeleton className="h-300 w-full rounded-xl" />}>
+        <Suspense fallback={<Skeleton className="h-72 sm:h-80 lg:h-96 w-full rounded-xl" />}>
           <CurrentChallengeSection 
             currentChallenge={currentChallenge}
             challengeLoading={challengeLoading}

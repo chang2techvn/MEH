@@ -666,19 +666,19 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
   if (loading || loadingSettings) {
     return (
       <Card className="neo-card overflow-hidden border-none bg-white/20 dark:bg-gray-800/20 backdrop-blur-sm shadow-neo">
-        <div className="p-6 flex flex-col items-center justify-center min-h-[300px]">
+        <div className="p-4 sm:p-6 flex flex-col items-center justify-center min-h-[250px] sm:min-h-[300px]">
           <motion.div
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ duration: 0.3 }}
           >
-            <Loader2 className="h-16 w-16 text-neo-mint dark:text-purist-blue animate-spin mb-4" />
+            <Loader2 className="h-12 w-12 sm:h-16 sm:w-16 text-neo-mint dark:text-purist-blue animate-spin mb-3 sm:mb-4" />
           </motion.div>
           <motion.p
             initial={{ y: 10, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.2 }}
-            className="text-center text-muted-foreground text-lg"
+            className="text-center text-muted-foreground text-base sm:text-lg"
           >
             Loading today's challenge...
           </motion.p>
@@ -690,19 +690,19 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
   if (error && !videoData) {
     return (
       <Card className="neo-card overflow-hidden border-none bg-white/20 dark:bg-gray-800/20 backdrop-blur-sm shadow-neo">
-        <div className="p-6 flex flex-col items-center justify-center min-h-[300px]">
+        <div className="p-4 sm:p-6 flex flex-col items-center justify-center min-h-[250px] sm:min-h-[300px]">
           <motion.div
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ duration: 0.3 }}
           >
-            <AlertTriangle className="h-16 w-16 text-amber-500 mb-4" />
+            <AlertTriangle className="h-12 w-12 sm:h-16 sm:w-16 text-amber-500 mb-3 sm:mb-4" />
           </motion.div>
           <motion.p
             initial={{ y: 10, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.2 }}
-            className="text-center text-red-500 mb-4 text-lg"
+            className="text-center text-red-500 mb-3 sm:mb-4 text-base sm:text-lg px-4"
           >
             {error}
           </motion.p>
@@ -715,9 +715,9 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
           >
             <Button
               onClick={handleRetry}
-              className="bg-gradient-to-r from-neo-mint to-purist-blue hover:from-neo-mint/90 hover:to-purist-blue/90 text-white border-0"
+              className="bg-gradient-to-r from-neo-mint to-purist-blue hover:from-neo-mint/90 hover:to-purist-blue/90 text-white border-0 text-sm sm:text-base px-4 sm:px-6"
             >
-              <RefreshCw className="h-4 w-4 mr-2" />
+              <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
               Try Again
             </Button>
           </motion.div>
@@ -729,14 +729,14 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
     <TooltipProvider>
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
         <Card ref={challengeHeaderRef} className="neo-card overflow-hidden border-none bg-white/20 dark:bg-gray-800/20 backdrop-blur-sm shadow-neo">
-          <div className="p-6">
-            <div className="flex flex-col md:flex-row gap-6">
+          <div className="p-4 sm:p-6">
+            <div className="flex flex-col lg:flex-row gap-4 sm:gap-6">
               {activeStep === 1 && videoData && (
                 <motion.div
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ duration: 0.3 }}
-                  className="md:w-3/5 aspect-video rounded-xl overflow-hidden relative group"
+                  className="w-full lg:w-3/5 aspect-video rounded-xl overflow-hidden relative group"
                 >
                   <div className="absolute inset-0 bg-gradient-to-br from-neo-mint/20 to-purist-blue/20 backdrop-blur-sm z-0"></div>
                   <div className="relative w-full h-full z-10">
@@ -754,13 +754,13 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ duration: 0.3 }}
-                  className="md:w-1/2 aspect-video rounded-xl overflow-hidden flex items-center justify-center relative"
+                  className="w-full lg:w-1/2 min-h-[300px] sm:min-h-[400px] lg:aspect-video rounded-xl overflow-hidden flex items-center justify-center relative"
                 >
                   <Textarea
                     value={rewrittenContent}
                     onChange={(e) => setRewrittenContent(e.target.value)}
                     placeholder="Rewrite the content of the video in your own words. Try to be comprehensive and use proper grammar."
-                    className="h-full resize-none p-4 bg-white/20 dark:bg-gray-800/20 backdrop-blur-sm border-white/20 dark:border-gray-800/20"
+                    className="h-full min-h-[300px] sm:min-h-[400px] resize-none p-3 sm:p-4 bg-white/20 dark:bg-gray-800/20 backdrop-blur-sm border-white/20 dark:border-gray-800/20 text-sm sm:text-base"
                   />
                 </motion.div>
               )}
@@ -770,7 +770,7 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ duration: 0.3 }}
-                  className="md:w-1/2 flex flex-col"
+                  className="w-full lg:w-1/2 flex flex-col"
                 >
                   {videoPreviewUrl ? (
                     <div className="space-y-3">
@@ -898,13 +898,13 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
               )}
 
               {activeStep !== 4 && (
-                <div className="md:w-1/2">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+                <div className="w-full lg:w-1/2">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3 mb-3 sm:mb-4">
                     <motion.h3
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ duration: 0.3, delay: 0.1 }}
-                      className="text-xl font-bold"
+                      className="text-lg sm:text-xl lg:text-2xl font-bold line-clamp-2"
                     >
                       {videoData?.title || "Daily Challenge"}
                     </motion.h3>
@@ -912,10 +912,10 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
                       initial={{ opacity: 0, x: 20 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ duration: 0.3, delay: 0.2 }}
-                      className="flex items-center gap-2 text-sm bg-white/20 dark:bg-gray-800/20 backdrop-blur-sm px-3 py-1 rounded-full"
+                      className="flex items-center gap-2 text-xs sm:text-sm bg-white/20 dark:bg-gray-800/20 backdrop-blur-sm px-2 sm:px-3 py-1 rounded-full shrink-0"
                     >
-                      <Clock className="h-4 w-4 text-cantaloupe dark:text-cassis" />
-                      <span>
+                      <Clock className="h-3 w-3 sm:h-4 sm:w-4 text-cantaloupe dark:text-cassis" />
+                      <span className="whitespace-nowrap">
                         Due: <strong>{getDueDate()}</strong>
                       </span>
                     </motion.div>
@@ -925,13 +925,13 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.3, delay: 0.3 }}
-                    className="text-sm text-muted-foreground mb-6"
+                    className="text-sm sm:text-base text-muted-foreground mb-4 sm:mb-6 line-clamp-3"
                   >
                     {videoData?.description ||
                       "Watch this video and complete the 3-step challenge to improve your English skills."}
                   </motion.p>
 
-                  <div className="mb-6">
+                  <div className="mb-4 sm:mb-6">
                     <div className="flex justify-between mb-2 text-sm">
                       <span>Progress</span>
                       <span>{progress}%</span>
@@ -951,9 +951,9 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
                     </motion.div>
                   </div>
 
-                  <div className="space-y-4">
-                    <h4 className="font-medium text-sm">4-Step Process:</h4>
-                    <div className="grid grid-cols-4 gap-2">
+                  <div className="space-y-3 sm:space-y-4">
+                    <h4 className="font-medium text-sm sm:text-base">4-Step Process:</h4>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 max-w-4xl">
                       {steps.map((step, index) => {
                         const StepIcon = step.icon
                         const isActive = step.id === activeStep
@@ -999,19 +999,19 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
                                 }}
                               >
                                 <div className="relative">
-                                  <StepIcon className="h-4 w-4 mb-1" />
+                                  <StepIcon className="h-3 w-3 sm:h-4 sm:w-4 mb-1" />
                                   {isCompleted && (
                                     <motion.div
                                       initial={{ scale: 0 }}
                                       animate={{ scale: 1 }}
                                       transition={{ type: "spring", stiffness: 500, damping: 15 }}
-                                      className="absolute -top-1 -right-1 bg-green-500 rounded-full w-2 h-2 flex items-center justify-center"
+                                      className="absolute -top-1 -right-1 bg-green-500 rounded-full w-1.5 h-1.5 sm:w-2 sm:h-2 flex items-center justify-center"
                                     >
-                                      <CheckCircle2 className="h-1 w-1 text-white" />
+                                      <CheckCircle2 className="h-0.5 w-0.5 sm:h-1 sm:w-1 text-white" />
                                     </motion.div>
                                   )}
                                 </div>
-                                <span className="text-xs font-medium">{step.name}</span>
+                                <span className="text-[10px] sm:text-xs font-medium text-center leading-tight">{step.name}</span>
                               </motion.div>
                             </TooltipTrigger>
                             <TooltipContent>
@@ -1079,30 +1079,33 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, delay: 0.8 }}
-              className="px-6 py-4 border-t border-white/10 dark:border-gray-800/10 flex flex-wrap gap-3 justify-between bg-white/10 dark:bg-gray-800/10 backdrop-blur-sm"
+              className="px-4 sm:px-6 py-3 sm:py-4 border-t border-white/10 dark:border-gray-800/10 flex flex-col sm:flex-row gap-3 justify-between bg-white/10 dark:bg-gray-800/10 backdrop-blur-sm"
             >
               <div className="flex items-center gap-2">
-                <span className="text-sm font-medium">Current Step:</span>
-                <span className="text-sm">{steps[activeStep - 1].name}</span>
+                <span className="text-xs sm:text-sm font-medium">Current Step:</span>
+                <span className="text-xs sm:text-sm">{steps[activeStep - 1].name}</span>
               </div>
-              <div className="flex gap-2">                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              <div className="flex gap-2 justify-end">
+                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                   <Button
                     size="sm"
-                    onClick={handleNextStep}                    disabled={
+                    onClick={handleNextStep}
+                    disabled={
                       (activeStep === 1 && adminSettings.enforceWatchTime && !videoWatched) ||
                       isComparingContent ||
                       (activeStep === 2 && showComparisonFeedback) ||
                       isEvaluating
                     }
-                    className="bg-gradient-to-r from-neo-mint to-purist-blue hover:from-neo-mint/90 hover:to-purist-blue/90 text-white border-0"
-                  >                    {isComparingContent ? (
+                    className="bg-gradient-to-r from-neo-mint to-purist-blue hover:from-neo-mint/90 hover:to-purist-blue/90 text-white border-0 text-xs sm:text-sm px-3 sm:px-4"
+                  >
+                    {isComparingContent ? (
                       <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 mr-2 animate-spin" />
                         Analyzing...
                       </>
                     ) : isEvaluating ? (
                       <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 mr-2 animate-spin" />
                         Evaluating...
                       </>
                     ) : (

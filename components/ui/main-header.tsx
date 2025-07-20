@@ -23,13 +23,44 @@ export default function MainHeader({ mobileMenuOpen, setMobileMenuOpen }: MainHe
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const [showMenuIcon, setShowMenuIcon] = useState(false)
   const [isHomePage, setIsHomePage] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
+  const [headerVisible, setHeaderVisible] = useState(true)
+  const [lastScrollY, setLastScrollY] = useState(0)
+
+  useEffect(() => {
+    // Check if mobile
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768)
+    }
+    
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
 
   useEffect(() => {
     const handleScroll = () => {
+      const currentScrollY = window.scrollY
+
       if (window.scrollY > 10) {
         setScrolled(true)
       } else {
         setScrolled(false)
+      }
+
+      // Mobile header hide/show logic
+      if (isMobile) {
+        if (currentScrollY > lastScrollY && currentScrollY > 100) {
+          // Scrolling down - hide header
+          setHeaderVisible(false)
+        } else if (currentScrollY < lastScrollY) {
+          // Scrolling up - show header
+          setHeaderVisible(true)
+        }
+        setLastScrollY(currentScrollY)
+      } else {
+        // Always show header on desktop
+        setHeaderVisible(true)
       }
     }
 
@@ -38,7 +69,7 @@ export default function MainHeader({ mobileMenuOpen, setMobileMenuOpen }: MainHe
 
     window.addEventListener("scroll", handleScroll)
     return () => window.removeEventListener("scroll", handleScroll)
-  }, [])
+  }, [isMobile, lastScrollY])
 
   // Mobile logo animation effect - switch between logo and menu icon every 1.5s
   useEffect(() => {
@@ -54,6 +85,8 @@ export default function MainHeader({ mobileMenuOpen, setMobileMenuOpen }: MainHe
       <header
         className={`sticky top-0 z-40 w-full transition-all duration-300 ${
           scrolled ? "bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl shadow-sm" : "bg-transparent"
+        } ${
+          isMobile ? (headerVisible ? "translate-y-0" : "-translate-y-full") : ""
         }`}
       >
         <div className="w-full max-w-none px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 flex h-20 items-center justify-between">

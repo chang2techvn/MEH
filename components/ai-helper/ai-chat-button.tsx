@@ -53,9 +53,9 @@ export function AIChatButton() {
         onClick={handleClick}
         size="icon"
         variant="outline"
-        className="fixed bottom-4 right-4 h-14 w-14 rounded-full bg-gradient-to-r from-neo-mint to-purist-blue text-white shadow-lg border-0 z-40"
+        className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 h-12 w-12 sm:h-14 sm:w-14 rounded-full bg-gradient-to-r from-neo-mint to-purist-blue text-white shadow-lg border-0 z-40 hover:scale-105 transition-transform"
       >
-        <Bot className="h-6 w-6" />
+        <Bot className="h-5 w-5 sm:h-6 sm:w-6" />
       </Button>
       {isOpen && (
         <AIChatBox

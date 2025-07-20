@@ -40,10 +40,10 @@ export function AIChatBox({ onClose, onMinimize, buttonPosition, initialPosition
     const isMobile = window.innerWidth < 768
     
     if (isMobile) {
-      // On mobile, center the chat box
+      // On mobile, use full screen positioning
       return {
-        x: Math.max(0, (window.innerWidth - 350) / 2),
-        y: Math.max(0, (window.innerHeight - 450) / 2)
+        x: 10,
+        y: 10
       }
     }
     
@@ -64,6 +64,7 @@ export function AIChatBox({ onClose, onMinimize, buttonPosition, initialPosition
   const defaultPosition = initialPosition || calculateInitialPosition()
   const [position, setPosition] = useState(defaultPosition)
   const [isMaximized, setIsMaximized] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
   const { messages, input, setInput, handleSubmit, isLoading, isTyping, handleQuickResponse } = useGeminiAI()
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const [isDragging, setIsDragging] = useState(false)
@@ -71,6 +72,17 @@ export function AIChatBox({ onClose, onMinimize, buttonPosition, initialPosition
   const chatBoxRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const [theme, setTheme] = useState<"light" | "dark" | "gradient">("gradient")
+
+  // Check mobile state
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768)
+    }
+    
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
@@ -83,6 +95,12 @@ export function AIChatBox({ onClose, onMinimize, buttonPosition, initialPosition
   useEffect(() => {
     const resizeTextarea = () => {
       if (textareaRef.current) {
+        // On mobile when maximized, maintain fixed height to prevent layout jumps
+        if (isMobile && isMaximized) {
+          textareaRef.current.style.height = "60px"
+          return
+        }
+        
         // Store current scroll position to prevent jumping
         const scrollTop = textareaRef.current.scrollTop
         
@@ -108,7 +126,7 @@ export function AIChatBox({ onClose, onMinimize, buttonPosition, initialPosition
     // Small delay to ensure DOM has updated
     const timeoutId = setTimeout(resizeTextarea, 0)
     return () => clearTimeout(timeoutId)
-  }, [input])
+  }, [input, isMaximized, isMobile])
 
   // Draggable functionality
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -184,13 +202,12 @@ export function AIChatBox({ onClose, onMinimize, buttonPosition, initialPosition
   // Auto-maximize on small screens and handle window resize
   useEffect(() => {
     const handleResize = () => {
-      const isMobile = window.innerWidth < 768
+      const newIsMobile = window.innerWidth < 768
+      setIsMobile(newIsMobile)
       
-      if (isMobile) {
-        // On mobile, auto-maximize for better UX
-        if (!isMaximized) {
-          setIsMaximized(true)
-        }
+      if (newIsMobile) {
+        // On mobile, force maximized for better UX
+        setIsMaximized(true)
       } else {
         // On desktop/tablet, update position if chat box is out of bounds
         if (!isMaximized) {
@@ -283,8 +300,8 @@ export function AIChatBox({ onClose, onMinimize, buttonPosition, initialPosition
     <motion.div
       ref={chatBoxRef}
       className={`fixed z-50 shadow-xl overflow-hidden ${
-        isMaximized ? "rounded-none" : "rounded-lg"
-      }`}
+        isMaximized ? "rounded-none" : "rounded-lg sm:rounded-xl"
+      } ${isMobile && isMaximized ? "inset-0" : ""}`} // Use inset-0 for full mobile coverage
       style={{
         top: isMaximized ? "0px" : `${position.y}px`,
         left: isMaximized ? "0px" : `${position.x}px`,
@@ -353,10 +370,12 @@ export function AIChatBox({ onClose, onMinimize, buttonPosition, initialPosition
       </div>
       <div className={getBodyClass()}>
         <ScrollArea 
-          className={`p-3 ${
+          className={`${
             isMaximized 
-              ? "h-[calc(100vh-140px)]" 
-              : "h-[min(350px,calc(80vh-140px))]"
+              ? isMobile 
+                ? "h-[calc(100vh-160px)] p-3" // Reduced height and moved padding here
+                : "h-[calc(100vh-140px)] p-3"
+              : "h-[min(350px,calc(80vh-140px))] p-3"
           }`}
         >
           <div className="space-y-4">
@@ -424,9 +443,9 @@ export function AIChatBox({ onClose, onMinimize, buttonPosition, initialPosition
                   <motion.div
                     key={message.id}
                     className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
-                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                    initial={{ opacity: 0, y: isMobile ? 0 : 10, scale: isMobile ? 1 : 0.95 }} // Disable animations on mobile
                     animate={{ opacity: 1, y: 0, scale: 1 }}
-                    transition={{ duration: 0.2, delay: 0.05 * index }}
+                    transition={{ duration: isMobile ? 0 : 0.2, delay: isMobile ? 0 : 0.05 * index }} // No delay on mobile
                   >
                     <div
                       className={`max-w-[85%] rounded-2xl p-3 ${
@@ -444,7 +463,8 @@ export function AIChatBox({ onClose, onMinimize, buttonPosition, initialPosition
             <div ref={messagesEndRef} />
           </div>
         </ScrollArea>
-        <div className="p-3 border-t border-gray-200 dark:border-gray-800">
+        <div className="p-3 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
+        
           <form onSubmit={handleSubmit} className="relative">
             <div className="relative">
               <Textarea
@@ -452,7 +472,11 @@ export function AIChatBox({ onClose, onMinimize, buttonPosition, initialPosition
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="Type your message..."
-                className="min-h-[60px] max-h-[120px] resize-none bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:ring-neo-mint dark:focus:ring-purist-blue rounded-3xl pr-16 pl-5 py-4 [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-gray-300 [&::-webkit-scrollbar-thumb]:rounded-full dark:[&::-webkit-scrollbar-thumb]:bg-gray-600"
+                className={`resize-none bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:ring-neo-mint dark:focus:ring-purist-blue rounded-3xl pr-16 pl-5 py-4 [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-gray-300 [&::-webkit-scrollbar-thumb]:rounded-full dark:[&::-webkit-scrollbar-thumb]:bg-gray-600 ${
+                  isMobile && isMaximized 
+                    ? "h-[60px] min-h-[60px] max-h-[60px]" // Fixed height on mobile to prevent jumping
+                    : "min-h-[60px] max-h-[120px]"
+                }`}
                 style={{
                   scrollbarWidth: 'thin',
                   scrollbarColor: '#d1d5db transparent',

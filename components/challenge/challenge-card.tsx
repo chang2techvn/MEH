@@ -126,7 +126,7 @@ const ChallengeCard = memo(function ChallengeCard({
     }
   }, [id, userId, onDelete])
   return (
-    <Card className="h-full min-h-[320px] flex flex-col">
+    <Card className="h-full min-h-[280px] sm:min-h-[320px] flex flex-col">
       <CardContent className="p-0 flex-1 flex flex-col">        
         <div className="aspect-video bg-muted relative overflow-hidden flex-shrink-0">
           {thumbnailUrl ? (
@@ -142,12 +142,12 @@ const ChallengeCard = memo(function ChallengeCard({
             />
           ) : (
             <div className="absolute inset-0 flex items-center justify-center">
-              <BookOpen className="h-12 w-12 text-muted-foreground/50" />
+              <BookOpen className="h-8 w-8 sm:h-12 sm:w-12 text-muted-foreground/50" />
             </div>
           )}
-          <div className="absolute top-2 right-2">
+          <div className="absolute top-1 right-1 sm:top-2 sm:right-2">
             <div 
-              className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors"
+              className="inline-flex items-center rounded-full border px-1.5 py-0.5 sm:px-2.5 text-[10px] sm:text-xs font-semibold transition-colors"
               style={difficultyBadgeStyle}
             >
               {difficultyDisplayName}
@@ -155,15 +155,15 @@ const ChallengeCard = memo(function ChallengeCard({
           </div>
           {/* Add delete button for user-generated challenges */}
           {canDelete && (
-            <div className="absolute top-2 left-2">
+            <div className="absolute top-1 left-1 sm:top-2 sm:left-2">
               <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="secondary"
                     size="sm"
-                    className="h-8 w-8 p-0 bg-black/50 hover:bg-black/70 backdrop-blur-sm border-0"
+                    className="h-6 w-6 sm:h-8 sm:w-8 p-0 bg-black/50 hover:bg-black/70 backdrop-blur-sm border-0"
                   >
-                    <MoreVertical className="h-4 w-4 text-white" />
+                    <MoreVertical className="h-3 w-3 sm:h-4 sm:w-4 text-white" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start">
@@ -179,25 +179,26 @@ const ChallengeCard = memo(function ChallengeCard({
             </div>
           )}
         </div>
-        <div className="p-4 flex-1 flex flex-col justify-between">
+        <div className="p-3 sm:p-4 flex-1 flex flex-col justify-between">
           <div className="flex-1">
-            <h3 className="font-bold text-lg mb-2 line-clamp-2 min-h-[3.5rem]">{title}</h3>
-            <p className="text-sm text-muted-foreground mb-3 line-clamp-3 min-h-[4rem]">
+            <h3 className="font-bold text-base sm:text-lg mb-1 sm:mb-2 line-clamp-2 min-h-[2.5rem] sm:min-h-[3.5rem]">{title}</h3>
+            <p className="text-xs sm:text-sm text-muted-foreground mb-2 sm:mb-3 line-clamp-2 sm:line-clamp-3 min-h-[2.5rem] sm:min-h-[4rem]">
               {truncatedDescription}
             </p>
           </div>
-          <div className="flex items-center gap-2 text-sm mt-auto">
-            <Clock className="h-4 w-4 text-muted-foreground" />
+          <div className="flex items-center gap-2 text-xs sm:text-sm mt-auto">
+            <Clock className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
             <span>{formattedDuration}</span>
           </div>
         </div>
       </CardContent>
-      <CardFooter className="px-4 py-3 border-t mt-auto">
+      <CardFooter className="px-3 py-2 sm:px-4 sm:py-3 border-t mt-auto">
         <Button 
-          className="w-full bg-gradient-to-r from-neo-mint to-purist-blue hover:from-neo-mint/90 hover:to-purist-blue/90 text-white border-0" 
+          className="w-full bg-gradient-to-r from-neo-mint to-purist-blue hover:from-neo-mint/90 hover:to-purist-blue/90 text-white border-0 text-sm sm:text-base" 
           onClick={handleStart}
         >
-          Start Challenge
+          <span className="hidden sm:inline">Start Challenge</span>
+          <span className="sm:hidden">Start</span>
         </Button>
       </CardFooter>
 

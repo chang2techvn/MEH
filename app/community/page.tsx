@@ -535,7 +535,7 @@ export default function CommunityPage() {
     setMounted(true)
   }, [])
 
-  // Handle scroll to show/hide scroll to top button
+  // Handle scroll to show/hide scroll to top button for community page
   useEffect(() => {
     const handleScroll = () => {
       if (window.scrollY > 500) {
@@ -1091,13 +1091,6 @@ export default function CommunityPage() {
     }
   }
 
-  const handleScrollToTop = () => {
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth",
-    })
-  }
-
   const handleFilterChange = (filters: string[]) => {
     setActiveFilters(filters)
   }
@@ -1117,6 +1110,14 @@ export default function CommunityPage() {
   const handleCloseStoryViewers = () => {
     setShowStoryViewers(false)
     setStoryPaused(false) // Resume story progression
+  }
+
+  // Scroll to top function for community page
+  const handleScrollToTop = () => {
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    })
   }
 
   // Handle story reply submission
