@@ -97,14 +97,14 @@ function MessageDropdownContent() {
         })
       })
       
-      // Build simple query from users table first
+      // Build query to get users with their profiles
       let query = supabase
         .from('users')
         .select(`
           id, 
           email, 
           last_login,
-          profiles!inner (
+          profiles (
             username,
             full_name,
             avatar_url
@@ -112,12 +112,14 @@ function MessageDropdownContent() {
         `)
         .neq('id', currentUser.id)
         .eq('is_active', true)
+        .not('profiles', 'is', null)
         .order('last_login', { ascending: false })
         .range(offset, offset + pageSize - 1)
       
-      // Add search filters - only search in users table fields for now
+      // Add search filters - search in both email and profile fields
       if (searchTerm.trim()) {
-        query = query.ilike('email', `%${searchTerm}%`)
+        // Search in email, profiles.full_name, and profiles.username
+        query = query.or(`email.ilike.%${searchTerm}%,profiles.full_name.ilike.%${searchTerm}%,profiles.username.ilike.%${searchTerm}%`)
       }
       
       // If we have existing conversations, exclude those users
@@ -164,11 +166,16 @@ function MessageDropdownContent() {
           return shouldInclude
         })
         .map(user => {
-          const profile = user.profiles?.[0] || {}
+          // Handle profiles data - could be an array or object depending on query
+          const profile = Array.isArray(user.profiles) ? user.profiles[0] : user.profiles
+          const safeProfile = profile || {}
+          const displayName = safeProfile.full_name || safeProfile.username || user.email?.split('@')[0] || 'Unknown User'
+          const avatarUrl = safeProfile.avatar_url || '/placeholder-user.jpg'
+                   
           return {
             id: user.id,
-            name: profile.full_name || profile.username || user.email?.split('@')[0] || 'Unknown User',
-            avatar: profile.avatar_url || '/placeholder.svg?height=200&width=200',
+            name: displayName,
+            avatar: avatarUrl,
             status: 'offline' as const,
             lastActive: new Date(user.last_login || Date.now()),
           }
@@ -453,7 +460,7 @@ function MessageDropdownContent() {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -10 }}
           transition={{ duration: 0.2 }}
-          className="absolute right-0 top-full mt-2 w-80 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border border-white/20 dark:border-gray-800/20 rounded-xl shadow-xl z-[9999]"
+          className="absolute right-0 top-full mt-2 w-[calc(100vw-120px)] sm:w-80 max-w-sm bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border border-white/20 dark:border-gray-800/20 rounded-xl shadow-xl z-[9999]"
         >
           <div className="p-4 text-center">
             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-neo-mint dark:border-purist-blue mx-auto"></div>
@@ -471,7 +478,7 @@ function MessageDropdownContent() {
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: -10, scale: 0.95 }}
         transition={{ duration: 0.2 }}
-        className="absolute right-0 top-full mt-2 w-80 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border border-white/20 dark:border-gray-800/20 rounded-xl shadow-xl z-[9999] overflow-hidden"
+        className="absolute right-0 top-full mt-2 w-[calc(100vw-120px)] sm:w-80 max-w-sm bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border border-white/20 dark:border-gray-800/20 rounded-xl shadow-xl z-[9999] overflow-hidden"
       >
         <div className="p-4 border-b border-white/10 dark:border-gray-800/10">
           <div className="flex items-center justify-between mb-3">
@@ -506,10 +513,10 @@ function MessageDropdownContent() {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
             <Input
-              placeholder={showNewChat ? "Search users..." : "Search conversations..."}
+              placeholder={showNewChat ? "Search..." : "Search..."}
               value={showNewChat ? searchTerm : searchQuery}
               onChange={(e) => showNewChat ? setSearchTerm(e.target.value) : setSearchQuery(e.target.value)}
-              className="pl-10 bg-white/50 dark:bg-gray-800/50 border-white/20 dark:border-gray-700/20"
+              className="pl-10 bg-white/50 dark:bg-gray-800/50 border-white/20 dark:border-gray-700/20 text-sm"
             />
           </div>
           {error && (
@@ -544,15 +551,15 @@ function MessageDropdownContent() {
                     onClick={() => createConversation(user)}
                   >
                     <div className="flex items-center space-x-3">
-                      <Avatar className="h-10 w-10 border-2 border-white/20">
-                        <AvatarImage src={user.avatar} />
-                        <AvatarFallback className="bg-gradient-to-br from-neo-mint to-purist-blue text-white text-sm font-semibold">
-                          {user.name.charAt(0).toUpperCase()}
+                      <Avatar className="h-8 w-8 sm:h-10 sm:w-10 border-2 border-white/20">
+                        <AvatarImage src={user.avatar || "/placeholder-user.jpg"} alt={user.name} />
+                        <AvatarFallback className="bg-gradient-to-br from-neo-mint to-purist-blue text-white text-xs sm:text-sm font-semibold">
+                          {user.name?.charAt(0)?.toUpperCase() || 'U'}
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                          {user.name}
+                          {user.name || 'Unknown User'}
                         </p>
                         <p className="text-xs text-gray-500 dark:text-gray-400">
                           {formatDistanceToNow(user.lastActive, { addSuffix: true })}

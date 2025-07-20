@@ -11,6 +11,7 @@ import ThemeToggle from "@/components/ui/theme-toggle"
 import UserMenu from "@/components/ui/user-menu"
 import MessageButton from "@/components/messages/message-button"
 import NotificationsDropdown from "@/components/ui/notifications-dropdown"
+import { MobileHeaderButtons } from "@/components/home/mobile-header-buttons"
 
 interface MainHeaderProps {
   mobileMenuOpen: boolean
@@ -21,6 +22,7 @@ export default function MainHeader({ mobileMenuOpen, setMobileMenuOpen }: MainHe
   const [scrolled, setScrolled] = useState(false)
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const [showMenuIcon, setShowMenuIcon] = useState(false)
+  const [isHomePage, setIsHomePage] = useState(false)
 
   useEffect(() => {
     const handleScroll = () => {
@@ -30,6 +32,9 @@ export default function MainHeader({ mobileMenuOpen, setMobileMenuOpen }: MainHe
         setScrolled(false)
       }
     }
+
+    // Check if we're on the home page
+    setIsHomePage(window.location.pathname === '/')
 
     window.addEventListener("scroll", handleScroll)
     return () => window.removeEventListener("scroll", handleScroll)
@@ -138,8 +143,10 @@ export default function MainHeader({ mobileMenuOpen, setMobileMenuOpen }: MainHe
           </nav>
 
           <div className="flex items-center gap-2 md:gap-3 lg:gap-4 xl:gap-6">
-            {/* Mobile view - show only essential buttons */}
+            {/* Mobile view - show essential buttons with progress and leaderboard */}
             <div className="md:hidden flex items-center gap-2">
+              {/* Only show these buttons when on home route "/" */}
+              {isHomePage && <MobileHeaderButtons />}
               <NotificationsDropdown />
               <MessageButton />
               <UserMenu />

@@ -53,25 +53,7 @@ export default function HeroSection({ title, description, children, showToggle, 
                     </Button>
                   </div>
 
-                  {/* Mobile Toggle Button - Hidden on mobile as sidebar is auto-hidden */}
-                  <div className="hidden lg:block fixed top-16 sm:top-20 right-3 sm:right-4 z-50">
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={onToggleSidebar}
-                      className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm border-white/20 dark:border-gray-700/20 hover:bg-white dark:hover:bg-gray-800 shadow-lg w-8 h-8 sm:w-10 sm:h-10"
-                    >
-                      {sidebarCollapsed ? (
-                        <svg className="h-3 w-3 sm:h-4 sm:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                        </svg>
-                      ) : (
-                        <svg className="h-3 w-3 sm:h-4 sm:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                      )}
-                    </Button>
-                  </div>
+                  {/* Mobile Toggle Button - Now we've removed the fixed button from desktop/laptop */}
                 </>
               )}
             </motion.div>

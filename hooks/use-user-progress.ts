@@ -76,6 +76,8 @@ interface UserProgressData {
   latestPostDate: string | null
   // Daily streak data
   dailyStreakData: DailyStreakData
+  // Level progress percentage
+  levelProgress: number
 }
 
 // Shared function to fetch user progress data
@@ -206,6 +208,12 @@ async function fetchUserProgressData(userId: string) {
   // Calculate Daily Streak based on posts with "Daily" title
   const dailyStreakData = await calculateDailyStreak(userId)
 
+  // Calculate level progress percentage
+  const levelProgress = Math.min(
+    Math.round((challengesInCurrentLevel / currentLevelChallengesNeeded) * 100),
+    100
+  )
+
   return {
     videosCompleted: videoSubmissions,
     totalVideos: totalVideoChallenges,
@@ -222,6 +230,7 @@ async function fetchUserProgressData(userId: string) {
     latestPostPoints: weeklyData?.latest_post_points || 0,
     latestPostDate: weeklyData?.latest_post_date || null,
     dailyStreakData: dailyStreakData,
+    levelProgress: levelProgress, // Add the level progress percentage
   }
 }
 
@@ -246,6 +255,7 @@ export function useUserProgress() {
       currentStreak: 0,
       weeklyActivity: []
     },
+    levelProgress: 0, // Add initial levelProgress value
   })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)

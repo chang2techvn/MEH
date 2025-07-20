@@ -167,12 +167,12 @@ export function LeaderboardModal({ isOpen, onClose }: LeaderboardModalProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl h-[85vh] flex flex-col overflow-hidden bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl border-white/20 dark:border-gray-800/20 mx-2 sm:mx-4">
+      <DialogContent className="w-[90%] max-w-sm sm:max-w-2xl h-[80vh] sm:h-[85vh] flex flex-col overflow-hidden bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl border-white/20 dark:border-gray-800/20 mx-auto my-auto rounded-2xl sm:rounded-xl">
         <DialogHeader className="flex-shrink-0">
-          <DialogTitle className="flex items-center gap-3 text-xl sm:text-2xl font-bold bg-gradient-to-r from-neo-mint to-purist-blue bg-clip-text text-transparent">
+          <DialogTitle className="flex items-center gap-2 sm:gap-3 text-lg sm:text-xl md:text-2xl font-bold bg-gradient-to-r from-neo-mint to-purist-blue bg-clip-text text-transparent">
             <div className="relative">
               <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-mellow-yellow to-cantaloupe blur-sm opacity-70"></div>
-              <TrendingUp className="relative h-6 w-6 text-mellow-yellow dark:text-cantaloupe" />
+              <TrendingUp className="relative h-5 w-5 sm:h-6 sm:w-6 text-mellow-yellow dark:text-cantaloupe" />
             </div>
             Global Leaderboard
           </DialogTitle>
@@ -181,13 +181,13 @@ export function LeaderboardModal({ isOpen, onClose }: LeaderboardModalProps) {
         {/* Content Area - Scrollable */}
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Tab Navigation */}
-          <div className="flex flex-wrap gap-2 mb-4 flex-shrink-0">
+          <div className="flex justify-center sm:justify-start flex-wrap gap-2 mb-4 flex-shrink-0 px-1">
             {(["top10", "totalPoints", "weekPoints"] as LeaderboardTab[]).map((tab) => (
               <Button
                 key={tab}
                 variant={activeTab === tab ? "default" : "outline"}
                 size="sm"
-                className={`flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3 ${
+                className={`flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3 rounded-full ${
                   activeTab === tab
                     ? "bg-gradient-to-r from-neo-mint to-purist-blue text-white"
                     : "bg-white/20 dark:bg-gray-800/20 backdrop-blur-sm border-white/20 dark:border-gray-700/20"
@@ -202,12 +202,12 @@ export function LeaderboardModal({ isOpen, onClose }: LeaderboardModalProps) {
           </div>
 
           {/* Description */}
-          <div className="mb-4 p-3 rounded-lg bg-white/10 dark:bg-gray-800/10 flex-shrink-0">
-            <p className="text-sm text-muted-foreground">
+          <div className="mb-4 p-3 rounded-xl bg-white/10 dark:bg-gray-800/10 flex-shrink-0 mx-1">
+            <p className="text-xs sm:text-sm text-muted-foreground text-center sm:text-left">
               {activeTab === "top10" && 
-                "Top performers ranked by Daily Streak (primary), Total Points (secondary), and Challenges Completed (tertiary)"}
+                "Top performers ranked by Daily Streak, Points, and Challenges"}
               {activeTab === "totalPoints" && 
-                "Users ranked by their total accumulated points from all challenges"}
+                "Users ranked by total accumulated points from all challenges"}
               {activeTab === "weekPoints" && 
                 "Weekly leaderboard showing points earned in the last 7 days"}
             </p>
@@ -237,31 +237,31 @@ export function LeaderboardModal({ isOpen, onClose }: LeaderboardModalProps) {
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -20 }}
                       transition={{ delay: index * 0.05 }}
-                      className="group flex items-center gap-4 p-4 rounded-xl bg-white/10 dark:bg-gray-800/10 hover:bg-white/20 dark:hover:bg-gray-800/20 transition-all duration-200 hover:scale-[1.02] hover:shadow-lg"
+                      className="group flex items-center gap-2 sm:gap-4 p-2 sm:p-4 rounded-xl bg-white/10 dark:bg-gray-800/10 hover:bg-white/20 dark:hover:bg-gray-800/20 transition-all duration-200 hover:scale-[1.02] hover:shadow-lg"
                     >
                       {/* Rank */}
-                      <div className="flex items-center justify-center w-10 h-10">
+                      <div className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10">
                         {getRankIcon(index + 1)}
                       </div>
 
                       {/* User Info */}
-                      <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
-                        <Avatar className="h-10 w-10 sm:h-12 sm:w-12 border-2 border-white dark:border-gray-800 shrink-0">
+                      <div className="flex items-center gap-1 sm:gap-3 flex-1 min-w-0">
+                        <Avatar className="h-8 w-8 sm:h-12 sm:w-12 border-2 border-white dark:border-gray-800 shrink-0">
                           <AvatarImage src={user.avatar || "/placeholder.svg"} alt={user.name} />
                           <AvatarFallback className="bg-gradient-to-br from-neo-mint to-purist-blue text-white text-xs sm:text-sm">
                             {user.name.split(' ').map(n => n[0]).join('').toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
                         <div className="flex-1 min-w-0">
-                          <p className="font-semibold text-sm sm:text-base truncate">{user.name}</p>
+                          <p className="font-semibold text-xs sm:text-base truncate max-w-[120px] sm:max-w-full">{user.name}</p>
                           <div className="flex items-center gap-1 sm:gap-2 mt-1">
                             <Badge
                               variant="outline"
-                              className="text-xs px-1.5 sm:px-2 py-0.5 h-4 sm:h-5 bg-white/20 dark:bg-gray-800/20 shrink-0"
+                              className="text-xs px-1 sm:px-2 py-0 h-4 sm:h-5 bg-white/20 dark:bg-gray-800/20 shrink-0"
                             >
                               {user.level}
                             </Badge>
-                            <span className="text-xs text-muted-foreground truncate">
+                            <span className="text-xs text-muted-foreground truncate max-w-[60px] sm:max-w-full">
                               {user.challengesCompleted} challenges
                             </span>
                           </div>
@@ -269,20 +269,20 @@ export function LeaderboardModal({ isOpen, onClose }: LeaderboardModalProps) {
                       </div>
 
                       {/* Metric - Compact UI */}
-                      <div className="flex flex-col items-end gap-0.5">
+                      <div className="flex flex-col items-end gap-0.5 ml-1 sm:ml-0">
                         {/* Points */}
-                        <div className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/30 group-hover:from-amber-500/30 group-hover:to-orange-500/30 transition-all duration-200">
-                          <Trophy className="h-2.5 w-2.5 text-amber-500" />
-                          <span className="text-xs font-semibold text-amber-600 dark:text-amber-400">
+                        <div className="flex items-center gap-0.5 px-1 sm:px-1.5 py-0.5 rounded-md bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/30 group-hover:from-amber-500/30 group-hover:to-orange-500/30 transition-all duration-200">
+                          <Trophy className="h-2 w-2 sm:h-2.5 sm:w-2.5 text-amber-500" />
+                          <span className="text-[10px] sm:text-xs font-semibold text-amber-600 dark:text-amber-400">
                             {getMetricValue(user)}
                           </span>
                         </div>
                         
                         {/* Day Streak (only for top10 tab) */}
                         {activeTab === "top10" && (
-                          <div className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-gradient-to-r from-emerald-500/20 to-green-500/20 border border-emerald-500/30 group-hover:from-emerald-500/30 group-hover:to-green-500/30 transition-all duration-200">
-                            <Flame className="h-2.5 w-2.5 text-emerald-500" />
-                            <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                          <div className="flex items-center gap-0.5 px-1 sm:px-1.5 py-0.5 rounded-md bg-gradient-to-r from-emerald-500/20 to-green-500/20 border border-emerald-500/30 group-hover:from-emerald-500/30 group-hover:to-green-500/30 transition-all duration-200">
+                            <Flame className="h-2 w-2 sm:h-2.5 sm:w-2.5 text-emerald-500" />
+                            <span className="text-[10px] sm:text-xs font-medium text-emerald-600 dark:text-emerald-400">
                               <span className="hidden sm:inline">{user.streak} day streak</span>
                               <span className="sm:hidden">{user.streak}d</span>
                             </span>
@@ -330,15 +330,15 @@ export function LeaderboardModal({ isOpen, onClose }: LeaderboardModalProps) {
         </div>
 
         {/* Footer - Fixed at bottom */}
-        <div className="flex-shrink-0 flex justify-between items-center pt-4 border-t border-white/10 dark:border-gray-800/10">
-          <p className="text-xs text-muted-foreground">
+        <div className="flex-shrink-0 flex flex-col sm:flex-row gap-3 sm:gap-0 justify-center sm:justify-between items-center pt-4 border-t border-white/10 dark:border-gray-800/10">
+          <p className="text-xs text-muted-foreground text-center">
             Updated every hour • {sortedUsers.length} users shown
           </p>
           <Button
             variant="outline"
             size="sm"
             onClick={onClose}
-            className="bg-white/20 dark:bg-gray-800/20 backdrop-blur-sm border-white/20 dark:border-gray-700/20"
+            className="bg-white/20 dark:bg-gray-800/20 backdrop-blur-sm border-white/20 dark:border-gray-700/20 rounded-full px-6"
           >
             Close
           </Button>

@@ -156,10 +156,10 @@ export default function Home() {
             />
 
             {/* Sidebar with conditional rendering and animation */}
-            <div className={`transition-all duration-500 ease-in-out w-full lg:w-80 xl:w-96 2xl:w-[420px] lg:flex-shrink-0 lg:max-w-[35%] lg:-mt-5 ${
+            <div className={`transition-all duration-500 ease-in-out w-full lg:w-80 xl:w-96 2xl:w-[420px] lg:flex-shrink-0 lg:max-w-[35%] lg:-mt-5 xl:-mt-0 hidden md:block ${
               sidebarCollapsed 
                 ? "lg:hidden" // Hide only on desktop when collapsed
-                : "block" // Show normally on all screen sizes
+                : "md:block" // Show only on desktop/tablet screens (md and up)
             }`}>
               <Suspense fallback={<LoadingFallback />}>
                 <Sidebar 
@@ -275,11 +275,13 @@ export default function Home() {
         }}  
       />
 
-      {/* Leaderboard Modal */}
-      <LeaderboardModal 
-        isOpen={leaderboardModalOpen}
-        onClose={() => setLeaderboardModalOpen(false)}
-      />
+      {/* Leaderboard Modal - Only used on desktop, mobile uses the one in MobileHeaderButtons */}
+      {!isMobile && (
+        <LeaderboardModal 
+          isOpen={leaderboardModalOpen}
+          onClose={() => setLeaderboardModalOpen(false)}
+        />
+      )}
       <footer className="border-t border-white/10 dark:border-gray-800/10 bg-white/40 dark:bg-gray-900/40 backdrop-blur-xl">
           <div className="border-t border-white/10 dark:border-gray-800/10 mt-8 pt-8 text-center text-sm text-muted-foreground">
             <p>© 2025 EnglishMasteryHub. All rights reserved.</p>

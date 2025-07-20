@@ -547,9 +547,9 @@ export default function NotificationsDropdown() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -10, scale: 0.95 }}
             transition={{ duration: 0.2 }}
-            className="absolute right-0 mt-2 w-80 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl rounded-lg shadow-lg border border-white/20 dark:border-gray-800/20 z-50 overflow-hidden"
+            className="absolute right-0 mt-2 w-[calc(100vw-120px)] sm:w-80 max-w-[280px] bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl rounded-lg shadow-lg border border-white/20 dark:border-gray-800/20 z-50 overflow-hidden"
           >
-            <div className="p-3 border-b border-white/20 dark:border-gray-800/20">
+            <div className="p-2 sm:p-3 border-b border-white/20 dark:border-gray-800/20">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="font-semibold">Notifications</h3>
                 <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => setIsOpen(false)}>
@@ -561,8 +561,8 @@ export default function NotificationsDropdown() {
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   type="search"
-                  placeholder="Search notifications..."
-                  className="pl-8 h-9 bg-white/20 dark:bg-gray-800/20 border-white/20 dark:border-gray-800/20"
+                  placeholder="Search..."
+                  className="pl-8 h-9 bg-white/20 dark:bg-gray-800/20 border-white/20 dark:border-gray-800/20 text-sm"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
@@ -592,7 +592,7 @@ export default function NotificationsDropdown() {
                   >
                     <div className="flex items-center gap-3">
                       <div className="relative">
-                        <Avatar className="h-10 w-10 border border-white/20 dark:border-gray-800/20">
+                        <Avatar className="h-8 w-8 sm:h-10 sm:w-10 border border-white/20 dark:border-gray-800/20">
                           <AvatarImage
                             src={notification.sender.avatar || "/placeholder.svg"}
                             alt={notification.sender.name}
@@ -635,7 +635,7 @@ export default function NotificationsDropdown() {
               )}
             </div>
 
-            <div className="p-3 border-t border-white/20 dark:border-gray-800/20">
+            <div className="p-2 sm:p-3 border-t border-white/20 dark:border-gray-800/20">
               <div className="flex items-center justify-between mb-2">
                 <Button variant="ghost" size="sm" className="text-xs" onClick={markAllAsRead}>
                   <Check className="h-3.5 w-3.5 mr-1" />
