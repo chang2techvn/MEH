@@ -497,12 +497,12 @@ export default function NotificationsDropdown() {
             <Button
               variant="ghost"
               size="icon"
-              className="relative group hover:bg-muted transition-colors"
+              className="relative group transition-colors opacity-50 cursor-not-allowed pointer-events-none"
               aria-label="Notifications"
               disabled
             >
               <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-neo-mint to-purist-blue blur-sm opacity-0 group-hover:opacity-70 transition-opacity"></div>
-              <Bell className="relative h-5 w-5 opacity-50" />
+              <Bell className="relative h-5 w-5" />
               <span className="sr-only">Notifications</span>
             </Button>
           </TooltipTrigger>

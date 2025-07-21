@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
+import { usePathname } from "next/navigation"
 import { motion } from "framer-motion"
 import { BookOpen, Search, Menu } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -26,6 +27,7 @@ export default function MainHeader({ mobileMenuOpen, setMobileMenuOpen }: MainHe
   const [isMobile, setIsMobile] = useState(false)
   const [headerVisible, setHeaderVisible] = useState(true)
   const [lastScrollY, setLastScrollY] = useState(0)
+  const pathname = usePathname()
 
   useEffect(() => {
     // Check if mobile
@@ -64,8 +66,9 @@ export default function MainHeader({ mobileMenuOpen, setMobileMenuOpen }: MainHe
       }
     }
 
-    // Check if we're on the home page
-    setIsHomePage(window.location.pathname === '/')
+    // Check if we're on the home page or community page (both use simplified mobile header)
+    const currentPath = window.location.pathname
+    setIsHomePage(currentPath === '/' || currentPath === '/community')
 
     window.addEventListener("scroll", handleScroll)
     return () => window.removeEventListener("scroll", handleScroll)
@@ -166,25 +169,43 @@ export default function MainHeader({ mobileMenuOpen, setMobileMenuOpen }: MainHe
             <Link
               href="/"
               prefetch={true}
-              className="text-sm lg:text-base font-medium text-neo-mint dark:text-purist-blue transition-colors hover:text-neo-mint/80 dark:hover:text-purist-blue/80 relative group px-2"
+              className={`text-sm lg:text-base font-medium transition-colors relative group px-2 ${
+                pathname === '/' 
+                  ? "text-orange-600 dark:text-orange-400" 
+                  : "text-gray-700 dark:text-gray-300 hover:text-neo-mint dark:hover:text-purist-blue"
+              }`}
             >
-              <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-neo-mint to-purist-blue group-hover:w-full transition-all duration-300"></span>
+              <span className={`absolute -bottom-1 left-0 h-0.5 bg-gradient-to-r from-neo-mint to-purist-blue transition-all duration-300 ${
+                pathname === '/' ? "w-full" : "w-0 group-hover:w-full"
+              }`}></span>
               Challenges
             </Link>
             <Link
               href="/community"
               prefetch={true}
-              className="text-sm lg:text-base font-medium transition-colors hover:text-neo-mint dark:hover:text-purist-blue relative group px-2"
+              className={`text-sm lg:text-base font-medium transition-colors relative group px-2 ${
+                pathname === '/community' 
+                  ? "text-orange-600 dark:text-orange-400" 
+                  : "text-gray-700 dark:text-gray-300 hover:text-neo-mint dark:hover:text-purist-blue"
+              }`}
             >
-              <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-neo-mint to-purist-blue group-hover:w-full transition-all duration-300"></span>
+              <span className={`absolute -bottom-1 left-0 h-0.5 bg-gradient-to-r from-neo-mint to-purist-blue transition-all duration-300 ${
+                pathname === '/community' ? "w-full" : "w-0 group-hover:w-full"
+              }`}></span>
               Community
             </Link>
             <Link
               href="/resources"
               prefetch={true}
-              className="text-sm lg:text-base font-medium transition-colors hover:text-neo-mint dark:hover:text-purist-blue relative group px-2"
+              className={`text-sm lg:text-base font-medium transition-colors relative group px-2 ${
+                pathname === '/resources' 
+                  ? "text-orange-600 dark:text-orange-400" 
+                  : "text-gray-700 dark:text-gray-300 hover:text-neo-mint dark:hover:text-purist-blue"
+              }`}
             >
-              <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-neo-mint to-purist-blue group-hover:w-full transition-all duration-300"></span>
+              <span className={`absolute -bottom-1 left-0 h-0.5 bg-gradient-to-r from-neo-mint to-purist-blue transition-all duration-300 ${
+                pathname === '/resources' ? "w-full" : "w-0 group-hover:w-full"
+              }`}></span>
               AI Learning Hub
             </Link>
           </nav>

@@ -12,12 +12,22 @@ import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
 import { Card } from "@/components/ui/card"
 import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { 
   Search, 
   Calendar, 
   Clock, 
   MapPin, 
   Users, 
   ChevronLeft, 
+  ChevronDown,
+  Check,
   Globe,
   Video,
   BookOpen,
@@ -272,35 +282,35 @@ export function EventsModal({ isOpen, onClose, highlightEventId }: EventsModalPr
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
-        className="p-4 rounded-xl bg-white/10 dark:bg-gray-800/10 hover:bg-white/20 dark:hover:bg-gray-800/20 transition-all cursor-pointer group border border-transparent hover:border-white/20 dark:hover:border-gray-700/20"
+        className="p-3 sm:p-4 rounded-lg sm:rounded-xl bg-white/10 dark:bg-gray-800/10 hover:bg-white/20 dark:hover:bg-gray-800/20 transition-all cursor-pointer group border border-transparent hover:border-white/20 dark:hover:border-gray-700/20"
         onClick={() => handleEventClick(event)}
       >
-        <div className="flex items-start justify-between mb-3">
-          <div className="flex items-center gap-3">
-            <div className={`p-2 rounded-lg ${eventTypeColors[event.event_type]}`}>
+        <div className="flex items-start justify-between mb-2 sm:mb-3">
+          <div className="flex items-start gap-2 sm:gap-3 flex-1 min-w-0">
+            <div className={`p-1.5 sm:p-2 rounded-lg ${eventTypeColors[event.event_type]} flex-shrink-0`}>
               <EventTypeIcon type={event.event_type} />
             </div>
-            <div>
-              <h3 className="font-semibold text-base group-hover:text-neo-mint dark:group-hover:text-purist-blue transition-colors">
+            <div className="flex-1 min-w-0">
+              <h3 className="font-semibold text-sm sm:text-base group-hover:text-neo-mint dark:group-hover:text-purist-blue transition-colors line-clamp-2">
                 {event.title}
               </h3>
-              <div className="flex items-center gap-2 mt-1">
-                <Badge variant="outline" className={eventTypeColors[event.event_type]}>
+              <div className="flex items-center gap-1 sm:gap-2 mt-1 flex-wrap">
+                <Badge variant="outline" className={`text-xs h-5 px-1.5 ${eventTypeColors[event.event_type]}`}>
                   {event.event_type.replace('_', ' ')}
                 </Badge>
                 {event.difficulty_level !== 'all' && (
-                  <Badge variant="outline" className={difficultyColors[event.difficulty_level]}>
+                  <Badge variant="outline" className={`text-xs h-5 px-1.5 ${difficultyColors[event.difficulty_level]}`}>
                     {event.difficulty_level}
                   </Badge>
                 )}
                 {isToday && (
-                  <Badge className="bg-green-500 text-white">
+                  <Badge className="bg-green-500 text-white text-xs h-5 px-1.5">
                     Today
                   </Badge>
                 )}
                 {isPast && (
-                  <Badge variant="outline" className="bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">
-                    Past Event
+                  <Badge variant="outline" className="bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 text-xs h-5 px-1.5">
+                    Past
                   </Badge>
                 )}
               </div>
@@ -315,18 +325,19 @@ export function EventsModal({ isOpen, onClose, highlightEventId }: EventsModalPr
                 e.stopPropagation()
                 toggleAttendance(event.id)
               }}
-              className={isEventAttending ? "bg-green-600 hover:bg-green-700" : ""}
+              className={`${isEventAttending ? "bg-green-600 hover:bg-green-700" : ""} flex-shrink-0 ml-2 h-7 px-2 text-xs`}
               disabled={attendanceLoading}
             >
               {isEventAttending ? (
                 <>
-                  <CheckCircle2 className="h-4 w-4 mr-1" />
-                  Attending
+                  <CheckCircle2 className="h-3 w-3 mr-1" />
+                  <span className="hidden sm:inline">Attending</span>
+                  <span className="sm:hidden">✓</span>
                 </>
               ) : (
                 <>
-                  <UserPlus className="h-4 w-4 mr-1" />
-                  Join
+                  <UserPlus className="h-3 w-3 sm:mr-1" />
+                  <span className="hidden sm:inline">Join</span>
                 </>
               )}
             </Button>
@@ -334,25 +345,25 @@ export function EventsModal({ isOpen, onClose, highlightEventId }: EventsModalPr
         </div>
 
         {event.description && (
-          <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
+          <p className="text-xs sm:text-sm text-muted-foreground mb-2 sm:mb-3 line-clamp-2">
             {event.description}
           </p>
         )}
 
-        <div className="space-y-2">
-          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+        <div className="space-y-1.5 sm:space-y-2">
+          <div className="flex items-center gap-2 sm:gap-4 text-xs text-muted-foreground flex-wrap">
             <div className="flex items-center gap-1">
               <Calendar className="h-3 w-3" />
-              <span>{dateStr}</span>
+              <span className="truncate">{dateStr}</span>
             </div>
             <div className="flex items-center gap-1">
               <Clock className="h-3 w-3" />
-              <span>{timeStr}</span>
+              <span className="truncate">{timeStr}</span>
             </div>
           </div>
 
-          <div className="flex items-center justify-between text-sm text-muted-foreground">
-            <div className="flex items-center gap-4">
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0">
               <div className="flex items-center gap-1">
                 {event.is_online ? (
                   <>
@@ -362,34 +373,34 @@ export function EventsModal({ isOpen, onClose, highlightEventId }: EventsModalPr
                 ) : (
                   <>
                     <MapPin className="h-3 w-3" />
-                    <span className="truncate max-w-[150px]">{event.location}</span>
+                    <span className="truncate max-w-[80px] sm:max-w-[150px]">{event.location}</span>
                   </>
                 )}
               </div>
               <div className="flex items-center gap-1">
                 <Users className="h-3 w-3" />
                 <span>{event.current_attendees}</span>
-                {event.max_attendees && <span>/ {event.max_attendees}</span>}
+                {event.max_attendees && <span>/{event.max_attendees}</span>}
               </div>
             </div>
             
             {!isPast && (
-              <span className="text-xs font-medium">
+              <span className="text-xs font-medium flex-shrink-0 ml-2">
                 {getTimeUntilEvent(event.start_date)}
               </span>
             )}
           </div>
 
           {event.tags && event.tags.length > 0 && (
-            <div className="flex flex-wrap gap-1 mt-2">
-              {event.tags.slice(0, 3).map((tag, index) => (
-                <Badge key={index} variant="outline" className="text-xs h-5 px-2 bg-white/20 dark:bg-gray-800/20">
+            <div className="flex flex-wrap gap-1 mt-1.5 sm:mt-2">
+              {event.tags.slice(0, 2).map((tag, index) => (
+                <Badge key={index} variant="outline" className="text-xs h-4 px-1.5 bg-white/20 dark:bg-gray-800/20">
                   {tag}
                 </Badge>
               ))}
-              {event.tags.length > 3 && (
-                <Badge variant="outline" className="text-xs h-5 px-2 bg-white/20 dark:bg-gray-800/20">
-                  +{event.tags.length - 3}
+              {event.tags.length > 2 && (
+                <Badge variant="outline" className="text-xs h-4 px-1.5 bg-white/20 dark:bg-gray-800/20">
+                  +{event.tags.length - 2}
                 </Badge>
               )}
             </div>
@@ -401,16 +412,16 @@ export function EventsModal({ isOpen, onClose, highlightEventId }: EventsModalPr
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl border-white/20 dark:border-gray-800/20">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-3 text-xl">
+      <DialogContent className="max-w-[90vw] sm:max-w-4xl w-full max-h-[90vh] sm:max-h-[85vh] overflow-hidden bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl border-white/20 dark:border-gray-800/20 mx-auto my-auto p-3 sm:p-6 rounded-2xl sm:rounded-xl">
+        <DialogHeader className="pb-3 sm:pb-4 flex-shrink-0">
+          <DialogTitle className="flex items-center gap-2 sm:gap-3 text-base sm:text-lg md:text-xl">
             {showDetail && selectedEvent ? (
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 sm:gap-3">
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={handleBackToList}
-                  className="rounded-full hover:bg-white/20 dark:hover:bg-gray-800/20"
+                  className="rounded-full hover:bg-white/20 dark:hover:bg-gray-800/20 h-8 w-8 p-0"
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
@@ -437,7 +448,7 @@ export function EventsModal({ isOpen, onClose, highlightEventId }: EventsModalPr
           </DialogTitle>
         </DialogHeader>
 
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 overflow-hidden mt-2">
           <AnimatePresence mode="wait">
             {showDetail && selectedEvent ? (
               // Event Detail View
@@ -450,27 +461,31 @@ export function EventsModal({ isOpen, onClose, highlightEventId }: EventsModalPr
                 className="h-full"
               >
                 {/* Event Detail Content */}
-                <ScrollArea className="h-[500px] pr-4">
-                  <div className="space-y-6">
+                <ScrollArea className="h-[280px] sm:h-[400px] md:h-[500px] pr-2 sm:pr-4">
+                  <div className="space-y-4 sm:space-y-6">
                     {/* Event Header */}
-                    <div className="space-y-4">
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className={`p-3 rounded-lg ${eventTypeColors[selectedEvent.event_type]}`}>
-                            <EventTypeIcon type={selectedEvent.event_type} />
-                          </div>
-                          <div>
-                            <h2 className="text-2xl font-bold">{selectedEvent.title}</h2>
-                            <div className="flex items-center gap-2 mt-1">
-                              <Badge className={eventTypeColors[selectedEvent.event_type]}>
-                                {selectedEvent.event_type.replace('_', ' ')}
-                              </Badge>
-                              {selectedEvent.difficulty_level !== 'all' && (
-                                <Badge variant="outline" className={difficultyColors[selectedEvent.difficulty_level]}>
-                                  {selectedEvent.difficulty_level}
-                                </Badge>
-                              )}
+                    <div className="space-y-3 sm:space-y-4">
+                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
+                        <div className="flex-1 min-w-0">
+                          {/* Title with Icon */}
+                          <div className="flex items-start gap-2 sm:gap-3 mb-2">
+                            <div className={`p-2 sm:p-3 rounded-lg ${eventTypeColors[selectedEvent.event_type]} flex-shrink-0`}>
+                              <EventTypeIcon type={selectedEvent.event_type} />
                             </div>
+                            <div className="min-w-0 flex-1">
+                              <h2 className="text-lg sm:text-xl md:text-2xl font-bold leading-tight">{selectedEvent.title}</h2>
+                            </div>
+                          </div>
+                          {/* Badges */}
+                          <div className="flex flex-wrap items-center gap-1 sm:gap-2 ml-10 sm:ml-12">
+                            <Badge className={`text-xs ${eventTypeColors[selectedEvent.event_type]}`}>
+                              {selectedEvent.event_type.replace('_', ' ')}
+                            </Badge>
+                            {selectedEvent.difficulty_level !== 'all' && (
+                              <Badge variant="outline" className={`text-xs ${difficultyColors[selectedEvent.difficulty_level]}`}>
+                                {selectedEvent.difficulty_level}
+                              </Badge>
+                            )}
                           </div>
                         </div>
 
@@ -478,18 +493,21 @@ export function EventsModal({ isOpen, onClose, highlightEventId }: EventsModalPr
                           <Button
                             variant={isAttending(selectedEvent.id) ? "default" : "outline"}
                             onClick={() => toggleAttendance(selectedEvent.id)}
-                            className={isAttending(selectedEvent.id) ? "bg-green-600 hover:bg-green-700" : ""}
+                            className={`${isAttending(selectedEvent.id) ? "bg-green-600 hover:bg-green-700" : ""} flex-shrink-0 text-sm`}
+                            size="sm"
                             disabled={attendanceLoading}
                           >
                             {isAttending(selectedEvent.id) ? (
                               <>
-                                <CheckCircle2 className="h-4 w-4 mr-2" />
-                                Attending
+                                <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                                <span className="hidden sm:inline">Attending</span>
+                                <span className="sm:hidden">✓</span>
                               </>
                             ) : (
                               <>
-                                <UserPlus className="h-4 w-4 mr-2" />
-                                Join Event
+                                <UserPlus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                                <span className="hidden sm:inline">Join Event</span>
+                                <span className="sm:hidden">Join</span>
                               </>
                             )}
                           </Button>
@@ -497,7 +515,7 @@ export function EventsModal({ isOpen, onClose, highlightEventId }: EventsModalPr
                       </div>
 
                       {selectedEvent.description && (
-                        <p className="text-muted-foreground leading-relaxed">
+                        <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">
                           {selectedEvent.description}
                         </p>
                       )}
@@ -506,13 +524,13 @@ export function EventsModal({ isOpen, onClose, highlightEventId }: EventsModalPr
                     <Separator />
 
                     {/* Event Details */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <Card className="p-4 bg-white/20 dark:bg-gray-800/20 border-white/20 dark:border-gray-700/20">
-                        <h3 className="font-semibold mb-3 flex items-center gap-2">
-                          <Calendar className="h-4 w-4" />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 md:gap-6">
+                      <Card className="p-3 sm:p-4 bg-white/20 dark:bg-gray-800/20 border-white/20 dark:border-gray-700/20">
+                        <h3 className="font-semibold mb-2 sm:mb-3 flex items-center gap-2 text-sm sm:text-base">
+                          <Calendar className="h-3 w-3 sm:h-4 sm:w-4" />
                           When
                         </h3>
-                        <div className="space-y-2 text-sm">
+                        <div className="space-y-1 sm:space-y-2 text-xs sm:text-sm">
                           <div>{formatEventTime(selectedEvent.start_date, selectedEvent.end_date).dateStr}</div>
                           <div>{formatEventTime(selectedEvent.start_date, selectedEvent.end_date).timeStr}</div>
                           <div className="text-muted-foreground">
@@ -521,26 +539,26 @@ export function EventsModal({ isOpen, onClose, highlightEventId }: EventsModalPr
                         </div>
                       </Card>
 
-                      <Card className="p-4 bg-white/20 dark:bg-gray-800/20 border-white/20 dark:border-gray-700/20">
-                        <h3 className="font-semibold mb-3 flex items-center gap-2">
+                      <Card className="p-3 sm:p-4 bg-white/20 dark:bg-gray-800/20 border-white/20 dark:border-gray-700/20">
+                        <h3 className="font-semibold mb-2 sm:mb-3 flex items-center gap-2 text-sm sm:text-base">
                           {selectedEvent.is_online ? (
                             <>
-                              <Globe className="h-4 w-4" />
+                              <Globe className="h-3 w-3 sm:h-4 sm:w-4" />
                               Online Event
                             </>
                           ) : (
                             <>
-                              <MapPin className="h-4 w-4" />
+                              <MapPin className="h-3 w-3 sm:h-4 sm:w-4" />
                               Location
                             </>
                           )}
                         </h3>
-                        <div className="text-sm">
+                        <div className="text-xs sm:text-sm">
                           {selectedEvent.is_online ? (
                             <div className="space-y-2">
                               <div>This is an online event</div>
                               {selectedEvent.online_link && (
-                                <Button variant="outline" size="sm" asChild>
+                                <Button variant="outline" size="sm" asChild className="h-7 text-xs">
                                   <a href={selectedEvent.online_link} target="_blank" rel="noopener noreferrer">
                                     <ExternalLink className="h-3 w-3 mr-1" />
                                     Join Online
@@ -549,17 +567,17 @@ export function EventsModal({ isOpen, onClose, highlightEventId }: EventsModalPr
                               )}
                             </div>
                           ) : (
-                            <div>{selectedEvent.location}</div>
+                            <div className="break-words">{selectedEvent.location}</div>
                           )}
                         </div>
                       </Card>
 
-                      <Card className="p-4 bg-white/20 dark:bg-gray-800/20 border-white/20 dark:border-gray-700/20">
-                        <h3 className="font-semibold mb-3 flex items-center gap-2">
-                          <Users className="h-4 w-4" />
+                      <Card className="p-3 sm:p-4 bg-white/20 dark:bg-gray-800/20 border-white/20 dark:border-gray-700/20">
+                        <h3 className="font-semibold mb-2 sm:mb-3 flex items-center gap-2 text-sm sm:text-base">
+                          <Users className="h-3 w-3 sm:h-4 sm:w-4" />
                           Attendees
                         </h3>
-                        <div className="text-sm space-y-1">
+                        <div className="text-xs sm:text-sm space-y-1">
                           <div>{selectedEvent.current_attendees} attending</div>
                           {selectedEvent.max_attendees && (
                             <div className="text-muted-foreground">
@@ -569,9 +587,9 @@ export function EventsModal({ isOpen, onClose, highlightEventId }: EventsModalPr
                         </div>
                       </Card>
 
-                      <Card className="p-4 bg-white/20 dark:bg-gray-800/20 border-white/20 dark:border-gray-700/20">
-                        <h3 className="font-semibold mb-3">Event Info</h3>
-                        <div className="space-y-2 text-sm">
+                      <Card className="p-3 sm:p-4 bg-white/20 dark:bg-gray-800/20 border-white/20 dark:border-gray-700/20">
+                        <h3 className="font-semibold mb-2 sm:mb-3 text-sm sm:text-base">Event Info</h3>
+                        <div className="space-y-1 sm:space-y-2 text-xs sm:text-sm">
                           <div>
                             <span className="text-muted-foreground">Type:</span>{" "}
                             {selectedEvent.event_type.replace('_', ' ')}
@@ -591,10 +609,10 @@ export function EventsModal({ isOpen, onClose, highlightEventId }: EventsModalPr
                     {/* Tags */}
                     {selectedEvent.tags && selectedEvent.tags.length > 0 && (
                       <div>
-                        <h3 className="font-semibold mb-3">Tags</h3>
-                        <div className="flex flex-wrap gap-2">
+                        <h3 className="font-semibold mb-2 sm:mb-3 text-sm sm:text-base">Tags</h3>
+                        <div className="flex flex-wrap gap-1 sm:gap-2">
                           {selectedEvent.tags.map((tag, index) => (
-                            <Badge key={index} variant="outline" className="bg-white/20 dark:bg-gray-800/20">
+                            <Badge key={index} variant="outline" className="text-xs bg-white/20 dark:bg-gray-800/20">
                               {tag}
                             </Badge>
                           ))}
@@ -605,15 +623,15 @@ export function EventsModal({ isOpen, onClose, highlightEventId }: EventsModalPr
                 </ScrollArea>
 
                 {/* Footer */}
-                <div className="flex justify-between items-center pt-4 border-t border-white/10 dark:border-gray-800/10">
-                  <p className="text-xs text-muted-foreground">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 sm:gap-0 pt-3 sm:pt-4 border-t border-white/10 dark:border-gray-800/10">
+                  <p className="text-xs text-muted-foreground order-2 sm:order-1">
                     Event created {formatDistanceToNow(new Date(selectedEvent.created_at), { addSuffix: true })}
                   </p>
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={onClose}
-                    className="bg-white/20 dark:bg-gray-800/20 backdrop-blur-sm border-white/20 dark:border-gray-700/20"
+                    className="bg-white/20 dark:bg-gray-800/20 backdrop-blur-sm border-white/20 dark:border-gray-700/20 order-1 sm:order-2 self-end sm:self-auto"
                   >
                     Close
                   </Button>
@@ -630,74 +648,89 @@ export function EventsModal({ isOpen, onClose, highlightEventId }: EventsModalPr
                 className="flex-1 overflow-hidden"
               >
                 {/* Search and Filter Bar */}
-                <div className="space-y-4 mb-4">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                    <Input
-                      placeholder="Search events..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-10 bg-white/20 dark:bg-gray-800/20 backdrop-blur-sm border-white/20 dark:border-gray-700/20"
-                    />
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <Filter className="h-4 w-4 text-muted-foreground" />
-                    <div className="flex flex-wrap gap-2">
-                      {[
-                        { key: 'all', label: 'All Events' },
-                        { key: 'workshop', label: 'Workshops' },
-                        { key: 'webinar', label: 'Webinars' },
-                        { key: 'study_group', label: 'Study Groups' },
-                        { key: 'competition', label: 'Competitions' },
-                        { key: 'social', label: 'Social' }
-                      ].map(filter => (
-                        <Button
-                          key={filter.key}
-                          variant={filterType === filter.key ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => setFilterType(filter.key)}
-                          className={filterType === filter.key ? 
-                            "bg-gradient-to-r from-neo-mint to-purist-blue text-white" : 
-                            "bg-white/20 dark:bg-gray-800/20"
-                          }
-                        >
-                          {filter.label}
-                        </Button>
-                      ))}
+                <div className="space-y-3 mb-4 px-1 pt-2">
+                  {/* Mobile: Search and Filter in same row */}
+                  <div className="flex gap-2">
+                    <div className="relative flex-1 min-w-0">
+                      <Search className="absolute left-2 sm:left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-3 w-3 sm:h-4 sm:w-4 z-10" />
+                      <Input
+                        placeholder="Search events..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pl-8 sm:pl-10 pr-2 sm:pr-4 h-9 sm:h-10 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border-2 border-white/60 dark:border-gray-600/60 text-sm rounded-lg focus:ring-2 focus:ring-neo-mint/50 dark:focus:ring-purist-blue/50 focus:border-neo-mint/70 dark:focus:border-purist-blue/70 transition-colors shadow-sm"
+                      />
                     </div>
+                    
+                    {/* Filter Dropdown */}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          className="h-9 sm:h-10 px-2 sm:px-3 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border-2 border-white/60 dark:border-gray-600/60 hover:bg-white/60 dark:hover:bg-gray-800/60 flex-shrink-0 transition-colors shadow-sm"
+                        >
+                          <Filter className="h-3 w-3 sm:h-4 sm:w-4" />
+                          <span className="hidden sm:inline ml-1">Filter</span>
+                          <ChevronDown className="h-3 w-3 ml-0.5 sm:ml-1" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-48 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl border-white/20 dark:border-gray-800/20">
+                        <DropdownMenuLabel>Event Type</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        {[
+                          { key: 'all', label: 'All Events' },
+                          { key: 'workshop', label: 'Workshops' },
+                          { key: 'webinar', label: 'Webinars' },
+                          { key: 'study_group', label: 'Study Groups' },
+                          { key: 'competition', label: 'Competitions' },
+                          { key: 'social', label: 'Social' }
+                        ].map(filter => (
+                          <DropdownMenuItem
+                            key={filter.key}
+                            onClick={() => setFilterType(filter.key)}
+                            className={`cursor-pointer ${filterType === filter.key ? 
+                              'bg-neo-mint/20 dark:bg-purist-blue/20 text-neo-mint dark:text-purist-blue' : 
+                              ''
+                            }`}
+                          >
+                            {filterType === filter.key && <Check className="h-4 w-4 mr-2" />}
+                            <span className={filterType !== filter.key ? 'ml-6' : ''}>{filter.label}</span>
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
 
                 {/* Description */}
-                <div className="mb-4 p-3 rounded-lg bg-white/10 dark:bg-gray-800/10">
-                  <p className="text-sm text-muted-foreground">
+                <div className="mb-3 sm:mb-4 p-2 sm:p-3 rounded-lg bg-white/10 dark:bg-gray-800/10 mx-1">
+                  <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
                     Discover and join English learning events. Click on any event to view details and join the community.
                   </p>
                 </div>
 
                 {/* Events List */}
-                <ScrollArea className="h-[400px] pr-4">
-                  <div className="space-y-4">
+                <ScrollArea className="h-[280px] sm:h-[400px] pr-2 sm:pr-4">
+                  <div className="space-y-2 sm:space-y-4">
                     {loading ? (
                       // Loading skeleton
                       Array.from({ length: 6 }).map((_, i) => (
-                        <div key={i} className="p-4 rounded-xl bg-white/10 dark:bg-gray-800/10">
-                          <div className="flex items-start gap-3">
-                            <Skeleton className="w-12 h-12 rounded-lg" />
-                            <div className="flex-1 space-y-2">
-                              <Skeleton className="h-5 w-3/4" />
-                              <div className="flex gap-2">
-                                <Skeleton className="h-4 w-16" />
-                                <Skeleton className="h-4 w-20" />
+                        <div key={i} className="p-3 sm:p-4 rounded-lg sm:rounded-xl bg-white/10 dark:bg-gray-800/10">
+                          <div className="flex items-start gap-2 sm:gap-3">
+                            <Skeleton className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg" />
+                            <div className="flex-1 space-y-1.5 sm:space-y-2">
+                              <Skeleton className="h-4 sm:h-5 w-3/4" />
+                              <div className="flex gap-1 sm:gap-2">
+                                <Skeleton className="h-3 sm:h-4 w-12 sm:w-16" />
+                                <Skeleton className="h-3 sm:h-4 w-16 sm:w-20" />
                               </div>
-                              <Skeleton className="h-4 w-full" />
-                              <div className="flex gap-4">
-                                <Skeleton className="h-3 w-24" />
-                                <Skeleton className="h-3 w-16" />
+                              <Skeleton className="h-3 sm:h-4 w-full" />
+                              <div className="flex gap-2 sm:gap-4">
+                                <Skeleton className="h-3 w-20 sm:w-24" />
+                                <Skeleton className="h-3 w-12 sm:w-16" />
                               </div>
                             </div>
-                            <Skeleton className="h-8 w-20" />
+                            <Skeleton className="h-6 sm:h-8 w-16 sm:w-20" />
                           </div>
                         </div>
                       ))
@@ -708,19 +741,19 @@ export function EventsModal({ isOpen, onClose, highlightEventId }: EventsModalPr
                         ))}
                       </AnimatePresence>
                     ) : (
-                      <div className="text-center py-8">
-                        <Calendar className="h-16 w-16 mx-auto opacity-50 mb-4" />
+                      <div className="text-center py-6 sm:py-8">
+                        <Calendar className="h-12 w-12 sm:h-16 sm:w-16 mx-auto opacity-50 mb-3 sm:mb-4" />
                         {searchQuery || filterType !== 'all' ? (
                           <div>
-                            <h3 className="font-medium mb-2">No events found</h3>
-                            <p className="text-muted-foreground text-sm">
+                            <h3 className="font-medium mb-1 sm:mb-2 text-sm sm:text-base">No events found</h3>
+                            <p className="text-muted-foreground text-xs sm:text-sm">
                               Try adjusting your search or filter criteria
                             </p>
                           </div>
                         ) : (
                           <div>
-                            <h3 className="font-medium mb-2">No events available</h3>
-                            <p className="text-muted-foreground text-sm">
+                            <h3 className="font-medium mb-1 sm:mb-2 text-sm sm:text-base">No events available</h3>
+                            <p className="text-muted-foreground text-xs sm:text-sm">
                               Check back later for new events
                             </p>
                           </div>
@@ -731,7 +764,7 @@ export function EventsModal({ isOpen, onClose, highlightEventId }: EventsModalPr
                 </ScrollArea>
 
                 {/* Footer */}
-                <div className="flex justify-between items-center pt-4 border-t border-white/10 dark:border-gray-800/10">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-0 pt-3 sm:pt-4 border-t border-white/10 dark:border-gray-800/10">
                   <p className="text-xs text-muted-foreground">
                     {searchQuery || filterType !== 'all' ? 
                       `${filteredEvents.length} of ${events.length} events` : 
@@ -742,7 +775,7 @@ export function EventsModal({ isOpen, onClose, highlightEventId }: EventsModalPr
                     variant="outline"
                     size="sm"
                     onClick={onClose}
-                    className="bg-white/20 dark:bg-gray-800/20 backdrop-blur-sm border-white/20 dark:border-gray-700/20"
+                    className="bg-white/20 dark:bg-gray-800/20 backdrop-blur-sm border-white/20 dark:border-gray-700/20 self-end sm:self-auto"
                   >
                     Close
                   </Button>

@@ -17,7 +17,7 @@ export function MobileNavigation({ isOpen, onClose }: MobileNavigationProps) {
   const navigationItems = [
     {
       href: "/",
-      label: "Practice Challenges",
+      label: "Home",
       icon: BookOpen
     },
     {
@@ -29,11 +29,6 @@ export function MobileNavigation({ isOpen, onClose }: MobileNavigationProps) {
       href: "/resources",
       label: "AI Learning Hub",
       icon: Zap
-    },
-    {
-      href: "/profile",
-      label: "Profile",
-      icon: Award
     }
   ]
 

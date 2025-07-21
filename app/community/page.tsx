@@ -4,6 +4,8 @@ import { motion, AnimatePresence } from "framer-motion"
 import Image from "next/image"
 import OptimizedImage from "@/components/optimized/optimized-image"
 import MainHeader from "@/components/ui/main-header"
+import { MobileNavigation } from "@/components/home/mobile-navigation"
+import { CommunityMobileBottomNavigation } from "@/components/community/community-mobile-bottom-navigation"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -98,7 +100,6 @@ export default function CommunityPage() {
   const [activeUserStories, setActiveUserStories] = useState<Story[]>([])
   const [currentStoryIndex, setCurrentStoryIndex] = useState(0)
   const [progressKey, setProgressKey] = useState(0) // Force progress bar re-render
-  const [showScrollToTop, setShowScrollToTop] = useState(false)
   const [activeFilters, setActiveFilters] = useState<string[]>([])
   const [feedPosts, setFeedPosts] = useState<Post[]>([])
   const [contacts, setContacts] = useState<Contact[]>([])
@@ -533,20 +534,6 @@ export default function CommunityPage() {
   // Set mounted to true for client-side rendering
   useEffect(() => {
     setMounted(true)
-  }, [])
-
-  // Handle scroll to show/hide scroll to top button for community page
-  useEffect(() => {
-    const handleScroll = () => {
-      if (window.scrollY > 500) {
-        setShowScrollToTop(true)
-      } else {
-        setShowScrollToTop(false)
-      }
-    }
-
-    window.addEventListener("scroll", handleScroll)
-    return () => window.removeEventListener("scroll", handleScroll)
   }, [])
 
   // Auto-advance stories when viewing multiple stories
@@ -1112,14 +1099,6 @@ export default function CommunityPage() {
     setStoryPaused(false) // Resume story progression
   }
 
-  // Scroll to top function for community page
-  const handleScrollToTop = () => {
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth",
-    })
-  }
-
   // Handle story reply submission
   const handleStoryReplySubmit = async () => {
     if (!storyReplyText.trim() || !activeStory || isSubmittingReply) return
@@ -1288,17 +1267,13 @@ export default function CommunityPage() {
       />      <div className="flex min-h-screen flex-col bg-[#f0f2f5] dark:bg-gray-900">
         <MainHeader mobileMenuOpen={mobileMenuOpen} setMobileMenuOpen={setMobileMenuOpen} />
 
-        {/* Mobile Search Bar */}
-        <div className="md:hidden bg-white dark:bg-gray-800 px-4 py-2 shadow-sm">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input
-              type="search"
-              placeholder="Search EnglishMastery"
-              className="pl-9 bg-gray-100 dark:bg-gray-700 border-none rounded-full"
-            />
-          </div>
-        </div>        {/* Main Content */}
+        {/* Mobile menu */}
+        <MobileNavigation 
+          isOpen={mobileMenuOpen} 
+          onClose={() => setMobileMenuOpen(false)} 
+        />
+
+        {/* Main Content */}
         <main className="flex-1 relative">
           <div className="w-full max-w-none px-2 sm:px-4 lg:px-6 xl:px-8 2xl:px-12 py-4">
             <div className="flex flex-col lg:flex-row lg:gap-4 xl:gap-6 2xl:gap-8 2xl:justify-center 2xl:max-w-[1800px] 2xl:mx-auto">
@@ -1790,26 +1765,6 @@ export default function CommunityPage() {
         {/* Enhanced Story Creator */}
         <EnhancedStoryCreator isOpen={showStoryCreator} onClose={() => setShowStoryCreator(false)} />
 
-        {/* Scroll to Top Button */}
-        <AnimatePresence>
-          {showScrollToTop && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.8 }}
-              className="fixed bottom-4 sm:bottom-6 right-4 sm:right-6 z-30"
-            >
-              <Button
-                size="icon"
-                className="rounded-full bg-neo-mint hover:bg-neo-mint/90 text-white shadow-lg h-10 w-10 sm:h-12 sm:w-12"
-                onClick={handleScrollToTop}
-              >
-                <ArrowUp className="h-5 w-5" />
-              </Button>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
         {/* Floating Story Reaction Animations */}
         <AnimatePresence>
           {storyReactionAnimations.map((reaction) => (
@@ -1839,6 +1794,11 @@ export default function CommunityPage() {
             </motion.div>
           ))}
         </AnimatePresence>
+
+        {/* Mobile Bottom Navigation - Only visible on mobile */}
+        <div className="md:hidden">
+          <CommunityMobileBottomNavigation />
+        </div>
       </div>
     </>
   )

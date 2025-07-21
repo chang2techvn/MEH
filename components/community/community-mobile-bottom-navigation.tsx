@@ -19,22 +19,22 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { TrendingUp, Trophy, MessageSquare, User, LogOut, Settings, Bot } from "lucide-react"
-import { ProgressModal } from "@/components/home/progress-modal"
-import { LeaderboardModal } from "@/components/home/leaderboard-modal"
+import { Bookmark, Calendar, MessageSquare, User, LogOut, Settings, Bot } from "lucide-react"
+import { SavedPostsModal } from "@/components/community/saved-posts-modal"
+import { EventsModal } from "@/components/community/events-modal"
 import { MessagesModal } from "@/components/messages/messages-modal"
 import { AIChatBox } from "@/components/ai-helper/ai-chat-box"
 import { useAuthState, useAuthActions } from "@/contexts/auth-context"
 import { useChat } from "@/contexts/chat-context-realtime"
 import { useRouter } from "next/navigation"
 
-interface MobileBottomNavigationProps {
+interface CommunityMobileBottomNavigationProps {
   isVisible?: boolean
 }
 
-export function MobileBottomNavigation({ isVisible = true }: MobileBottomNavigationProps) {
-  const [progressModalOpen, setProgressModalOpen] = useState(false)
-  const [leaderboardModalOpen, setLeaderboardModalOpen] = useState(false)
+export function CommunityMobileBottomNavigation({ isVisible = true }: CommunityMobileBottomNavigationProps) {
+  const [savedModalOpen, setSavedModalOpen] = useState(false)
+  const [eventsModalOpen, setEventsModalOpen] = useState(false)
   const [messagesModalOpen, setMessagesModalOpen] = useState(false)
   const [isAIChatOpen, setIsAIChatOpen] = useState(false)
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false)
@@ -43,13 +43,13 @@ export function MobileBottomNavigation({ isVisible = true }: MobileBottomNavigat
   const { toggleDropdown, totalUnreadCount, isDropdownOpen } = useChat()
   const router = useRouter()
   
-  const handleProgressClick = () => {
+  const handleSavedClick = () => {
     if (!isAuthenticated) return
-    setProgressModalOpen(true)
+    setSavedModalOpen(true)
   }
   
-  const handleLeaderboardClick = () => {
-    setLeaderboardModalOpen(true)
+  const handleEventsClick = () => {
+    setEventsModalOpen(true)
   }
 
   const handleMessageClick = () => {
@@ -88,7 +88,7 @@ export function MobileBottomNavigation({ isVisible = true }: MobileBottomNavigat
           <div className="px-4 py-1">
             <div className="flex items-center justify-around max-w-md mx-auto">
               
-              {/* Your Progress */}
+              {/* Saved Posts */}
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -103,38 +103,38 @@ export function MobileBottomNavigation({ isVisible = true }: MobileBottomNavigat
                         className={`relative group transition-colors h-10 w-10 rounded-xl ${
                           !isAuthenticated 
                             ? "opacity-50 cursor-not-allowed" 
-                            : progressModalOpen 
+                            : savedModalOpen 
                               ? "bg-orange-100 dark:bg-orange-900/30" 
                               : "hover:bg-muted"
                         }`}
-                        onClick={handleProgressClick}
+                        onClick={handleSavedClick}
                         disabled={!isAuthenticated}
                       >
                         <div className={`absolute -inset-1 rounded-xl blur-sm transition-opacity ${
                           !isAuthenticated 
                             ? "opacity-0" 
-                            : progressModalOpen 
+                            : savedModalOpen 
                               ? "bg-gradient-to-r from-orange-400 to-orange-600 opacity-70" 
                               : "bg-gradient-to-r from-gray-400 to-gray-600 opacity-0 group-hover:opacity-50"
                         }`}></div>
-                        <TrendingUp className={`relative h-6 w-6 ${
+                        <Bookmark className={`relative h-6 w-6 ${
                           !isAuthenticated 
                             ? "text-gray-400" 
-                            : progressModalOpen 
+                            : savedModalOpen 
                               ? "text-orange-600 dark:text-orange-400" 
                               : "text-gray-700 dark:text-gray-300"
                         }`} />
                       </Button>
-                      <span className="text-[9px] text-muted-foreground font-medium leading-tight">Progress</span>
+                      <span className="text-[9px] text-muted-foreground font-medium leading-tight">Saved</span>
                     </motion.div>
                   </TooltipTrigger>
                   <TooltipContent side="top">
-                    <p>{isAuthenticated ? "Your Progress" : "Login to view your progress"}</p>
+                    <p>{isAuthenticated ? "Saved Posts" : "Login to view saved posts"}</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
 
-              {/* Global Leaderboard */}
+              {/* Events */}
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -147,26 +147,26 @@ export function MobileBottomNavigation({ isVisible = true }: MobileBottomNavigat
                         variant="ghost"
                         size="icon"
                         className={`relative group transition-colors h-10 w-10 rounded-xl ${
-                          leaderboardModalOpen ? "bg-orange-100 dark:bg-orange-900/30" : "hover:bg-muted"
+                          eventsModalOpen ? "bg-orange-100 dark:bg-orange-900/30" : "hover:bg-muted"
                         }`}
-                        onClick={handleLeaderboardClick}
+                        onClick={handleEventsClick}
                       >
                         <div className={`absolute -inset-1 rounded-xl blur-sm transition-opacity ${
-                          leaderboardModalOpen 
+                          eventsModalOpen 
                             ? "bg-gradient-to-r from-orange-400 to-orange-600 opacity-70" 
                             : "bg-gradient-to-r from-gray-400 to-gray-600 opacity-0 group-hover:opacity-50"
                         }`}></div>
-                        <Trophy className={`relative h-6 w-6 ${
-                          leaderboardModalOpen 
+                        <Calendar className={`relative h-6 w-6 ${
+                          eventsModalOpen 
                             ? "text-orange-600 dark:text-orange-400" 
                             : "text-gray-700 dark:text-gray-300"
                         }`} />
                       </Button>
-                      <span className="text-[9px] text-muted-foreground font-medium leading-tight">Leaderboard</span>
+                      <span className="text-[9px] text-muted-foreground font-medium leading-tight">Events</span>
                     </motion.div>
                   </TooltipTrigger>
                   <TooltipContent side="top">
-                    <p>Global Leaderboard</p>
+                    <p>Community Events</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -208,7 +208,7 @@ export function MobileBottomNavigation({ isVisible = true }: MobileBottomNavigat
                               : "text-gray-700 dark:text-gray-300"
                         }`} />
                         {isAuthenticated && totalUnreadCount > 0 && (
-                          <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-gradient-to-r from-orange-400 to-orange-600 text-[9px] text-white shadow-glow-sm">
+                          <span className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
                             {totalUnreadCount > 9 ? '9+' : totalUnreadCount}
                           </span>
                         )}
@@ -217,12 +217,12 @@ export function MobileBottomNavigation({ isVisible = true }: MobileBottomNavigat
                     </motion.div>
                   </TooltipTrigger>
                   <TooltipContent side="top">
-                    <p>{isAuthenticated ? "Messages" : "Sign in to view messages"}</p>
+                    <p>{isAuthenticated ? "Messages" : "Login to access messages"}</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
 
-              {/* AI Chat */}
+              {/* AI Assistant */}
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -250,7 +250,7 @@ export function MobileBottomNavigation({ isVisible = true }: MobileBottomNavigat
                             : "text-gray-700 dark:text-gray-300"
                         }`} />
                       </Button>
-                      <span className="text-[9px] text-muted-foreground font-medium leading-tight">AI Chat</span>
+                      <span className="text-[9px] text-muted-foreground font-medium leading-tight">AI</span>
                     </motion.div>
                   </TooltipTrigger>
                   <TooltipContent side="top">
@@ -259,102 +259,103 @@ export function MobileBottomNavigation({ isVisible = true }: MobileBottomNavigat
                 </Tooltip>
               </TooltipProvider>
 
-              {/* Avatar Profile */}
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <motion.div
-                      whileHover={{ scale: 1.05 }}
+              {/* Profile or Login */}
+              {isAuthenticated ? (
+                <DropdownMenu open={profileDropdownOpen} onOpenChange={setProfileDropdownOpen}>
+                  <DropdownMenuTrigger asChild>
+                    <motion.div 
+                      whileHover={{ scale: 1.05 }} 
                       whileTap={{ scale: 0.95 }}
                       className="flex flex-col items-center min-w-0"
                     >
-                      {isAuthenticated && user ? (
-                        <DropdownMenu open={profileDropdownOpen} onOpenChange={setProfileDropdownOpen}>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className={`relative group transition-colors h-10 w-10 rounded-xl p-1 ${
-                                profileDropdownOpen ? "bg-orange-100 dark:bg-orange-900/30" : "hover:bg-muted"
-                              }`}
-                            >
-                              <div
-                                className={`absolute -inset-1 rounded-xl blur-sm transition-opacity ${
-                                  profileDropdownOpen
-                                    ? "bg-gradient-to-r from-orange-400 to-orange-600 opacity-70"
-                                    : "bg-gradient-to-r from-gray-400 to-gray-600 opacity-0 group-hover:opacity-50"
-                                }`}
-                              />
-                              <Avatar
-                                className={`relative h-7 w-7 ring-2 transition-all ${
-                                  profileDropdownOpen ? "ring-orange-500/50" : "ring-transparent group-hover:ring-gray-400/50"
-                                }`}
-                              >
-                                <AvatarImage src={user.avatar} alt={user.name || "User"} />
-                                <AvatarFallback
-                                  className={`text-white text-sm ${
-                                    profileDropdownOpen
-                                      ? "bg-gradient-to-br from-orange-400 to-orange-600"
-                                      : "bg-gradient-to-br from-gray-500 to-gray-700"
-                                  }`}
-                                >
-                                  {(user.name || "U").charAt(0).toUpperCase()}
-                                </AvatarFallback>
-                              </Avatar>
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="center" side="top" className="w-56 mb-2">
-                            <DropdownMenuLabel className="font-normal">
-                              <div className="flex flex-col space-y-1">
-                                <p className="text-sm font-medium leading-none">{user.name}</p>
-                                <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
-                              </div>
-                            </DropdownMenuLabel>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => router.push("/profile") }>
-                              <Settings className="mr-2 h-4 w-4" />
-                              <span>Profile Settings</span>
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={handleLogout}>
-                              <LogOut className="mr-2 h-4 w-4" />
-                              <span>Log out</span>
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      ) : (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className={`relative group transition-colors h-10 w-10 rounded-xl ${
+                          profileDropdownOpen ? "bg-orange-100 dark:bg-orange-900/30" : "hover:bg-muted"
+                        }`}
+                      >
+                        <div className={`absolute -inset-1 rounded-xl blur-sm transition-opacity ${
+                          profileDropdownOpen 
+                            ? "bg-gradient-to-r from-orange-400 to-orange-600 opacity-70" 
+                            : "bg-gradient-to-r from-gray-400 to-gray-600 opacity-0 group-hover:opacity-50"
+                        }`}></div>
+                        <Avatar className="h-6 w-6">
+                          <AvatarImage src={user?.avatar} alt={user?.name || "User"} />
+                          <AvatarFallback className="text-xs bg-gradient-to-br from-orange-400 to-orange-600 text-white">
+                            {user?.name?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || 'U'}
+                          </AvatarFallback>
+                        </Avatar>
+                      </Button>
+                      <span className="text-[9px] text-muted-foreground font-medium leading-tight">Profile</span>
+                    </motion.div>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="center" side="top" className="w-48 mb-2">
+                    <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => router.push("/profile")}>
+                      <User className="mr-2 h-4 w-4" />
+                      <span>Profile</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => router.push("/settings")}>
+                      <Settings className="mr-2 h-4 w-4" />
+                      <span>Settings</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleLogout}>
+                      <LogOut className="mr-2 h-4 w-4" />
+                      <span>Log out</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <motion.div 
+                        whileHover={{ scale: 1.05 }} 
+                        whileTap={{ scale: 0.95 }}
+                        className="flex flex-col items-center min-w-0"
+                      >
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={handleLogin}
                           className="relative group transition-colors h-10 w-10 rounded-full bg-gradient-to-r from-orange-400 to-orange-600 hover:from-orange-500 hover:to-orange-700"
+                          onClick={handleLogin}
                         >
                           <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-orange-400 to-orange-600 blur-sm opacity-70"></div>
                           <User className="relative h-6 w-6 text-white" />
                         </Button>
-                      )}
-                      <span className="text-[9px] text-muted-foreground font-medium leading-tight">
-                        {isAuthenticated ? "Profile" : "Login"}
-                      </span>
-                    </motion.div>
-                  </TooltipTrigger>
-                  <TooltipContent side="top">
-                    <p>{isAuthenticated ? "Profile Menu" : "Login"}</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-
+                        <span className="text-[9px] text-muted-foreground font-medium leading-tight">Login</span>
+                      </motion.div>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">
+                      <p>Login to access all features</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
             </div>
           </div>
         </div>
       </motion.div>
 
-      {/* Messages Modal */}
-      <MessagesModal 
-        isOpen={messagesModalOpen}
-        onClose={() => setMessagesModalOpen(false)}
+      {/* Modals and Chat */}
+      <SavedPostsModal 
+        isOpen={savedModalOpen} 
+        onClose={() => setSavedModalOpen(false)} 
       />
-
+      
+      <EventsModal 
+        isOpen={eventsModalOpen} 
+        onClose={() => setEventsModalOpen(false)} 
+      />
+      
+      <MessagesModal 
+        isOpen={messagesModalOpen} 
+        onClose={() => setMessagesModalOpen(false)} 
+      />
+      
       {/* AI Chat Box */}
       {isAIChatOpen && (
         <AIChatBox 
@@ -364,18 +365,6 @@ export function MobileBottomNavigation({ isVisible = true }: MobileBottomNavigat
           initialPosition={{ x: 10, y: 10 }}
         />
       )}
-
-      {/* Progress Modal */}
-      <ProgressModal 
-        isOpen={progressModalOpen} 
-        onClose={() => setProgressModalOpen(false)} 
-      />
-
-      {/* Leaderboard Modal */}
-      <LeaderboardModal 
-        isOpen={leaderboardModalOpen}
-        onClose={() => setLeaderboardModalOpen(false)}
-      />
     </>
   )
 }
