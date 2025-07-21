@@ -1,9 +1,11 @@
 "use client"
 
 import { motion } from "framer-motion"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { MessageSquare, RefreshCw } from "lucide-react"
+import { useAuth } from "@/contexts/auth-context"
 
 interface FeedEmptyStateProps {
   onRefresh: () => void
@@ -16,6 +18,19 @@ export default function FeedEmptyState({
   message = "No posts found",
   filterActive = false,
 }: FeedEmptyStateProps) {
+  const { user } = useAuth()
+  const router = useRouter()
+
+  const handleCreatePost = () => {
+    if (!user) {
+      router.push('/auth/login')
+      return
+    }
+    
+    // Redirect to community page where post creation is available
+    router.push('/community')
+  }
+
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
       <Card className="neo-card overflow-hidden border-none bg-white/40 dark:bg-gray-900/40 backdrop-blur-xl shadow-neo">
@@ -47,7 +62,10 @@ export default function FeedEmptyState({
             </Button>
 
             {!filterActive && (
-              <Button className="bg-gradient-to-r from-neo-mint to-purist-blue hover:from-neo-mint/90 hover:to-purist-blue/90 text-white border-0">
+              <Button 
+                className="bg-gradient-to-r from-neo-mint to-purist-blue hover:from-neo-mint/90 hover:to-purist-blue/90 text-white border-0"
+                onClick={handleCreatePost}
+              >
                 Create Post
               </Button>
             )}

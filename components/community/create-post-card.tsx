@@ -1,6 +1,7 @@
 "use client"
 
 import { useRef } from "react"
+import { useRouter } from "next/navigation"
 import { Card } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
@@ -20,6 +21,19 @@ export function CreatePostCard({
   postFileInputRef,
 }: CreatePostCardProps) {
   const { user } = useAuthState()
+  const router = useRouter()
+
+  const handlePostAction = (action?: () => void) => {
+    if (!user) {
+      router.push('/auth/login')
+      return
+    }
+    
+    setShowNewPostForm(true)
+    if (action) {
+      action()
+    }
+  }
   
   return (
     <Card className="mb-4 bg-white dark:bg-gray-800 shadow-sm border-0 overflow-hidden">
@@ -34,7 +48,7 @@ export function CreatePostCard({
           <Button
             variant="outline"
             className="flex-1 justify-start text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 border-0 rounded-full h-9 sm:h-10 text-sm sm:text-base hover:bg-gray-100 dark:hover:bg-gray-700"
-            onClick={() => setShowNewPostForm(true)}
+            onClick={() => handlePostAction()}
           >
             What&apos;s on your mind, {user?.name?.split(' ').pop() || 'there'}?
           </Button>
@@ -46,12 +60,11 @@ export function CreatePostCard({
           <Button
             variant="ghost"
             className="flex-1 text-xs sm:text-sm p-1 sm:p-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-            onClick={() => {
-              setShowNewPostForm(true)
+            onClick={() => handlePostAction(() => {
               setTimeout(() => {
                 postFileInputRef.current?.click()
               }, 500)
-            }}
+            })}
           >
             <ImageIcon className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2 text-green-500" />
             <span>Photo/Video</span>
@@ -59,12 +72,11 @@ export function CreatePostCard({
           <Button
             variant="ghost"
             className="flex-1 text-xs sm:text-sm p-1 sm:p-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-            onClick={() => {
-              setShowNewPostForm(true)
+            onClick={() => handlePostAction(() => {
               setTimeout(() => {
                 setShowEmojiPicker(true)
               }, 500)
-            }}
+            })}
           >
             <Smile className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2 text-yellow-500" />
             <span>Feeling</span>

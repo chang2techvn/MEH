@@ -1,8 +1,9 @@
 "use client"
 
-import { useState, useRef, useCallback } from "react"
+import { useState, useRef, useCallback, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import Image from "next/image"
+import { useRouter } from "next/navigation"
 import {
   X,
   Camera,
@@ -20,6 +21,12 @@ import {
   AlignCenter,
   AlignLeft,
   AlignRight,
+  Plus,
+  Sparkles,
+  Edit3,
+  Trash2,
+  ChevronDown,
+  Share,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -30,6 +37,7 @@ import { Slider } from "@/components/ui/slider"
 import { toast } from "@/hooks/use-toast"
 import { useStories } from "@/hooks/use-stories"
 import { useAuth } from "@/contexts/auth-context"
+import { useMobile } from "@/hooks/use-mobile"
 import type { EnhancedStoryCreatorProps } from "./types"
 
 interface TextElement {
@@ -57,6 +65,16 @@ interface MediaTransform {
 export function EnhancedStoryCreator({ isOpen, onClose }: EnhancedStoryCreatorProps) {
   const { user } = useAuth()
   const { createStory, uploadStoryMedia, loading } = useStories()
+  const { isMobile } = useMobile()
+  const router = useRouter()
+  
+  // Check if user is authenticated when component opens
+  useEffect(() => {
+    if (isOpen && !user) {
+      onClose() // Close the modal first
+      router.push('/auth/login') // Then redirect to login
+    }
+  }, [isOpen, user, onClose, router])
   
   // Media states
   const [storyMedia, setStoryMedia] = useState<string | null>(null)
@@ -83,6 +101,9 @@ export function EnhancedStoryCreator({ isOpen, onClose }: EnhancedStoryCreatorPr
   // UI states
   const [isUploading, setIsUploading] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
+  
+  // Mobile dropdown states
+  const [activeDropdown, setActiveDropdown] = useState<'stickers' | 'text' | 'effects' | null>(null)
   
   const fileInputRef = useRef<HTMLInputElement>(null)
   const storyPreviewRef = useRef<HTMLDivElement>(null)
@@ -382,6 +403,13 @@ export function EnhancedStoryCreator({ isOpen, onClose }: EnhancedStoryCreatorPr
   }, [textElements])
 
   const handleCreateStory = async () => {
+    // Check if user is authenticated
+    if (!user) {
+      onClose() // Close the modal first
+      router.push('/auth/login') // Redirect to login
+      return
+    }
+
     if (textElements.length === 0 && !storyMedia && storyImages.length === 0) {
       toast({
         title: "Content required",
@@ -447,6 +475,583 @@ export function EnhancedStoryCreator({ isOpen, onClose }: EnhancedStoryCreatorPr
 
   const selectedText = textElements.find(t => t.id === selectedTextId)
 
+  // If user is not authenticated, don't render the modal
+  if (!user) {
+    return null
+  }
+
+  // Mobile Layout
+  if (isMobile) {
+    return (
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black flex flex-col"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) handleClose()
+            }}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 bg-black/90 backdrop-blur-sm">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleClose}
+                className="text-white hover:bg-white/10"
+              >
+                <X className="h-5 w-5" />
+              </Button>
+              <h1 className="text-white font-semibold"> Create Story</h1>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleCreateStory}
+                disabled={loading || isUploading || (textElements.length === 0 && !storyMedia && storyImages.length === 0)}
+                className="text-white hover:bg-white/10"
+              >
+                {loading ? <Loader className="h-5 w-5 animate-spin" /> : <Share className="h-5 w-5" />}
+              </Button>
+            </div>
+
+            {/* Story Preview with Side Controls */}
+            <div className="flex-1 flex items-center justify-center relative px-4 pb-24">
+              {/* Story Preview Container */}
+              <div 
+                ref={storyPreviewRef}
+                className="relative w-[280px] h-[500px] rounded-2xl overflow-hidden shadow-2xl"
+                style={{
+                  ...(backgroundImage 
+                    ? {
+                        backgroundImage: `url(${backgroundImage})`,
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                        backgroundRepeat: 'no-repeat'
+                      }
+                    : backgroundColor.includes('gradient') 
+                      ? { backgroundImage: backgroundColor }
+                      : { backgroundColor: backgroundColor }
+                  )
+                }}
+              >
+                {/* Background Media */}
+                {storyMedia && (
+                  <div 
+                    className="absolute inset-0 overflow-hidden cursor-grab active:cursor-grabbing"
+                    style={{
+                      transform: `scale(${mediaTransform.scale}) translate(${mediaTransform.x}px, ${mediaTransform.y}px) rotate(${mediaTransform.rotation}deg)`
+                    }}
+                    onTouchStart={(e) => {
+                      const touch = e.touches[0]
+                      const startX = touch.clientX
+                      const startY = touch.clientY
+                      const startTransformX = mediaTransform.x
+                      const startTransformY = mediaTransform.y
+
+                      const handleTouchMove = (e: TouchEvent) => {
+                        e.preventDefault()
+                        const touch = e.touches[0]
+                        const deltaX = touch.clientX - startX
+                        const deltaY = touch.clientY - startY
+                        setMediaTransform(prev => ({
+                          ...prev,
+                          x: startTransformX + deltaX * 0.3,
+                          y: startTransformY + deltaY * 0.3
+                        }))
+                      }
+
+                      const handleTouchEnd = () => {
+                        document.removeEventListener('touchmove', handleTouchMove)
+                        document.removeEventListener('touchend', handleTouchEnd)
+                      }
+
+                      document.addEventListener('touchmove', handleTouchMove, { passive: false })
+                      document.addEventListener('touchend', handleTouchEnd)
+                    }}
+                  >
+                    {mediaType === 'video' ? (
+                      <video 
+                        src={storyMedia} 
+                        className="w-full h-full object-cover"
+                        muted
+                        loop
+                        autoPlay
+                      />
+                    ) : (
+                      <Image
+                        src={storyMedia}
+                        alt="Story background"
+                        fill
+                        className="object-cover"
+                      />
+                    )}
+                  </div>
+                )}
+
+                {/* Text Elements */}
+                {textElements.map((textElement) => (
+                  <div
+                    key={textElement.id}
+                    className={`absolute cursor-move select-none ${
+                      selectedTextId === textElement.id ? 'ring-2 ring-blue-400' : ''
+                    } ${textElement.isDragging ? 'z-50' : 'z-30'}`}
+                    style={{
+                      left: `${textElement.x}%`,
+                      top: `${textElement.y}%`,
+                      transform: 'translate(-50%, -50%)',
+                      fontSize: `${textElement.fontSize}px`,
+                      color: textElement.color,
+                      fontFamily: textElement.fontFamily,
+                      fontWeight: textElement.fontWeight,
+                      fontStyle: textElement.fontStyle,
+                      textAlign: textElement.textAlign as any,
+                      backgroundColor: textElement.backgroundColor !== 'transparent' ? textElement.backgroundColor : undefined,
+                      padding: textElement.backgroundColor !== 'transparent' ? '4px 8px' : undefined,
+                      borderRadius: textElement.backgroundColor !== 'transparent' ? '4px' : undefined,
+                    }}
+                    onTouchStart={(e) => {
+                      const touch = e.touches[0]
+                      const startX = touch.clientX
+                      const startY = touch.clientY
+                      const element = textElements.find(t => t.id === textElement.id)
+                      if (!element || !storyPreviewRef.current) return
+
+                      const rect = storyPreviewRef.current.getBoundingClientRect()
+                      const startXPercent = element.x
+                      const startYPercent = element.y
+
+                      const handleTouchMove = (e: TouchEvent) => {
+                        e.preventDefault()
+                        const touch = e.touches[0]
+                        const deltaX = touch.clientX - startX
+                        const deltaY = touch.clientY - startY
+                        
+                        const newXPercent = startXPercent + (deltaX / rect.width) * 100
+                        const newYPercent = startYPercent + (deltaY / rect.height) * 100
+                        
+                        const constrainedX = Math.max(0, Math.min(100, newXPercent))
+                        const constrainedY = Math.max(0, Math.min(100, newYPercent))
+                        
+                        updateTextElement(textElement.id, { x: constrainedX, y: constrainedY, isDragging: true })
+                      }
+
+                      const handleTouchEnd = () => {
+                        updateTextElement(textElement.id, { isDragging: false })
+                        document.removeEventListener('touchmove', handleTouchMove)
+                        document.removeEventListener('touchend', handleTouchEnd)
+                      }
+
+                      setSelectedTextId(textElement.id)
+                      document.addEventListener('touchmove', handleTouchMove, { passive: false })
+                      document.addEventListener('touchend', handleTouchEnd)
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setSelectedTextId(textElement.id)
+                    }}
+                  >
+                    {textElement.text}
+                  </div>
+                ))}
+
+                {/* Add Media Button - Center */}
+                {!storyMedia && storyImages.length === 0 && (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <Button
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={isUploading}
+                      className="w-16 h-16 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm border border-white/30"
+                    >
+                      {isUploading ? (
+                        <Loader className="h-8 w-8 animate-spin text-white" />
+                      ) : (
+                        <Plus className="h-8 w-8 text-white" />
+                      )}
+                    </Button>
+                  </div>
+                )}
+
+                {/* Story Header */}
+                <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-20">
+                  <div className="flex items-center gap-2">
+                    <Avatar className="h-8 w-8 border-2 border-white">
+                      {user?.avatar ? (
+                        <Image
+                          src={user.avatar}
+                          alt={user.name || "User"}
+                          fill
+                          className="object-cover"
+                        />
+                      ) : (
+                        <AvatarFallback className="bg-gray-600 text-white text-xs">
+                          {user?.name?.charAt(0) || 'U'}
+                        </AvatarFallback>
+                      )}
+                    </Avatar>
+                  </div>
+                </div>
+
+                {/* Story Progress Bar */}
+                <div className="absolute top-2 left-4 right-4 h-1 bg-white/30 rounded-full z-20">
+                  <div className="h-full bg-white rounded-full w-0 animate-pulse"></div>
+                </div>
+              </div>
+
+              {/* Right Side Controls - Moved up and smaller */}
+              <div className="absolute right-2 top-16 flex flex-col gap-2">
+                {/* Stickers Button */}
+                <div className="relative">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setActiveDropdown(activeDropdown === 'stickers' ? null : 'stickers')}
+                    className="w-10 h-10 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-sm border border-white/30 flex flex-col items-center justify-center p-0"
+                  >
+                    <Sparkles className="h-4 w-4 text-white" />
+                  </Button>
+                  
+                  {/* Stickers Dropdown - Responsive positioning */}
+                  {activeDropdown === 'stickers' && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      className="absolute right-full mr-3 top-0 w-64 bg-white/95 backdrop-blur-md rounded-xl border border-white/30 shadow-2xl p-3 max-h-72 overflow-y-auto z-50"
+                      style={{
+                        // Ensure dropdown doesn't go off screen
+                        transform: 'translateY(calc(-50% + 20px))',
+                        maxWidth: 'calc(100vw - 80px)',
+                      }}
+                    >
+                      <h3 className="font-semibold text-xs mb-2">Background Colors</h3>
+                      <div className="grid grid-cols-5 gap-1.5 mb-3">
+                        {backgroundOptions.filter(bg => bg.type === 'color').map((bg) => (
+                          <button
+                            key={bg.id}
+                            onClick={() => {
+                              setBackgroundColor(bg.value)
+                              setBackgroundImage(null)
+                              setActiveDropdown(null)
+                            }}
+                            className={`w-8 h-8 rounded-md border-2 transition-all ${
+                              backgroundColor === bg.value && !backgroundImage 
+                                ? 'border-blue-500 ring-1 ring-blue-200' 
+                                : 'border-gray-200 hover:border-gray-300'
+                            }`}
+                            style={{ backgroundColor: bg.value }}
+                          />
+                        ))}
+                      </div>
+                      
+                      <h3 className="font-semibold text-xs mb-2">Gradients</h3>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        {backgroundOptions.filter(bg => bg.type === 'gradient').map((bg) => (
+                          <button
+                            key={bg.id}
+                            onClick={() => {
+                              setBackgroundColor(bg.value)
+                              setBackgroundImage(null)
+                              setActiveDropdown(null)
+                            }}
+                            className={`w-full h-10 rounded-md border-2 flex items-center justify-center transition-all ${
+                              backgroundColor === bg.value && !backgroundImage 
+                                ? 'border-blue-500 ring-1 ring-blue-200' 
+                                : 'border-gray-200 hover:border-gray-300'
+                            }`}
+                            style={{ background: bg.value }}
+                          >
+                            <span className="text-white text-xs font-medium drop-shadow-md">
+                              {bg.name}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
+                </div>
+
+                {/* Text Button */}
+                <div className="relative">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setActiveDropdown(activeDropdown === 'text' ? null : 'text')}
+                    className="w-10 h-10 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-sm border border-white/30 flex flex-col items-center justify-center p-0"
+                  >
+                    <Type className="h-4 w-4 text-white" />
+                  </Button>
+                  
+                  {/* Text Dropdown - Responsive positioning */}
+                  {activeDropdown === 'text' && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      className="absolute right-full mr-3 top-0 w-72 bg-white/95 backdrop-blur-md rounded-xl border border-white/30 shadow-2xl p-3 max-h-80 overflow-y-auto z-50"
+                      style={{
+                        transform: 'translateY(calc(-50% + 20px))',
+                        maxWidth: 'calc(100vw - 80px)',
+                      }}
+                    >
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="font-semibold text-xs">Add Text</h3>
+                        <Button
+                          size="sm"
+                          onClick={() => {
+                            addTextElement()
+                            setActiveDropdown(null)
+                          }}
+                          className="bg-blue-500 hover:bg-blue-600 text-white text-xs px-2 py-1 h-6"
+                        >
+                          Add Text
+                        </Button>
+                      </div>
+                      
+                      {selectedText && (
+                        <div className="space-y-3">
+                          <div>
+                            <label className="text-xs font-medium text-gray-600 block mb-1">Text Content</label>
+                            <Textarea
+                              value={selectedText.text}
+                              onChange={(e) => updateTextElement(selectedText.id, { text: e.target.value })}
+                              placeholder="Enter your text..."
+                              className="w-full text-xs h-16 resize-none"
+                            />
+                          </div>
+                          
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label className="text-xs font-medium text-gray-600 block mb-1">Font Size</label>
+                              <Slider
+                                value={[selectedText.fontSize]}
+                                onValueChange={([value]) => updateTextElement(selectedText.id, { fontSize: value })}
+                                min={12}
+                                max={72}
+                                step={1}
+                                className="w-full"
+                              />
+                              <span className="text-xs text-gray-500">{selectedText.fontSize}px</span>
+                            </div>
+                            
+                            <div>
+                              <label className="text-xs font-medium text-gray-600 block mb-1">Font Family</label>
+                              <select
+                                value={selectedText.fontFamily}
+                                onChange={(e) => updateTextElement(selectedText.id, { fontFamily: e.target.value })}
+                                className="w-full text-xs border border-gray-200 rounded px-1 py-1"
+                              >
+                                {fontFamilies.map((font) => (
+                                  <option key={font} value={font}>{font.split(',')[0]}</option>
+                                ))}
+                              </select>
+                            </div>
+                          </div>
+                          
+                          <div className="flex gap-1">
+                            <Button
+                              variant={selectedText.fontWeight === 'bold' ? 'default' : 'outline'}
+                              size="sm"
+                              onClick={() => updateTextElement(selectedText.id, { 
+                                fontWeight: selectedText.fontWeight === 'bold' ? 'normal' : 'bold' 
+                              })}
+                              className="flex-1 text-xs h-7"
+                            >
+                              <Bold className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              variant={selectedText.fontStyle === 'italic' ? 'default' : 'outline'}
+                              size="sm"
+                              onClick={() => updateTextElement(selectedText.id, { 
+                                fontStyle: selectedText.fontStyle === 'italic' ? 'normal' : 'italic' 
+                              })}
+                              className="flex-1 text-xs h-7"
+                            >
+                              <Italic className="h-3 w-3" />
+                            </Button>
+                          </div>
+                          
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label className="text-xs font-medium text-gray-600 block mb-1">Text Color</label>
+                              <div className="flex gap-1 flex-wrap">
+                                {colorPalette.slice(0, 6).map((color) => (
+                                  <button
+                                    key={color}
+                                    onClick={() => updateTextElement(selectedText.id, { color })}
+                                    className={`w-5 h-5 rounded-full border-2 ${
+                                      selectedText.color === color ? 'border-gray-400 ring-1 ring-blue-200' : 'border-gray-200'
+                                    }`}
+                                    style={{ backgroundColor: color }}
+                                  />
+                                ))}
+                              </div>
+                            </div>
+                            
+                            <div>
+                              <label className="text-xs font-medium text-gray-600 block mb-1">Background</label>
+                              <div className="flex gap-1 flex-wrap">
+                                <button
+                                  onClick={() => updateTextElement(selectedText.id, { backgroundColor: 'transparent' })}
+                                  className={`w-5 h-5 rounded-full border-2 bg-gradient-to-br from-white to-gray-100 flex items-center justify-center ${
+                                    selectedText.backgroundColor === 'transparent' ? 'border-gray-400 ring-1 ring-blue-200' : 'border-gray-200'
+                                  }`}
+                                >
+                                  <X className="h-2 w-2 text-gray-500" />
+                                </button>
+                                {colorPalette.slice(0, 5).map((color) => (
+                                  <button
+                                    key={color}
+                                    onClick={() => updateTextElement(selectedText.id, { backgroundColor: color })}
+                                    className={`w-5 h-5 rounded-full border-2 ${
+                                      selectedText.backgroundColor === color ? 'border-gray-400 ring-1 ring-blue-200' : 'border-gray-200'
+                                    }`}
+                                    style={{ backgroundColor: color }}
+                                  />
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => {
+                              deleteTextElement(selectedText.id)
+                              setActiveDropdown(null)
+                            }}
+                            className="w-full text-xs h-7"
+                          >
+                            <Trash2 className="h-3 w-3 mr-1" />
+                            Delete Text
+                          </Button>
+                        </div>
+                      )}
+                    </motion.div>
+                  )}
+                </div>
+
+                {/* Effects Button */}
+                <div className="relative">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setActiveDropdown(activeDropdown === 'effects' ? null : 'effects')}
+                    className="w-10 h-10 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-sm border border-white/30 flex flex-col items-center justify-center p-0"
+                  >
+                    <Sparkles className="h-4 w-4 text-white" />
+                  </Button>
+                  
+                  {/* Effects Dropdown - Responsive positioning */}
+                  {activeDropdown === 'effects' && storyMedia && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      className="absolute right-full mr-3 top-0 w-56 bg-white/95 backdrop-blur-md rounded-xl border border-white/30 shadow-2xl p-3 z-50"
+                      style={{
+                        transform: 'translateY(calc(-50% + 20px))',
+                        maxWidth: 'calc(100vw - 80px)',
+                      }}
+                    >
+                      <h3 className="font-semibold text-xs mb-2">Media Effects</h3>
+                      
+                      <div className="space-y-2">
+                        <div>
+                          <label className="text-xs font-medium text-gray-600 block mb-1">Scale</label>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setMediaTransform(prev => ({ ...prev, scale: Math.max(0.5, prev.scale - 0.1) }))}
+                              className="h-7 w-7 p-0"
+                            >
+                              <ZoomOut className="h-3 w-3" />
+                            </Button>
+                            <span className="text-xs font-mono bg-gray-100 px-2 py-1 rounded flex-1 text-center">
+                              {Math.round(mediaTransform.scale * 100)}%
+                            </span>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setMediaTransform(prev => ({ ...prev, scale: Math.min(3, prev.scale + 0.1) }))}
+                              className="h-7 w-7 p-0"
+                            >
+                              <ZoomIn className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                        
+                        <div>
+                          <label className="text-xs font-medium text-gray-600 block mb-1">Rotation</label>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setMediaTransform(prev => ({ ...prev, rotation: prev.rotation - 15 }))}
+                              className="h-7 w-7 p-0"
+                            >
+                              <RotateCcw className="h-3 w-3" />
+                            </Button>
+                            <span className="text-xs font-mono bg-gray-100 px-2 py-1 rounded flex-1 text-center">
+                              {mediaTransform.rotation}°
+                            </span>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setMediaTransform(prev => ({ ...prev, rotation: prev.rotation + 15 }))}
+                              className="h-7 w-7 p-0"
+                            >
+                              <RotateCcw className="h-3 w-3 transform rotate-180" />
+                            </Button>
+                          </div>
+                        </div>
+                        
+                        <div className="flex gap-1">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setMediaTransform({ scale: 1, x: 0, y: 0, rotation: 0 })}
+                            className="flex-1 text-xs h-7"
+                          >
+                            Reset
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => {
+                              handleDeleteMedia()
+                              setActiveDropdown(null)
+                            }}
+                            className="flex-1 text-xs h-7"
+                          >
+                            Delete
+                          </Button>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Hidden file input */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*,video/*"
+              onChange={handleFileChange}
+              className="hidden"
+              multiple={false}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+    )
+  }
+
+  // Desktop Layout (existing code)
   return (
     <AnimatePresence>
       {isOpen && (
