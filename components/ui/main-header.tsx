@@ -89,7 +89,7 @@ export default function MainHeader({ mobileMenuOpen, setMobileMenuOpen }: MainHe
           isMobile ? (headerVisible ? "translate-y-0" : "-translate-y-full") : ""
         }`}
       >
-        <div className="w-full max-w-none px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 flex h-20 items-center justify-between">
+        <div className="w-full max-w-none px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 flex h-14 md:h-20 items-center justify-between">
           <div className="flex items-center gap-3">
             {/* Mobile: Animated logo/menu combo */}
             <div className="md:hidden">
@@ -148,6 +148,20 @@ export default function MainHeader({ mobileMenuOpen, setMobileMenuOpen }: MainHe
             </Link>
           </div>
 
+          {/* Mobile: Website name in center */}
+          <div className="md:hidden absolute left-1/2 transform -translate-x-1/2">
+            <Link href="/" prefetch={true}>
+              <motion.span
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
+                className="text-lg font-bold bg-clip-text text-transparent bg-gradient-to-r from-neo-mint to-purist-blue"
+              >
+                English Mastery Hub
+              </motion.span>
+            </Link>
+          </div>
+
           <nav className="hidden md:flex items-center gap-6 lg:gap-8 xl:gap-12 2xl:gap-16">
             <Link
               href="/"
@@ -176,13 +190,18 @@ export default function MainHeader({ mobileMenuOpen, setMobileMenuOpen }: MainHe
           </nav>
 
           <div className="flex items-center gap-2 md:gap-3 lg:gap-4 xl:gap-6">
-            {/* Mobile view - show essential buttons with progress and leaderboard */}
+            {/* Mobile view - show only notifications, messages, and user menu on non-home pages */}
             <div className="md:hidden flex items-center gap-2">
-              {/* Only show these buttons when on home route "/" */}
-              {isHomePage && <MobileHeaderButtons />}
-              <NotificationsDropdown />
-              <MessageButton />
-              <UserMenu />
+              {/* Only show these buttons when NOT on home route "/" */}
+              {!isHomePage && (
+                <>
+                  <NotificationsDropdown />
+                  <MessageButton />
+                  <UserMenu />
+                </>
+              )}
+              {/* On home page, only show notifications since others moved to bottom nav */}
+              {isHomePage && <NotificationsDropdown />}
             </div>
             
             {/* Desktop view - show all features */}

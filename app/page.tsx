@@ -18,11 +18,9 @@ import MainHeader from "@/components/ui/main-header"
 import { MobileNavigation } from "@/components/home/mobile-navigation"
 import { MainContent } from "@/components/home/main-content"
 import { LeaderboardModal } from "@/components/home/leaderboard-modal"
+import { MobileBottomNavigation } from "@/components/home/mobile-bottom-navigation"
 
 // Non-critical components - keep lazy loading  
-const AIChatButtonComponent = lazy(() =>
-  import("@/components/ai-helper/ai-chat-button").then((mod) => ({ default: mod.AIChatButton })),
-)
 const Sidebar = lazy(() => import("@/components/home/sidebar").then((mod) => ({ default: mod.Sidebar })))
 const ChallengeTabs = lazy(() => import("@/components/challenge/challenge-tabs"))
 const CreateChallengeModal = lazy(() => import("@/components/challenge/create-challenge-modal"))
@@ -137,11 +135,11 @@ export default function Home() {
 
       <main className="flex-1 relative overflow-hidden">
         {/* Background decorations - optimized with contain property */}
-        <div className="absolute top-20 left-10 w-64 h-64 rounded-full bg-neo-mint/10 dark:bg-purist-blue/10 blur-3xl -z-10 animate-blob contain-paint"></div>
-        <div className="absolute bottom-20 right-10 w-64 h-64 rounded-full bg-cantaloupe/10 dark:bg-cassis/10 blur-3xl -z-10 animate-blob animation-delay-2000 contain-paint"></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full bg-mellow-yellow/5 dark:bg-mellow-yellow/5 blur-3xl -z-10 animate-blob animation-delay-4000 contain-paint"></div>        <div className="w-full max-w-none px-4 sm:px-6 lg:px-6 xl:px-8 2xl:px-12 py-8">
+        <div className="absolute top-10 sm:top-20 left-2 sm:left-10 w-32 h-32 sm:w-64 sm:h-64 rounded-full bg-neo-mint/10 dark:bg-purist-blue/10 blur-3xl -z-10 animate-blob contain-paint"></div>
+        <div className="absolute bottom-10 sm:bottom-20 right-2 sm:right-10 w-32 h-32 sm:w-64 sm:h-64 rounded-full bg-cantaloupe/10 dark:bg-cassis/10 blur-3xl -z-10 animate-blob animation-delay-2000 contain-paint"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-48 h-48 sm:w-96 sm:h-96 rounded-full bg-mellow-yellow/5 dark:bg-mellow-yellow/5 blur-3xl -z-10 animate-blob animation-delay-4000 contain-paint"></div>        <div className="w-full max-w-none px-3 sm:px-4 md:px-6 lg:px-6 xl:px-8 2xl:px-12 py-4 sm:py-6 lg:py-8 pb-20 md:pb-4 sm:pb-6 lg:pb-8">
           {/* Top section: Main Content + Sidebar with dynamic layout */}
-          <div className={`flex flex-col lg:flex-row gap-4 lg:gap-6 mb-8 transition-all duration-500 ease-in-out ${
+          <div className={`flex flex-col lg:flex-row gap-3 sm:gap-4 lg:gap-6 mb-6 sm:mb-8 transition-all duration-500 ease-in-out ${
             sidebarCollapsed 
               ? "justify-center" // Center content when collapsed
               : "justify-between" // Distribute when expanded
@@ -169,16 +167,16 @@ export default function Home() {
               </Suspense>
             </div>
           </div>          {/* Challenge Tabs Section - Full width below Main Content + Sidebar */}          <div className="w-full">
-            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">
-              <div>
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="relative">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
+              <div className="w-full md:w-auto">
+                <div className="flex items-center gap-2 sm:gap-3 mb-2">
+                  <div className="relative flex-shrink-0">
                     <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-neo-mint to-purist-blue blur-sm opacity-70"></div>
-                    <Sparkles className="relative h-5 w-5 text-neo-mint dark:text-purist-blue" />
+                    <Sparkles className="relative h-4 w-4 sm:h-5 sm:w-5 text-neo-mint dark:text-purist-blue" />
                   </div>
-                  <h2 className="text-xl font-bold">Practice Challenges</h2>
+                  <h2 className="text-lg sm:text-xl lg:text-xl font-bold leading-tight">Practice Challenges</h2>
                 </div>
-                <p className="text-sm text-muted-foreground mb-4">Choose from various difficulty levels and topics to improve your English skills</p>
+                <p className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4 leading-relaxed pr-2 md:pr-0">Choose from various difficulty levels and topics to improve your English skills</p>
               </div>
                 {/* Search Bar and Create Button */}
               <div className="flex gap-2 w-full md:w-auto">
@@ -194,59 +192,61 @@ export default function Home() {
                 </div>
                 
                 {/* Mobile Filter Button */}
-                <div className="md:hidden flex-shrink-0">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="outline" size="sm" className="h-10 px-3">
-                        <Filter className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-48">
-                      <DropdownMenuItem 
-                        onClick={() => handleFilterTabChange("all")}
-                        className={filterTab === "all" ? "bg-accent" : ""}
-                      >
-                        All {searchTerm && "🔍"}
-                      </DropdownMenuItem>
-                      {!searchTerm && (
-                        <>
-                          <DropdownMenuItem 
-                            onClick={() => handleFilterTabChange("user")}
-                            className={filterTab === "user" ? "bg-accent" : ""}
-                          >
-                            Your Challenges
-                          </DropdownMenuItem>
-                          <DropdownMenuItem 
-                            onClick={() => handleFilterTabChange("beginner")}
-                            className={filterTab === "beginner" ? "bg-accent" : ""}
-                          >
-                            Beginner
-                          </DropdownMenuItem>
-                          <DropdownMenuItem 
-                            onClick={() => handleFilterTabChange("intermediate")}
-                            className={filterTab === "intermediate" ? "bg-accent" : ""}
-                          >
-                            Intermediate
-                          </DropdownMenuItem>
-                          <DropdownMenuItem 
-                            onClick={() => handleFilterTabChange("advanced")}
-                            className={filterTab === "advanced" ? "bg-accent" : ""}
-                          >
-                            Advanced
-                          </DropdownMenuItem>
-                        </>
-                      )}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                <div className="flex gap-2 sm:gap-3">
+                  <div className="md:hidden flex-shrink-0">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm" className="h-10 w-10 p-0 text-sm">
+                          <Filter className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-48">
+                        <DropdownMenuItem 
+                          onClick={() => handleFilterTabChange("all")}
+                          className={filterTab === "all" ? "bg-accent" : ""}
+                        >
+                          All {searchTerm && "🔍"}
+                        </DropdownMenuItem>
+                        {!searchTerm && (
+                          <>
+                            <DropdownMenuItem 
+                              onClick={() => handleFilterTabChange("user")}
+                              className={filterTab === "user" ? "bg-accent" : ""}
+                            >
+                              Your Challenges
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              onClick={() => handleFilterTabChange("beginner")}
+                              className={filterTab === "beginner" ? "bg-accent" : ""}
+                            >
+                              Beginner
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              onClick={() => handleFilterTabChange("intermediate")}
+                              className={filterTab === "intermediate" ? "bg-accent" : ""}
+                            >
+                              Intermediate
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              onClick={() => handleFilterTabChange("advanced")}
+                              className={filterTab === "advanced" ? "bg-accent" : ""}
+                            >
+                              Advanced
+                            </DropdownMenuItem>
+                          </>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                  
+                  <Button
+                    onClick={() => setCreateModalOpen(true)}
+                    className="bg-gradient-to-r from-neo-mint to-purist-blue text-white flex-shrink-0 h-10 w-10 sm:w-auto p-0 sm:px-4 text-sm"
+                  >
+                    <Plus className="h-4 w-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Create</span>
+                  </Button>
                 </div>
-                
-                <Button
-                  onClick={() => setCreateModalOpen(true)}
-                  className="bg-gradient-to-r from-neo-mint to-purist-blue text-white flex-shrink-0"
-                >
-                  <Plus className="h-4 w-4 sm:mr-2" />
-                  <span className="hidden sm:inline">Create</span>
-                </Button>
               </div>
             </div>
             
@@ -262,10 +262,6 @@ export default function Home() {
         </div>
       </main>
 
-      {/* Floating Chat Icon - lazy loaded */}
-      <Suspense fallback={null}>
-        <AIChatButtonComponent />
-      </Suspense>
       <CreateChallengeModal
         open={createModalOpen}
         onOpenChange={setCreateModalOpen}
@@ -282,8 +278,11 @@ export default function Home() {
           onClose={() => setLeaderboardModalOpen(false)}
         />
       )}
+      {/* Mobile Bottom Navigation - Only show on home route */}
+      <MobileBottomNavigation />
+
       <footer className="border-t border-white/10 dark:border-gray-800/10 bg-white/40 dark:bg-gray-900/40 backdrop-blur-xl">
-          <div className="border-t border-white/10 dark:border-gray-800/10 mt-8 pt-8 text-center text-sm text-muted-foreground">
+          <div className="border-t border-white/10 dark:border-gray-800/10 mt-6 sm:mt-8 pt-6 sm:pt-8 text-center text-xs sm:text-sm text-muted-foreground px-3 sm:px-6">
             <p>© 2025 EnglishMasteryHub. All rights reserved.</p>
           </div>
       </footer>

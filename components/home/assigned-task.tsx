@@ -103,6 +103,7 @@ export default function AssignedTask({
       setActiveStep(activeStep + 1)
       setProgress((activeStep + 1) * 25)
       setError(null) // Clear any previous errors
+    
     }
   }
 

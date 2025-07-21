@@ -224,20 +224,20 @@ export default function CreateChallengeModal({ open, onOpenChange, onChallengeCr
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="w-[90vw] max-w-[500px] mx-auto left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%]">
         <DialogHeader>
-          <DialogTitle>Create New Challenge</DialogTitle>
-          <DialogDescription>
+          <DialogTitle className="text-lg sm:text-xl">Create New Challenge</DialogTitle>
+          <DialogDescription className="text-sm sm:text-base">
             Enter a YouTube URL to create a new challenge. The video will be automatically analyzed and added to the
             challenges list.
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4 py-4">
+        <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4 py-3 sm:py-4">
           {!cachedUser && !userLoading && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
+              <AlertDescription className="text-sm">
                 Please log in to create challenges
               </AlertDescription>
             </Alert>
@@ -246,14 +246,14 @@ export default function CreateChallengeModal({ open, onOpenChange, onChallengeCr
           {error && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
+              <AlertDescription className="text-sm">{error}</AlertDescription>
             </Alert>
           )}
 
           {userLoading && (
             <Alert>
               <Loader2 className="h-4 w-4 animate-spin" />
-              <AlertDescription>
+              <AlertDescription className="text-sm">
                 Loading user authentication...
               </AlertDescription>
             </Alert>
@@ -262,58 +262,65 @@ export default function CreateChallengeModal({ open, onOpenChange, onChallengeCr
           {loading && (
             <Alert>
               <Loader2 className="h-4 w-4 animate-spin" />
-              <AlertDescription className="flex items-center gap-2">
+              <AlertDescription className="flex items-center gap-2 text-sm">
                 {progressStep || 'Creating challenge...'}
               </AlertDescription>
             </Alert>
           )}
 
-          <div className="space-y-2">
-            <Label htmlFor="youtube-url">YouTube Video URL</Label>
+          <div className="space-y-1 sm:space-y-2">
+            <Label htmlFor="youtube-url" className="text-sm sm:text-base">YouTube Video URL</Label>
             <Input
               id="youtube-url"
               placeholder="https://www.youtube.com/watch?v=... or https://youtu.be/..."
               value={youtubeUrl}
               onChange={(e) => setYoutubeUrl(e.target.value)}
               disabled={loading || userLoading || !cachedUser}
+              className="text-sm sm:text-base"
             />
             <p className="text-xs text-muted-foreground">
               Paste any YouTube URL format (youtube.com/watch, youtu.be, or embed links)
             </p>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="difficulty">Difficulty Level</Label>
+          <div className="space-y-1 sm:space-y-2">
+            <Label htmlFor="difficulty" className="text-sm sm:text-base">Difficulty Level</Label>
             <Select value={difficulty} onValueChange={setDifficulty} disabled={loading || userLoading || !cachedUser}>
-              <SelectTrigger id="difficulty">
+              <SelectTrigger id="difficulty" className="text-sm sm:text-base">
                 <SelectValue placeholder="Select difficulty" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="beginner">Beginner</SelectItem>
-                <SelectItem value="intermediate">Intermediate</SelectItem>
-                <SelectItem value="advanced">Advanced</SelectItem>
+                <SelectItem value="beginner" className="text-sm sm:text-base">Beginner</SelectItem>
+                <SelectItem value="intermediate" className="text-sm sm:text-base">Intermediate</SelectItem>
+                <SelectItem value="advanced" className="text-sm sm:text-base">Advanced</SelectItem>
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">Choose the difficulty level for this challenge</p>
           </div>
 
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading || userLoading}>
+          <DialogFooter className="flex flex-col sm:flex-row gap-2 sm:gap-0">
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => onOpenChange(false)} 
+              disabled={loading || userLoading}
+              className="text-sm sm:text-base px-4 sm:px-6 py-2 sm:py-2"
+            >
               Cancel
             </Button>
             <Button
               type="submit"
               disabled={loading || userLoading || !cachedUser}
-              className="bg-gradient-to-r from-neo-mint to-purist-blue text-white"
+              className="bg-gradient-to-r from-neo-mint to-purist-blue text-white text-sm sm:text-base px-4 sm:px-6 py-2 sm:py-2"
             >
               {userLoading ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="mr-2 h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
                   Loading...
                 </>
               ) : loading ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="mr-2 h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
                   Creating...
                 </>
               ) : (

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { 
@@ -9,6 +9,7 @@ import {
   PlayIcon, 
   PauseIcon,
   MaximizeIcon,
+  MinimizeIcon,
   CheckCircle,
   Clock,
   Volume2,
@@ -49,6 +50,7 @@ export function VideoControls({
   playbackRateMenuRef,
 }: VideoControlsProps) {
   const { isMobile } = useMobile()
+  const [isFullscreen, setIsFullscreen] = useState(false)
   
   const {
     isPlaying,
@@ -64,6 +66,63 @@ export function VideoControls({
   } = playerState
 
   const progressPercentage = Math.min((watchTime / requiredWatchTime) * 100, 100)
+
+  // Fullscreen functionality for mobile
+  const handleMobileFullscreen = async () => {
+    if (!isMobile) {
+      onFullscreen()
+      return
+    }
+
+    try {
+      if (!isFullscreen) {
+        // Enter fullscreen
+        const element = document.documentElement
+        if (element.requestFullscreen) {
+          await element.requestFullscreen()
+        } else if ((element as any).webkitRequestFullscreen) {
+          await (element as any).webkitRequestFullscreen()
+        } else if ((element as any).msRequestFullscreen) {
+          await (element as any).msRequestFullscreen()
+        }
+        setIsFullscreen(true)
+      } else {
+        // Exit fullscreen
+        if (document.exitFullscreen) {
+          await document.exitFullscreen()
+        } else if ((document as any).webkitExitFullscreen) {
+          await (document as any).webkitExitFullscreen()
+        } else if ((document as any).msExitFullscreen) {
+          await (document as any).msExitFullscreen()
+        }
+        setIsFullscreen(false)
+      }
+    } catch (error) {
+      console.error('Fullscreen error:', error)
+    }
+  }
+
+  // Listen for fullscreen changes
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      const isCurrentlyFullscreen = !!(
+        document.fullscreenElement ||
+        (document as any).webkitFullscreenElement ||
+        (document as any).msFullscreenElement
+      )
+      setIsFullscreen(isCurrentlyFullscreen)
+    }
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange)
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange)
+    document.addEventListener('msfullscreenchange', handleFullscreenChange)
+
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange)
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange)
+      document.removeEventListener('msfullscreenchange', handleFullscreenChange)
+    }
+  }, [])
 
   // ✅ Close menu on outside click
   useEffect(() => {
@@ -225,23 +284,29 @@ export function VideoControls({
             variant="ghost"
             size="icon"
             className={`${isMobile ? 'h-6 w-6 sm:h-8 sm:w-8' : 'h-8 w-8'} rounded-full text-white hover:bg-white/20`}
-            onClick={onFullscreen}
+            onClick={handleMobileFullscreen}
           >
-            <MaximizeIcon className={`${isMobile ? 'h-3 w-3 sm:h-4 sm:w-4' : 'h-4 w-4'}`} />
-            <span className="sr-only">Fullscreen</span>
+            {isMobile && isFullscreen ? (
+              <MinimizeIcon className={`${isMobile ? 'h-3 w-3 sm:h-4 sm:w-4' : 'h-4 w-4'}`} />
+            ) : (
+              <MaximizeIcon className={`${isMobile ? 'h-3 w-3 sm:h-4 sm:w-4' : 'h-4 w-4'}`} />
+            )}
+            <span className="sr-only">{isMobile && isFullscreen ? "Exit Fullscreen" : "Fullscreen"}</span>
           </Button>
 
-          {/* Completed badge */}
+          {/* Completed badge - Fixed positioning for mobile */}
           {completed && (
             <motion.div
               initial={{ scale: 0, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ type: "spring", stiffness: 300, damping: 20 }}
-              className="flex items-center gap-1 bg-green-500/20 backdrop-blur-sm px-2 sm:px-3 py-1 rounded-full ml-1 sm:ml-2"
+              className={`flex items-center gap-1 bg-green-500/20 backdrop-blur-sm px-2 sm:px-3 py-1 rounded-full ${
+                isMobile ? 'ml-1 max-w-[80px] sm:max-w-none sm:ml-2' : 'ml-2'
+              }`}
             >
-              <CheckCircle className={`${isMobile ? 'h-3 w-3 sm:h-4 sm:w-4' : 'h-4 w-4'} text-green-500`} />
-              <span className={`${isMobile ? 'text-xs sm:text-sm' : 'text-sm'} font-medium text-green-500`}>
-                completed
+              <CheckCircle className={`${isMobile ? 'h-3 w-3 sm:h-4 sm:w-4' : 'h-4 w-4'} text-green-500 flex-shrink-0`} />
+              <span className={`${isMobile ? 'text-xs sm:text-sm truncate' : 'text-sm'} font-medium text-green-500`}>
+                {isMobile ? 'done' : 'completed'}
               </span>
             </motion.div>
           )}

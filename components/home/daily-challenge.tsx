@@ -419,6 +419,16 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
       setProgress(((activeStep + 1) / steps.length) * 100)
       setError(null)
       setShowComparisonFeedback(false)
+      
+      // Scroll to top on mobile when advancing to next step
+      setTimeout(() => {
+        if (window.innerWidth < 768) { // Mobile breakpoint
+          window.scrollTo({
+            top: 0,
+            behavior: "smooth"
+          })
+        }
+      }, 100) // Small delay to ensure DOM updates
     }
   }
   // Handle content comparison feedback actions
@@ -1043,10 +1053,10 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.3, delay: 0.7 }}
                     >
-                      <Alert className="mt-4 bg-amber-500/10 border-amber-500/20">
-                        <AlertTriangle className="h-4 w-4 text-amber-500" />
-                        <AlertTitle>Watch the Video</AlertTitle>
-                        <AlertDescription>
+                      <Alert className="mt-3 sm:mt-4 mx-2 sm:mx-0 p-3 sm:p-4 bg-amber-500/10 border-amber-500/20 rounded-lg">
+                        <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5 text-amber-500 flex-shrink-0" />
+                        <AlertTitle className="text-sm sm:text-base font-medium mb-1 sm:mb-2">Watch the Video</AlertTitle>
+                        <AlertDescription className="text-xs sm:text-sm leading-relaxed">
                           Please watch at least {formatTime(adminSettings.minWatchTime)} of the video
                           before proceeding to the next step.
                         </AlertDescription>
