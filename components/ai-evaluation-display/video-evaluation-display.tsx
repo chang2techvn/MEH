@@ -184,23 +184,23 @@ export default function EnhancedVideoEvaluationDisplay({
   if (isCompact && !expanded) {
     return (
       <motion.div
-        className="p-4 rounded-lg border bg-white dark:bg-gray-800 shadow-sm hover:shadow-md transition-all duration-200"
+        className="p-2 sm:p-4 rounded-lg border bg-white dark:bg-gray-800 shadow-sm hover:shadow-md transition-all duration-200"
         whileHover={{ scale: 1.01 }}
         onClick={() => setExpanded(true)}
       >
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Brain className="h-5 w-5 text-blue-500" />
+          <div className="flex items-center gap-1.5 sm:gap-3">
+            <Brain className="h-3 w-3 sm:h-5 sm:w-5 text-blue-500" />
             <div>
-              <h4 className="font-semibold">English Analysis Ready</h4>
-              <p className="text-xs text-gray-500">Tap to see your results</p>
+              <h4 className="font-semibold text-xs sm:text-base">English Analysis Ready</h4>
+              <p className="text-[10px] sm:text-xs text-gray-500">Tap to see your results</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Badge variant="outline" className={getScoreBadgeStyle(overallScore)}>
+          <div className="flex items-center gap-1 sm:gap-2">
+            <Badge variant="outline" className={`text-xs px-1.5 py-0.5 sm:px-2 sm:py-1 ${getScoreBadgeStyle(overallScore)}`}>
               {overallScore}/100
             </Badge>
-            <ChevronDown className="h-4 w-4 text-gray-400" />
+            <ChevronDown className="h-3 w-3 sm:h-4 sm:w-4 text-gray-400" />
           </div>
         </div>
       </motion.div>
@@ -209,44 +209,44 @@ export default function EnhancedVideoEvaluationDisplay({
 
   return (
     <Card className="w-full border-0 shadow-lg">
-      <CardHeader className="text-center pb-4">
-        <div className="flex items-center justify-center gap-2 mb-2">
-          <Brain className="h-6 w-6 text-blue-500" />
-          <CardTitle className="text-xl font-bold">English Speaking Analysis</CardTitle>
+      <CardHeader className="text-center pb-3 sm:pb-4 px-3 sm:px-6">
+        <div className="flex items-center justify-center gap-1 sm:gap-2 mb-2">
+          <Brain className="h-4 w-4 sm:h-6 sm:w-6 text-blue-500" />
+          <CardTitle className="text-base sm:text-xl font-bold">English Speaking Analysis</CardTitle>
         </div>
-        <p className="text-sm text-gray-600 dark:text-gray-400">Video: {videoTopic}</p>
-        <div className="mt-4">
-          <Badge variant="outline" className={`text-lg px-4 py-2 ${getScoreBadgeStyle(overallScore)}`}>
+        <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Video: {videoTopic}</p>
+        <div className="mt-3 sm:mt-4">
+          <Badge variant="outline" className={`text-sm sm:text-lg px-2 sm:px-4 py-1 sm:py-2 ${getScoreBadgeStyle(overallScore)}`}>
             Overall Score: {overallScore}/100 - {getPerformanceLevel(overallScore)}
           </Badge>
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-6">
-        {/* Quick Overview Grid - Responsive */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <CardContent className="space-y-4 sm:space-y-6 px-3 sm:px-6">
+        {/* Quick Overview Grid - Mobile Responsive: 2 rows x 3 columns on mobile */}
+        <div className="grid grid-cols-3 sm:grid-cols-2 lg:grid-cols-3 gap-1.5 sm:gap-3 md:gap-4">
           {speakingCriteria.map((criteria, index) => (
             <motion.div
               key={criteria.id}
-              className="p-4 rounded-lg bg-gray-50 dark:bg-gray-800 border"
+              className="p-1.5 sm:p-3 md:p-4 rounded-lg bg-gray-50 dark:bg-gray-800 border"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
             >
-              <div className="flex items-center gap-2 mb-2">
-                <div className={`p-1.5 rounded ${criteria.color} text-white`}>
+              <div className="flex items-center gap-1 sm:gap-2 mb-1.5 sm:mb-2">
+                <div className={`p-1 sm:p-1.5 rounded ${criteria.color} text-white`}>
                   {criteria.icon}
                 </div>
-                <div>
-                  <h4 className="font-medium text-sm">{criteria.title}</h4>
-                  <p className="text-xs text-gray-500">{criteria.subtitle}</p>
+                <div className="min-w-0 flex-1">
+                  <h4 className="font-medium text-xs sm:text-sm truncate">{criteria.title}</h4>
+                  <p className="text-xs text-gray-500 hidden sm:block">{criteria.subtitle}</p>
                 </div>
               </div>
-              <div className="flex items-center justify-between">
-                <span className={`font-bold ${getScoreColor(criteria.score)}`}>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-0">
+                <span className={`font-bold text-xs sm:text-sm ${getScoreColor(criteria.score)} text-center sm:text-left`}>
                   {criteria.score}/100
                 </span>
-                <div className="w-16 h-2 bg-gray-200 dark:bg-gray-700 rounded-full">
+                <div className="w-full sm:w-16 h-1.5 sm:h-2 bg-gray-200 dark:bg-gray-700 rounded-full">
                   <motion.div
                     className={`h-full ${criteria.color} rounded-full`}
                     initial={{ width: 0 }}
@@ -261,37 +261,40 @@ export default function EnhancedVideoEvaluationDisplay({
 
         {/* Tabbed Details */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="feedback">
-              <MessageSquare className="h-4 w-4 mr-2" />
-              Key Points
+          <TabsList className="grid w-full grid-cols-3 h-6 sm:h-auto p-0.5 sm:p-1">
+            <TabsTrigger value="feedback" className="text-xs sm:text-sm flex-col sm:flex-row gap-0 sm:gap-2 px-0.5 sm:px-3 py-0.5 sm:py-2 h-5 sm:h-auto">
+              <MessageSquare className="h-2 w-2 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Key Points</span>
+              <span className="sm:hidden text-xs">Points</span>
             </TabsTrigger>
-            <TabsTrigger value="assessment">
-              <BarChart3 className="h-4 w-4 mr-2" />
-              Assessment
+            <TabsTrigger value="assessment" className="text-xs sm:text-sm flex-col sm:flex-row gap-0 sm:gap-2 px-0.5 sm:px-3 py-0.5 sm:py-2 h-5 sm:h-auto">
+              <BarChart3 className="h-2 w-2 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Assessment</span>
+              <span className="sm:hidden text-xs">Review</span>
             </TabsTrigger>
-            <TabsTrigger value="improvements">
-              <TrendingUp className="h-4 w-4 mr-2" />
-              Next Steps
+            <TabsTrigger value="improvements" className="text-xs sm:text-sm flex-col sm:flex-row gap-0 sm:gap-2 px-0.5 sm:px-3 py-0.5 sm:py-2 h-5 sm:h-auto">
+              <TrendingUp className="h-2 w-2 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Next Steps</span>
+              <span className="sm:hidden text-xs">Steps</span>
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="feedback" className="mt-4">
-            <div className="space-y-4">
+          <TabsContent value="feedback" className="mt-1.5 sm:mt-4">
+            <div className="space-y-1.5 sm:space-y-4">
               {/* AI Key Points */}
               {evaluation.keyPoints && evaluation.keyPoints.length > 0 && (
-                <div className="space-y-3">
-                  <h4 className="font-medium text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-blue-600" />
+                <div className="space-y-1.5 sm:space-y-3">
+                  <h4 className="font-medium text-gray-900 dark:text-gray-100 flex items-center gap-1 sm:gap-2 text-xs sm:text-base">
+                    <CheckCircle2 className="h-2.5 w-2.5 sm:h-4 sm:w-4 text-blue-600" />
                     Your Key Points
                   </h4>
-                  <div className="space-y-2">
+                  <div className="space-y-1 sm:space-y-2">
                     {evaluation.keyPoints.map((point: string, idx: number) => (
-                      <div key={idx} className="flex items-start gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border-l-4 border-blue-400">
-                        <div className="flex-shrink-0 w-6 h-6 bg-blue-100 dark:bg-blue-800 rounded-full flex items-center justify-center mt-0.5">
-                          <span className="text-blue-600 dark:text-blue-400 text-sm font-medium">{idx + 1}</span>
+                      <div key={idx} className="flex items-start gap-1 sm:gap-3 p-1 sm:p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border-l-4 border-blue-400">
+                        <div className="flex-shrink-0 w-3.5 h-3.5 sm:w-6 sm:h-6 bg-blue-100 dark:bg-blue-800 rounded-full flex items-center justify-center mt-0.5">
+                          <span className="text-blue-600 dark:text-blue-400 text-xs sm:text-sm font-medium">{idx + 1}</span>
                         </div>
-                        <p className="text-sm text-blue-800 dark:text-blue-200 leading-relaxed">{point}</p>
+                        <p className="text-xs sm:text-sm text-blue-800 dark:text-blue-200 leading-relaxed">{point}</p>
                       </div>
                     ))}
                   </div>
@@ -300,19 +303,19 @@ export default function EnhancedVideoEvaluationDisplay({
 
               {/* Fallback: Current Level Summary if no AI key points */}
               {(!evaluation.keyPoints || evaluation.keyPoints.length === 0) && (
-                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 p-4 rounded-xl border border-blue-200 dark:border-blue-800">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="p-2 bg-blue-100 dark:bg-blue-900/50 rounded-lg">
-                      <Brain className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 p-2 sm:p-4 rounded-xl border border-blue-200 dark:border-blue-800">
+                  <div className="flex items-center gap-1.5 sm:gap-3 mb-1.5 sm:mb-3">
+                    <div className="p-1 sm:p-2 bg-blue-100 dark:bg-blue-900/50 rounded-lg">
+                      <Brain className="h-3 w-3 sm:h-5 sm:w-5 text-blue-600 dark:text-blue-400" />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-blue-900 dark:text-blue-100">Your Current Level</h3>
-                      <p className="text-sm text-blue-700 dark:text-blue-300">
+                      <h3 className="font-semibold text-blue-900 dark:text-blue-100 text-sm sm:text-base">Your Current Level</h3>
+                      <p className="text-xs sm:text-sm text-blue-700 dark:text-blue-300">
                         {getPerformanceLevel(overallScore)} • {overallScore}/100 points
                       </p>
                     </div>
                   </div>
-                  <p className="text-sm text-blue-800 dark:text-blue-200 leading-relaxed">
+                  <p className="text-xs sm:text-sm text-blue-800 dark:text-blue-200 leading-relaxed">
                     {evaluation.overallFeedback || 
                      `Your English communication shows ${getPerformanceLevel(overallScore).toLowerCase()} proficiency. You're making good progress in your English learning journey!`}
                   </p>
@@ -322,27 +325,27 @@ export default function EnhancedVideoEvaluationDisplay({
             </div>
           </TabsContent>
 
-          <TabsContent value="assessment" className="mt-4">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <TabsContent value="assessment" className="mt-1.5 sm:mt-4">
+            <div className="grid grid-cols-1 gap-2 sm:gap-6 lg:grid-cols-2">
               {/* Strengths */}
-              <div className="space-y-3">
-                <h4 className="font-medium text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-green-600" />
+              <div className="space-y-1.5 sm:space-y-3">
+                <h4 className="font-medium text-gray-900 dark:text-gray-100 flex items-center gap-1 sm:gap-2 text-xs sm:text-base">
+                  <CheckCircle2 className="h-2.5 w-2.5 sm:h-4 sm:w-4 text-green-600" />
                   Your Strengths
                 </h4>
-                <div className="space-y-2">
+                <div className="space-y-1 sm:space-y-2">
                   {evaluation.strengths && evaluation.strengths.length > 0 ? (
                     evaluation.strengths.map((strength: string, idx: number) => (
-                      <div key={idx} className="flex items-start gap-3 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border-l-4 border-green-400">
-                        <div className="flex-shrink-0 w-6 h-6 bg-green-100 dark:bg-green-800 rounded-full flex items-center justify-center mt-0.5">
-                          <span className="text-green-600 dark:text-green-400 text-sm font-medium">{idx + 1}</span>
+                      <div key={idx} className="flex items-start gap-1 sm:gap-3 p-1 sm:p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border-l-4 border-green-400">
+                        <div className="flex-shrink-0 w-3.5 h-3.5 sm:w-6 sm:h-6 bg-green-100 dark:bg-green-800 rounded-full flex items-center justify-center mt-0.5">
+                          <span className="text-green-600 dark:text-green-400 text-xs sm:text-sm font-medium">{idx + 1}</span>
                         </div>
-                        <p className="text-sm text-green-800 dark:text-green-200 leading-relaxed">{strength}</p>
+                        <p className="text-xs sm:text-sm text-green-800 dark:text-green-200 leading-relaxed">{strength}</p>
                       </div>
                     ))
                   ) : (
-                    <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
-                      <p className="text-sm text-green-700 dark:text-green-300 text-center">
+                    <div className="p-1.5 sm:p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                      <p className="text-xs sm:text-sm text-green-700 dark:text-green-300 text-center">
                         No specific strengths identified. Keep practicing to improve your English skills!
                       </p>
                     </div>
@@ -351,24 +354,24 @@ export default function EnhancedVideoEvaluationDisplay({
               </div>
 
               {/* Weaknesses */}
-              <div className="space-y-3">
-                <h4 className="font-medium text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                  <AlertCircle className="h-4 w-4 text-red-600" />
+              <div className="space-y-1.5 sm:space-y-3">
+                <h4 className="font-medium text-gray-900 dark:text-gray-100 flex items-center gap-1 sm:gap-2 text-xs sm:text-base">
+                  <AlertCircle className="h-2.5 w-2.5 sm:h-4 sm:w-4 text-red-600" />
                   Your Weaknesses
                 </h4>
-                <div className="space-y-2">
+                <div className="space-y-1 sm:space-y-2">
                   {evaluation.weaknesses && evaluation.weaknesses.length > 0 ? (
                     evaluation.weaknesses.map((weakness: string, idx: number) => (
-                      <div key={idx} className="flex items-start gap-3 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border-l-4 border-red-400">
-                        <div className="flex-shrink-0 w-6 h-6 bg-red-100 dark:bg-red-800 rounded-full flex items-center justify-center mt-0.5">
-                          <span className="text-red-600 dark:text-red-400 text-sm font-medium">{idx + 1}</span>
+                      <div key={idx} className="flex items-start gap-1 sm:gap-3 p-1 sm:p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border-l-4 border-red-400">
+                        <div className="flex-shrink-0 w-3.5 h-3.5 sm:w-6 sm:h-6 bg-red-100 dark:bg-red-800 rounded-full flex items-center justify-center mt-0.5">
+                          <span className="text-red-600 dark:text-red-400 text-xs sm:text-sm font-medium">{idx + 1}</span>
                         </div>
-                        <p className="text-sm text-red-800 dark:text-red-200 leading-relaxed">{weakness}</p>
+                        <p className="text-xs sm:text-sm text-red-800 dark:text-red-200 leading-relaxed">{weakness}</p>
                       </div>
                     ))
                   ) : (
-                    <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
-                      <p className="text-sm text-red-700 dark:text-red-300 text-center">
+                    <div className="p-1.5 sm:p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+                      <p className="text-xs sm:text-sm text-red-700 dark:text-red-300 text-center">
                         No major weaknesses identified. Great job with your English!
                       </p>
                     </div>
@@ -378,23 +381,53 @@ export default function EnhancedVideoEvaluationDisplay({
             </div>
           </TabsContent>
 
-          <TabsContent value="improvements" className="mt-4">
-            <div className="space-y-4">
+          <TabsContent value="improvements" className="mt-1.5 sm:mt-4">
+            <div className="space-y-1.5 sm:space-y-4">
               {/* AI Next Steps */}
               {evaluation.nextSteps && evaluation.nextSteps.length > 0 && (
-                <div className="space-y-3">
-                  <h4 className="font-medium text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                    <TrendingUp className="h-4 w-4 text-purple-600" />
+                <div className="space-y-1.5 sm:space-y-3">
+                  <h4 className="font-medium text-gray-900 dark:text-gray-100 flex items-center gap-1 sm:gap-2 text-xs sm:text-base">
+                    <TrendingUp className="h-2.5 w-2.5 sm:h-4 sm:w-4 text-purple-600" />
                     Your Next Move
                   </h4>
-                  <div className="space-y-2">
+                  <div className="space-y-1 sm:space-y-2">
                     {evaluation.nextSteps.map((step: string, idx: number) => (
-                      <div key={idx} className="flex items-start gap-3 p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border-l-4 border-purple-400">
-                        <div className="flex-shrink-0 w-6 h-6 bg-purple-100 dark:bg-purple-800 rounded-full flex items-center justify-center mt-0.5">
-                          <span className="text-purple-600 dark:text-purple-400 text-sm font-medium">{idx + 1}</span>
+                      <div key={idx} className="flex items-start gap-1 sm:gap-3 p-1 sm:p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border-l-4 border-purple-400">
+                        <div className="flex-shrink-0 w-3.5 h-3.5 sm:w-6 sm:h-6 bg-purple-100 dark:bg-purple-800 rounded-full flex items-center justify-center mt-0.5">
+                          <span className="text-purple-600 dark:text-purple-400 text-xs sm:text-sm font-medium">{idx + 1}</span>
                         </div>
-                        <p className="text-sm text-purple-800 dark:text-purple-200 leading-relaxed">{step}</p>
+                                                <p className="text-xs sm:text-sm text-purple-800 dark:text-purple-200 leading-relaxed">{step}</p>
                       </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Speaking Criteria Improvements */}
+              {speakingCriteria.length > 0 && (
+                <div className="space-y-1.5 sm:space-y-3">
+                  <h4 className="font-medium text-gray-900 dark:text-gray-100 flex items-center gap-1 sm:gap-2 text-xs sm:text-base">
+                    <Target className="h-2.5 w-2.5 sm:h-4 sm:w-4 text-orange-600" />
+                    Your Priority Areas
+                  </h4>
+                  <div className="grid gap-1 sm:gap-3">
+                    {speakingCriteria
+                      .filter(criteria => criteria.score < 7) // Only show areas needing improvement
+                      .map((criteria, idx) => (
+                        <div key={idx} className="p-1 sm:p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg border-l-4 border-orange-400">
+                          <div className="flex items-center gap-1 sm:gap-3 mb-1 sm:mb-2">
+                            <div className={`p-0.5 sm:p-1.5 rounded-md ${criteria.color} text-white`}>
+                              {criteria.icon}
+                            </div>
+                            <span className="font-medium text-xs sm:text-sm text-orange-900 dark:text-orange-100">{criteria.title}</span>
+                            <Badge variant="outline" className="bg-orange-100 dark:bg-orange-800 text-orange-700 dark:text-orange-300 text-xs px-1 py-0.5 sm:px-2 sm:py-0.5 border-orange-300">
+                              {criteria.score}/100
+                            </Badge>
+                          </div>
+                          <p className="text-xs sm:text-sm text-orange-800 dark:text-orange-200 leading-relaxed">
+                            {criteria.improvement}
+                          </p>
+                        </div>
                     ))}
                   </div>
                 </div>
@@ -402,30 +435,30 @@ export default function EnhancedVideoEvaluationDisplay({
 
               {/* Fallback: Priority Areas if no AI next steps */}
               {(!evaluation.nextSteps || evaluation.nextSteps.length === 0) && (
-                <div className="space-y-2">
-                  <h4 className="font-medium text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                    <Target className="h-4 w-4 text-orange-600" />
+                <div className="space-y-1.5 sm:space-y-2">
+                  <h4 className="font-medium text-gray-900 dark:text-gray-100 flex items-center gap-1 sm:gap-2 text-xs sm:text-base">
+                    <Target className="h-3 w-3 sm:h-4 sm:w-4 text-orange-600" />
                     Priority Areas to Improve
                   </h4>
-                  <div className="grid gap-3">
+                  <div className="grid gap-1.5 sm:gap-3">
                     {speakingCriteria
                       .filter(c => c.score < 75)
                       .slice(0, 3)
                       .map((criteria, idx) => (
-                        <div key={criteria.id} className="p-4 rounded-lg bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800">
-                          <div className="flex items-center gap-3 mb-2">
-                            <div className={`p-1.5 rounded-md ${criteria.color} text-white`}>
+                        <div key={criteria.id} className="p-2 sm:p-4 rounded-lg bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800">
+                          <div className="flex items-center gap-1.5 sm:gap-3 mb-1.5 sm:mb-2">
+                            <div className={`p-0.5 sm:p-1.5 rounded-md ${criteria.color} text-white`}>
                               {criteria.icon}
                             </div>
                             <div className="flex-1">
-                              <h5 className="font-medium text-orange-900 dark:text-orange-100">{criteria.title}</h5>
+                              <h5 className="font-medium text-orange-900 dark:text-orange-100 text-xs sm:text-base">{criteria.title}</h5>
                               <p className="text-xs text-orange-700 dark:text-orange-300">Current: {criteria.score}%</p>
                             </div>
-                            <div className="px-2 py-1 bg-orange-100 dark:bg-orange-800 rounded text-xs font-medium text-orange-800 dark:text-orange-200">
+                            <div className="px-1 sm:px-2 py-0.5 sm:py-1 bg-orange-100 dark:bg-orange-800 rounded text-xs font-medium text-orange-800 dark:text-orange-200">
                               Priority {idx + 1}
                             </div>
                           </div>
-                          <p className="text-sm text-orange-800 dark:text-orange-200 leading-relaxed">
+                          <p className="text-xs sm:text-sm text-orange-800 dark:text-orange-200 leading-relaxed">
                             {criteria.improvement}
                           </p>
                         </div>
@@ -441,14 +474,14 @@ export default function EnhancedVideoEvaluationDisplay({
 
         {/* Collapse Button */}
         {isCompact && (
-          <div className="text-center pt-4 border-t">
+          <div className="text-center pt-2 sm:pt-4 border-t">
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setExpanded(false)}
-              className="text-gray-500"
+              className="text-gray-500 h-6 sm:h-auto px-2 sm:px-4 py-1 sm:py-2 text-xs sm:text-sm"
             >
-              <ChevronUp className="h-4 w-4 mr-1" />
+              <ChevronUp className="h-2.5 w-2.5 sm:h-4 sm:w-4 mr-0.5 sm:mr-1" />
               Show Less
             </Button>
           </div>

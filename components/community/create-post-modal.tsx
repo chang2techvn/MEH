@@ -150,7 +150,7 @@ export function CreatePostModal(props: CreatePostModalProps) {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-2 sm:p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-2 sm:p-4 pb-20 sm:pb-4"
           onClick={(e) => {
             // Close modal when clicking outside
             if (e.target === e.currentTarget) {
@@ -163,7 +163,7 @@ export function CreatePostModal(props: CreatePostModalProps) {
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.9, opacity: 0, y: 20 }}
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
-            className="w-full max-w-lg bg-white dark:bg-gray-800 rounded-2xl overflow-hidden max-h-[90vh] overflow-y-auto shadow-xl border border-white/20 dark:border-gray-700/30"
+            className="w-full max-w-lg bg-white dark:bg-gray-800 rounded-2xl overflow-hidden max-h-[80vh] sm:max-h-[90vh] overflow-y-auto shadow-xl border border-white/20 dark:border-gray-700/30"
           >
             {/* Header */}
             <div className="p-3 sm:p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between sticky top-0 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm z-10">
@@ -247,7 +247,7 @@ export function CreatePostModal(props: CreatePostModalProps) {
               >
                 <Textarea
                   placeholder={`What's on your mind, ${user?.name?.split(' ').pop() || 'there'}?`}
-                  className="min-h-[120px] sm:min-h-[150px] resize-none border-0 focus-visible:ring-1 focus-visible:ring-neo-mint dark:focus-visible:ring-purist-blue text-base sm:text-lg p-0 bg-transparent placeholder:text-gray-400 dark:placeholder:text-gray-500 hover:bg-transparent focus:bg-transparent"
+                  className="min-h-[80px] sm:min-h-[120px] md:min-h-[150px] resize-none border-0 focus-visible:ring-1 focus-visible:ring-neo-mint dark:focus-visible:ring-purist-blue text-base sm:text-lg p-0 bg-transparent placeholder:text-gray-400 dark:placeholder:text-gray-500 hover:bg-transparent focus:bg-transparent"
                   value={newPostContent}
                   onChange={(e) => setNewPostContent(e.target.value)}
                   aria-label="Post content"
@@ -410,7 +410,7 @@ export function CreatePostModal(props: CreatePostModalProps) {
                       </div>
                     ) : (
                       // Multiple images - 2 rows x 3 columns layout
-                      <div className="grid grid-cols-3 grid-rows-2 gap-2 max-h-80">
+                      <div className="grid grid-cols-3 grid-rows-2 gap-1.5 sm:gap-2 max-h-60 sm:max-h-80">
                         {mediaPreviews.slice(0, 5).map((preview, index) => (
                           <div 
                             key={index} 
@@ -470,13 +470,13 @@ export function CreatePostModal(props: CreatePostModalProps) {
 
               {/* Add to post section */}
               <motion.div
-                className="mt-4 p-3 sm:p-4 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800/50"
+                className="mt-3 sm:mt-4 p-2.5 sm:p-3 md:p-4 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800/50"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
               >
                 <div className="flex items-center justify-between">
-                  <h4 className="font-medium text-sm sm:text-base">Add to your post</h4>
+                  <h4 className="font-medium text-xs sm:text-sm md:text-base">Add to your post</h4>
                   <div className="flex gap-1 sm:gap-2">
                     {/* Photo/Video Button */}
                     <TooltipProvider>
@@ -486,11 +486,11 @@ export function CreatePostModal(props: CreatePostModalProps) {
                             whileHover={{ scale: 1.1 }}
                             whileTap={{ scale: 0.95 }}
                             transition={{ type: "spring", stiffness: 400, damping: 15 }}
-                            className="h-9 w-9 sm:h-10 sm:w-10 rounded-full flex items-center justify-center bg-white dark:bg-gray-700 shadow-sm hover:shadow-md transition-all duration-200 border border-gray-200 dark:border-gray-600"
+                            className="h-8 w-8 sm:h-9 sm:w-9 md:h-10 md:w-10 rounded-full flex items-center justify-center bg-white dark:bg-gray-700 shadow-sm hover:shadow-md transition-all duration-200 border border-gray-200 dark:border-gray-600"
                             onClick={() => postFileInputRef.current?.click()}
                             aria-label="Add photo or video"
                           >
-                            <ImageIcon className="h-4.5 w-4.5 sm:h-5 sm:w-5 text-green-500" />
+                            <ImageIcon className="h-4 w-4 sm:h-4.5 sm:w-4.5 md:h-5 md:w-5 text-green-500" />
                             <input
                               type="file"
                               ref={postFileInputRef}

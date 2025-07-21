@@ -1275,7 +1275,7 @@ export default function CommunityPage() {
 
         {/* Main Content */}
         <main className="flex-1 relative">
-          <div className="w-full max-w-none px-2 sm:px-4 lg:px-6 xl:px-8 2xl:px-12 py-4">
+          <div className="w-full max-w-none px-1 sm:px-2 md:px-4 lg:px-6 xl:px-8 2xl:px-12 py-2 sm:py-4">
             <div className="flex flex-col lg:flex-row lg:gap-4 xl:gap-6 2xl:gap-8 2xl:justify-center 2xl:max-w-[1800px] 2xl:mx-auto">
               {/* Left Sidebar */}
               <LeftSidebar 
@@ -1300,12 +1300,12 @@ export default function CommunityPage() {
                 />
 
                 {/* Feed Filters */}
-                <div className="mb-4">
+                <div className="mb-2 sm:mb-4">
                   <FeedFilter onFilterChange={handleFilterChange} />
                 </div>
 
                 {/* Feed Posts */}
-                <div className="space-y-4">
+                <div className="space-y-2 sm:space-y-4">
                   {initialLoad ? (
                     Array(3)
                       .fill(0)

@@ -209,7 +209,7 @@ export function PostMedia({
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
       >
-        <p className="text-sm">{textContent}</p>
+        <p className="text-xs sm:text-sm">{textContent}</p>
       </motion.div>
     )
   }

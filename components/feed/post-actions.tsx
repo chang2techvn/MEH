@@ -56,14 +56,14 @@ export function PostActions({
         <Button
           variant="ghost"
           size="sm"
-          className="flex items-center gap-2 rounded-full px-4 hover:bg-white/20 dark:hover:bg-gray-800/20"
+          className="flex items-center gap-1 sm:gap-2 rounded-full px-2 sm:px-4 hover:bg-white/20 dark:hover:bg-gray-800/20 text-xs sm:text-sm"
           onClick={onLike}
         >
           {selectedReaction ? (
-            <span className="text-lg mr-1">{selectedReaction}</span>
+            <span className="text-base sm:text-lg mr-1">{selectedReaction}</span>
           ) : (
             <Heart
-              className={`h-4 w-4 ${liked ? "fill-cassis text-cassis" : ""} transition-colors`}
+              className={`h-3 w-3 sm:h-4 sm:w-4 ${liked ? "fill-cassis text-cassis" : ""} transition-colors`}
               style={{
                 transform: liked ? "scale(1.2)" : "scale(1)",
                 transition: "transform 0.3s ease",
@@ -81,7 +81,7 @@ export function PostActions({
               animate={{ opacity: 1, y: -45, scale: 1 }}
               exit={{ opacity: 0, y: 10, scale: 0.9 }}
               transition={{ duration: 0.2 }}
-              className="absolute left-0 -top-1 bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl rounded-full p-2 shadow-xl border border-white/20 dark:border-gray-700/30 z-20 flex gap-1"
+              className="absolute left-0 -top-1 bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl rounded-full p-1.5 sm:p-2 shadow-xl border border-white/20 dark:border-gray-700/30 z-20 flex gap-0.5 sm:gap-1"
               style={{
                 // Extend the hover area to prevent gaps
                 paddingBottom: '8px',
@@ -108,7 +108,7 @@ export function PostActions({
                         delay: index * 0.05 
                       }}
                     >
-                      <span className="text-lg">{reaction.emoji}</span>
+                      <span className="text-base sm:text-lg">{reaction.emoji}</span>
                     </motion.button>
                   </TooltipTrigger>
                   <TooltipContent side="top">
@@ -124,31 +124,31 @@ export function PostActions({
       <Button
         variant="ghost"
         size="sm"
-        className="flex items-center gap-2 rounded-full px-4 hover:bg-white/20 dark:hover:bg-gray-800/20"
+        className="flex items-center gap-1 sm:gap-2 rounded-full px-2 sm:px-4 hover:bg-white/20 dark:hover:bg-gray-800/20 text-xs sm:text-sm"
         onClick={onComment}
       >
-        <MessageSquare className="h-4 w-4" />
+        <MessageSquare className="h-3 w-3 sm:h-4 sm:w-4" />
         <span id={`comment-count-${username.replace(/\s+/g, "-")}`}>{commentCount}</span>
       </Button>
 
       <Button
         variant="ghost"
         size="sm"
-        className="flex items-center gap-2 rounded-full px-4 hover:bg-white/20 dark:hover:bg-gray-800/20"
+        className="flex items-center gap-1 sm:gap-2 rounded-full px-2 sm:px-4 hover:bg-white/20 dark:hover:bg-gray-800/20 text-xs sm:text-sm"
         onClick={onShare}
       >
-        <Share2 className="h-4 w-4" />
+        <Share2 className="h-3 w-3 sm:h-4 sm:w-4" />
         <span>Share</span>
       </Button>
 
       <Button
         variant="ghost"
         size="sm"
-        className={`flex items-center gap-2 rounded-full px-4 hover:bg-white/20 dark:hover:bg-gray-800/20 ${saved ? "text-neo-mint dark:text-purist-blue" : ""}`}
+        className={`flex items-center gap-1 sm:gap-2 rounded-full px-2 sm:px-4 hover:bg-white/20 dark:hover:bg-gray-800/20 text-xs sm:text-sm ${saved ? "text-neo-mint dark:text-purist-blue" : ""}`}
         onClick={() => onSavedChange(!saved)}
       >
         <Bookmark
-          className={`h-4 w-4 ${saved ? "fill-neo-mint dark:fill-purist-blue" : ""}`}
+          className={`h-3 w-3 sm:h-4 sm:w-4 ${saved ? "fill-neo-mint dark:fill-purist-blue" : ""}`}
           style={{
             transform: saved ? "scale(1.2)" : "scale(1)",
             transition: "transform 0.3s ease",

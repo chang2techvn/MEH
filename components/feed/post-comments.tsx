@@ -117,10 +117,10 @@ function CommentItem({
       <div className="flex-1 min-w-0">
         {/* Comment bubble */}
         <div className="bg-gray-100 dark:bg-gray-800 rounded-2xl px-3 py-2 inline-block">
-          <p className="text-sm font-semibold text-gray-900 dark:text-white">
+          <p className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white">
             {comment.user_name || 'Anonymous User'}
           </p>
-          <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+          <p className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
             {comment.content}
           </p>
         </div>
@@ -328,7 +328,7 @@ export function PostComments({
                 ))
               ) : (
                 <div className="text-center py-4">
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                  <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
                     No comments yet. Be the first to comment!
                   </p>
                 </div>

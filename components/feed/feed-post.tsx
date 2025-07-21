@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useAuthState } from "@/contexts/auth-context"
 import { motion } from "framer-motion"
 import { Card } from "@/components/ui/card"
@@ -53,6 +53,22 @@ export default function FeedPost({
   } = usePostInteractions(likes, comments, isNew, id)
   const { user: authUser } = useAuthState()
 
+  // Track screen size for mobile/desktop hover behavior
+  const [isDesktop, setIsDesktop] = useState(false)
+
+  useEffect(() => {
+    const checkScreenSize = () => {
+      setIsDesktop(window.innerWidth >= 768)
+    }
+    
+    // Initial check
+    checkScreenSize()
+    
+    // Listen for resize events
+    window.addEventListener('resize', checkScreenSize)
+    return () => window.removeEventListener('resize', checkScreenSize)
+  }, [])
+
   useEffect(() => {
   }, [isNew, username, content, mediaType, submission])
 
@@ -62,15 +78,28 @@ export default function FeedPost({
         ref={postRef}
         initial={{ opacity: 1, y: 0 }}
         animate={{ opacity: 1, y: 0 }}
-        whileHover={{
-          y: -8,
-          boxShadow: "0 20px 40px rgba(0,0,0,0.15)",
-          transition: { duration: 0.2, ease: "easeOut" },
-        }}
+        whileHover={
+          // Only enable hover animation on desktop/laptop (768px and above)
+          isDesktop ? {
+            y: -8,
+            boxShadow: "0 20px 40px rgba(0,0,0,0.15)",
+            transition: { duration: 0.2, ease: "easeOut" },
+          } : {}
+        }
         transition={{ duration: 0.3, type: "spring", stiffness: 100 }}
-        onHoverStart={() => updateState?.({ isHovered: true })}
-        onHoverEnd={() => updateState?.({ isHovered: false })}
-        className={`animation-gpu ${isNew ? "relative z-10 mb-8 pt-3" : "mb-6"}`}
+        onHoverStart={() => {
+          // Only trigger hover state on desktop/laptop
+          if (isDesktop) {
+            updateState?.({ isHovered: true })
+          }
+        }}
+        onHoverEnd={() => {
+          // Only trigger hover end on desktop/laptop
+          if (isDesktop) {
+            updateState?.({ isHovered: false })
+          }
+        }}
+        className={`animation-gpu ${isNew ? "relative z-10 mb-3 sm:mb-8 pt-3" : "mb-3 sm:mb-6"}`}
       >
         <Card
           className={`neo-card border-none bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl shadow-md hover:shadow-2xl transition-shadow duration-300 ${
@@ -93,7 +122,7 @@ export default function FeedPost({
               </Badge>
             </div>
           )}
-          <div className="p-6 overflow-hidden">
+          <div className="p-3 sm:p-4 md:p-6 overflow-hidden">
             <PostHeader
               username={username}
               userImage={userImage}
@@ -106,7 +135,7 @@ export default function FeedPost({
             />
             
             <motion.p
-              className="mt-2 text-gray-800 dark:text-gray-200"
+              className="mt-2 text-xs sm:text-base text-gray-800 dark:text-gray-200"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.1 }}
@@ -127,7 +156,7 @@ export default function FeedPost({
             {/* Chỉ hiển thị AI Evaluation cho posts từ challenge (có submission hoặc videoEvaluation) */}
             {(mediaType === "ai-submission" || submission || videoEvaluation) && (
               <motion.div
-                className="mt-4 w-full"
+                className="mt-3 sm:mt-4 w-full"
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: "auto" }}
                 exit={{ opacity: 0, height: 0 }}
@@ -299,7 +328,7 @@ export default function FeedPost({
               </motion.div>
             )}
 
-            <div className="mt-6 pt-4 border-t border-white/20 dark:border-gray-800/20 flex flex-col gap-4">
+            <div className="mt-4 sm:mt-6 pt-3 sm:pt-4 border-t border-white/20 dark:border-gray-800/20 flex flex-col gap-3 sm:gap-4">
               <PostActions
                 liked={state?.liked || false}
                 likeCount={state?.likeCount || 0}
