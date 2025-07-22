@@ -1,4 +1,4 @@
-export { EnhancedStoryCreator } from '../enhanced-story-creator-optimized'
+export { EnhancedStoryCreator } from '../enhanced-story-creator'
 export { StoryPreview } from './story-preview'
 export { MediaControls } from './media-controls'
 export { TextEditor } from './text-editor'

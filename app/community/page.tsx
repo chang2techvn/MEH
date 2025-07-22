@@ -23,6 +23,8 @@ import {
   Send,
   Eye,
   Heart,
+  Volume2,
+  VolumeX,
 } from "lucide-react"
 import FeedPost from "@/components/feed/feed-post"
 import FeedFilter from "@/components/feed/feed-filter"
@@ -116,6 +118,12 @@ export default function CommunityPage() {
   const [storyReactionAnimations, setStoryReactionAnimations] = useState<Array<{id: string, emoji: string, x: number, y: number}>>([])
   const [windowWidth, setWindowWidth] = useState<number>(typeof window !== "undefined" ? window.innerWidth : 0)
   const [highlightPostId, setHighlightPostId] = useState<string | null>(null)
+  
+  // Video and progress control states
+  const [videoProgress, setVideoProgress] = useState(0)
+  const [videoDuration, setVideoDuration] = useState(5) // Default 5 seconds for non-video stories
+  const [videoMuted, setVideoMuted] = useState(true) // Videos start muted by default
+  const videoRef = useRef<HTMLVideoElement>(null)
 
   const [selectedDate, setSelectedDate] = useState<Date>()
   const [location, setLocation] = useState<string>("")
@@ -539,32 +547,57 @@ export default function CommunityPage() {
   // Auto-advance stories when viewing multiple stories
   useEffect(() => {
     if (activeStory && activeUserStories.length > 0 && !storyPaused) {
-      const timer = setTimeout(() => {
-        if (currentStoryIndex < activeUserStories.length - 1) {
-          // Move to next story in current user's stories
-          const newIndex = currentStoryIndex + 1
-          setCurrentStoryIndex(newIndex)
-          setActiveStory(activeUserStories[newIndex].id)
-          setProgressKey(prev => prev + 1) // Force progress bar reset
-          viewStory(String(activeUserStories[newIndex].id))
-          
-          // Update story viewers modal if open and user is story author
-          if (showStoryViewers && user && activeUserStories[newIndex]?.author_id === user.id) {
-            setSelectedStoryForViewers(activeUserStories[newIndex].id)
-          } else if (showStoryViewers) {
-            // Close modal if new story is not authored by current user
-            setShowStoryViewers(false)
-            setStoryPaused(false)
-          }
-        } else {
-          // Move to next user's stories
-          moveToNextUser()
-        }
-      }, 5000) // 5 seconds per story
+      const currentStory = activeUserStories[currentStoryIndex]
+      const isVideo = currentStory?.media_type === 'video' || 
+        (currentStory?.media_url && (
+          currentStory.media_url.includes('.mp4') || 
+          currentStory.media_url.includes('.webm') || 
+          currentStory.media_url.includes('.mov') ||
+          currentStory.media_url.includes('video') ||
+          currentStory.media_url.includes('.avi')
+        ))
 
-      return () => clearTimeout(timer)
+      // For videos, let the video control the timing via onEnded event
+      if (!isVideo) {
+        const timer = setTimeout(() => {
+          if (currentStoryIndex < activeUserStories.length - 1) {
+            // Move to next story in current user's stories
+            const newIndex = currentStoryIndex + 1
+            setCurrentStoryIndex(newIndex)
+            setActiveStory(activeUserStories[newIndex].id)
+            setProgressKey(prev => prev + 1) // Force progress bar reset
+            viewStory(String(activeUserStories[newIndex].id))
+            
+            // Update story viewers modal if open and user is story author
+            if (showStoryViewers && user && activeUserStories[newIndex]?.author_id === user.id) {
+              setSelectedStoryForViewers(activeUserStories[newIndex].id)
+            } else if (showStoryViewers) {
+              // Close modal if new story is not authored by current user
+              setShowStoryViewers(false)
+              setStoryPaused(false)
+            }
+          } else {
+            // Move to next user's stories
+            moveToNextUser()
+          }
+        }, 5000) // 5 seconds per story
+
+        return () => clearTimeout(timer)
+      }
     }
   }, [activeStory, currentStoryIndex, activeUserStories, viewStory, storyPaused])
+
+  // Reset video progress when story changes
+  useEffect(() => {
+    if (activeStory) {
+      setVideoProgress(0)
+      setVideoMuted(true) // Reset to muted when changing stories
+      if (videoRef.current) {
+        videoRef.current.currentTime = 0
+        videoRef.current.muted = true
+      }
+    }
+  }, [activeStory, currentStoryIndex])
 
   // Helper function to move to next user's stories
   const moveToNextUser = () => {
@@ -1225,6 +1258,48 @@ export default function CommunityPage() {
     }
   }
 
+  // Handle center tap to pause/resume story and video
+  const handleCenterTap = () => {
+    setStoryPaused(!storyPaused)
+    
+    // Also pause/resume video if it exists
+    if (videoRef.current) {
+      if (storyPaused) {
+        videoRef.current.play()
+      } else {
+        videoRef.current.pause()
+      }
+    }
+  }
+
+  // Handle video events for progress tracking
+  const handleVideoLoadedMetadata = () => {
+    if (videoRef.current) {
+      setVideoDuration(videoRef.current.duration || 5)
+      setVideoProgress(0)
+    }
+  }
+
+  const handleVideoTimeUpdate = () => {
+    if (videoRef.current && !storyPaused) {
+      const progress = (videoRef.current.currentTime / videoRef.current.duration) * 100
+      setVideoProgress(progress)
+    }
+  }
+
+  const handleVideoEnded = () => {
+    // Move to next story when video ends
+    goToNextStory()
+  }
+
+  // Handle video mute/unmute
+  const handleVideoMuteToggle = () => {
+    setVideoMuted(!videoMuted)
+    if (videoRef.current) {
+      videoRef.current.muted = !videoMuted
+    }
+  }
+
   // Available story reactions
   const storyReactions = ['❤️', '😂', '😮', '😢', '😡', '👍']
 
@@ -1436,27 +1511,42 @@ export default function CommunityPage() {
                   {/* Story Progress Bars */}
                   {activeUserStories.length > 1 && (
                     <div className="absolute top-2 left-3 right-3 flex gap-1 z-10">
-                      {activeUserStories.map((_, index) => (
-                        <div 
-                          key={`${progressKey}-${index}`} // Use progressKey to force re-render
-                          className="flex-1 h-1 rounded-full bg-white/30 overflow-hidden"
-                        >
-                          <motion.div
-                            key={`progress-${progressKey}-${index}`} // Unique key for each animation
-                            className="h-full bg-white"
-                            initial={{ width: index < currentStoryIndex ? "100%" : "0%" }}
-                            animate={{ 
-                              width: index < currentStoryIndex ? "100%" : 
-                                     index === currentStoryIndex ? "100%" : "0%" 
-                            }}
-                            transition={{ 
-                              duration: index === currentStoryIndex ? (storyPaused ? 0 : 5) : 0,
-                              ease: "linear",
-                              delay: 0 // No delay to start immediately
-                            }}
-                          />
-                        </div>
-                      ))}
+                      {activeUserStories.map((story, index) => {
+                        const currentStory = activeUserStories[currentStoryIndex]
+                        const isVideo = currentStory?.media_type === 'video' || 
+                          (currentStory?.media_url && (
+                            currentStory.media_url.includes('.mp4') || 
+                            currentStory.media_url.includes('.webm') || 
+                            currentStory.media_url.includes('.mov') ||
+                            currentStory.media_url.includes('video') ||
+                            currentStory.media_url.includes('.avi')
+                          ))
+                        
+                        return (
+                          <div 
+                            key={`${progressKey}-${index}`}
+                            className="flex-1 h-1 rounded-full bg-white/30 overflow-hidden"
+                          >
+                            <motion.div
+                              key={`progress-${progressKey}-${index}`}
+                              className="h-full bg-white"
+                              initial={{ width: index < currentStoryIndex ? "100%" : "0%" }}
+                              animate={{ 
+                                width: index < currentStoryIndex ? "100%" : 
+                                       index === currentStoryIndex ? 
+                                         (isVideo && index === currentStoryIndex ? `${videoProgress}%` : "100%") : 
+                                         "0%" 
+                              }}
+                              transition={{ 
+                                duration: index === currentStoryIndex ? 
+                                  (storyPaused ? 0 : (isVideo ? 0 : 5)) : 0,
+                                ease: "linear",
+                                delay: 0
+                              }}
+                            />
+                          </div>
+                        )
+                      })}
                     </div>
                   )}
 
@@ -1508,23 +1598,23 @@ export default function CommunityPage() {
                           >
                             {isVideo ? (
                               <video
+                                ref={videoRef}
                                 key={activeStory} // Force re-render when story changes
                                 src={mediaUrl}
                                 className="w-full h-full object-cover"
                                 autoPlay
-                                muted
-                                loop
+                                muted={videoMuted}
+                                loop={false} // Don't loop, let it end naturally
                                 playsInline
                                 controls={false}
+                                onLoadedMetadata={handleVideoLoadedMetadata}
+                                onTimeUpdate={handleVideoTimeUpdate}
+                                onEnded={handleVideoEnded}
                                 onLoadedData={(e) => {
                                   // Restart video from beginning when story opens
                                   e.currentTarget.currentTime = 0
                                   e.currentTarget.play()
-                                }}
-                                onClick={(e) => {
-                                  // Restart video when clicked
-                                  e.currentTarget.currentTime = 0
-                                  e.currentTarget.play()
+                                  setVideoProgress(0)
                                 }}
                               />
                             ) : (
@@ -1576,6 +1666,21 @@ export default function CommunityPage() {
                       className="absolute left-0 top-0 w-1/3 bottom-16 cursor-pointer z-10"
                       onClick={goToPreviousStory}
                     />
+                    
+                    {/* Center Pause/Resume Area */}
+                    <div 
+                      className="absolute left-1/3 top-16 w-1/3 bottom-16 cursor-pointer z-10 flex items-center justify-center"
+                      onClick={handleCenterTap}
+                    >
+                      {/* Pause/Play indicator */}
+                      {storyPaused && (
+                        <div className="bg-black/50 backdrop-blur-sm rounded-full p-3 transition-opacity duration-300 ease-in-out">
+                          <svg className="h-4 w-4 text-white" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M8 5v14l11-7z"/>
+                          </svg>
+                        </div>
+                      )}
+                    </div>
                     
                     {/* Next Story Area (invisible clickable area) - excluding top area for eye button and bottom reply area */}
                     <div 
@@ -1658,6 +1763,38 @@ export default function CommunityPage() {
                     </>
                   )}
 
+                  {/* Video Volume Control - Only show for video stories */}
+                  {(() => {
+                    const currentStory = activeUserStories[currentStoryIndex] || stories.find((s) => s.id === activeStory)
+                    const isVideo = currentStory?.media_type === 'video' || 
+                      (currentStory?.media_url && (
+                        currentStory.media_url.includes('.mp4') || 
+                        currentStory.media_url.includes('.webm') || 
+                        currentStory.media_url.includes('.mov') ||
+                        currentStory.media_url.includes('video') ||
+                        currentStory.media_url.includes('.avi')
+                      ))
+                    
+                    if (!isVideo) return null
+                    
+                    return (
+                      <div className="absolute top-16 sm:top-20 left-3 sm:left-4 z-30">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8 rounded-full bg-black/30 backdrop-blur-sm text-white hover:bg-black/50 border border-white/20"
+                          onClick={handleVideoMuteToggle}
+                        >
+                          {videoMuted ? (
+                            <VolumeX className="h-4 w-4" />
+                          ) : (
+                            <Volume2 className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </div>
+                    )
+                  })()}
+
                   {/* Story interactions */}
                   <div className="absolute bottom-3 sm:bottom-4 left-0 right-0 px-3 sm:px-4 z-20 mb-safe">
                     <div className="flex items-center gap-1.5 bg-black/30 backdrop-blur-sm rounded-full p-1.5 sm:p-2">
@@ -1686,7 +1823,7 @@ export default function CommunityPage() {
                             <div className="relative flex-1 min-w-0">
                               <Input
                                 placeholder="Reply to story..."
-                                className="w-full bg-white/20 backdrop-blur-sm border border-white/30 text-white placeholder:text-white/70 focus-visible:ring-1 focus-visible:ring-white/50 focus-visible:ring-offset-0 text-sm rounded-full px-4 py-2 pr-12"
+                                className="w-full bg-white/20 backdrop-blur-sm border border-white/30 text-white placeholder:text-white/70 focus-visible:ring-1 focus-visible:ring-white/50 focus-visible:ring-offset-0 text-sm rounded-full px-4 py-2 pr-12 h-10"
                                 value={storyReplyText}
                                 onChange={(e) => setStoryReplyText(e.target.value)}
                                 onKeyDown={handleStoryReplyKeyPress}
@@ -1700,13 +1837,24 @@ export default function CommunityPage() {
                                 disabled={isSubmittingReply}
                               />
                               
-                              {/* Send Button inside input */}
-                              <Button 
-                                size="icon" 
-                                variant="ghost" 
-                                className="absolute right-1 top-1/2 -translate-y-1/2 text-white h-8 w-8 rounded-full bg-transparent hover:bg-white/20 disabled:opacity-50 transition-all duration-200"
+                              {/* Send Button inside input - Completely stable positioning */}
+                              <button 
                                 onClick={handleStoryReplySubmit}
                                 disabled={!storyReplyText.trim() || isSubmittingReply}
+                                className="absolute right-2 top-1/2 transform -translate-y-1/2 w-7 h-7 text-white rounded-full bg-transparent hover:bg-white/20 disabled:opacity-50 border-0 p-0 flex items-center justify-center transition-colors duration-200"
+                                style={{
+                                  position: 'absolute',
+                                  right: '8px',
+                                  top: '50%',
+                                  transform: 'translateY(-50%)',
+                                  width: '28px',
+                                  height: '28px',
+                                  margin: 0,
+                                  padding: 0,
+                                  border: 'none',
+                                  outline: 'none',
+                                  cursor: (!storyReplyText.trim() || isSubmittingReply) ? 'not-allowed' : 'pointer'
+                                }}
                               >
                                 {isSubmittingReply ? (
                                   <svg className="animate-spin h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1715,7 +1863,7 @@ export default function CommunityPage() {
                                 ) : (
                                   <Send className="h-4 w-4" />
                                 )}
-                              </Button>
+                              </button>
                             </div>
                             
                             {/* Story Reactions Button - compact and right-aligned */}
