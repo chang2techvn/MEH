@@ -1414,13 +1414,13 @@ export default function CommunityPage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-50 flex items-center justify-center bg-black/90"
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 pb-16 md:pb-0"
             >
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => setActiveStory(null)}
-                className="absolute top-4 right-4 rounded-full text-white"
+                className="absolute top-4 right-4 rounded-full text-white z-60"
               >
                 <X className="h-5 w-5 sm:h-6 sm:w-6" />
               </Button>
@@ -1429,10 +1429,10 @@ export default function CommunityPage() {
                 initial={{ scale: 0.9, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.9, opacity: 0 }}
-                className="relative w-full max-w-xs sm:max-w-sm md:max-w-md"
+                className="relative w-full max-w-[280px] mx-4 sm:max-w-xs md:max-w-sm lg:max-w-md md:mx-0"
               >
                 {/* Story content */}
-                <div className="relative aspect-[9/16] overflow-hidden rounded-xl bg-gradient-to-br from-neo-mint/20 to-purist-blue/20">
+                <div className="relative aspect-[9/16] max-h-[calc(100vh-8rem)] md:max-h-none overflow-hidden rounded-xl bg-gradient-to-br from-neo-mint/20 to-purist-blue/20">
                   {/* Story Progress Bars */}
                   {activeUserStories.length > 1 && (
                     <div className="absolute top-2 left-3 right-3 flex gap-1 z-10">
@@ -1659,7 +1659,7 @@ export default function CommunityPage() {
                   )}
 
                   {/* Story interactions */}
-                  <div className="absolute bottom-3 sm:bottom-4 left-0 right-0 px-3 sm:px-4 z-20">
+                  <div className="absolute bottom-3 sm:bottom-4 left-0 right-0 px-3 sm:px-4 z-20 mb-safe">
                     <div className="flex items-center gap-1.5 bg-black/30 backdrop-blur-sm rounded-full p-1.5 sm:p-2">
                       <Avatar className="h-7 w-7 sm:h-8 sm:w-8 border-2 border-white flex-shrink-0">
                         <AvatarImage src={user?.avatar} />
