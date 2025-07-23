@@ -26,7 +26,6 @@ interface RightSidebarProps {
   setShowRightSidebar: (show: boolean) => void
   contacts: Contact[]
   events: Event[]
-  trendingTopics: { name: string; count: number }[]
   loading: boolean
 }
 
@@ -35,7 +34,6 @@ export function RightSidebar({
   setShowRightSidebar,
   contacts,
   events,
-  trendingTopics,
   loading,
 }: RightSidebarProps) {
   const [showEventsModal, setShowEventsModal] = useState(false)

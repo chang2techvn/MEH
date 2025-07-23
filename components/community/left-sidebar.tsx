@@ -24,10 +24,9 @@ import type { Group } from "./types"
 interface LeftSidebarProps {
   showLeftSidebar: boolean
   setShowLeftSidebar: (show: boolean) => void
-  groups: Group[]
 }
 
-export function LeftSidebar({ showLeftSidebar, setShowLeftSidebar, groups }: LeftSidebarProps) {
+export function LeftSidebar({ showLeftSidebar, setShowLeftSidebar }: LeftSidebarProps) {
   const [showSavedModal, setShowSavedModal] = useState(false)
   const [showEventsModal, setShowEventsModal] = useState(false)
   const [showAiChatbox, setShowAiChatbox] = useState(false)

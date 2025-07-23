@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { dbHelpers, supabase } from "@/lib/supabase"
-import type { Post, Contact, Event, Group } from "@/components/community"
+import type { Post, Contact, Event } from "@/components/community"
 import { formatTimeAgo, extractYouTubeId, isToday, isTomorrow } from "@/components/community"
 
 export function useCommunityData() {
@@ -12,8 +12,6 @@ export function useCommunityData() {
   const [feedPosts, setFeedPosts] = useState<Post[]>([])
   const [contacts, setContacts] = useState<Contact[]>([])
   const [events, setEvents] = useState<Event[]>([])
-  const [groups, setGroups] = useState<Group[]>([])
-  const [trendingTopics, setTrendingTopics] = useState<{ name: string; count: number }[]>([])
 
   // Load real data from Supabase
   const loadData = async () => {
@@ -219,42 +217,6 @@ export function useCommunityData() {
 
 
 
-  // Load trending topics
-  const loadTrendingTopics = async () => {
-    try {
-      console.log("🔄 Loading trending topics...")
-      
-      // Load trending topics from database using the same approach as backup file
-      const { data: trendingData, error: trendingError } = await dbHelpers.getTrendingTopics(10)
-      
-      if (trendingError) {
-        console.error("❌ Error loading trending topics:", trendingError)
-        throw new Error("Failed to load trending topics")
-      }
-      
-      if (!trendingData || trendingData.length === 0) {
-        console.log("ℹ️ No trending topics found")
-        setTrendingTopics([])
-        return
-      }
-
-      console.log(`✅ Loaded ${trendingData.length} trending topics`)
-      
-      // Transform trending topics data
-      const transformedTopics = trendingData.map((topic: any) => ({
-        name: topic.name || topic.topic,
-        count: topic.count || topic.post_count || 0
-      }))
-      
-      setTrendingTopics(transformedTopics)
-    } catch (error) {
-      console.error("❌ Error loading trending topics:", error)
-      // Don't set fallback data, just show error
-      setTrendingTopics([])
-      throw error
-    }
-  }
-
   // Initial data load
   useEffect(() => {
     // Set loading to false immediately to show skeleton states
@@ -280,13 +242,10 @@ export function useCommunityData() {
     setContacts,
     events,
     setEvents,
-    setGroups,
-    setTrendingTopics,
 
     // Functions
     loadData,
     loadContacts,
-    loadEvents,
-    loadTrendingTopics
+    loadEvents
   }
 }

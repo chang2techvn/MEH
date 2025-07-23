@@ -250,7 +250,6 @@ export default function CommunityPage() {
               <LeftSidebar 
                 showLeftSidebar={showLeftSidebar}
                 setShowLeftSidebar={setShowLeftSidebar}
-                groups={communityData.groups}
               />
 
               {/* Main Feed */}
@@ -335,7 +334,6 @@ export default function CommunityPage() {
                 setShowRightSidebar={setShowRightSidebar}
                 contacts={communityData.contacts}
                 events={communityData.events}
-                trendingTopics={communityData.trendingTopics}
                 loading={communityData.loading}
               />
             </div>
