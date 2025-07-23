@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createChallenge } from '@/app/actions/youtube-video'
+import { recoverInactiveApiKeys } from '@/app/actions/api-key-recovery'
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,7 +19,8 @@ export async function POST(request: NextRequest) {
     const logData = {
       dailyChallenge: null as any,
       practiceChallenges: [] as any[],
-      errors: [] as string[]
+      errors: [] as string[],
+      apiKeyRecovery: null as any
     }
 
     // 1. Generate daily challenge (1 video for "Your Current Challenge")
@@ -89,6 +91,40 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // 3. API Key Recovery (Auto-reactivate keys that have been inactive for 24+ hours)
+    console.log('\n🔑 === API KEY RECOVERY ===')
+    try {
+      const recoveryResult = await recoverInactiveApiKeys('gemini')
+      
+      if (recoveryResult.success) {
+        console.log(`✅ API Key Recovery completed: ${recoveryResult.recoveredKeys}/${recoveryResult.totalInactiveKeys} keys recovered`)
+        logData.apiKeyRecovery = {
+          success: true,
+          recoveredKeys: recoveryResult.recoveredKeys,
+          totalInactiveKeys: recoveryResult.totalInactiveKeys,
+          errors: recoveryResult.errors
+        }
+      } else {
+        console.log(`⚠️ API Key Recovery completed with issues: ${recoveryResult.errors.join(', ')}`)
+        logData.apiKeyRecovery = {
+          success: false,
+          recoveredKeys: recoveryResult.recoveredKeys,
+          totalInactiveKeys: recoveryResult.totalInactiveKeys,
+          errors: recoveryResult.errors
+        }
+        logData.errors.push(`API Key Recovery: ${recoveryResult.errors.join(', ')}`)
+      }
+    } catch (recoveryError) {
+      console.error('❌ API Key Recovery failed:', recoveryError)
+      logData.errors.push(`API Key Recovery: ${recoveryError}`)
+      logData.apiKeyRecovery = {
+        success: false,
+        recoveredKeys: 0,
+        totalInactiveKeys: 0,
+        errors: [recoveryError instanceof Error ? recoveryError.message : 'Unknown recovery error']
+      }
+    }
+
     const endTime = Date.now()
     const duration = endTime - startTime
 
@@ -97,6 +133,7 @@ export async function POST(request: NextRequest) {
     console.log(`Date: ${today}`)
     console.log(`Daily Challenge: ${logData.dailyChallenge ? 'Generated' : 'Existed'}`)
     console.log(`Practice Challenges: ${logData.practiceChallenges.length}/3 generated`)
+    console.log(`API Key Recovery: ${logData.apiKeyRecovery?.recoveredKeys || 0} keys recovered`)
     console.log(`Errors: ${logData.errors.length}`)
 
     return NextResponse.json({
@@ -109,8 +146,9 @@ export async function POST(request: NextRequest) {
         count: logData.practiceChallenges.length,
         challenges: logData.practiceChallenges
       },
+      apiKeyRecovery: logData.apiKeyRecovery,
       errors: logData.errors,
-      message: `Auto-generated ${logData.practiceChallenges.length}/3 practice challenges + ${logData.dailyChallenge ? '1' : '0'} daily challenge`
+      message: `Auto-generated ${logData.practiceChallenges.length}/3 practice challenges + ${logData.dailyChallenge ? '1' : '0'} daily challenge + API key recovery`
     })
 
   } catch (error) {
