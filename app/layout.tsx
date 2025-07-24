@@ -105,6 +105,9 @@ export default function RootLayout({
         <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
         <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
 
+        {/* FontAwesome Icons */}
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+
         {/* Preload critical assets */}
         <link rel="preload" href="/fonts/outfit-var.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
         <link rel="preload" href="/images/hero-bg.webp" as="image" />
