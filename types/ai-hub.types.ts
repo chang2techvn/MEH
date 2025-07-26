@@ -8,6 +8,8 @@ export interface Message {
   isTyping: boolean;
   highlights?: string[];
   vocabulary?: VocabularyItem[];
+  replyToMessageId?: string; // ID của message được reply
+  isReplyMode?: boolean; // Có phải là reply mode không
 }
 
 export interface VocabularyItem {

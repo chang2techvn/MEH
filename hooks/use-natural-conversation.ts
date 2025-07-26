@@ -28,21 +28,55 @@ interface NaturalConversationMessage {
   content: string;
   message_type: 'text' | 'ai_response' | 'ai_question' | 'ai_interaction';
   response_type?: 'direct_answer' | 'ai_to_ai_question' | 'question_user' | 'agreement' | 'disagreement' | 'interrupt' | 'topic_shift' | 'build_on_previous' | 'natural_response';
-  interaction_type: 'user_to_ai' | 'ai_to_user' | 'ai_to_ai' | 'system';
+  interaction_type: 'user_to_ai' | 'ai_to_user' | 'ai_to_ai' | 'system' | 'reply' | 'ai_reply';
   target_ai_id?: string;
   vocabulary?: VocabularyItem[];
   confidence_score?: number;
   naturalness_score?: number;
   processing_time?: number;
+  reply_to_message_id?: string; // Added field for reply functionality
   created_at: string;
 }
 
 export function useNaturalConversation(selectedAIIds: string[]) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [typingAIs, setTypingAIs] = useState<{id: string, name: string, avatar: string}[]>([]);
   const [currentSession, setCurrentSession] = useState<NaturalConversationSession | null>(null);
   const [error, setError] = useState<string | null>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
+
+  // Load an existing session by ID
+  const loadSession = async (sessionId: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+
+      // Load session data
+      const { data: sessionData, error: sessionError } = await supabase
+        .from('natural_conversation_sessions')
+        .select('*')
+        .eq('id', sessionId)
+        .eq('user_id', user.id)
+        .single();
+
+      if (sessionError) throw sessionError;
+      
+      setCurrentSession(sessionData);
+      
+      // Load conversation history for this session
+      await loadConversationHistory(sessionId);
+      
+      return sessionData;
+    } catch (error) {
+      console.error('Error loading session:', error);
+      setError(error instanceof Error ? error.message : 'Failed to load session');
+      return null;
+    }
+  };
 
   // Create a new natural conversation session
   const createSession = async (title?: string) => {
@@ -84,7 +118,7 @@ export function useNaturalConversation(selectedAIIds: string[]) {
   };
 
   // Send a message in natural conversation mode
-  const sendNaturalMessage = async (content: string) => {
+  const sendNaturalMessage = async (content: string, replyToMessageId?: string, replyToAI?: string) => {
     try {
       let sessionToUse = currentSession;
       
@@ -117,7 +151,8 @@ export function useNaturalConversation(selectedAIIds: string[]) {
         content,
         timestamp: new Date(),
         type: 'text',
-        isTyping: false
+        isTyping: false,
+        replyToMessageId: replyToMessageId || undefined
       };
 
       setMessages(prev => [...prev, userMessage]);
@@ -130,11 +165,13 @@ export function useNaturalConversation(selectedAIIds: string[]) {
           sender_id: user.id,
           content,
           message_type: 'text',
-          interaction_type: 'user_to_ai'
+          interaction_type: replyToMessageId ? 'reply' : 'user_to_ai',
+          reply_to_message_id: replyToMessageId || null
         });
 
       if (insertError) {
         console.error('Error saving user message:', insertError);
+        // Don't throw error, continue with conversation even if saving fails
       }
 
       // Call natural conversation API
@@ -147,7 +184,9 @@ export function useNaturalConversation(selectedAIIds: string[]) {
           message: content,
           sessionId: sessionToUse.id,
           selectedAIs: selectedAIIds,
-          conversationMode: 'natural_group'
+          conversationMode: 'natural_group',
+          replyToMessageId: replyToMessageId || undefined,
+          replyToAI: replyToAI || undefined
         }),
       });
 
@@ -171,7 +210,12 @@ export function useNaturalConversation(selectedAIIds: string[]) {
             try {
               const data = JSON.parse(line.slice(6));
               
-              if (data.type === 'ai_response') {
+              if (data.type === 'typing_start') {
+                setTypingAIs(data.ais);
+                setIsProcessing(true);
+              } else if (data.type === 'typing_stop') {
+                setTypingAIs(prev => prev.filter(ai => ai.name !== data.aiName));
+              } else if (data.type === 'ai_response') {
                 const aiMessage: Message = {
                   id: data.response.id,
                   sender: data.response.aiName, // This is AI name, not ID
@@ -179,10 +223,15 @@ export function useNaturalConversation(selectedAIIds: string[]) {
                   timestamp: new Date(data.timestamp),
                   type: 'text',
                   isTyping: false,
-                  vocabulary: data.response.vocabulary || []
+                  vocabulary: data.response.vocabulary && data.response.vocabulary.length > 0 ? data.response.vocabulary : undefined,
+                  replyToMessageId: data.response.replyToMessageId || undefined,
+                  isReplyMode: data.response.isReplyMode || false
                 };
 
                 setMessages(prev => [...prev, aiMessage]);
+                
+                // Remove this AI from typing list if not already removed
+                setTypingAIs(prev => prev.filter(ai => ai.name !== data.response.aiName));
               } else if (data.type === 'ai_to_ai_interaction') {
                 const interactionMessage: Message = {
                   id: crypto.randomUUID(),
@@ -194,6 +243,13 @@ export function useNaturalConversation(selectedAIIds: string[]) {
                 };
 
                 setMessages(prev => [...prev, interactionMessage]);
+              } else if (data.type === 'error') {
+                console.error('API Error:', data.message);
+                setError(data.message);
+                // Remove AI from typing list on error
+                if (data.aiName) {
+                  setTypingAIs(prev => prev.filter(ai => ai.name !== data.aiName));
+                }
               }
             } catch (parseError) {
               console.error('Parse error:', parseError);
@@ -207,6 +263,7 @@ export function useNaturalConversation(selectedAIIds: string[]) {
       setError(error instanceof Error ? error.message : 'Failed to send message');
     } finally {
       setIsProcessing(false);
+      setTypingAIs([]);
     }
   };
 
@@ -226,12 +283,14 @@ export function useNaturalConversation(selectedAIIds: string[]) {
 
       const transformedMessages: Message[] = (data || []).map((msg: any) => ({
         id: msg.id,
-        sender: msg.ai_assistant_id ? msg.ai_assistants?.name || 'AI' : 'You',
+        sender: msg.ai_assistant_id ? msg.ai_assistants?.name || 'AI' : 'user', // Changed from 'You' to 'user'
         content: msg.content,
         timestamp: new Date(msg.created_at),
         type: 'text',
         isTyping: false,
-        vocabulary: msg.vocabulary || []
+        vocabulary: msg.vocabulary || [],
+        replyToMessageId: msg.reply_to_message_id || undefined,
+        isReplyMode: !!msg.reply_to_message_id
       }));
 
       setMessages(transformedMessages);
@@ -248,14 +307,22 @@ export function useNaturalConversation(selectedAIIds: string[]) {
     }
   }, [messages]);
 
+  // Helper function for replying to a specific AI message
+  const replyToMessage = async (content: string, originalMessageId: string, targetAIId: string) => {
+    return sendNaturalMessage(content, originalMessageId, targetAIId);
+  };
+
   return {
     messages,
     isProcessing,
+    typingAIs,
     currentSession,
     error,
     chatContainerRef,
     sendNaturalMessage,
+    replyToMessage, // New function for reply functionality
     createSession,
+    loadSession,
     loadConversationHistory
   };
 }

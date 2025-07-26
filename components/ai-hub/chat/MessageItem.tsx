@@ -9,13 +9,14 @@ interface MessageItemProps {
   message: Message;
   ai?: AICharacter;
   darkMode: boolean;
+  onReply?: (messageId: string, aiId: string, aiName: string) => void;
 }
 
-export const MessageItem: React.FC<MessageItemProps> = ({ message, ai, darkMode }) => {
+export const MessageItem: React.FC<MessageItemProps> = ({ message, ai, darkMode, onReply }) => {
   const isUser = message.sender === 'user';
 
   return (
-    <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} animate-fadeIn px-2 sm:px-0`}>
+    <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} animate-fadeIn px-2 sm:px-0 group`}>
       {!isUser && ai && (
         <div className="mr-2 sm:mr-3 flex-shrink-0">
           <Avatar className={`w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 shadow-md border-2 ${darkMode ? 'border-gray-700' : 'border-white'}`}>
@@ -57,7 +58,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message, ai, darkMode 
                     className="text-sm sm:text-base break-words"
                     dangerouslySetInnerHTML={{ __html: highlightText(message.content, message.highlights) }} 
                   />
-                  {message.vocabulary && (
+                  {message.vocabulary && message.vocabulary.length > 0 && (
                     <div className={`mt-3 sm:mt-4 p-3 sm:p-4 ${darkMode ? 'bg-gradient-to-r from-orange-900/30 to-orange-900/30 border border-orange-800' : 'bg-gradient-to-r from-orange-50 to-orange-50 border border-orange-100'} rounded-xl`}>
                       <div className="flex items-center mb-2 sm:mb-3">
                         <i className="fas fa-book-open text-orange-600 mr-2 text-sm sm:text-base"></i>
@@ -138,11 +139,34 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message, ai, darkMode 
             />
           )}
         </div>
-        {isUser && (
-          <div className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'} mt-1 sm:mt-2 text-right`}>
+        
+        {/* Message Footer with timestamp and actions */}
+        <div className={`flex items-center justify-between mt-1 sm:mt-2`}>
+          <div className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
             {formatTime(message.timestamp)}
+            {message.isReplyMode && (
+              <span className="ml-2 px-2 py-0.5 bg-blue-100 text-blue-800 rounded-full text-xs">
+                Phản hồi
+              </span>
+            )}
           </div>
-        )}
+          
+          {/* Reply button for AI messages */}
+          {!isUser && onReply && ai && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onReply(message.id, ai.id, ai.name)}
+              className={`text-xs px-2 py-1 h-6 transition-opacity opacity-0 group-hover:opacity-100 ${
+                darkMode ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200' : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
+              }`}
+              title={`Phản hồi ${ai.name}`}
+            >
+              <i className="fas fa-reply text-xs mr-1"></i>
+              Phản hồi
+            </Button>
+          )}
+        </div>
       </div>
       {isUser && (
         <div className="ml-2 sm:ml-3 flex-shrink-0">

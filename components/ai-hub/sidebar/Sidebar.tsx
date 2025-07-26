@@ -17,7 +17,8 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AICard } from './AICard';
 import { ChatHistoryItem } from './ChatHistoryItem';
-import { chatHistories, fields } from '@/lib/ai-hub-data';
+import { fields } from '@/lib/ai-hub-data';
+import { useChatSessions } from '@/hooks/use-chat-sessions';
 import { AICharacter } from '@/types/ai-hub.types';
 
 interface SidebarProps {
@@ -51,6 +52,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   currentChatId,
   aiCharacters = []
 }) => {
+  const { sessions, loading: sessionsLoading, error: sessionsError } = useChatSessions();
+  
   const filteredAIs = activeFilter === 'Tất cả'
     ? aiCharacters
     : aiCharacters.filter(ai => ai.field === activeFilter);
@@ -181,14 +184,48 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <TabsContent value="history" className="flex-1 overflow-hidden mt-0 pt-0 data-[state=inactive]:hidden">
                 <div className="h-full overflow-y-auto scrollbar-auto-hide">
                   <div className="px-3 py-2 sm:px-4 sm:py-3">
-                    {chatHistories.map((chat) => (
+                    {sessionsLoading && (
+                      <div className="flex items-center justify-center py-8">
+                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-orange-600"></div>
+                        <span className={`ml-2 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                          Đang tải lịch sử...
+                        </span>
+                      </div>
+                    )}
+                    
+                    {sessionsError && (
+                      <div className="flex items-center justify-center py-8">
+                        <div className="text-center">
+                          <i className="fas fa-exclamation-triangle text-red-500 text-2xl mb-2"></i>
+                          <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                            Lỗi tải lịch sử: {sessionsError}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {!sessionsLoading && !sessionsError && sessions.length === 0 && (
+                      <div className="flex items-center justify-center py-8">
+                        <div className="text-center">
+                          <i className="fas fa-comments text-gray-400 text-3xl mb-3"></i>
+                          <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'} mb-2`}>
+                            Chưa có lịch sử trò chuyện
+                          </p>
+                          <p className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}>
+                            Bắt đầu cuộc trò chuyện đầu tiên với AI
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {!sessionsLoading && !sessionsError && sessions.map((session) => (
                       <ChatHistoryItem
-                        key={chat.id}
-                        chat={chat}
+                        key={session.id}
+                        chat={session}
                         aiCharacters={aiCharacters}
                         darkMode={darkMode}
                         onChatSelect={onChatSelect}
-                        isActive={currentChatId === chat.id}
+                        isActive={currentChatId === session.id}
                       />
                     ))}
                   </div>

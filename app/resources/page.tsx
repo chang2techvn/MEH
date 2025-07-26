@@ -27,8 +27,8 @@ import { ChatInput } from '@/components/ai-hub/chat/ChatInput';
 import { LearningStatsSidebar } from '@/components/ai-hub/learning-stats/LearningStatsSidebar';
 import { useAIAssistants } from '@/hooks/use-ai-assistants';
 import { useNaturalConversation } from '@/hooks/use-natural-conversation';
+import { useChatSessions } from '@/hooks/use-chat-sessions';
 import { useAuth } from '@/contexts/auth-context';
-import { chatHistories } from '@/lib/ai-hub-data';
 import { useMobile } from "@/hooks/use-mobile";
 
 export default function ResourcesPage() {
@@ -50,6 +50,9 @@ export default function ResourcesPage() {
   // Use real AI assistants from Supabase - MUST be called before any early returns
   const { aiAssistants, loading: aiLoading, error: aiError, getAIById } = useAIAssistants();
   
+  // Use real chat sessions from Supabase
+  const { sessions: chatSessions, loading: sessionsLoading } = useChatSessions();
+  
   // Initialize selectedAIs with first 2 active AIs when data loads
   useEffect(() => {
     if (aiAssistants.length > 0 && selectedAIs.length === 0) {
@@ -62,11 +65,60 @@ export default function ResourcesPage() {
   const { 
     messages, 
     isProcessing, 
+    typingAIs,
     currentSession,
     error: conversationError,
     chatContainerRef, 
-    sendNaturalMessage 
+    sendNaturalMessage,
+    replyToMessage,
+    loadSession
   } = useNaturalConversation(selectedAIsStable);
+
+  // Wrapper function for ChatInput compatibility
+  const handleSendMessage = (content: string, mediaUrl?: string | null, mediaType?: string | null) => {
+    // For now, ignore media parameters as we focus on text chat
+    sendNaturalMessage(content);
+  };
+
+  // Function to handle reply to specific AI message
+  const handleReplyToMessage = (content: string, originalMessageId: string, targetAIId: string) => {
+    return replyToMessage(content, originalMessageId, targetAIId);
+  };
+
+  // State for reply mode
+  const [replyMode, setReplyMode] = useState<{
+    isActive: boolean;
+    messageId: string;
+    aiId: string;
+    aiName: string;
+  } | null>(null);
+
+  // Function to start reply mode
+  const startReplyMode = (messageId: string, aiId: string, aiName: string) => {
+    setReplyMode({
+      isActive: true,
+      messageId,
+      aiId,
+      aiName
+    });
+  };
+
+  // Function to cancel reply mode
+  const cancelReplyMode = () => {
+    setReplyMode(null);
+  };
+
+  // Enhanced send message that handles reply mode
+  const enhancedSendMessage = (content: string, mediaUrl?: string | null, mediaType?: string | null) => {
+    if (replyMode?.isActive) {
+      // Send as reply
+      replyToMessage(content, replyMode.messageId, replyMode.aiId);
+      setReplyMode(null); // Exit reply mode after sending
+    } else {
+      // Send as normal message
+      sendNaturalMessage(content);
+    }
+  };
 
   // ALL OTHER useEffect HOOKS MUST BE HERE - before any early returns
   useEffect(() => {
@@ -114,8 +166,8 @@ export default function ResourcesPage() {
     );
   }
 
-  // Lấy thông tin chat hiện tại
-  const currentChat = currentChatId ? chatHistories.find(chat => chat.id === currentChatId) : null;
+  // Lấy thông tin chat hiện tại từ Supabase sessions
+  const currentChat = currentChatId ? chatSessions.find(session => session.id === currentChatId) : null;
 
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
@@ -135,12 +187,14 @@ export default function ResourcesPage() {
     }
   };
 
-  const handleChatSelect = (chatId: string) => {
+  const handleChatSelect = async (chatId: string) => {
     setCurrentChatId(chatId);
-    // Load selectedAIs từ chat history
-    const chat = chatHistories.find(c => c.id === chatId);
-    if (chat) {
-      setSelectedAIs(chat.participants);
+    // Load session and messages from Supabase
+    const session = chatSessions.find(s => s.id === chatId);
+    if (session) {
+      setSelectedAIs(session.participants);
+      // Load the session with its messages
+      await loadSession(chatId);
     }
     // Đóng sidebar trên mobile sau khi select
     if (window.innerWidth < 1024) {
@@ -487,40 +541,82 @@ export default function ResourcesPage() {
                   message={message}
                   ai={ai ?? undefined}
                   darkMode={darkMode}
+                  onReply={startReplyMode}
                 />
               );
             })}
-            {isProcessing && (
-              <div className="flex justify-start animate-fadeIn">
-                <div className="mr-2 sm:mr-3 flex-shrink-0">
-                  <Avatar className="w-6 h-6 sm:w-8 sm:h-8 shadow-md border-2 border-white">
+          </div>
+        </ScrollArea>
+        
+        {/* Reply Mode Indicator */}
+        {replyMode?.isActive && (
+          <div className={`px-3 sm:px-4 md:px-6 lg:px-8 xl:px-12 2xl:px-16 py-2 ${darkMode ? 'bg-blue-900/20 border-blue-800' : 'bg-blue-50 border-blue-200'} border-t`}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <i className="fas fa-reply text-blue-600 mr-2"></i>
+                <span className={`text-sm ${darkMode ? 'text-blue-400' : 'text-blue-700'}`}>
+                  Đang phản hồi <strong>{replyMode.aiName}</strong>
+                </span>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={cancelReplyMode}
+                className={`text-xs px-2 py-1 h-6 ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-200'}`}
+              >
+                <i className="fas fa-times mr-1"></i>
+                Hủy
+              </Button>
+            </div>
+          </div>
+        )}
+        
+        {/* Fixed Typing Indicator Above Input */}
+        {typingAIs.length > 0 && (
+          <div className={`px-3 sm:px-4 md:px-6 lg:px-8 xl:px-12 2xl:px-16 py-2 ${darkMode ? 'bg-gray-900/80' : 'bg-white/80'} backdrop-blur-sm border-t ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+            <div className="flex justify-start animate-fadeIn">
+              <div className="flex items-center mr-2 sm:mr-3 flex-shrink-0 space-x-1">
+                {typingAIs.map((ai) => (
+                  <Avatar key={ai.id} className="w-6 h-6 sm:w-8 sm:h-8 shadow-md border-2 border-white">
                     <AvatarImage
-                      src={getAIById(selectedAIs[0])?.avatar}
-                      alt={getAIById(selectedAIs[0])?.name}
+                      src={ai.avatar}
+                      alt={ai.name}
                       className="object-cover"
                     />
                     <AvatarFallback className="bg-orange-100 text-orange-800 text-xs">
-                      {getAIById(selectedAIs[0])?.name.substring(0, 2)}
+                      {ai.name.substring(0, 2)}
                     </AvatarFallback>
                   </Avatar>
-                </div>
-                <div className={`rounded-xl p-2 sm:p-3 ${darkMode ? 'bg-gray-700 border border-gray-600' : 'bg-white border border-gray-200'} shadow-sm`}>
+                ))}
+              </div>
+              <div className={`rounded-xl p-2 sm:p-3 ${darkMode ? 'bg-gray-700 border border-gray-600' : 'bg-white border border-gray-200'} shadow-sm`}>
+                <div className="flex items-center space-x-2">
                   <div className="flex space-x-1.5">
                     <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-orange-400 animate-bounce"></div>
                     <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-orange-400 animate-bounce" style={{ animationDelay: '0.2s' }}></div>
                     <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-orange-400 animate-bounce" style={{ animationDelay: '0.4s' }}></div>
                   </div>
+                  <span className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                    {typingAIs.length === 1 
+                      ? `${typingAIs[0].name} typing...`
+                      : `${typingAIs.length} person typing...`
+                    }
+                  </span>
                 </div>
               </div>
-            )}
+            </div>
           </div>
-        </ScrollArea>
+        )}
         
         <ChatInput 
-          onSendMessage={sendNaturalMessage} 
+          onSendMessage={enhancedSendMessage}
           darkMode={darkMode}
           disabled={isProcessing || selectedAIs.length === 0}
-          placeholder={isProcessing ? "Đang xử lý..." : "Nhập tin nhắn của bạn..."}
+          placeholder={
+            replyMode?.isActive 
+              ? `Phản hồi ${replyMode.aiName}...` 
+              : (isProcessing ? "Đang xử lý..." : "Nhập tin nhắn của bạn...")
+          }
         />
       </div>
       
