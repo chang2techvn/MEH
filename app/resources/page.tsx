@@ -25,8 +25,10 @@ import { Sidebar } from '@/components/ai-hub/sidebar/Sidebar';
 import { MessageItem } from '@/components/ai-hub/chat/MessageItem';
 import { ChatInput } from '@/components/ai-hub/chat/ChatInput';
 import { LearningStatsSidebar } from '@/components/ai-hub/learning-stats/LearningStatsSidebar';
-import { useChat } from '@/hooks/use-ai-chat';
-import { aiCharacters, chatHistories } from '@/lib/ai-hub-data';
+import { useAIAssistants } from '@/hooks/use-ai-assistants';
+import { useNaturalConversation } from '@/hooks/use-natural-conversation';
+import { useAuth } from '@/contexts/auth-context';
+import { chatHistories } from '@/lib/ai-hub-data';
 import { useMobile } from "@/hooks/use-mobile";
 
 export default function ResourcesPage() {
@@ -34,7 +36,7 @@ export default function ResourcesPage() {
   const [isDesktopSidebarCollapsed, setIsDesktopSidebarCollapsed] = useState(false); // desktop: thu nhỏ sidebar
   const [isStatsSidebarOpen, setIsStatsSidebarOpen] = useState(false);
   const [isStatsDesktopCollapsed, setIsStatsDesktopCollapsed] = useState(false); // desktop: thu nhỏ stats sidebar
-  const [selectedAIs, setSelectedAIs] = useState<string[]>(['ai1', 'ai3']);
+  const [selectedAIs, setSelectedAIs] = useState<string[]>([]);
   const [activeFilter, setActiveFilter] = useState('Tất cả');
   const [darkMode, setDarkMode] = useState(false);
   const [maxAvatars, setMaxAvatars] = useState(3);
@@ -42,12 +44,31 @@ export default function ResourcesPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const isMobile = useMobile();
 
+  // Authentication check - MUST be called before any early returns
+  const { user, isLoading: authLoading, isAuthenticated } = useAuth();
+
+  // Use real AI assistants from Supabase - MUST be called before any early returns
+  const { aiAssistants, loading: aiLoading, error: aiError, getAIById } = useAIAssistants();
+  
+  // Initialize selectedAIs with first 2 active AIs when data loads
+  useEffect(() => {
+    if (aiAssistants.length > 0 && selectedAIs.length === 0) {
+      const defaultAIs = aiAssistants.slice(0, 2).map(ai => ai.id);
+      setSelectedAIs(defaultAIs);
+    }
+  }, [aiAssistants, selectedAIs.length]);
+
   const selectedAIsStable = useMemo(() => selectedAIs, [selectedAIs]);
-  const { messages, isTyping, sendMessage, chatContainerRef } = useChat(selectedAIsStable, currentChatId);
+  const { 
+    messages, 
+    isProcessing, 
+    currentSession,
+    error: conversationError,
+    chatContainerRef, 
+    sendNaturalMessage 
+  } = useNaturalConversation(selectedAIsStable);
 
-  // Lấy thông tin chat hiện tại
-  const currentChat = currentChatId ? chatHistories.find(chat => chat.id === currentChatId) : null;
-
+  // ALL OTHER useEffect HOOKS MUST BE HERE - before any early returns
   useEffect(() => {
     const handleResize = () => {
       setMaxAvatars(window.innerWidth < 640 ? 2 : 3);
@@ -65,6 +86,36 @@ export default function ResourcesPage() {
 
     return () => clearTimeout(timer);
   }, []);
+
+  // Show loading state while authentication is being checked
+  if (authLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Đang tải...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Redirect to login if not authenticated
+  if (!isAuthenticated || !user) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-800 mb-4">Cần đăng nhập</h2>
+          <p className="text-gray-600 mb-6">Bạn cần đăng nhập để sử dụng tính năng AI Hub</p>
+          <Button onClick={() => window.location.href = '/auth'}>
+            Đăng nhập
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Lấy thông tin chat hiện tại
+  const currentChat = currentChatId ? chatHistories.find(chat => chat.id === currentChatId) : null;
 
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
@@ -99,11 +150,8 @@ export default function ResourcesPage() {
 
   const handleNewChat = () => {
     setCurrentChatId(null);
-    setSelectedAIs(['ai1', 'ai3']); // Reset về AI mặc định
-  };
-
-  const getAIById = (id: string) => {
-    return aiCharacters.find(ai => ai.id === id);
+    // Keep current selected AIs instead of resetting
+    // setSelectedAIs(['ai1', 'ai3']); // Remove this line
   };
 
   const getChatTitle = () => {
@@ -120,6 +168,41 @@ export default function ResourcesPage() {
     }
     return selectedAIs.map(aiId => getAIById(aiId)?.name).join(', ');
   };
+
+  // Helper function to find AI by name (since API returns AI name, not ID)
+  const getAIByName = (name: string) => {
+    return aiAssistants.find(ai => ai.name === name);
+  };
+
+  // Show loading state
+  if (aiLoading) {
+    return (
+      <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900">
+        <MainHeader mobileMenuOpen={mobileMenuOpen} setMobileMenuOpen={setMobileMenuOpen} />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600 dark:text-gray-400">Đang tải AI assistants...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (aiError) {
+    return (
+      <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900">
+        <MainHeader mobileMenuOpen={mobileMenuOpen} setMobileMenuOpen={setMobileMenuOpen} />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <p className="text-red-600 mb-4">Lỗi khi tải AI assistants: {aiError}</p>
+            <Button onClick={() => window.location.reload()}>Thử lại</Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -158,6 +241,7 @@ export default function ResourcesPage() {
             onToggleDarkMode={() => setDarkMode(!darkMode)}
             onChatSelect={handleChatSelect}
             currentChatId={currentChatId}
+            aiCharacters={aiAssistants}
           />
         </div>
       </div>
@@ -177,6 +261,7 @@ export default function ResourcesPage() {
           onCollapseToggle={() => setIsDesktopSidebarCollapsed(!isDesktopSidebarCollapsed)}
           onChatSelect={handleChatSelect}
           currentChatId={currentChatId}
+          aiCharacters={aiAssistants}
         />
       </div>
 
@@ -290,7 +375,7 @@ export default function ResourcesPage() {
                 
                 {/* AI Selection List */}
                 <div className="mt-4 space-y-2 sm:space-y-3 max-h-[70vh] overflow-y-auto scrollbar-hide">
-                  {aiCharacters.map((ai) => (
+                  {aiAssistants.map((ai) => (
                     <div
                       key={ai.id}
                       onClick={() => toggleAISelection(ai.id)}
@@ -393,7 +478,9 @@ export default function ResourcesPage() {
           <div className="w-full space-y-4 sm:space-y-6 px-3 sm:px-4 md:px-6 lg:px-8 xl:px-12 2xl:px-16 py-4 sm:py-6">
             {messages.map((message) => {
               const isUser = message.sender === 'user';
-              const ai = isUser ? null : getAIById(message.sender);
+              // For AI messages, sender will be the AI name (not ID)
+              const ai = isUser ? null : getAIByName(message.sender);
+              
               return (
                 <MessageItem
                   key={message.id}
@@ -403,7 +490,7 @@ export default function ResourcesPage() {
                 />
               );
             })}
-            {isTyping && (
+            {isProcessing && (
               <div className="flex justify-start animate-fadeIn">
                 <div className="mr-2 sm:mr-3 flex-shrink-0">
                   <Avatar className="w-6 h-6 sm:w-8 sm:h-8 shadow-md border-2 border-white">
@@ -429,7 +516,12 @@ export default function ResourcesPage() {
           </div>
         </ScrollArea>
         
-        <ChatInput onSendMessage={sendMessage} darkMode={darkMode} />
+        <ChatInput 
+          onSendMessage={sendNaturalMessage} 
+          darkMode={darkMode}
+          disabled={isProcessing || selectedAIs.length === 0}
+          placeholder={isProcessing ? "Đang xử lý..." : "Nhập tin nhắn của bạn..."}
+        />
       </div>
       
       {/* Desktop Learning Stats Sidebar */}

@@ -6,9 +6,16 @@ import { emojis } from '@/lib/ai-hub-data';
 interface ChatInputProps {
   onSendMessage: (content: string, mediaUrl?: string | null, mediaType?: string | null) => void;
   darkMode: boolean;
+  disabled?: boolean;
+  placeholder?: string;
 }
 
-export const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, darkMode }) => {
+export const ChatInput: React.FC<ChatInputProps> = ({ 
+  onSendMessage, 
+  darkMode, 
+  disabled = false,
+  placeholder = "Nhập tin nhắn của bạn..."
+}) => {
   const [inputMessage, setInputMessage] = useState('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [mediaPreview, setMediaPreview] = useState<string | null>(null);
@@ -17,6 +24,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, darkMode })
 
   const handleSendMessage = () => {
     if (inputMessage.trim() === '' && !mediaPreview) return;
+    if (disabled) return;
     
     onSendMessage(inputMessage, mediaPreview, mediaType);
     setInputMessage('');
@@ -28,7 +36,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, darkMode })
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      handleSendMessage();
+      if (!disabled) {
+        handleSendMessage();
+      }
     }
   };
 
@@ -163,7 +173,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, darkMode })
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
               onKeyDown={handleKeyPress}
-              placeholder="Nhập tin nhắn của bạn..."
+              placeholder={placeholder}
+              disabled={disabled}
               className={`pr-20 text-base min-h-[48px] rounded-2xl border-2 transition-all duration-200 ${
                 darkMode 
                   ? 'bg-gray-800 border-gray-600 text-white placeholder:text-gray-400' 
@@ -175,9 +186,10 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, darkMode })
               {(inputMessage.trim() || mediaPreview) && (
                 <Button
                   onClick={handleSendMessage}
+                  disabled={disabled}
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 rounded-full transition-all duration-200 text-orange-500 hover:text-orange-600 hover:bg-orange-50"
+                  className="h-8 w-8 rounded-full transition-all duration-200 text-orange-500 hover:text-orange-600 hover:bg-orange-50 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <i className="fas fa-paper-plane text-sm"></i>
                 </Button>

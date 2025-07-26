@@ -17,7 +17,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AICard } from './AICard';
 import { ChatHistoryItem } from './ChatHistoryItem';
-import { aiCharacters, chatHistories, fields } from '@/lib/ai-hub-data';
+import { chatHistories, fields } from '@/lib/ai-hub-data';
 import { AICharacter } from '@/types/ai-hub.types';
 
 interface SidebarProps {
@@ -33,6 +33,7 @@ interface SidebarProps {
   onCollapseToggle?: () => void;
   onChatSelect?: (chatId: string) => void;
   currentChatId?: string | null;
+  aiCharacters?: AICharacter[];
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -47,7 +48,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   collapsed,
   onCollapseToggle,
   onChatSelect,
-  currentChatId
+  currentChatId,
+  aiCharacters = []
 }) => {
   const filteredAIs = activeFilter === 'Tất cả'
     ? aiCharacters

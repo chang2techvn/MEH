@@ -1,0 +1,261 @@
+import { useState, useEffect, useRef } from 'react';
+import { supabase } from '@/lib/supabase';
+import { AICharacter, Message, VocabularyItem } from '@/types/ai-hub.types';
+
+interface NaturalConversationSession {
+  id: string;
+  user_id: string;
+  title: string;
+  conversation_mode: 'natural_group' | 'structured' | 'mixed';
+  session_settings: {
+    allow_ai_interruptions?: boolean;
+    allow_ai_questions?: boolean;
+    topic_drift_allowed?: boolean;
+    max_ai_participants?: number;
+    response_timing?: 'natural' | 'sequential';
+  };
+  active_ai_ids: string[];
+  created_at: string;
+  updated_at: string;
+  is_active: boolean;
+}
+
+interface NaturalConversationMessage {
+  id: string;
+  session_id: string;
+  sender_id?: string;
+  ai_assistant_id?: string;
+  content: string;
+  message_type: 'text' | 'ai_response' | 'ai_question' | 'ai_interaction';
+  response_type?: 'direct_answer' | 'ai_to_ai_question' | 'question_user' | 'agreement' | 'disagreement' | 'interrupt' | 'topic_shift' | 'build_on_previous' | 'natural_response';
+  interaction_type: 'user_to_ai' | 'ai_to_user' | 'ai_to_ai' | 'system';
+  target_ai_id?: string;
+  vocabulary?: VocabularyItem[];
+  confidence_score?: number;
+  naturalness_score?: number;
+  processing_time?: number;
+  created_at: string;
+}
+
+export function useNaturalConversation(selectedAIIds: string[]) {
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [currentSession, setCurrentSession] = useState<NaturalConversationSession | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+
+  // Create a new natural conversation session
+  const createSession = async (title?: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+
+      const { data, error } = await supabase
+        .from('natural_conversation_sessions')
+        .insert({
+          user_id: user.id,
+          title: title || `Cuộc trò chuyện với ${selectedAIIds.length} AI`,
+          conversation_mode: 'natural_group',
+          active_ai_ids: selectedAIIds,
+          session_settings: {
+            allow_ai_interruptions: true,
+            allow_ai_questions: true,
+            topic_drift_allowed: true,
+            max_ai_participants: 4,
+            response_timing: 'natural'
+          }
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      
+      setCurrentSession(data);
+      setMessages([]);
+      return data;
+    } catch (error) {
+      console.error('Error creating session:', error);
+      setError(error instanceof Error ? error.message : 'Failed to create session');
+      return null;
+    }
+  };
+
+  // Send a message in natural conversation mode
+  const sendNaturalMessage = async (content: string) => {
+    try {
+      let sessionToUse = currentSession;
+      
+      // Create session if it doesn't exist
+      if (!sessionToUse) {
+        console.log('🔄 Creating new session...');
+        sessionToUse = await createSession();
+        if (!sessionToUse) {
+          console.error('❌ Failed to create session');
+          setError('Failed to create conversation session');
+          return;
+        }
+        console.log('✅ Session created:', sessionToUse.id);
+      }
+
+      console.log('📤 Sending message with session:', sessionToUse.id);
+      setIsProcessing(true);
+      setError(null);
+
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+
+      // Add user message to local state immediately
+      const userMessage: Message = {
+        id: crypto.randomUUID(),
+        sender: 'user',
+        content,
+        timestamp: new Date(),
+        type: 'text',
+        isTyping: false
+      };
+
+      setMessages(prev => [...prev, userMessage]);
+
+      // Insert user message to database
+      const { error: insertError } = await supabase
+        .from('natural_conversation_messages')
+        .insert({
+          session_id: sessionToUse.id,
+          sender_id: user.id,
+          content,
+          message_type: 'text',
+          interaction_type: 'user_to_ai'
+        });
+
+      if (insertError) {
+        console.error('Error saving user message:', insertError);
+      }
+
+      // Call natural conversation API
+      const response = await fetch('/api/natural-group-chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: content,
+          sessionId: sessionToUse.id,
+          selectedAIs: selectedAIIds,
+          conversationMode: 'natural_group'
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to get AI response');
+      }
+
+      // Handle streaming response
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error('No response stream');
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = new TextDecoder().decode(value);
+        const lines = chunk.split('\n');
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(6));
+              
+              if (data.type === 'ai_response') {
+                const aiMessage: Message = {
+                  id: data.response.id,
+                  sender: data.response.aiName, // This is AI name, not ID
+                  content: data.response.content,
+                  timestamp: new Date(data.timestamp),
+                  type: 'text',
+                  isTyping: false,
+                  vocabulary: data.response.vocabulary || []
+                };
+
+                setMessages(prev => [...prev, aiMessage]);
+              } else if (data.type === 'ai_to_ai_interaction') {
+                const interactionMessage: Message = {
+                  id: crypto.randomUUID(),
+                  sender: data.response.targetAI, // This is AI name, not ID
+                  content: data.response.response,
+                  timestamp: new Date(data.timestamp),
+                  type: 'text',
+                  isTyping: false
+                };
+
+                setMessages(prev => [...prev, interactionMessage]);
+              }
+            } catch (parseError) {
+              console.error('Parse error:', parseError);
+            }
+          }
+        }
+      }
+
+    } catch (error) {
+      console.error('Error sending message:', error);
+      setError(error instanceof Error ? error.message : 'Failed to send message');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // Load conversation history
+  const loadConversationHistory = async (sessionId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('natural_conversation_messages')
+        .select(`
+          *,
+          ai_assistants!ai_assistant_id(name)
+        `)
+        .eq('session_id', sessionId)
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+
+      const transformedMessages: Message[] = (data || []).map((msg: any) => ({
+        id: msg.id,
+        sender: msg.ai_assistant_id ? msg.ai_assistants?.name || 'AI' : 'You',
+        content: msg.content,
+        timestamp: new Date(msg.created_at),
+        type: 'text',
+        isTyping: false,
+        vocabulary: msg.vocabulary || []
+      }));
+
+      setMessages(transformedMessages);
+    } catch (error) {
+      console.error('Error loading conversation history:', error);
+      setError(error instanceof Error ? error.message : 'Failed to load conversation');
+    }
+  };
+
+  // Auto-scroll to bottom when new messages arrive
+  useEffect(() => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
+  }, [messages]);
+
+  return {
+    messages,
+    isProcessing,
+    currentSession,
+    error,
+    chatContainerRef,
+    sendNaturalMessage,
+    createSession,
+    loadConversationHistory
+  };
+}

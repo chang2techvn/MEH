@@ -26,6 +26,12 @@ export interface AICharacter {
   avatar: string;
   online: boolean;
   animation: string;
+  category?: string;
+  experience?: string;
+  personality_traits?: string[];
+  response_threshold?: number;
+  tags?: string[];
+  system_prompt?: string;
 }
 
 export interface ChatHistory {
