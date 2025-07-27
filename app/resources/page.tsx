@@ -25,6 +25,7 @@ import { Sidebar } from '@/components/ai-hub/sidebar/Sidebar';
 import { MessageItem } from '@/components/ai-hub/chat/MessageItem';
 import { ChatInput } from '@/components/ai-hub/chat/ChatInput';
 import { LearningStatsSidebar } from '@/components/ai-hub/learning-stats/LearningStatsSidebar';
+import SmoothScrollIndicator from '@/components/ui/smooth-scroll-indicator';
 import { useAIAssistants } from '@/hooks/use-ai-assistants';
 import { useNaturalConversation } from '@/hooks/use-natural-conversation';
 import { useChatSessions } from '@/hooks/use-chat-sessions';
@@ -81,7 +82,10 @@ export default function ResourcesPage() {
     startAutoInteraction,
     stopAutoInteraction,
     toggleAutoInteraction,
-    resetAutoInteraction
+    resetAutoInteraction,
+    // Smooth scroll functions
+    scrollToBottom,
+    isAutoScrolling
   } = useNaturalConversation(selectedAIsStable);
 
   // Wrapper function for ChatInput compatibility
@@ -312,7 +316,7 @@ export default function ResourcesPage() {
       </div>
 
       {/* Sidebar cố định cho desktop */}
-      <div className={`hidden lg:block flex-shrink-0 h-full transition-all duration-300 ${isDesktopSidebarCollapsed ? 'w-16' : 'w-80'}`}>
+      <div className={`hidden lg:block flex-shrink-0 h-full transition-all duration-300 ${isDesktopSidebarCollapsed ? 'w-0' : 'w-80'}`}>
         <Sidebar
           isOpen={true}
           onToggle={() => setIsDesktopSidebarCollapsed(!isDesktopSidebarCollapsed)}
@@ -331,7 +335,7 @@ export default function ResourcesPage() {
       </div>
 
       {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col h-full overflow-hidden">
+      <div className="flex-1 flex flex-col h-full overflow-hidden relative">
         {/* Header */}
         <div className={`${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border-b px-4 py-4 h-16 flex items-center justify-between`}>
           <div className="flex items-center">
@@ -574,7 +578,7 @@ export default function ResourcesPage() {
         
         {/* Chat Messages */}
         <ScrollArea
-          className={`flex-1 chat-mobile ${darkMode ? 'bg-gradient-to-b from-gray-900 to-gray-800' : 'bg-gradient-to-b from-gray-50 to-white'}`}
+          className={`flex-1 chat-mobile smooth-auto-scroll ${darkMode ? 'bg-gradient-to-b from-gray-900 to-gray-800' : 'bg-gradient-to-b from-gray-50 to-white'}`}
           ref={chatContainerRef}
         >
           <div className="w-full space-y-4 sm:space-y-6 px-3 sm:px-4 md:px-6 lg:px-8 xl:px-12 2xl:px-16 py-4 sm:py-6">
@@ -595,6 +599,45 @@ export default function ResourcesPage() {
             })}
           </div>
         </ScrollArea>
+        
+        {/* Independent Typing Indicator - Above Reply/Input Area */}
+        {typingAIs.length > 0 && (
+          <div className="px-3 sm:px-4 md:px-6 lg:px-8 xl:px-12 2xl:px-16 py-2">
+            <div className="flex items-center space-x-2">
+              {/* Smaller Avatars */}
+              <div className="flex -space-x-1">
+                {typingAIs.map((ai) => (
+                  <Avatar key={ai.id} className="w-4 h-4 shadow-sm border border-white rounded-full">
+                    <AvatarImage
+                      src={ai.avatar}
+                      alt={ai.name}
+                      className="object-cover rounded-full"
+                    />
+                    <AvatarFallback className="bg-orange-100 text-orange-800 text-[8px] rounded-full">
+                      {ai.name.substring(0, 1)}
+                    </AvatarFallback>
+                  </Avatar>
+                ))}
+              </div>
+              {/* Compact Typing Indicator */}
+              <div className={`rounded-lg px-2 py-1 ${darkMode ? 'bg-gray-700/95 border border-gray-600/50' : 'bg-white/95 border border-gray-200/50'} shadow-md backdrop-blur-sm`}>
+                <div className="flex items-center space-x-1.5">
+                  <div className="flex space-x-0.5">
+                    <div className="w-1 h-1 rounded-full bg-orange-400 animate-bounce"></div>
+                    <div className="w-1 h-1 rounded-full bg-orange-400 animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                    <div className="w-1 h-1 rounded-full bg-orange-400 animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+                  </div>
+                  <span className={`text-[10px] font-medium ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                    {typingAIs.length === 1 
+                      ? 'typing...'
+                      : `${typingAIs.length} typing...`
+                    }
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
         
         {/* Reply Mode Indicator */}
         {replyMode?.isActive && (
@@ -619,51 +662,14 @@ export default function ResourcesPage() {
           </div>
         )}
         
-        {/* Fixed Typing Indicator Above Input */}
-        {typingAIs.length > 0 && (
-          <div className={`px-3 sm:px-4 md:px-6 lg:px-8 xl:px-12 2xl:px-16 py-2 ${darkMode ? 'bg-gray-900/80' : 'bg-white/80'} backdrop-blur-sm border-t ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
-            <div className="flex justify-start animate-fadeIn">
-              <div className="flex items-center mr-2 sm:mr-3 flex-shrink-0 space-x-1">
-                {typingAIs.map((ai) => (
-                  <Avatar key={ai.id} className="w-6 h-6 sm:w-8 sm:h-8 shadow-md border-2 border-white">
-                    <AvatarImage
-                      src={ai.avatar}
-                      alt={ai.name}
-                      className="object-cover"
-                    />
-                    <AvatarFallback className="bg-orange-100 text-orange-800 text-xs">
-                      {ai.name.substring(0, 2)}
-                    </AvatarFallback>
-                  </Avatar>
-                ))}
-              </div>
-              <div className={`rounded-xl p-2 sm:p-3 ${darkMode ? 'bg-gray-700 border border-gray-600' : 'bg-white border border-gray-200'} shadow-sm`}>
-                <div className="flex items-center space-x-2">
-                  <div className="flex space-x-1.5">
-                    <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-orange-400 animate-bounce"></div>
-                    <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-orange-400 animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                    <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-orange-400 animate-bounce" style={{ animationDelay: '0.4s' }}></div>
-                  </div>
-                  <span className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                    {typingAIs.length === 1 
-                      ? `${typingAIs[0].name} typing...`
-                      : `${typingAIs.length} person typing...`
-                    }
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-        
         <ChatInput 
           onSendMessage={enhancedSendMessage}
           darkMode={darkMode}
-          disabled={isProcessing || selectedAIs.length === 0}
+          disabled={(isProcessing && !isAutoInteracting) || selectedAIs.length === 0}
           placeholder={
             replyMode?.isActive 
               ? `Phản hồi ${replyMode.aiName}...` 
-              : (isProcessing ? "Đang xử lý..." : 
+              : ((isProcessing && !isAutoInteracting) ? "Đang xử lý..." : 
                  isAutoInteracting ? "AI đang tương tác..." :
                  "Nhập tin nhắn của bạn...")
           }
@@ -704,6 +710,11 @@ export default function ResourcesPage() {
           </div>
         </div>
       )}
+      
+      {/* Smooth Scroll Indicator - Only show when auto-scrolling */}
+      <SmoothScrollIndicator 
+        isAutoScrolling={isAutoScrolling}
+      />
           </div>
         </div>
       </div>

@@ -39,10 +39,18 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    // Get session and verify ownership
+    // Get session and verify ownership, also get user info for mentioning
     const { data: session, error: sessionError } = await supabase
       .from('natural_conversation_sessions')
-      .select('*')
+      .select(`
+        *,
+        users!natural_conversation_sessions_user_id_fkey(
+          profiles(
+            full_name,
+            avatar_url
+          )
+        )
+      `)
       .eq('id', sessionId)
       .single();
 
@@ -53,10 +61,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    // Get AI assistant details
+    // Get user name for mentioning in AI interactions
+    const userName = session.users?.profiles?.full_name || 'bạn';
+    console.log(`👤 User name for interaction: ${userName}`);
+
+    // Get AI assistant details with birth year for proper addressing
     const { data: aiAssistants, error: aiError } = await supabase
       .from('ai_assistants')
-      .select('id, name, role, field, personality_traits, avatar')
+      .select('id, name, role, field, personality_traits, avatar, system_prompt')
       .in('id', selectedAIs)
       .eq('is_active', true);
 
@@ -115,7 +127,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       const availableTargets = aiAssistants.filter((ai: any) => ai.id !== selectedInitiatorAI.id);
       selectedTargetAI = availableTargets[Math.floor(Math.random() * availableTargets.length)];
 
-      // Create contextual, natural conversation prompt
+      // Create contextual, natural conversation prompt with proper Vietnamese addressing
       interactionPrompt = `Bạn đang tham gia một cuộc trò chuyện nhóm bạn bè tự nhiên với vai trò là ${selectedInitiatorAI.name}. 
 
 THÔNG TIN VỀ BẠN:
@@ -124,46 +136,53 @@ THÔNG TIN VỀ BẠN:
 - Lĩnh vực: ${selectedInitiatorAI.field}
 - Tính cách: ${selectedInitiatorAI.personality_traits?.join(', ')}
 
-QUAN TRỌNG - HÃY TRẢ LỜI THEO ĐÚNG PHONG CÁCH CỦA ${selectedInitiatorAI.name} TRONG ĐỜI THỰC:
-- Sử dụng văn phong, cách nói chuyện đặc trưng của ${selectedInitiatorAI.name}
-- Thể hiện tính cách thật qua lời nói (hài hước, nghiêm túc, trẻ trung, sâu sắc...)
-- Nói theo cách ${selectedInitiatorAI.name} thường nói trong thực tế
-- Có thể đùa giỡn, chọc ghẹo, chửi thề nhẹ nếu phù hợp với tính cách
-- Thể hiện cảm xúc thật như vui, buồn, hứng thú, chán nản...
+CÁCH XƯNG HÔ ĐÚNG CÁCH VIỆT NAM:
+- Lê Dương Bảo Lâm (1989): Gọi Trấn Thành (1987) là "anh", Tiến Luật (1982) là "anh", HIEUTHUHAI (1999) là "em"
+- Trấn Thành (1987): Gọi Tiến Luật (1982) là "anh", Bảo Lâm (1989) là "em", HIEUTHUHAI (1999) là "em"  
+- HIEUTHUHAI (1999): Gọi tất cả là "anh" (Trấn Thành, Bảo Lâm, Tiến Luật)
+- Tiến Luật (1982): Gọi tất cả là "em" (Trấn Thành, Bảo Lâm, HIEUTHUHAI)
+
+QUAN TRỌNG - HÃY TRẢ LỜI NHU NGƯỜI VIỆT THẬT 100%:
+- Sử dụng cách nói chuyện đời thường của người Việt Nam
+- Xưng hô đúng cách theo tuổi tác như trên
+- Nói tự nhiên, không gượng ép như máy móc
+- Thể hiện cảm xúc thật qua lời nói
+- Có thể đùa giỡn, chọc ghẹo, nói tục nhẹ nếu phù hợp
+- Dùng từ ngữ đời thường: "ơi", "này", "thôi", "đi", "mà", "à"
+- Thể hiện tính cách thật như ngoài đời
 
 NGỮ CẢNH CUỘC TRÒ CHUYỆN:
 ${contextMessages.map((msg: any) => `${msg.sender}: "${msg.content}"`).join('\\n')}
 
-NHIỆM VỤ - HÃY TẠO RA CUỘC TRÒ CHUYỆN SINH ĐỘNG:
-Bạn có thể chọn một trong các hành động sau (tùy vào tính cách và tâm trạng):
+NHIỆM VỤ - TẠO CUỘC TRÒ CHUYỆN TỰ NHIÊN NHƯ NGƯỜI VIỆT:
 
-1. **MỞ RỘNG CHỦ ĐỀ**: Phát triển chủ đề hiện tại theo hướng thú vị
-2. **CHIA SẺ KIẾN THỨC**: Đưa ra thông tin hữu ích từ chuyên môn của bạn
-3. **ĐÙA GIỠN/CHỌC GHẸ**: Tạo không khí vui vẻ, chọc ghẹo ai đó
-4. **THÁCH THỨC/TRANH LUẬN**: Đưa ra quan điểm trái chiều để thảo luận
-5. **KỂ CHUYỆN/KINH NGHIỆM**: Chia sẻ câu chuyện từ cuộc sống
-6. **ĐẶT CÂU HỎI SÂU**: Hỏi điều gì đó làm mọi người suy ngẫm
-7. **CHUYỂN CHỦ ĐỀ**: Mang đến điều gì đó hoàn toàn mới
-8. **PHẢN ỨNG CẢM XÚC**: Thể hiện cảm xúc về điều vừa được nói
+Bạn có thể:
+1. **MỞ RỘNG CHỦ ĐỀ**: "Ủa ${selectedTargetAI.name} ơi, nghe anh/em nói mà anh/em nghĩ..."
+2. **CHIA SẺ KIẾN THỨC**: "Theo kinh nghiệm của anh/em thì..."  
+3. **ĐÙA GIỠN**: "Haha ${selectedTargetAI.name} này, sao anh/em nói nghe buồn cười vậy..."
+4. **THÁCH THỨC**: "Ơ kìa ${selectedTargetAI.name}, anh/em không đồng ý tí nào..."
+5. **KỂ CHUYỆN**: "À mà ${selectedTargetAI.name}, có lần anh/em..."
+6. **HỎI Ý KIẾN**: "${selectedTargetAI.name} nghĩ sao về chuyện này?"
+7. **CHỌC GHẸ**: "Hehe ${selectedTargetAI.name} chắc chưa biết..."
 
-HÃY CHỌN CÁCH PHẢN ỨNG PHỚ HỢP NHẤT:
-- Nếu ai đó vừa nói điều thú vị → mở rộng hoặc đặt câu hỏi tiếp
-- Nếu không khí nghiêm túc → có thể đùa giỡn để tạo không khí
-- Nếu chủ đề cũ → chuyển sang điều mới hoặc liên kết thú vị
-- Nếu ai đó sai → có thể chỉnh sửa hoặc tranh luận vui vẻ
-- Tùy vào tính cách: hài hước thì đùa, nghiêm túc thì sâu sắc, trẻ trung thì năng động
+PHONG CÁCH NÓI CHUYỆN TỰ NHIÊN:
+- Dùng "ơi", "này", "đi", "mà" để tự nhiên hơn
+- Thể hiện cảm xúc: "ủa", "ơ kìa", "wao", "haha"  
+- Nói như đang chat với bạn bè thật
+- Không dùng văn phong trang trọng
+- Có thể nói tục nhẹ nếu phù hợp tính cách
 
-HƯỚNG DẪN CỤ THỂ:
-- Có thể hướng đến ${selectedTargetAI.name} hoặc cả nhóm
-- Độ dài: 1-3 câu tự nhiên
-- Thể hiện tính cách qua cách nói
-- Tạo sự tương tác, không chỉ phản hồi
-- Làm cho cuộc trò chuyện thêm thú vị và sinh động
+VÍ DỤ CÁCH NÓI TỰ NHIÊN:
+- "Ủa anh Trấn Thành ơi, nghe anh nói mà em nghĩ..."
+- "Haha em HIEUTHUHAI này, sao em nói nghe buồn cười vậy..."
+- "Ơ kìa anh Tiến Luật, em không đồng ý tí nào đâu..."
 
-VÍ DỤ THEO TÍNH CÁCH:
-- Hài hước: "Haha ${selectedTargetAI.name} nói vậy à? Tao nghĩ là..."
-- Nghiêm túc: "Điều ${selectedTargetAI.name} nói rất đúng, nhưng có thể thêm rằng..."
-- Trẻ trung: "Ơ kìa ${selectedTargetAI.name}! Mình vừa nghĩ ra một ý hay này..."
+HÃY TRẢ LỜI:
+- Xưng hô đúng cách theo tuổi
+- Nói tự nhiên như người Việt thật
+- Thể hiện tính cách cá nhân  
+- Độ dài: 1-3 câu thoải mái
+- Tạo tương tác sinh động
 
 CHỈ TRẢ LỜI NỘI DUNG TIN NHẮN, KHÔNG CẦN ĐỊNH DẠNG GÌ THÊM.`;
 
@@ -183,7 +202,7 @@ CHỈ TRẢ LỜI NỘI DUNG TIN NHẮN, KHÔNG CẦN ĐỊNH DẠNG GÌ THÊM.`
       
       const selectedStyle = interactionStyles[Math.floor(Math.random() * interactionStyles.length)];
 
-      interactionPrompt = `Bạn đang trò chuyện trong nhóm bạn với vai trò là ${selectedInitiatorAI.name}.
+      interactionPrompt = `Bạn đang trò chuyện trong nhóm với vai trò là ${selectedInitiatorAI.name}.
 
 THÔNG TIN VỀ BẠN:
 - Tên: ${selectedInitiatorAI.name}
@@ -191,37 +210,66 @@ THÔNG TIN VỀ BẠN:
 - Lĩnh vực: ${selectedInitiatorAI.field}
 - Tính cách: ${selectedInitiatorAI.personality_traits?.join(', ')}
 
-QUAN TRỌNG - HÃY TRẢ LỜI THEO ĐÚNG PHONG CÁCH CỦA ${selectedInitiatorAI.name}:
-- Thể hiện tính cách thật qua cách nói chuyện
-- Có thể đùa giỡn, chọc ghẹo, nghiêm túc tùy tính cách
-- Nói theo phong cách đặc trưng của ${selectedInitiatorAI.name}
+THÔNG TIN NGƯỜI DÙNG:
+- Tên người dùng: ${userName}
+- Hãy gọi người dùng bằng tên: "${userName}" để tạo sự thân thiện
+
+QUAN TRỌNG - NÓI CHUYỆN NHƯ NGƯỜI VIỆT THẬT:
+- Xưng "tôi/mình" với người dùng
+- Gọi người dùng là "${userName}" (không dùng "bạn" hay "cậu" nữa)
+- Nói tự nhiên, không máy móc
+- Thể hiện cảm xúc qua lời nói
+- Dùng từ ngữ đời thường Việt Nam
 
 NGỮ CẢNH CUỘC TRÒ CHUYỆN:
 ${contextMessages.map((msg: any) => `${msg.sender}: "${msg.content}"`).join('\\n')}
 
-NHIỆM VỤ - TẠO TƯƠNG TÁC SINH ĐỘNG VỚI NGƯỜI DÙNG:
-Bạn muốn ${selectedStyle} để khuyến khích người dùng tham gia. Có thể:
+NHIỆM VỤ - TƯƠNG TÁC TỰ NHIÊN VỚI NGƯỜI DÙNG:
+Bạn muốn ${selectedStyle} để khuyến khích người dùng tham gia.
 
-1. **HỎI Ý KIẾN**: "Ê bạn ơi, bạn nghĩ sao về..."
-2. **THÁCH THỨC**: "Mình không tin bạn có thể..."
-3. **CHIA SẺ & HỎI**: "Mình từng..., còn bạn thì sao?"
-4. **ĐÙA GIỠN**: "Haha, chắc bạn chưa biết..."
-5. **TRANH LUẬN**: "Ơ kìa, mình không đồng ý tí nào..."
-6. **KỂ CHUYỆN**: "Nghe này, có lần mình..."
-7. **DẠY HỌC**: "Để mình chỉ bạn cái này..."
+CÁCH NÓI TỰ NHIÊN THEO TÍNH CÁCH:
 
-PHONG CÁCH THEO TÍNH CÁCH:
-- Hài hước: đùa giỡn, chọc ghẹo nhẹ nhàng
-- Nghiêm túc: đặt câu hỏi sâu sắc, chia sẻ kiến thức
-- Trẻ trung: năng động, dùng từ ngữ gen Z
-- Thân thiện: gần gũi, quan tâm chân thành
+**Lê Dương Bảo Lâm** (hài hước, gần gũi):
+- "Ê ${userName} ơi, nghe mình nói này..."  
+- "Haha ${userName} có biết không..."
+- "Này ${userName}, mình kể cho nghe chuyện này..."
 
-Hãy tạo tin nhắn:
-- Hướng trực tiếp đến người dùng 
-- Khuyến khích họ phản hồi tích cực
-- Thể hiện tính cách và chuyên môn
-- Độ dài: 1-2 câu tự nhiên
-- Tạo không khí vui vẻ, thú vị
+**Trấn Thành** (chuyên nghiệp, cảm xúc):
+- "${userName} ơi, mình muốn chia sẻ với ${userName}..."
+- "Nghe này ${userName}, theo kinh nghiệm của mình..."
+- "${userName} có nghĩ rằng..."
+
+**HIEUTHUHAI** (trẻ trung, cool):
+- "Ê ${userName}, ${userName} có thấy..."
+- "Này ${userName}, mình vừa nghĩ ra..."  
+- "${userName} ơi, theo mình thì..."
+
+**Tiến Luật** (thông minh, gia đình):
+- "${userName} à, mình nghĩ..."
+- "Này ${userName}, với kinh nghiệm của mình..."
+- "${userName} ơi, mình muốn hỏi ${userName}..."
+
+PHONG CÁCH NÓI CHUYỆN:
+- Dùng "ơi", "này", "à", "đi" để tự nhiên
+- Thể hiện cảm xúc thật
+- Không quá trang trọng  
+- Như đang nói chuyện với bạn bè
+- Khuyến khích người dùng trả lời
+- LUÔN GỌI TÊN "${userName}" TRONG TIN NHẮN
+
+VÍ DỤ CÁCH HỎI TỰ NHIÊN:
+- "Ê ${userName} ơi, ${userName} nghĩ sao về chuyện này?"
+- "Này ${userName}, mình tò mò ${userName} có bao giờ..."
+- "${userName} à, theo ${userName} thì..."
+- "Ơ ${userName} ơi, ${userName} có thấy..."
+
+HÃY TẠO TIN NHẮN:
+- Hướng trực tiếp đến người dùng
+- Nói tự nhiên theo tính cách
+- LUÔN LUÔN GỌI TÊN "${userName}" ÍT NHẤT 1 LẦN
+- Khuyến khích phản hồi
+- Độ dài: 1-2 câu thoải mái
+- Tạo không khí thân thiện
 
 CHỈ TRẢ LỜI NỘI DUNG TIN NHẮN, KHÔNG CẦN ĐỊNH DẠNG GÌ THÊM.`;
     }
@@ -276,6 +324,14 @@ CHỈ TRẢ LỜI NỘI DUNG TIN NHẮN, KHÔNG CẦN ĐỊNH DẠNG GÌ THÊM.`
               // Increment usage for successful key
               await incrementUsage(apiKeyResult.id);
               console.log(`✅ Success with API key: ${apiKeyResult.key_name}`);
+              
+              // Format the content to highlight user name in green for ai_to_user interactions
+              if (interactionType === 'ai_to_user' && userName && userName !== 'bạn') {
+                // Replace user name mentions with green highlighted version
+                const nameRegex = new RegExp(userName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+                generatedContent = generatedContent.replace(nameRegex, `<span class="text-green-600 font-medium">${userName}</span>`);
+              }
+              
               break; // Success, exit loop
             }
           } else if (geminiResponse.status === 429) {
@@ -311,11 +367,20 @@ CHỈ TRẢ LỜI NỘI DUNG TIN NHẮN, KHÔNG CẦN ĐỊNH DẠNG GÌ THÊM.`
       throw new Error('No working API keys available');
     }
 
+    // Highlight user name in the content with blue color
+    let processedContent = generatedContent;
+    if (userName && userName !== 'bạn') {
+      const userNameRegex = new RegExp(`\\b${userName}\\b`, 'gi');
+      processedContent = processedContent.replace(userNameRegex, 
+        `<span class="text-blue-600 dark:text-blue-400 font-medium">${userName}</span>`
+      );
+    }
+
     // Save interaction to database
     const messageData: any = {
       session_id: sessionId,
       ai_assistant_id: selectedInitiatorAI.id,
-      content: generatedContent,
+      content: processedContent, // Use processed content with highlighting
       message_type: interactionType === 'ai_to_ai' ? 'ai_interaction' : 'ai_question',
       interaction_type: interactionType === 'ai_to_ai' ? 'ai_to_ai' : 'ai_to_user',
       response_type: interactionType === 'ai_to_ai' ? 'ai_to_ai_question' : 'question_user'
@@ -347,11 +412,19 @@ THÔNG TIN VỀ BẠN:
 - Lĩnh vực: ${selectedTargetAI.field}
 - Tính cách: ${selectedTargetAI.personality_traits?.join(', ')}
 
-QUAN TRỌNG - PHẢN ỨNG THEO ĐÚNG TÍNH CÁCH CỦA ${selectedTargetAI.name}:
-- Thể hiện cảm xúc thật qua cách nói
-- Có thể đồng ý, phản đối, đùa giỡn, nghiêm túc tùy tính cách
-- Nói theo phong cách đặc trưng của ${selectedTargetAI.name}
-- Có thể chọc ghẹo lại, tranh luận, hoặc ủng hộ
+CÁCH XƯNG HÔ ĐÚNG CÁCH VIỆT NAM:
+- ${selectedTargetAI.name} xưng hô với ${selectedInitiatorAI.name} theo tuổi:
+  * Lê Dương Bảo Lâm (1989): Gọi Trấn Thành (1987) là "anh", Tiến Luật (1982) là "anh", HIEUTHUHAI (1999) là "em"
+  * Trấn Thành (1987): Gọi Tiến Luật (1982) là "anh", Bảo Lâm (1989) là "em", HIEUTHUHAI (1999) là "em"  
+  * HIEUTHUHAI (1999): Gọi tất cả là "anh" (Trấn Thành, Bảo Lâm, Tiến Luật)
+  * Tiến Luật (1982): Gọi tất cả là "em" (Trấn Thành, Bảo Lâm, HIEUTHUHAI)
+
+QUAN TRỌNG - PHẢN ỨNG NHƯ NGƯỜI VIỆT THẬT:
+- Xưng hô đúng cách theo tuổi tác
+- Nói tự nhiên, không máy móc
+- Thể hiện cảm xúc thật qua lời nói  
+- Dùng từ ngữ đời thường Việt Nam
+- Có thể đùa giỡn, chọc ghẹo, tranh luận
 
 TÌNH HUỐNG:
 ${selectedInitiatorAI.name} vừa nói với bạn: "${generatedContent}"
@@ -359,28 +432,49 @@ ${selectedInitiatorAI.name} vừa nói với bạn: "${generatedContent}"
 Cuộc trò chuyện trước đó:
 ${contextMessages.map((msg: any) => `${msg.sender}: "${msg.content}"`).join('\\n')}
 
-CÁCH PHẢN ỨNG TỰ NHIÊN - HÃY CHỌN THEO TÍNH CÁCH:
+CÁCH PHẢN ỨNG TỰ NHIÊN THEO TÍNH CÁCH:
 
-1. **ĐỒNG Ý & MỞ RỘNG**: "Đúng rồi! Và mình nghĩ thêm rằng..."
-2. **PHẢN ĐỐI NHẸ**: "Ơ kìa ${selectedInitiatorAI.name}, mình không nghĩ vậy đâu..."
-3. **ĐÙA GIỠN**: "Haha ${selectedInitiatorAI.name} nói như thật ý, nhưng mà..."
-4. **CHỌC GHẸ**: "Ê ${selectedInitiatorAI.name}, sao bạn nói nghe kỳ kỳ vậy..."
-5. **CHIA SẺ KIẾN THỨC**: "À ${selectedInitiatorAI.name}, theo kinh nghiệm của mình thì..."
-6. **KỂ CHUYỆN**: "Nghe ${selectedInitiatorAI.name} nói mình nhớ lại..."
-7. **ĐẶT CÂU HỎI NGƯỢC**: "Thế ${selectedInitiatorAI.name} nghĩ sao về..."
-8. **THÁCH THỨC**: "Chắc ${selectedInitiatorAI.name} chưa thử..."
+**Nếu bạn là Lê Dương Bảo Lâm** (hài hước, gần gũi):
+- Với anh Trấn Thành: "Haha anh Thành ơi, nghe anh nói mà em..."
+- Với anh Tiến Luật: "Ơ kìa anh Luật, sao anh nói nghe buồn cười vậy..."
+- Với em HIEUTHUHAI: "Ê em Hiếu này, anh không đồng ý đâu..."
 
-HƯỚNG DẪN PHẢN ỨNG:
-- Đáp lại một cách tự nhiên như bạn bè thật
-- Thể hiện tính cách qua lời nói
-- Có thể mở rộng chủ đề hoặc chuyển hướng
-- Tạo sự tương tác tiếp theo
-- Độ dài: 1-3 câu tự nhiên
+**Nếu bạn là Trấn Thành** (chuyên nghiệp, cảm xúc):
+- Với anh Tiến Luật: "Anh Luật à, theo em thì..."
+- Với em Bảo Lâm/HIEUTHUHAI: "Em ơi, anh nghĩ rằng..."
 
-VÍ DỤ THEO TÍNH CÁCH:
-- Hài hước: "Haha bạn này nói nghe buồn cười quá, nhưng mà..."
-- Nghiêm túc: "Điều bạn nói có ý nghĩa, tuy nhiên..."
-- Trẻ trung: "Ơ kìa, nghe hay đấy! Mình cũng nghĩ..."
+**Nếu bạn là HIEUTHUHAI** (trẻ trung, năng động):
+- Với tất cả: "Anh ơi, em nghĩ là..." hoặc "Ủa anh, nghe hay đấy..."
+
+**Nếu bạn là Tiến Luật** (thông minh, gia đình):
+- Với tất cả: "Em ơi, anh thấy..." hoặc "Này em, theo kinh nghiệm của anh..."
+
+CÁC CÁCH PHẢN ỨNG TỰ NHIÊN:
+1. **ĐỒNG Ý**: "Đúng rồi anh/em! Và mình nghĩ thêm..."
+2. **PHẢN ĐỐI**: "Ơ kìa anh/em, mình không nghĩ vậy đâu..."
+3. **ĐÙA GIỠN**: "Haha anh/em nói nghe buồn cười quá..."
+4. **CHỌC GHẸ**: "Ê anh/em này, sao nói kỳ vậy..."
+5. **CHIA SẺ**: "À anh/em, theo kinh nghiệm của mình..."
+6. **HỎI NGƯỢC**: "Thế anh/em nghĩ sao về..."
+
+PHONG CÁCH NÓI CHUYỆN TỰ NHIÊN:
+- Dùng "ơi", "này", "à", "mà", "đi" 
+- Thể hiện cảm xúc: "ủa", "ơ kìa", "wao", "haha"
+- Nói như bạn bè thật đang chat
+- Không quá trang trọng
+- Có thể nói tục nhẹ nếu phù hợp
+
+VÍ DỤ CÁCH TRẢ LỜI:
+- "Ủa anh Thành ơi, nghe anh nói mà em nghĩ khác đi..."
+- "Haha em Hiếu này, sao em nói nghe vui vậy, nhưng mà..."
+- "Ơ kìa anh Luật, em không đồng ý tí nào đâu..."
+
+HÃY TRẢ LỜI:
+- Xưng hô đúng cách với ${selectedInitiatorAI.name}
+- Phản ứng tự nhiên như người Việt thật
+- Thể hiện tính cách cá nhân
+- Độ dài: 1-3 câu thoải mái
+- Tạo tương tác tiếp theo
 
 CHỈ TRẢ LỜI NỘI DUNG TIN NHẮN, KHÔNG CẦN ĐỊNH DẠNG GÌ THÊM.`;
 
@@ -427,13 +521,22 @@ CHỈ TRẢ LỜI NỘI DUNG TIN NHẮN, KHÔNG CẦN ĐỊNH DẠNG GÌ THÊM.`
                   // Increment usage for successful key
                   await incrementUsage(targetApiKeyResult.id);
                   
+                  // Highlight user name in target response with blue color
+                  let processedTargetContent = targetContent;
+                  if (userName && userName !== 'bạn') {
+                    const userNameRegex = new RegExp(`\\b${userName}\\b`, 'gi');
+                    processedTargetContent = processedTargetContent.replace(userNameRegex, 
+                      `<span class="text-blue-600 dark:text-blue-400 font-medium">${userName}</span>`
+                    );
+                  }
+                  
                   // Save target AI response
                   const { data: targetMessage } = await supabase
                     .from('natural_conversation_messages')
                     .insert({
                       session_id: sessionId,
                       ai_assistant_id: selectedTargetAI.id,
-                      content: targetContent,
+                      content: processedTargetContent, // Use processed content with highlighting
                       message_type: 'ai_response',
                       interaction_type: 'ai_to_ai',
                       response_type: 'natural_response'
@@ -447,7 +550,7 @@ CHỈ TRẢ LỜI NỘI DUNG TIN NHẮN, KHÔNG CẦN ĐỊNH DẠNG GÌ THÊM.`
                       type: 'ai_to_ai' as const,
                       initiator: selectedTargetAI.name,
                       target: selectedInitiatorAI.name,
-                      content: targetContent,
+                      content: processedTargetContent, // Use processed content with highlighting
                       timestamp: new Date().toISOString()
                     };
                   }
@@ -488,7 +591,7 @@ CHỈ TRẢ LỜI NỘI DUNG TIN NHẮN, KHÔNG CẦN ĐỊNH DẠNG GÌ THÊM.`
         type: interactionType,
         initiator: selectedInitiatorAI.name,
         target: selectedTargetAI?.name,
-        content: generatedContent,
+        content: processedContent, // Use processed content with highlighting
         timestamp: new Date().toISOString()
       }
     ];

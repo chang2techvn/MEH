@@ -187,6 +187,49 @@
   scroll-behavior: smooth;
 }
 
+/* Smooth auto-scroll animations */
+.smooth-auto-scroll {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Message slide-in animations */
+@keyframes messageSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.message-slide-in {
+  animation: messageSlideIn 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* Staggered message animations */
+.message-stagger-1 { animation-delay: 0ms; }
+.message-stagger-2 { animation-delay: 100ms; }
+.message-stagger-3 { animation-delay: 200ms; }
+.message-stagger-4 { animation-delay: 300ms; }
+.message-stagger-5 { animation-delay: 400ms; }
+
+/* Auto-scroll pulse effect */
+@keyframes autoScrollPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(59, 130, 246, 0);
+  }
+}
+
+.auto-scroll-indicator {
+  animation: autoScrollPulse 2s infinite;
+}
+
 /* Container query animations (modern browsers) */
 @container (min-width: 400px) {
   .container-responsive {

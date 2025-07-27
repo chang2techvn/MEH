@@ -23,6 +23,7 @@ export const formatTime = (date: Date): string => {
 
 export const highlightText = (text: string, highlights?: string[]): string => {
   if (!highlights || highlights.length === 0) {
+    // Return text as-is to preserve any existing HTML formatting (like user name highlighting)
     return text;
   }
   

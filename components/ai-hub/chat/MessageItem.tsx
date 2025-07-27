@@ -16,7 +16,10 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message, ai, darkMode,
   const isUser = message.sender === 'user';
 
   return (
-    <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} animate-fadeIn px-2 sm:px-0 group`}>
+    <div 
+      className={`flex ${isUser ? 'justify-end' : 'justify-start'} message-slide-in px-2 sm:px-0 group`}
+      data-message-id={message.id}
+    >
       {!isUser && ai && (
         <div className="mr-2 sm:mr-3 flex-shrink-0">
           <Avatar className={`w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 shadow-md border-2 ${darkMode ? 'border-gray-700' : 'border-white'}`}>

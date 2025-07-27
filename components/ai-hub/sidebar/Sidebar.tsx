@@ -66,7 +66,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     <div className="relative h-full">
       {/* Sidebar Container */}
       <div
-        className={`${darkMode ? 'bg-gradient-to-b from-gray-800 to-gray-900 border-gray-700' : 'bg-gradient-to-b from-white to-gray-50 border-gray-200'} border-r transition-all duration-300 ease-in-out flex flex-col h-full shadow-lg ${collapsed ? 'w-16' : 'w-full max-w-sm lg:max-w-none lg:w-80'}`}
+        className={`${darkMode ? 'bg-gradient-to-b from-gray-800 to-gray-900 border-gray-700' : 'bg-gradient-to-b from-white to-gray-50 border-gray-200'} ${collapsed ? '' : 'border-r'} transition-all duration-300 ease-in-out flex flex-col h-full shadow-lg ${collapsed ? 'w-0' : 'w-full max-w-sm lg:max-w-none lg:w-80'} overflow-hidden`}
         style={{ minHeight: '100vh' }}
       >
         {/* Header */}
@@ -86,16 +86,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                   Powered by AI
                 </p>
-              </div>
-            </div>
-          )}
-          {collapsed && (
-            <div className="w-full flex justify-center">
-              <div className="relative">
-                <div className="w-8 h-8 bg-gradient-to-br from-neo-mint to-purist-blue rounded-lg flex items-center justify-center shadow-lg">
-                  <i className="fas fa-robot text-white text-sm"></i>
-                </div>
-                <div className="absolute -top-1 -right-1 w-3 h-3 bg-vibrant-orange rounded-full border border-white animate-pulse"></div>
               </div>
             </div>
           )}
@@ -273,45 +263,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
           </>
         )}
-
-        {/* Collapsed sidebar content */}
-        {collapsed && (
-          <div className="flex-1 flex flex-col items-center py-4 space-y-4">
-            {selectedAIs.slice(0, 3).map((aiId) => {
-              const ai = getAIById(aiId);
-              return (
-                <TooltipProvider key={aiId}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Avatar 
-                        className={`w-10 h-10 border-2 ${selectedAIs.includes(aiId) ? 'border-green-400' : (darkMode ? 'border-gray-600' : 'border-gray-300')} shadow-md cursor-pointer hover:scale-110 transition-transform duration-200`}
-                        onClick={() => onToggleAI(aiId)}
-                      >
-                        <AvatarImage src={ai?.avatar} alt={ai?.name} className="object-cover" />
-                        <AvatarFallback className="bg-neo-mint/10 text-purist-blue text-xs">
-                          {ai?.name.substring(0, 2)}
-                        </AvatarFallback>
-                      </Avatar>
-                    </TooltipTrigger>
-                    <TooltipContent side="right">
-                      <p>{ai?.name} - {ai?.role}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              );
-            })}
-            {selectedAIs.length > 3 && (
-              <div className={`w-10 h-10 rounded-full ${darkMode ? 'bg-gray-600' : 'bg-gray-200'} flex items-center justify-center text-xs font-medium`}>
-                +{selectedAIs.length - 3}
-              </div>
-            )}
-          </div>
-        )}
       </div>
 
       {/* Toggle Button - Fixed at center */}
       {onCollapseToggle && (
-        <div className="absolute top-1/2 -translate-y-1/2 -right-3 z-[5] hidden lg:block pointer-events-none">
+        <div className={`absolute top-1/2 -translate-y-1/2 z-[5] hidden lg:block pointer-events-none transition-all duration-300 ${collapsed ? '-right-8' : '-right-3'}`}>
           <div className="pointer-events-auto">
             <TooltipProvider>
               <Tooltip>

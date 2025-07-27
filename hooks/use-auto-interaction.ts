@@ -31,7 +31,8 @@ export function useAutoInteraction(
   sessionId: string | null,
   selectedAIIds: string[],
   onAutoInteraction: (type: 'ai_to_ai' | 'ai_to_user') => Promise<void>,
-  config: Partial<AutoInteractionConfig> = {}
+  config: Partial<AutoInteractionConfig> = {},
+  isUserActive: boolean = false // Add parameter to pause when user is active
 ) {
   const router = useRouter();
   const fullConfig = { ...DEFAULT_CONFIG, ...config };
@@ -111,8 +112,9 @@ export function useAutoInteraction(
     const timeoutId = setTimeout(async () => {
       console.log('🔔 Auto-interaction timeout triggered!');
       
-      if (!stateRef.current.isActive || !isOnResourcesRoute) {
-        console.log('❌ Auto-interaction cancelled - state changed');
+      // Double-check conditions before executing, including user activity
+      if (!stateRef.current.isActive || !isOnResourcesRoute || !sessionId || isUserActive) {
+        console.log('❌ Auto-interaction cancelled - conditions not met or user is active');
         return;
       }
 
@@ -129,9 +131,9 @@ export function useAutoInteraction(
           pendingTimeoutId: null
         }));
 
-        // Schedule next interaction
+        // Schedule next interaction after a small delay to avoid conflicts
         console.log('🔄 Scheduling next auto-interaction...');
-        scheduleAutoInteraction();
+        setTimeout(scheduleAutoInteraction, 1000);
 
       } catch (error) {
         console.error('❌ Auto-interaction failed:', error);
