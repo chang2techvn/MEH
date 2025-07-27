@@ -65,13 +65,23 @@ export default function ResourcesPage() {
   const { 
     messages, 
     isProcessing, 
+    isAutoInteracting,
     typingAIs,
     currentSession,
     error: conversationError,
     chatContainerRef, 
     sendNaturalMessage,
     replyToMessage,
-    loadSession
+    loadSession,
+    clearSession,
+    // Auto-interaction functions
+    autoInteractionEnabled,
+    autoInteractionActive,
+    currentTimeoutSeconds,
+    startAutoInteraction,
+    stopAutoInteraction,
+    toggleAutoInteraction,
+    resetAutoInteraction
   } = useNaturalConversation(selectedAIsStable);
 
   // Wrapper function for ChatInput compatibility
@@ -204,6 +214,7 @@ export default function ResourcesPage() {
 
   const handleNewChat = () => {
     setCurrentChatId(null);
+    clearSession(); // Clear current session and messages
     // Keep current selected AIs instead of resetting
     // setSelectedAIs(['ai1', 'ai3']); // Remove this line
   };
@@ -399,6 +410,43 @@ export default function ResourcesPage() {
                 <i className="fas fa-plus text-xs"></i>
               </span>
             </Button>
+            
+            {/* Auto-interaction Toggle - Only show when session exists */}
+            {currentSession && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={toggleAutoInteraction}
+                      className={`touch-target !rounded-button whitespace-nowrap cursor-pointer transition-colors duration-200 text-xs sm:text-sm h-8 sm:h-9 px-2 sm:px-3 ${
+                        autoInteractionActive
+                          ? (darkMode ? 'bg-green-700 border-green-600 hover:bg-green-600' : 'bg-green-100 border-green-300 hover:bg-green-200')
+                          : (darkMode ? 'bg-gray-700 border-gray-600 hover:bg-gray-600' : 'hover:bg-gray-50')
+                      }`}
+                      title={autoInteractionActive ? "Tắt tương tác tự động" : "Bật tương tác tự động"}
+                    >
+                      <i className={`fas ${autoInteractionActive ? 'fa-robot' : 'fa-pause'} mr-1 text-xs sm:text-sm`}></i>
+                      <span className="hidden md:inline">
+                        {autoInteractionActive ? "Auto ON" : "Auto OFF"}
+                      </span>
+                      <span className="md:hidden">
+                        {autoInteractionActive ? "ON" : "OFF"}
+                      </span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>
+                      {autoInteractionActive 
+                        ? `Tự động tương tác đang BẬT (${currentTimeoutSeconds} giây)`
+                        : "Bật tương tác tự động giữa AI và câu hỏi cho bạn"
+                      }
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
             
             {/* Add AI Button - Always visible */}
             <Sheet>
@@ -615,7 +663,9 @@ export default function ResourcesPage() {
           placeholder={
             replyMode?.isActive 
               ? `Phản hồi ${replyMode.aiName}...` 
-              : (isProcessing ? "Đang xử lý..." : "Nhập tin nhắn của bạn...")
+              : (isProcessing ? "Đang xử lý..." : 
+                 isAutoInteracting ? "AI đang tương tác..." :
+                 "Nhập tin nhắn của bạn...")
           }
         />
       </div>

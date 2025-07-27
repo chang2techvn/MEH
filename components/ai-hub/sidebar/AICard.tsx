@@ -39,19 +39,18 @@ export const AICard: React.FC<AICardProps> = ({ ai, isSelected, onToggle, darkMo
           ai.online ? 'bg-blue-500' : 'bg-gray-400'
         } transition-all duration-300`}></div>
       </div>
-      <div className="ml-2 flex-1 min-w-0">
-        <div className="flex items-start justify-between">
-          <div className="flex-1 min-w-0">
+      <div className="ml-2 flex-1 min-w-0 overflow-hidden">
+        <div className="flex items-start justify-between min-w-0">
+          <div className="flex-1 min-w-0 overflow-hidden">
             <h3 className="font-semibold text-xs line-clamp-1 group-hover:text-blue-600 transition-colors duration-200">{ai.name}</h3>
-            <div className="flex items-center gap-1 mt-0.5">
-              <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'} font-medium`}>{ai.role}</p>
-              <span className="text-gray-400">•</span>
-              <Badge variant="outline" className={`text-xs font-medium px-1.5 py-0 h-4 ${
+            <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'} font-medium truncate mt-0.5`}>{ai.role}</p>
+            <div className="mt-1">
+              <Badge variant="outline" className={`text-xs font-medium px-1.5 py-0.5 h-auto inline-block max-w-full ${
                 isSelected 
                   ? (darkMode ? 'bg-blue-900/30 text-blue-400 border-blue-500/50' : 'bg-blue-100 text-blue-700 border-blue-300')
                   : (darkMode ? 'bg-gray-600 text-gray-300 border-gray-500' : 'bg-gray-100 text-gray-600 border-gray-300')
-              } transition-all duration-200`}>
-                {ai.field}
+              } transition-all duration-200`} title={ai.field}>
+                <span className="block truncate">{ai.field}</span>
               </Badge>
             </div>
           </div>

@@ -330,3 +330,69 @@ export async function resetDailyUsage(serviceName: string): Promise<boolean> {
     return false
   }
 }
+
+/**
+ * Gets all active API keys for the specified service, ordered by usage
+ * @param serviceName - The service name (e.g., 'gemini')
+ * @returns Promise<ApiKeyDecrypted[]> - Array of active API keys with decrypted keys
+ */
+export async function getAllActiveApiKeys(
+  serviceName: string = 'gemini'
+): Promise<ApiKeyDecrypted[]> {
+  try {
+    console.log(`🔑 Getting all active API keys for service: ${serviceName}`)
+    
+    // Query for all active keys, ordered by usage (lowest first) and creation date
+    const { data: keys, error } = await supabase
+      .from('api_keys')
+      .select('*')
+      .eq('service_name', serviceName)
+      .eq('is_active', true)
+      .order('current_usage', { ascending: true })
+      .order('created_at', { ascending: true })
+    
+    if (error) {
+      console.error('❌ Database error:', error)
+      throw createApiKeyError('DATABASE_ERROR', 'Failed to fetch API keys from database', undefined, serviceName, error)
+    }
+    
+    if (!keys || keys.length === 0) {
+      console.error(`❌ No active API keys found for service: ${serviceName}`)
+      throw createApiKeyError('KEY_NOT_FOUND', `No active API keys available for service: ${serviceName}`, undefined, serviceName)
+    }
+    
+    const decryptedKeys: ApiKeyDecrypted[] = []
+    
+    for (const key of keys) {
+      try {
+        // Decrypt the API key
+        const decryptedKey = decryptApiKey(key.encrypted_key)
+        
+        decryptedKeys.push({
+          ...key,
+          decrypted_key: decryptedKey
+        })
+        
+        console.log(`✅ Decrypted API key: ${key.key_name} (Usage: ${key.current_usage}/${key.usage_limit})`)
+        
+      } catch (decryptError) {
+        console.error(`❌ Failed to decrypt API key ${key.key_name}:`, decryptError)
+        // Continue with other keys instead of failing completely
+      }
+    }
+    
+    if (decryptedKeys.length === 0) {
+      throw createApiKeyError('DECRYPTION_FAILED', 'Failed to decrypt any API keys', undefined, serviceName)
+    }
+    
+    console.log(`✅ Retrieved ${decryptedKeys.length} active API keys for service: ${serviceName}`)
+    return decryptedKeys
+    
+  } catch (error) {
+    if (error instanceof Error && 'code' in error) {
+      throw error // Re-throw custom API key errors
+    }
+    console.error('❌ Unexpected error in getAllActiveApiKeys:', error)
+    throw createApiKeyError('DATABASE_ERROR', 'Unexpected error while fetching API keys', undefined, serviceName, error)
+  }
+}
