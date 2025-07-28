@@ -1,25 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-
-interface VocabularyWord {
-  term: string;
-  meaning: string;
-  pronunciation: string;
-  count: number;
-  category: string;
-  difficulty: 'easy' | 'medium' | 'hard';
-  dateAdded: string;
-  example?: string;
-}
+import { useVocabulary, VocabularyEntry } from '@/hooks/use-learning-goals';
 
 interface VocabularyModalProps {
   isOpen: boolean;
@@ -30,33 +21,29 @@ interface VocabularyModalProps {
 export const VocabularyModal: React.FC<VocabularyModalProps> = ({ isOpen, onClose, darkMode }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Tất cả');
-  const [sortBy, setSortBy] = useState('dateAdded');
+  const [sortBy, setSortBy] = useState('created_at');
 
-  // Extended vocabulary data for demo
-  const allVocabulary: VocabularyWord[] = [
-    { term: "Schedule", meaning: "lên lịch, sắp xếp", pronunciation: "ˈʃɛdjuːl", count: 8, category: "Business", difficulty: "medium", dateAdded: "2025-06-18", example: "I need to schedule a meeting with the team." },
-    { term: "Meeting", meaning: "cuộc họp", pronunciation: "ˈmiːtɪŋ", count: 12, category: "Business", difficulty: "easy", dateAdded: "2025-06-17", example: "We have a meeting at 3 PM today." },
-    { term: "Deadline", meaning: "thời hạn chót", pronunciation: "ˈdedlaɪn", count: 6, category: "Business", difficulty: "medium", dateAdded: "2025-06-16", example: "The deadline for this project is next Friday." },
-    { term: "Presentation", meaning: "bài thuyết trình", pronunciation: "ˌprezənˈteɪʃən", count: 5, category: "Business", difficulty: "hard", dateAdded: "2025-06-15", example: "She gave an excellent presentation yesterday." },
-    { term: "Colleague", meaning: "đồng nghiệp", pronunciation: "ˈkɒliːɡ", count: 9, category: "Business", difficulty: "medium", dateAdded: "2025-06-14", example: "My colleague helped me with the report." },
-    { term: "Beautiful", meaning: "đẹp, xinh đẹp", pronunciation: "ˈbjuːtɪfəl", count: 15, category: "Daily", difficulty: "easy", dateAdded: "2025-06-13", example: "What a beautiful sunset!" },
-    { term: "Adventure", meaning: "cuộc phiêu lưu", pronunciation: "ədˈventʃər", count: 4, category: "Travel", difficulty: "medium", dateAdded: "2025-06-12", example: "Our trip to the mountains was quite an adventure." },
-    { term: "Innovation", meaning: "sự đổi mới", pronunciation: "ˌɪnəˈveɪʃən", count: 3, category: "Technology", difficulty: "hard", dateAdded: "2025-06-11", example: "Innovation is key to business success." },
-    { term: "Communicate", meaning: "giao tiếp", pronunciation: "kəˈmjuːnɪkeɪt", count: 11, category: "Business", difficulty: "medium", dateAdded: "2025-06-10", example: "It's important to communicate clearly with your team." },
-    { term: "Environment", meaning: "môi trường", pronunciation: "ɪnˈvaɪrənmənt", count: 7, category: "Science", difficulty: "medium", dateAdded: "2025-06-09", example: "We need to protect our environment." },
-    { term: "Technology", meaning: "công nghệ", pronunciation: "tekˈnɒlədʒi", count: 13, category: "Technology", difficulty: "medium", dateAdded: "2025-06-08", example: "Technology has changed our lives dramatically." },
-    { term: "Experience", meaning: "kinh nghiệm", pronunciation: "ɪkˈspɪəriəns", count: 10, category: "Daily", difficulty: "medium", dateAdded: "2025-06-07", example: "This job requires at least 3 years of experience." }
-  ];
+  // Use real database data
+  const { vocabulary, loading, error, fetchVocabulary } = useVocabulary();
 
-  const categories = ['Tất cả', 'Business', 'Daily', 'Travel', 'Technology', 'Science'];
+  // Fetch all vocabulary when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      fetchVocabulary(); // Fetch all vocabulary (no limit)
+    }
+  }, [isOpen]);
+
+  // Get unique categories from real data
+  const categories = ['Tất cả', ...Array.from(new Set(vocabulary.map(word => word.category)))];
+  
   const sortOptions = [
-    { value: 'dateAdded', label: 'Ngày thêm' },
-    { value: 'count', label: 'Tần suất sử dụng' },
+    { value: 'created_at', label: 'Ngày thêm' },
+    { value: 'usage_count', label: 'Tần suất sử dụng' },
     { value: 'term', label: 'Thứ tự ABC' },
-    { value: 'difficulty', label: 'Độ khó' }
+    { value: 'mastery_level', label: 'Độ thành thạo' }
   ];
 
-  const filteredVocabulary = allVocabulary
+  const filteredVocabulary = vocabulary
     .filter(word => 
       (selectedCategory === 'Tất cả' || word.category === selectedCategory) &&
       (word.term.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -64,35 +51,32 @@ export const VocabularyModal: React.FC<VocabularyModalProps> = ({ isOpen, onClos
     )
     .sort((a, b) => {
       switch (sortBy) {
-        case 'count':
-          return b.count - a.count;
+        case 'usage_count':
+          return b.usage_count - a.usage_count;
         case 'term':
           return a.term.localeCompare(b.term);
-        case 'difficulty':
-          const difficultyOrder = { easy: 1, medium: 2, hard: 3 };
-          return difficultyOrder[a.difficulty] - difficultyOrder[b.difficulty];
-        case 'dateAdded':
+        case 'mastery_level':
+          return b.mastery_level - a.mastery_level;
+        case 'created_at':
         default:
-          return new Date(b.dateAdded).getTime() - new Date(a.dateAdded).getTime();
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       }
     });
 
-  const getDifficultyColor = (difficulty: string) => {
-    switch (difficulty) {
-      case 'easy': return 'bg-green-100 text-green-800 border-green-200';
-      case 'medium': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'hard': return 'bg-red-100 text-red-800 border-red-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
+  const getMasteryColor = (masteryLevel: number) => {
+    if (masteryLevel <= 1) return 'bg-red-100 text-red-800 border-red-200';
+    if (masteryLevel <= 2) return 'bg-orange-100 text-orange-800 border-orange-200';
+    if (masteryLevel <= 3) return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+    if (masteryLevel <= 4) return 'bg-blue-100 text-blue-800 border-blue-200';
+    return 'bg-green-100 text-green-800 border-green-200';
   };
 
-  const getDifficultyLabel = (difficulty: string) => {
-    switch (difficulty) {
-      case 'easy': return 'Dễ';
-      case 'medium': return 'Trung bình';
-      case 'hard': return 'Khó';
-      default: return difficulty;
-    }
+  const getMasteryLabel = (masteryLevel: number) => {
+    if (masteryLevel <= 1) return 'Mới học';
+    if (masteryLevel <= 2) return 'Cơ bản';
+    if (masteryLevel <= 3) return 'Trung bình';
+    if (masteryLevel <= 4) return 'Khá';
+    return 'Thành thạo';
   };
 
   if (!isOpen) return null;
@@ -114,7 +98,7 @@ export const VocabularyModal: React.FC<VocabularyModalProps> = ({ isOpen, onClos
               Kho từ vựng của bạn
             </h2>
             <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'} mt-1`}>
-              Tổng cộng {filteredVocabulary.length} từ vựng
+              Tổng cộng {vocabulary.length} từ vựng
             </p>
           </div>
           <Button
@@ -200,77 +184,64 @@ export const VocabularyModal: React.FC<VocabularyModalProps> = ({ isOpen, onClos
         {/* Vocabulary Grid - Scrollable Area */}
         <div className="flex-1 overflow-hidden">
           <div className="h-full overflow-y-auto p-6 scrollbar-auto-hide">
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-              {filteredVocabulary.map((word, index) => (
-                <div
-                  key={`${word.term}-${index}`}
-                  className={`p-5 rounded-xl ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-white hover:bg-gray-50'} border ${darkMode ? 'border-gray-600' : 'border-gray-200'} shadow-sm hover:shadow-lg transition-all duration-300 transform hover:scale-[1.02] animate-fadeIn group cursor-pointer`}
-                  style={{ animationDelay: `${index * 50}ms` }}
-                >
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex-1">
-                      <h3 className="font-bold text-lg mb-1 group-hover:text-green-600 transition-colors duration-200">
-                        {word.term}
-                      </h3>
-                      <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'} font-mono`}>
-                        [{word.pronunciation}]
-                      </p>
+            {loading ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                {[...Array(6)].map((_, index) => (
+                  <div
+                    key={index}
+                    className={`p-5 rounded-xl ${darkMode ? 'bg-gray-700' : 'bg-white'} border ${darkMode ? 'border-gray-600' : 'border-gray-200'} shadow-sm`}
+                  >
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex-1">
+                        <Skeleton className="h-6 w-3/4 mb-2" />
+                        <Skeleton className="h-4 w-1/2" />
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <Skeleton className="h-5 w-8" />
+                        <Skeleton className="h-5 w-12" />
+                      </div>
                     </div>
-                    <div className="flex flex-col items-end gap-2">
-                      <Badge className="bg-green-100 text-green-800 hover:bg-green-200 transition-colors duration-200">
-                        {word.count}x
-                      </Badge>
-                      <Badge className={`text-xs border ${getDifficultyColor(word.difficulty)}`}>
-                        {getDifficultyLabel(word.difficulty)}
-                      </Badge>
-                    </div>
-                  </div>
-                  
-                  <p className={`${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-3 font-medium`}>
-                    {word.meaning}
-                  </p>
-                  
-                  {word.example && (
-                    <div className={`p-3 rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-gray-50'} mb-3`}>
-                      <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'} italic`}>
-                        "{word.example}"
-                      </p>
-                    </div>
-                  )}
-                  
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="text-xs">
-                        {word.category}
-                      </Badge>
-                      <span className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-                        {new Date(word.dateAdded).toLocaleDateString('vi-VN')}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 hover:bg-green-100 hover:text-green-600 transition-all duration-200 hover:scale-110"
-                        title="Phát âm"
-                      >
-                        <i className="fas fa-volume-up text-sm"></i>
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 hover:bg-orange-100 hover:text-orange-600 transition-all duration-200 hover:scale-110"
-                        title="Thêm vào ôn tập"
-                      >
-                        <i className="fas fa-bookmark text-sm"></i>
-                      </Button>
+                    <Skeleton className="h-4 w-full mb-3" />
+                    <Skeleton className="h-16 w-full mb-3" />
+                    <div className="flex items-center justify-between">
+                      <Skeleton className="h-4 w-20" />
+                      <div className="flex gap-2">
+                        <Skeleton className="h-8 w-8 rounded" />
+                        <Skeleton className="h-8 w-8 rounded" />
+                      </div>
                     </div>
                   </div>
+                ))}
+              </div>
+            ) : error ? (
+              <div className="text-center py-12">
+                <div className={`text-6xl ${darkMode ? 'text-gray-600' : 'text-gray-300'} mb-4`}>
+                  <i className="fas fa-exclamation-triangle"></i>
                 </div>
-              ))}
-            </div>
-            
-            {filteredVocabulary.length === 0 && (
+                <h3 className={`text-xl font-medium ${darkMode ? 'text-gray-400' : 'text-gray-500'} mb-2`}>
+                  Lỗi tải dữ liệu
+                </h3>
+                <p className={`${darkMode ? 'text-gray-500' : 'text-gray-400'} mb-4`}>
+                  {error}
+                </p>
+                <Button onClick={() => fetchVocabulary()} variant="outline">
+                  <i className="fas fa-redo mr-2"></i>
+                  Thử lại
+                </Button>
+              </div>
+            ) : vocabulary.length === 0 ? (
+              <div className="text-center py-12">
+                <div className={`text-6xl ${darkMode ? 'text-gray-600' : 'text-gray-300'} mb-4`}>
+                  <i className="fas fa-book-open"></i>
+                </div>
+                <h3 className={`text-xl font-medium ${darkMode ? 'text-gray-400' : 'text-gray-500'} mb-2`}>
+                  Chưa có từ vựng nào
+                </h3>
+                <p className={`${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                  Bắt đầu học để xây dựng kho từ vựng của bạn!
+                </p>
+              </div>
+            ) : filteredVocabulary.length === 0 ? (
               <div className="text-center py-12">
                 <div className={`text-6xl ${darkMode ? 'text-gray-600' : 'text-gray-300'} mb-4`}>
                   <i className="fas fa-search"></i>
@@ -281,6 +252,83 @@ export const VocabularyModal: React.FC<VocabularyModalProps> = ({ isOpen, onClos
                 <p className={`${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
                   Thử thay đổi từ khóa tìm kiếm hoặc bộ lọc
                 </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                {filteredVocabulary.map((word, index) => (
+                  <div
+                    key={word.id}
+                    className={`p-5 rounded-xl ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-white hover:bg-gray-50'} border ${darkMode ? 'border-gray-600' : 'border-gray-200'} shadow-sm hover:shadow-lg transition-all duration-300 transform hover:scale-[1.02] animate-fadeIn group cursor-pointer`}
+                    style={{ animationDelay: `${index * 50}ms` }}
+                  >
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex-1">
+                        <h3 className="font-bold text-lg mb-1 group-hover:text-green-600 transition-colors duration-200">
+                          {word.term}
+                        </h3>
+                        {word.pronunciation && (
+                          <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'} font-mono`}>
+                            [{word.pronunciation}]
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex flex-col items-end gap-2">
+                        <Badge className="bg-green-100 text-green-800 hover:bg-green-200 transition-colors duration-200">
+                          {word.usage_count}x
+                        </Badge>
+                        <Badge className={`text-xs border ${getMasteryColor(word.mastery_level)}`}>
+                          {getMasteryLabel(word.mastery_level)}
+                        </Badge>
+                      </div>
+                    </div>
+                    
+                    <p className={`${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-3 font-medium`}>
+                      {word.meaning}
+                    </p>
+                    
+                    {word.example_sentence && (
+                      <div className={`p-3 rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-gray-50'} mb-3`}>
+                        <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'} italic`}>
+                          "{word.example_sentence}"
+                        </p>
+                        {word.example_translation && (
+                          <p className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-500'} mt-1`}>
+                            {word.example_translation}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                    
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-xs">
+                          {word.category}
+                        </Badge>
+                        <span className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                          {new Date(word.created_at).toLocaleDateString('vi-VN')}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 hover:bg-green-100 hover:text-green-600 transition-all duration-200 hover:scale-110"
+                          title="Phát âm"
+                        >
+                          <i className="fas fa-volume-up text-sm"></i>
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 hover:bg-orange-100 hover:text-orange-600 transition-all duration-200 hover:scale-110"
+                          title="Thêm vào ôn tập"
+                        >
+                          <i className="fas fa-bookmark text-sm"></i>
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>

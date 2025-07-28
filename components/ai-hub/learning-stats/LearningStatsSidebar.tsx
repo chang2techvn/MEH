@@ -9,41 +9,16 @@ import {
 } from "@/components/ui/tooltip";
 import { VocabularyModal } from './VocabularyModal';
 import { GoalModal } from './GoalModal';
+import { GoalProgressModal } from './GoalProgressModal';
+import { GoalsListModal } from './GoalsListModal';
+import { useLearningGoals, useVocabulary, useStudyStreaks, LearningGoal } from '@/hooks/use-learning-goals';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface LearningStatsSidebarProps {
   darkMode: boolean;
   collapsed?: boolean;
   onCollapseToggle?: () => void;
 }
-
-interface Goal {
-  id: string;
-  title: string;
-  category: 'vocabulary' | 'grammar' | 'speaking' | 'listening' | 'reading' | 'writing';
-  target: number;
-  current: number;
-  unit: string;
-  deadline: string;
-  priority: 'low' | 'medium' | 'high';
-  completed: boolean;
-}
-
-// Learning stats data
-const learningStats = {
-  vocabulary: 75,
-  grammar: 68,
-  speaking: 82,
-  listening: 71
-};
-
-// Recent vocabulary data
-const recentVocabulary = [
-  { term: "Conference", meaning: "hội nghị", pronunciation: "ˈkɒnfərəns", count: 4 },
-  { term: "Presentation", meaning: "bài thuyết trình", pronunciation: "ˌprezənˈteɪʃən", count: 3 },
-  { term: "Achievement", meaning: "thành tựu", pronunciation: "əˈtʃiːvmənt", count: 2 },
-  { term: "Opportunity", meaning: "cơ hội", pronunciation: "ˌɒpəˈtjuːnɪti", count: 5 },
-  { term: "Development", meaning: "phát triển", pronunciation: "dɪˈveləpmənt", count: 7 }
-];
 
 export const LearningStatsSidebar: React.FC<LearningStatsSidebarProps> = ({ 
   darkMode, 
@@ -52,83 +27,56 @@ export const LearningStatsSidebar: React.FC<LearningStatsSidebarProps> = ({
 }) => {
   const [isVocabularyModalOpen, setIsVocabularyModalOpen] = useState(false);
   const [isGoalModalOpen, setIsGoalModalOpen] = useState(false);
-  const [goals, setGoals] = useState<Goal[]>([
-    {
-      id: '1',
-      title: 'Học 10 từ vựng mới mỗi ngày',
-      category: 'vocabulary',
-      target: 10,
-      current: 8,
-      unit: 'từ',
-      deadline: '2025-06-30',
-      priority: 'high',
-      completed: false
-    },
-    {
-      id: '2',
-      title: 'Luyện nói 30 phút mỗi ngày',
-      category: 'speaking',
-      target: 30,
-      current: 30,
-      unit: 'phút',
-      deadline: '2025-06-30',
-      priority: 'medium',
-      completed: true
-    },
-    {
-      id: '3',
-      title: 'Hoàn thành 5 bài tập ngữ pháp',
-      category: 'grammar',
-      target: 5,
-      current: 2,
-      unit: 'bài',
-      deadline: '2025-06-25',
-      priority: 'medium',
-      completed: false
+  const [isGoalsListModalOpen, setIsGoalsListModalOpen] = useState(false);
+  const [isProgressModalOpen, setIsProgressModalOpen] = useState(false);
+  const [selectedGoal, setSelectedGoal] = useState<LearningGoal | null>(null);
+  
+  // Use real database hooks
+  const { goals, loading: goalsLoading, createGoal, updateGoalProgress } = useLearningGoals();
+  const { recentVocabulary, loading: vocabLoading } = useVocabulary();
+  const { streaks, loading: streaksLoading } = useStudyStreaks();
+
+  const handleProgressUpdate = async (goalId: string, progressData: any) => {
+    await updateGoalProgress(goalId, progressData);
+    setIsProgressModalOpen(false);
+    setSelectedGoal(null);
+  };
+
+  const handleGoalClick = (goal: LearningGoal) => {
+    if (goal.current < goal.target) {
+      setSelectedGoal(goal);
+      setIsProgressModalOpen(true);
     }
-  ]);
-
-  const handleSaveGoal = (newGoalData: Omit<Goal, 'id' | 'current' | 'completed'>) => {
-    const newGoal: Goal = {
-      ...newGoalData,
-      id: Date.now().toString(),
-      current: 0,
-      completed: false
-    };
-    setGoals(prev => [...prev, newGoal]);
   };
 
-  const toggleGoalCompletion = (goalId: string) => {
-    setGoals(prev => prev.map(goal => 
-      goal.id === goalId 
-        ? { ...goal, completed: !goal.completed, current: goal.completed ? 0 : goal.target }
-        : goal
-    ));
+  const handleSaveGoal = async (newGoalData: any) => {
+    await createGoal(newGoalData);
+    setIsGoalModalOpen(false);
+    // Goals sẽ được tự động cập nhật thông qua hook
   };
 
-  const deleteGoal = (goalId: string) => {
-    setGoals(prev => prev.filter(goal => goal.id !== goalId));
+  const handleCreateNewGoal = () => {
+    // Không tắt GoalsListModal, chỉ mở GoalModal
+    setIsGoalModalOpen(true);
   };
 
-  const getCategoryIcon = (category: Goal['category']) => {
-    const icons = {
-      vocabulary: 'fa-book',
-      grammar: 'fa-language',
-      speaking: 'fa-microphone',
-      listening: 'fa-headphones',
-      reading: 'fa-book-open',
-      writing: 'fa-pen'
-    };
-    return icons[category] || 'fa-book';
+  const handleGoalClickFromList = (goal: LearningGoal) => {
+    setIsGoalsListModalOpen(false);
+    if (goal.current < goal.target) {
+      setSelectedGoal(goal);
+      setIsProgressModalOpen(true);
+    }
   };
 
-  const getPriorityColor = (priority: Goal['priority']) => {
-    const colors = {
+  const getCategoryIcon = () => 'fa-book';
+
+  const getPriorityColor = (priority: string) => {
+    const colors: Record<string, string> = {
       low: 'text-gray-500',
       medium: 'text-yellow-500',
       high: 'text-red-500'
     };
-    return colors[priority];
+    return colors[priority] || 'text-gray-500';
   };
 
   return (
@@ -174,33 +122,53 @@ export const LearningStatsSidebar: React.FC<LearningStatsSidebarProps> = ({
                 </Button>
               </div>
               <div className={`max-h-64 overflow-y-auto pr-2 scrollbar-auto-hide`}>
-                <div className="space-y-3">
-                  {recentVocabulary.map((word, index) => (
-                    <div 
-                      key={index} 
-                      className={`p-3 rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-white'} flex items-center justify-between shadow-sm transition-all duration-200 hover:scale-[1.02] hover:shadow-md`}
-                    >
-                      <div className="flex-1 min-w-0">
-                        <div className="font-medium text-sm sm:text-base">{word.term}</div>
-                        <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'} font-mono mb-1`}>
-                          [{word.pronunciation}]
+                {vocabLoading ? (
+                  <div className="space-y-3">
+                    {[...Array(3)].map((_, index) => (
+                      <div key={index} className={`p-3 rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-white'} shadow-sm`}>
+                        <Skeleton className="h-4 w-3/4 mb-2" />
+                        <Skeleton className="h-3 w-1/2 mb-1" />
+                        <Skeleton className="h-3 w-2/3" />
+                      </div>
+                    ))}
+                  </div>
+                ) : recentVocabulary.length === 0 ? (
+                  <div className={`text-center py-8 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                    <i className="fas fa-book-open text-2xl mb-2 opacity-50"></i>
+                    <p className="text-sm">No vocabulary entries yet</p>
+                    <p className="text-xs mt-1">Start learning to see your progress!</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {recentVocabulary.map((word) => (
+                      <div 
+                        key={word.id} 
+                        className={`p-3 rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-white'} flex items-center justify-between shadow-sm transition-all duration-200 hover:scale-[1.02] hover:shadow-md`}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-sm sm:text-base">{word.term}</div>
+                          {word.pronunciation && (
+                            <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'} font-mono mb-1`}>
+                              [{word.pronunciation}]
+                            </div>
+                          )}
+                          <div className={`text-xs sm:text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'} line-clamp-1`}>{word.meaning}</div>
                         </div>
-                        <div className={`text-xs sm:text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'} line-clamp-1`}>{word.meaning}</div>
+                        <div className="ml-3 flex flex-col items-end gap-1">
+                          <Badge className="bg-orange-100 text-orange-800 hover:bg-orange-200 text-xs">
+                            {word.usage_count}x
+                          </Badge>
+                          <button 
+                            className={`text-xs ${darkMode ? 'text-gray-400 hover:text-orange-400' : 'text-gray-500 hover:text-orange-600'} transition-colors duration-200`}
+                            title="Phát âm"
+                          >
+                            <i className="fas fa-volume-up"></i>
+                          </button>
+                        </div>
                       </div>
-                      <div className="ml-3 flex flex-col items-end gap-1">
-                        <Badge className="bg-orange-100 text-orange-800 hover:bg-orange-200 text-xs">
-                          {word.count}x
-                        </Badge>
-                        <button 
-                          className={`text-xs ${darkMode ? 'text-gray-400 hover:text-orange-400' : 'text-gray-500 hover:text-orange-600'} transition-colors duration-200`}
-                          title="Phát âm"
-                        >
-                          <i className="fas fa-volume-up"></i>
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
               <Button 
                 variant="ghost" 
@@ -220,7 +188,7 @@ export const LearningStatsSidebar: React.FC<LearningStatsSidebarProps> = ({
                   <i className="fas fa-flag mr-2 text-amber-500"></i>
                   Learning Goals
                   <Badge className="ml-2 bg-amber-100 text-amber-800 text-xs">
-                    {goals.filter(g => g.completed).length}/{goals.length}
+                    {goals.filter(g => g.current >= g.target).length}/{goals.length}
                   </Badge>
                 </h3>
                 <Button
@@ -233,70 +201,95 @@ export const LearningStatsSidebar: React.FC<LearningStatsSidebarProps> = ({
                 </Button>
               </div>
               <div className="space-y-3 max-h-64 overflow-y-auto scrollbar-auto-hide">
-                {goals.map((goal) => (
-                  <div 
-                    key={goal.id}
-                    className={`p-3 rounded-lg border transition-all duration-200 hover:shadow-md ${
-                      goal.completed 
-                        ? `${darkMode ? 'bg-green-900/20 border-green-700' : 'bg-green-50 border-green-200'} opacity-75`
-                        : `${darkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-200'}`
-                    }`}
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-start space-x-3 flex-1">
-                        <button 
-                          onClick={() => toggleGoalCompletion(goal.id)}
-                          className={`w-5 h-5 rounded-full border-2 flex items-center justify-center mt-0.5 transition-all duration-200 hover:scale-110 ${
-                            goal.completed 
-                              ? 'bg-green-500 border-green-500 text-white' 
-                              : `${darkMode ? 'border-gray-500 hover:border-green-400' : 'border-gray-300 hover:border-green-500'}`
-                          }`}
-                        >
-                          {goal.completed && <i className="fas fa-check text-xs"></i>}
-                        </button>
-                        <div className="flex-1 min-w-0">
-                          <div className={`font-medium text-sm ${goal.completed ? 'line-through opacity-75' : ''}`}>
-                            {goal.title}
-                          </div>
-                          <div className="flex items-center space-x-2 mt-1">
-                            <div className={`w-4 h-4 rounded bg-gradient-to-r ${getCategoryIcon(goal.category) === 'fa-book' ? 'from-blue-500 to-indigo-500' : getCategoryIcon(goal.category) === 'fa-language' ? 'from-blue-500 to-indigo-500' : getCategoryIcon(goal.category) === 'fa-microphone' ? 'from-orange-500 to-red-500' : 'from-purple-500 to-pink-500'} flex items-center justify-center`}>
-                              <i className={`fas ${getCategoryIcon(goal.category)} text-white text-xs`}></i>
+                {goalsLoading ? (
+                  <div className="space-y-3">
+                    {[...Array(3)].map((_, index) => (
+                      <div key={index} className={`p-3 rounded-lg border ${darkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-200'}`}>
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-start space-x-3 flex-1">
+                            <Skeleton className="w-5 h-5 rounded-full" />
+                            <div className="flex-1">
+                              <Skeleton className="h-4 w-3/4 mb-2" />
+                              <Skeleton className="h-3 w-1/2 mb-2" />
+                              <Skeleton className="h-1.5 w-full" />
                             </div>
-                            <span className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                              {goal.current}/{goal.target} {goal.unit}
-                            </span>
-                            <i className={`fas fa-flag text-xs ${getPriorityColor(goal.priority)}`}></i>
-                          </div>
-                          <div className={`w-full h-1.5 ${darkMode ? 'bg-gray-600' : 'bg-gray-200'} rounded-full mt-2`}>
-                            <div 
-                              className={`h-full rounded-full transition-all duration-300 ${
-                                goal.completed ? 'bg-green-500' : 'bg-gradient-to-r from-blue-500 to-purple-500'
-                              }`}
-                              style={{ width: `${Math.min((goal.current / goal.target) * 100, 100)}%` }}
-                            ></div>
                           </div>
                         </div>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => deleteGoal(goal.id)}
-                        className={`!rounded-button p-2 transition-all duration-200 hover:bg-red-500/10 ${darkMode ? 'text-gray-300 hover:text-red-500' : 'text-gray-600 hover:text-red-600'}`}
-                        title="Xóa mục tiêu"
-                      >
-                        <i className="fas fa-trash-alt"></i>
-                      </Button>
-                    </div>
+                    ))}
                   </div>
-                ))}
+                ) : goals.length === 0 ? (
+                  <div className={`text-center py-8 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                    <i className="fas fa-flag text-2xl mb-2 opacity-50"></i>
+                    <p className="text-sm">No learning goals yet</p>
+                    <p className="text-xs mt-1">Create your first goal to get started!</p>
+                  </div>
+                ) : (
+                  goals.map((goal) => {
+                    const isCompleted = goal.current >= goal.target;
+                    
+                    return (
+                      <div 
+                        key={goal.id}
+                        className={`p-3 rounded-lg border transition-all duration-200 hover:shadow-md cursor-pointer ${
+                          isCompleted 
+                            ? `${darkMode ? 'bg-green-900/20 border-green-700' : 'bg-green-50 border-green-200'} opacity-90`
+                            : `${darkMode ? 'bg-gray-800 border-gray-600 hover:bg-gray-750' : 'bg-white border-gray-200 hover:bg-gray-50'}`
+                        }`}
+                        onClick={() => handleGoalClick(goal)}
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-start space-x-3 flex-1">
+                            {/* Status Icon */}
+                            <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center mt-0.5 transition-all duration-200 ${
+                              isCompleted 
+                                ? 'bg-green-500 border-green-500 text-white' 
+                                : `${darkMode ? 'border-gray-500' : 'border-gray-300'}`
+                            }`}>
+                              {isCompleted && <i className="fas fa-check text-xs"></i>}
+                            </div>
+                            
+                            <div className="flex-1 min-w-0">
+                              <div className={`font-medium text-sm flex items-center ${isCompleted ? 'line-through opacity-75' : ''}`}>
+                                {goal.title}
+                                {isCompleted && (
+                                  <Badge className="ml-2 bg-green-100 text-green-800 text-xs">
+                                    Completed
+                                  </Badge>
+                                )}
+                              </div>
+                              <div className="flex items-center space-x-2 mt-1">
+                                <div className="w-4 h-4 rounded bg-gradient-to-r from-amber-500 to-orange-500 flex items-center justify-center">
+                                  <i className="fas fa-book text-white text-xs"></i>
+                                </div>
+                                <span className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                  {goal.current}/{goal.target} {goal.unit}
+                                </span>
+                                <i className={`fas fa-flag text-xs ${getPriorityColor(goal.priority)}`}></i>
+                              </div>
+                              <div className={`w-full h-1.5 ${darkMode ? 'bg-gray-600' : 'bg-gray-200'} rounded-full mt-2`}>
+                                <div 
+                                  className={`h-full rounded-full transition-all duration-300 ${
+                                    isCompleted ? 'bg-green-500' : 'bg-gradient-to-r from-amber-500 to-orange-500'
+                                  }`}
+                                  style={{ width: `${Math.min((goal.current / goal.target) * 100, 100)}%` }}
+                                ></div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
               </div>
               <Button 
                 variant="ghost" 
                 className={`w-full mt-3 text-sm rounded-xl transition-all duration-200 group ${darkMode ? 'hover:bg-gray-700 hover:text-amber-400' : 'hover:bg-amber-100 hover:text-amber-700'} transform hover:scale-[1.02]`}
-                onClick={() => setIsGoalModalOpen(true)}
+                onClick={() => setIsGoalsListModalOpen(true)}
               >
-                <i className="fas fa-plus mr-2 group-hover:rotate-90 transition-transform duration-200"></i>
-                Add Goal
+                <i className="fas fa-eye mr-2 group-hover:scale-110 transition-transform duration-200"></i>
+                View All Goals
               </Button>
             </div>
           </div>
@@ -352,12 +345,35 @@ export const LearningStatsSidebar: React.FC<LearningStatsSidebarProps> = ({
         darkMode={darkMode}
       />
 
+      <GoalsListModal
+        isOpen={isGoalsListModalOpen}
+        onClose={() => setIsGoalsListModalOpen(false)}
+        darkMode={darkMode}
+        goals={goals}
+        onCreateNew={handleCreateNewGoal}
+        onGoalClick={handleGoalClickFromList}
+      />
+
+      {/* GoalModal should render after GoalsListModal to appear on top */}
       <GoalModal
         isOpen={isGoalModalOpen}
         onClose={() => setIsGoalModalOpen(false)}
         darkMode={darkMode}
         onSave={handleSaveGoal}
       />
+
+      {selectedGoal && (
+        <GoalProgressModal
+          isOpen={isProgressModalOpen}
+          onClose={() => {
+            setIsProgressModalOpen(false);
+            setSelectedGoal(null);
+          }}
+          goal={selectedGoal}
+          darkMode={darkMode}
+          onProgress={handleProgressUpdate}
+        />
+      )}
     </div>
   );
 };
