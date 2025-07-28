@@ -121,8 +121,8 @@ export default function ConversationList({
             return (
               <motion.div
                 key={conversation.id}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
+                
+                
                 className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors ${
                   isActive ? "bg-primary/10 dark:bg-primary/20" : "hover:bg-muted"
                 }`}

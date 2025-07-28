@@ -99,8 +99,7 @@ export default function MainHeader({ mobileMenuOpen, setMobileMenuOpen }: MainHe
               <motion.button
                 onClick={() => setMobileMenuOpen(true)}
                 className="flex items-center p-2 rounded-lg transition-colors hover:bg-white/10 dark:hover:bg-gray-800/10"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+                
               >
                 <motion.div
                   className="relative"

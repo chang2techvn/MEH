@@ -494,7 +494,7 @@ export function AIChatBox({ onClose, onMinimize, buttonPosition, initialPosition
                 type="submit"
                 size="icon"
                 disabled={isLoading || !input.trim()}
-                className="absolute right-3 bottom-3 h-9 w-9 rounded-full hover:from-blue-600 hover:via-purple-600 hover:to-pink-600 transition-all duration-300 disabled:opacity-40 shadow-xl hover:shadow-2xl hover:scale-105 border-2 border-white dark:border-gray-800"
+                className="absolute right-3 bottom-3 h-9 w-9 rounded-full hover:from-blue-600 hover:via-purple-600 hover:to-pink-600 transition-all duration-300 disabled:opacity-40 shadow-xl hover:shadow-2xl border-2 border-white dark:border-gray-800"
               >
                 {isLoading ? (
                   <Loader2 className="h-4 w-4 animate-spin text-white" />

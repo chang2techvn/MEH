@@ -74,7 +74,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {!collapsed && (
             <div className="flex items-center space-x-3 min-w-0 flex-1">
               <div className="relative">
-                <div className="w-10 h-10 bg-gradient-to-br from-neo-mint to-purist-blue rounded-xl flex items-center justify-center shadow-lg transform hover:scale-105 transition-all duration-300 flex-shrink-0">
+                <div className="w-10 h-10 bg-gradient-to-br from-neo-mint to-purist-blue rounded-xl flex items-center justify-center shadow-lg transition-all duration-300 flex-shrink-0">
                   <i className="fas fa-robot text-white text-lg"></i>
                 </div>
                 <div className="absolute -top-1 -right-1 w-4 h-4 bg-vibrant-orange rounded-full border-2 border-white animate-pulse"></div>
@@ -276,7 +276,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     variant="outline"
                     size="icon"
                     onClick={onCollapseToggle}
-                    className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full border-2 shadow-lg transition-all duration-300 hover:scale-110 ${
+                    className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full border-2 shadow-lg transition-all duration-300 ${
                       darkMode 
                         ? 'bg-gray-800/90 border-gray-600 hover:bg-gray-700 text-gray-300' 
                         : 'bg-white/90 border-gray-300 hover:bg-gray-50 text-gray-600'

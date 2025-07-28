@@ -143,7 +143,7 @@ export const LearningStatsSidebar: React.FC<LearningStatsSidebarProps> = ({
                     {recentVocabulary.map((word) => (
                       <div 
                         key={word.id} 
-                        className={`p-3 rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-white'} flex items-center justify-between shadow-sm transition-all duration-200 hover:scale-[1.02] hover:shadow-md`}
+                        className={`p-3 rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-white'} flex items-center justify-between shadow-sm transition-all duration-200 hover:shadow-md`}
                       >
                         <div className="flex-1 min-w-0">
                           <div className="font-medium text-sm sm:text-base">{word.term}</div>
@@ -172,7 +172,7 @@ export const LearningStatsSidebar: React.FC<LearningStatsSidebarProps> = ({
               </div>
               <Button 
                 variant="ghost" 
-                className={`w-full mt-3 text-sm rounded-xl transition-all duration-200 ${darkMode ? 'hover:bg-gray-700 hover:text-orange-400' : 'hover:bg-orange-100 hover:text-orange-600'} transform hover:scale-[1.02]`}
+                className={`w-full mt-3 text-sm rounded-xl transition-all duration-200 ${darkMode ? 'hover:bg-gray-700 hover:text-orange-400' : 'hover:bg-orange-100 hover:text-orange-600'}`}
                 onClick={() => setIsVocabularyModalOpen(true)}
               >
                 <i className="fas fa-eye mr-2"></i>
@@ -285,10 +285,10 @@ export const LearningStatsSidebar: React.FC<LearningStatsSidebarProps> = ({
               </div>
               <Button 
                 variant="ghost" 
-                className={`w-full mt-3 text-sm rounded-xl transition-all duration-200 group ${darkMode ? 'hover:bg-gray-700 hover:text-amber-400' : 'hover:bg-amber-100 hover:text-amber-700'} transform hover:scale-[1.02]`}
+                className={`w-full mt-3 text-sm rounded-xl transition-all duration-200 group ${darkMode ? 'hover:bg-gray-700 hover:text-amber-400' : 'hover:bg-amber-100 hover:text-amber-700'}`}
                 onClick={() => setIsGoalsListModalOpen(true)}
               >
-                <i className="fas fa-eye mr-2 group-hover:scale-110 transition-transform duration-200"></i>
+                <i className="fas fa-eye mr-2 transition-transform duration-200"></i>
                 View All Goals
               </Button>
             </div>
@@ -300,7 +300,7 @@ export const LearningStatsSidebar: React.FC<LearningStatsSidebarProps> = ({
         {!collapsed && (
           <div className={`p-4 border-t ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
             <Button 
-              className="w-full bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white !rounded-button whitespace-nowrap cursor-pointer shadow-md transform hover:scale-105 transition-all duration-300"
+              className="w-full bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white !rounded-button whitespace-nowrap cursor-pointer shadow-md transition-all duration-300"
             >
               <i className="fas fa-chart-line mr-2"></i>
               Xem báo cáo chi tiết
@@ -320,7 +320,7 @@ export const LearningStatsSidebar: React.FC<LearningStatsSidebarProps> = ({
                     variant="outline"
                     size="icon"
                     onClick={onCollapseToggle}
-                    className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full border-2 shadow-lg transition-all duration-300 hover:scale-110 ${
+                    className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full border-2 shadow-lg transition-all duration-300 ${
                       darkMode 
                         ? 'bg-gray-800/90 border-gray-600 hover:bg-gray-700 text-gray-300' 
                         : 'bg-white/90 border-gray-300 hover:bg-gray-50 text-gray-600'

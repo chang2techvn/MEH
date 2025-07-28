@@ -45,8 +45,7 @@ export default function MinimizedChatBar() {
                 transition={{ duration: 0.15 }}
                 className="relative cursor-pointer group"
                 onClick={() => maximizeChatWindow(conversationId)}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+                
               >
                 <div className="relative">
                   <Avatar className="h-10 w-10 border-2 border-white dark:border-gray-900 shadow-md group-hover:ring-2 group-hover:ring-neo-mint dark:group-hover:ring-purist-blue transition-all">

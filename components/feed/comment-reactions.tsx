@@ -70,8 +70,8 @@ export function CommentReactions({
               <Tooltip key={reaction.label}>
                 <TooltipTrigger asChild>
                   <motion.button
-                    whileHover={{ scale: 1.2 }}
-                    whileTap={{ scale: 0.9 }}
+                    
+                    
                     className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-white/20 dark:hover:bg-gray-700/20"
                     onClick={() => onReaction(reaction.emoji)}
                     initial={{ opacity: 0, scale: 0.5 }}

@@ -30,7 +30,7 @@ export const ChatHistoryItem: React.FC<ChatHistoryItemProps> = ({
   return (
     <div
       onClick={handleClick}
-      className={`p-3 sm:p-4 rounded-xl mb-2 sm:mb-3 cursor-pointer transform hover:scale-[1.02] transition-all duration-300 relative ${
+      className={`p-3 sm:p-4 rounded-xl mb-2 sm:mb-3 cursor-pointer transition-all duration-300 relative ${
         isActive 
           ? (darkMode ? 'bg-blue-900/30 border border-blue-800' : 'bg-blue-50 border border-blue-200')
           : (darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100')

@@ -105,7 +105,7 @@ export const VocabularyModal: React.FC<VocabularyModalProps> = ({ isOpen, onClos
             variant="ghost"
             size="icon"
             onClick={onClose}
-            className={`h-10 w-10 rounded-full ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} transition-all duration-200 hover:scale-110`}
+            className={`h-10 w-10 rounded-full ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} transition-all duration-200`}
           >
             <i className="fas fa-times text-lg"></i>
           </Button>
@@ -258,7 +258,7 @@ export const VocabularyModal: React.FC<VocabularyModalProps> = ({ isOpen, onClos
                 {filteredVocabulary.map((word, index) => (
                   <div
                     key={word.id}
-                    className={`p-5 rounded-xl ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-white hover:bg-gray-50'} border ${darkMode ? 'border-gray-600' : 'border-gray-200'} shadow-sm hover:shadow-lg transition-all duration-300 transform hover:scale-[1.02] animate-fadeIn group cursor-pointer`}
+                    className={`p-5 rounded-xl ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-white hover:bg-gray-50'} border ${darkMode ? 'border-gray-600' : 'border-gray-200'} shadow-sm hover:shadow-lg transition-all duration-300 animate-fadeIn group cursor-pointer`}
                     style={{ animationDelay: `${index * 50}ms` }}
                   >
                     <div className="flex items-start justify-between mb-3">
@@ -312,7 +312,7 @@ export const VocabularyModal: React.FC<VocabularyModalProps> = ({ isOpen, onClos
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 hover:bg-green-100 hover:text-green-600 transition-all duration-200 hover:scale-110"
+                          className="h-8 w-8 hover:bg-green-100 hover:text-green-600 transition-all duration-200"
                           title="Phát âm"
                         >
                           <i className="fas fa-volume-up text-sm"></i>
@@ -320,7 +320,7 @@ export const VocabularyModal: React.FC<VocabularyModalProps> = ({ isOpen, onClos
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 hover:bg-orange-100 hover:text-orange-600 transition-all duration-200 hover:scale-110"
+                          className="h-8 w-8 hover:bg-orange-100 hover:text-orange-600 transition-all duration-200"
                           title="Thêm vào ôn tập"
                         >
                           <i className="fas fa-bookmark text-sm"></i>
@@ -353,7 +353,7 @@ export const VocabularyModal: React.FC<VocabularyModalProps> = ({ isOpen, onClos
             </Button>
           </div>
           <Button
-            className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white transition-all duration-300 transform hover:scale-105 shadow-lg"
+            className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white transition-all duration-300 shadow-lg"
             onClick={onClose}
           >
             <i className="fas fa-check mr-2"></i>

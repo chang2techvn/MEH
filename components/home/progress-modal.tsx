@@ -124,7 +124,6 @@ export function ProgressModal({ isOpen, onClose }: ProgressModalProps) {
                                   ? "bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-600"
                                   : "bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-600"}
                           `}
-                          whileHover={{ scale: 1.05 }}
                           transition={{ type: "spring", stiffness: 400, damping: 10 }}
                           title={day.hasDaily ? `Daily challenge completed on ${day.date}` : day.isPast ? `Missed daily challenge on ${day.date}` : `Upcoming: ${day.date}`}
                         >
@@ -143,7 +142,6 @@ export function ProgressModal({ isOpen, onClose }: ProgressModalProps) {
               <div className="mt-4 pt-4 border-t border-white/20 dark:border-gray-700/20">
                 <div className="grid grid-cols-2 gap-3">
                   <motion.div 
-                    whileHover={{ scale: 1.03 }}
                     className="text-center p-3 bg-white/40 dark:bg-gray-800/40 rounded-2xl shadow-sm"
                   >
                     <p className="text-base sm:text-lg font-bold text-neo-mint dark:text-purist-blue" title={`${progressData.totalPoints} points`}>
@@ -152,7 +150,6 @@ export function ProgressModal({ isOpen, onClose }: ProgressModalProps) {
                     <p className="text-xs text-muted-foreground">Total Points</p>
                   </motion.div>
                   <motion.div 
-                    whileHover={{ scale: 1.03 }}
                     className="text-center p-3 bg-white/40 dark:bg-gray-800/40 rounded-2xl shadow-sm"
                   >
                     <p className="text-base sm:text-lg font-bold text-neo-mint dark:text-purist-blue" title={`${progressData.weeklyPoints} points this week`}>
@@ -161,7 +158,6 @@ export function ProgressModal({ isOpen, onClose }: ProgressModalProps) {
                     <p className="text-xs text-muted-foreground">Week Points</p>
                   </motion.div>
                   <motion.div 
-                    whileHover={{ scale: 1.03 }}
                     className="text-center p-3 bg-white/40 dark:bg-gray-800/40 rounded-2xl shadow-sm"
                   >
                     <p className="text-base sm:text-lg font-bold text-neo-mint dark:text-purist-blue" title={`${progressData.latestPostPoints} points from latest post`}>
@@ -170,7 +166,6 @@ export function ProgressModal({ isOpen, onClose }: ProgressModalProps) {
                     <p className="text-xs text-muted-foreground">Latest Post</p>
                   </motion.div>
                   <motion.div 
-                    whileHover={{ scale: 1.03 }}
                     className="text-center p-3 bg-white/40 dark:bg-gray-800/40 rounded-2xl shadow-sm"
                   >
                     <p className="text-base sm:text-lg font-bold text-neo-mint dark:text-purist-blue">

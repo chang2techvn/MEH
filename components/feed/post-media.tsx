@@ -159,16 +159,14 @@ export function PostMedia({
               className="absolute inset-0 flex items-center justify-center pointer-events-auto"
               initial={{ opacity: 0.2 }}
               animate={{ 
-                opacity: isHovered ? 0.7 : 0.2,
-                scale: isHovered ? 1.05 : 1
+                opacity: isHovered ? 0.7 : 0.2
               }}
               transition={{ duration: 0.2 }}
             >
               <motion.button
                 onClick={handlePlayButtonClick}
                 className="bg-black/30 hover:bg-black/50 text-white rounded-full p-3 backdrop-blur-sm transition-all duration-200 group"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+                
               >
                 <Play className="w-6 h-6 fill-white ml-0.5" />
               </motion.button>
@@ -237,7 +235,7 @@ export function PostMedia({
             <img
               src={imageUrls[0]}
               alt={content}
-              className="w-full h-auto object-contain rounded-xl hover:scale-105 transition-transform duration-300"
+              className="w-full h-auto object-contain rounded-xl transition-transform duration-300"
               loading="lazy"
             />
           </motion.div>
@@ -279,7 +277,7 @@ export function PostMedia({
                 <img
                   src={url}
                   alt={`${content} - Image ${index + 1}`}
-                  className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                  className="w-full h-full object-cover transition-transform duration-300"
                   loading="lazy"
                 />
               </div>

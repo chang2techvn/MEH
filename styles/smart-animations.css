@@ -9,33 +9,13 @@
   transform: translateY(-5px);
 }
 
-.hover-scale {
-  transition: transform 0.2s cubic-bezier(0.4, 0.0, 0.2, 1);
-}
-
-.hover-scale:hover {
-  transform: scale(1.05);
-}
-
-.hover-scale-small {
-  transition: transform 0.2s cubic-bezier(0.4, 0.0, 0.2, 1);
-}
-
-.hover-scale-small:hover {
-  transform: scale(1.1);
-}
-
 /* Respect user preferences */
 @media (prefers-reduced-motion: reduce) {
-  .hover-lift,
-  .hover-scale,
-  .hover-scale-small {
+  .hover-lift {
     transition: none;
   }
   
-  .hover-lift:hover,
-  .hover-scale:hover,
-  .hover-scale-small:hover {
+  .hover-lift:hover {
     transform: none;
   }
 }

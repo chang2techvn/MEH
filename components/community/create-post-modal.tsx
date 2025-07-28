@@ -196,7 +196,7 @@ export function CreatePostModal(props: CreatePostModalProps) {
                 transition={{ delay: 0.15 }}
               >
                 <motion.div
-                  whileHover={{ scale: 1.05 }}
+                  
                   transition={{ type: "spring", stiffness: 400, damping: 10 }}
                 >
                   <Avatar className="h-10 w-10 sm:h-12 sm:w-12 border-2 border-white dark:border-gray-800 shadow-md">
@@ -483,8 +483,8 @@ export function CreatePostModal(props: CreatePostModalProps) {
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <motion.button
-                            whileHover={{ scale: 1.1 }}
-                            whileTap={{ scale: 0.95 }}
+                            
+                            
                             transition={{ type: "spring", stiffness: 400, damping: 15 }}
                             className="h-8 w-8 sm:h-9 sm:w-9 md:h-10 md:w-10 rounded-full flex items-center justify-center bg-white dark:bg-gray-700 shadow-sm hover:shadow-md transition-all duration-200 border border-gray-200 dark:border-gray-600"
                             onClick={() => postFileInputRef.current?.click()}
@@ -515,8 +515,8 @@ export function CreatePostModal(props: CreatePostModalProps) {
                           <Popover open={showTagPeople} onOpenChange={setShowTagPeople}>
                             <PopoverTrigger asChild>
                               <motion.button
-                                whileHover={{ scale: 1.1 }}
-                                whileTap={{ scale: 0.95 }}
+                                
+                                
                                 transition={{ type: "spring", stiffness: 400, damping: 15 }}
                                 className="h-9 w-9 sm:h-10 sm:w-10 rounded-full flex items-center justify-center bg-white dark:bg-gray-700 shadow-sm hover:shadow-md transition-all duration-200 border border-gray-200 dark:border-gray-600"
                                 aria-label="Tag people"
@@ -565,8 +565,8 @@ export function CreatePostModal(props: CreatePostModalProps) {
                           <Popover open={showEmojiPicker} onOpenChange={setShowEmojiPicker}>
                             <PopoverTrigger asChild>
                               <motion.button
-                                whileHover={{ scale: 1.1 }}
-                                whileTap={{ scale: 0.95 }}
+                                
+                                
                                 transition={{ type: "spring", stiffness: 400, damping: 15 }}
                                 className="h-9 w-9 sm:h-10 sm:w-10 rounded-full flex items-center justify-center bg-white dark:bg-gray-700 shadow-sm hover:shadow-md transition-all duration-200 border border-gray-200 dark:border-gray-600"
                                 aria-label="Add feeling or activity"
@@ -637,8 +637,8 @@ export function CreatePostModal(props: CreatePostModalProps) {
                           <Popover open={showLocationPicker} onOpenChange={setShowLocationPicker}>
                             <PopoverTrigger asChild>
                               <motion.button
-                                whileHover={{ scale: 1.1 }}
-                                whileTap={{ scale: 0.95 }}
+                                
+                                
                                 transition={{ type: "spring", stiffness: 400, damping: 15 }}
                                 className="h-9 w-9 sm:h-10 sm:w-10 rounded-full flex items-center justify-center bg-white dark:bg-gray-700 shadow-sm hover:shadow-md transition-all duration-200 border border-gray-200 dark:border-gray-600"
                                 aria-label="Check in location"
@@ -699,8 +699,8 @@ export function CreatePostModal(props: CreatePostModalProps) {
                           <Popover>
                             <PopoverTrigger asChild>
                               <motion.button
-                                whileHover={{ scale: 1.1 }}
-                                whileTap={{ scale: 0.95 }}
+                                
+                                
                                 transition={{ type: "spring", stiffness: 400, damping: 15 }}
                                 className="h-9 w-9 sm:h-10 sm:w-10 rounded-full flex items-center justify-center bg-white dark:bg-gray-700 shadow-sm hover:shadow-md transition-all duration-200 border border-gray-200 dark:border-gray-600"
                                 aria-label="Add date"
@@ -754,8 +754,8 @@ export function CreatePostModal(props: CreatePostModalProps) {
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <motion.button
-                                whileHover={{ scale: 1.1 }}
-                                whileTap={{ scale: 0.95 }}
+                                
+                                
                                 transition={{ type: "spring", stiffness: 400, damping: 15 }}
                                 className="h-9 w-9 sm:h-10 sm:w-10 rounded-full flex items-center justify-center bg-white dark:bg-gray-700 shadow-sm hover:shadow-md transition-all duration-200 border border-gray-200 dark:border-gray-600"
                                 aria-label="More options"
@@ -842,7 +842,7 @@ export function CreatePostModal(props: CreatePostModalProps) {
                   ) : (
                     <motion.div
                       className="flex items-center justify-center gap-2"
-                      whileHover={{ scale: 1.02 }}
+                      
                       transition={{ type: "spring", stiffness: 400, damping: 10 }}
                     >
                       <Send className="h-4 w-4 mr-1" />

@@ -296,7 +296,7 @@ export function useNaturalConversation(selectedAIIds: string[]) {
         .from('natural_conversation_sessions')
         .insert({
           user_id: user.id,
-          title: title || `Cuộc trò chuyện với ${selectedAIIds.length} AI`,
+          title: title || `Conversation with ${selectedAIIds.length} people`,
           conversation_mode: 'natural_group',
           active_ai_ids: selectedAIIds,
           session_settings: {

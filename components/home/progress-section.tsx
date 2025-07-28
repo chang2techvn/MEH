@@ -115,7 +115,6 @@ export function ProgressSection() {
                             ? "bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-600"
                             : "bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-600"}
                     `}
-                    whileHover={{ scale: 1.05 }}
                     transition={{ type: "spring", stiffness: 400, damping: 10 }}
                     title={day.hasDaily ? `Daily challenge completed on ${day.date}` : day.isPast ? `Missed daily challenge on ${day.date}` : `Upcoming: ${day.date}`}
                   >

@@ -234,7 +234,7 @@ export default function AssignedTask({
                                     : "bg-white/10 dark:bg-gray-800/10 backdrop-blur-sm text-muted-foreground"
                               }`}
                               onClick={() => handleStepClick(step.id)}
-                              whileHover={{ scale: 1.05 }}
+                              
                               transition={{ type: "spring", stiffness: 400, damping: 10 }}
                             >
                               <div className="relative">

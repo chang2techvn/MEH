@@ -44,15 +44,6 @@
   transform: translateY(-2px) translateZ(0);
 }
 
-.hover-scale {
-  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  will-change: transform;
-}
-
-.hover-scale:hover {
-  transform: scale(1.02) translateZ(0);
-}
-
 /* Fade in animation for lazy loaded content */
 .fade-in {
   animation: fadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;

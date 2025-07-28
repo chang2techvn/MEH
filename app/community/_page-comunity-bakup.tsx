@@ -1890,7 +1890,7 @@
 //                                       key={emoji}
 //                                       variant="ghost"
 //                                       size="sm"
-//                                       className="text-lg p-1 h-auto hover:scale-110 transition-transform duration-200 hover:bg-white/10 rounded-xl min-w-0"
+//                                       className="text-lg p-1 h-auto transition-transform duration-200 hover:bg-white/10 rounded-xl min-w-0"
 //                                       onClick={() => handleStoryReaction(emoji)}
 //                                     >
 //                                       {emoji}

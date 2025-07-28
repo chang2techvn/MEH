@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Message, AICharacter } from '@/types/ai-hub.types';
@@ -123,7 +125,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message, ai, darkMode,
 
   return (
     <div 
-      className={`flex ${isUser ? 'justify-end' : 'justify-start'} message-slide-in px-2 sm:px-0 group`}
+      className={`flex ${isUser ? 'justify-end' : 'justify-start'} message-slide-in px-2 sm:px-3 group mb-4 sm:mb-6`}
       data-message-id={message.id}
     >
       {!isUser && ai && (
@@ -137,37 +139,173 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message, ai, darkMode,
           />
         </div>
       )}
-      <div className="max-w-[85%] sm:max-w-[75%] lg:max-w-[70%]">
+      <div className="max-w-[90%] sm:max-w-[85%] lg:max-w-[80%] xl:max-w-[75%]">
         {!isUser && ai && (
-          <div className="flex flex-col sm:flex-row sm:items-center mb-1 sm:mb-2 space-y-1 sm:space-y-0">
-            <div className="flex items-center flex-wrap gap-1 sm:gap-2">
-              <span className={`text-xs sm:text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{ai.name}</span>
+          <div className="flex flex-col sm:flex-row sm:items-center mb-2 sm:mb-3 space-y-1 sm:space-y-0">
+            <div className="flex items-center flex-wrap gap-2">
+              <span className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{ai.name}</span>
               <Badge variant="outline" className={`text-xs ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-50'}`}>
                 {ai.field}
               </Badge>
             </div>
-            <span className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'} sm:ml-2`}>
+            <span className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'} sm:ml-3`}>
               {formatTime(message.timestamp)}
             </span>
           </div>
         )}
         <div
-          className={`rounded-2xl p-3 sm:p-4 shadow-md ${
+          className={`rounded-2xl p-4 sm:p-5 shadow-md min-h-fit ${
             isUser
               ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white'
               : (darkMode ? 'bg-gray-700 border border-gray-600' : 'bg-white border border-gray-200')
-          } transform transition-transform duration-300 hover:scale-[1.01]`}
+          }`}
         >
           {message.type === 'text' && (
             <div>
               {isUser ? (
-                <div className="text-sm sm:text-base break-words">{message.content}</div>
+                <div className="text-base break-words leading-relaxed">{message.content}</div>
               ) : (
                 <div>
-                  <div 
-                    className="text-sm sm:text-base break-words"
-                    dangerouslySetInnerHTML={{ __html: highlightText(message.content, message.highlights) }} 
-                  />
+                  <div className="prose prose-sm dark:prose-invert max-w-none w-full overflow-hidden">
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                      components={{
+                        // Custom styling for markdown elements with ChatGPT-like typography
+                        strong: ({ children }) => (
+                          <strong className="text-orange-600 dark:text-orange-400 font-semibold">
+                            {children}
+                          </strong>
+                        ),
+                        em: ({ children }) => (
+                          <em className="text-blue-600 dark:text-blue-400">
+                            {children}
+                          </em>
+                        ),
+                        code: ({ children }) => (
+                          <code className="bg-gray-100 dark:bg-gray-700 text-orange-600 dark:text-orange-400 px-1.5 py-0.5 rounded text-sm font-mono">
+                            {children}
+                          </code>
+                        ),
+                        p: ({ children }) => (
+                          <p className="mb-4 leading-relaxed text-gray-700 dark:text-gray-300 text-base break-words">
+                            {children}
+                          </p>
+                        ),
+                        ul: ({ children }) => (
+                          <ul className="list-disc list-outside space-y-2 ml-6 my-4 text-gray-700 dark:text-gray-300 text-base leading-normal">
+                            {children}
+                          </ul>
+                        ),
+                        ol: ({ children }) => (
+                          <ol className="list-decimal list-outside space-y-2 ml-6 my-4 text-gray-700 dark:text-gray-300 text-base leading-normal">
+                            {children}
+                          </ol>
+                        ),
+                        li: ({ children }) => (
+                          <li className="leading-normal mb-1 pl-2">
+                            {children}
+                          </li>
+                        ),
+                        h1: ({ children }) => (
+                          <h1 className="text-2xl font-bold text-orange-600 dark:text-orange-400 mt-6 mb-4 break-words leading-tight">
+                            {children}
+                          </h1>
+                        ),
+                        h2: ({ children }) => (
+                          <h2 className="text-xl font-semibold text-orange-600 dark:text-orange-400 mt-5 mb-3 break-words leading-tight">
+                            {children}
+                          </h2>
+                        ),
+                        h3: ({ children }) => (
+                          <h3 className="text-lg font-medium text-orange-600 dark:text-orange-400 mt-4 mb-2 break-words leading-snug">
+                            {children}
+                          </h3>
+                        ),
+                        h4: ({ children }) => (
+                          <h4 className="text-base font-medium text-orange-600 dark:text-orange-400 mt-3 mb-2 break-words leading-normal">
+                            {children}
+                          </h4>
+                        ),
+                        blockquote: ({ children }) => (
+                          <blockquote className="border-l-4 border-orange-300 dark:border-orange-600 pl-4 py-3 bg-orange-50 dark:bg-orange-900/20 italic text-gray-700 dark:text-gray-300 my-4 text-base leading-relaxed">
+                            {children}
+                          </blockquote>
+                        ),
+                        // Add table support with professional styling
+                        table: ({ children }) => (
+                          <div className="overflow-x-auto my-6 border border-gray-200 dark:border-gray-600 rounded-lg shadow-sm">
+                            <table className="min-w-full border-collapse">
+                              {children}
+                            </table>
+                          </div>
+                        ),
+                        thead: ({ children }) => (
+                          <thead className="bg-orange-50 dark:bg-orange-900/30">
+                            {children}
+                          </thead>
+                        ),
+                        tbody: ({ children }) => (
+                          <tbody className="divide-y divide-gray-200 dark:divide-gray-600 bg-white dark:bg-gray-800">
+                            {children}
+                          </tbody>
+                        ),
+                        tr: ({ children }) => (
+                          <tr className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                            {children}
+                          </tr>
+                        ),
+                        th: ({ children }) => (
+                          <th className="px-4 py-3 text-left font-semibold text-orange-600 dark:text-orange-400 text-sm">
+                            {children}
+                          </th>
+                        ),
+                        td: ({ children }) => (
+                          <td className="px-4 py-3 text-gray-700 dark:text-gray-300 text-sm leading-normal">
+                            {children}
+                          </td>
+                        ),
+                        // Improved link support with professional styling
+                        a: ({ href, children }) => (
+                          <a
+                            href={href}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline decoration-2 underline-offset-2 break-words cursor-pointer transition-all duration-200 hover:decoration-blue-600 dark:hover:decoration-blue-400 text-base"
+                          >
+                            {children}
+                          </a>
+                        ),
+                        // Add strikethrough support (from remark-gfm)
+                        del: ({ children }) => (
+                          <del className="text-gray-500 dark:text-gray-400 line-through text-base">
+                            {children}
+                          </del>
+                        ),
+                        // Add task list support (from remark-gfm)
+                        input: ({ checked, ...props }) => (
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            disabled
+                            className="mr-2 accent-orange-500 scale-110"
+                            {...props}
+                          />
+                        ),
+                        // Enhanced code block support with professional styling
+                        pre: ({ children }) => (
+                          <pre className="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-4 rounded-lg overflow-x-auto my-5 text-sm font-mono leading-relaxed shadow-sm">
+                            {children}
+                          </pre>
+                        ),
+                        // Add horizontal rule support
+                        hr: () => (
+                          <hr className="border-0 border-t border-gray-300 dark:border-gray-600 my-8" />
+                        )
+                      }}
+                    >
+                      {message.content}
+                    </ReactMarkdown>
+                  </div>
                   {message.vocabulary && message.vocabulary.length > 0 && (
                     <div className={`mt-3 sm:mt-4 p-3 sm:p-4 ${darkMode ? 'bg-gradient-to-r from-orange-900/30 to-orange-900/30 border border-orange-800' : 'bg-gradient-to-r from-orange-50 to-orange-50 border border-orange-100'} rounded-xl`}>
                       <div className="flex items-center mb-2 sm:mb-3">

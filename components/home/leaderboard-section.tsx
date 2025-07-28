@@ -58,7 +58,6 @@ export function LeaderboardSection({ users = [], loading = false, onViewAll }: L
                 <motion.div
                   key={user.id || i}
                   className="flex items-center justify-between p-3 rounded-xl hover:bg-white/20 dark:hover:bg-gray-800/20 transition-colors cursor-pointer"
-                  whileHover={{ scale: 1.01, x: 3 }}
                   transition={{ type: "spring", stiffness: 400, damping: 10 }}
                 >
                   <div className="flex items-center gap-3">

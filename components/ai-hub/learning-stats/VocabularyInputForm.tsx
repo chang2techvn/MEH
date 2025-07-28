@@ -1,3 +1,4 @@
+/* eslint-disable bem/classname */
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -81,7 +82,7 @@ export const VocabularyInputForm: React.FC<VocabularyInputFormProps> = ({
   };
 
   return (
-    <div className="space-y-4 h-full flex flex-col">
+    <div className="space-y-0 flex flex-col">
       {/* Input Form */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
@@ -137,9 +138,9 @@ export const VocabularyInputForm: React.FC<VocabularyInputFormProps> = ({
         </div>
       </div>
       
-      {/* Error Message - Fixed height to prevent layout shift */}
+      {/* Non-duplicate Error Message - Fixed height to prevent layout shift */}
       <div className="h-6 flex items-start">
-        {error && (
+        {error && !error.includes('already exists') && (
           <div className="flex items-center gap-2 text-red-500 text-sm animate-in fade-in duration-200">
             <i className="fas fa-exclamation-circle"></i>
             <span>{error}</span>
@@ -147,20 +148,27 @@ export const VocabularyInputForm: React.FC<VocabularyInputFormProps> = ({
         )}
       </div>
       
-      {/* Add Button - Fixed position */}
-      <div className="flex justify-end mt-auto">
-        <Button
-          onClick={handleAdd}
-          disabled={!word.trim() || !meaning.trim()}
-          className={`px-6 py-2 rounded-xl font-medium transition-all duration-200 ${
-            !word.trim() || !meaning.trim()
-              ? `${darkMode ? 'bg-gray-600 text-gray-400' : 'bg-gray-200 text-gray-400'} cursor-not-allowed`
-              : 'bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white hover:scale-105 shadow-lg hover:shadow-xl'
-          }`}
-        >
-          <i className="fas fa-plus mr-2"></i>
-          Add Word
-        </Button>
+      {/* Add Button Row - align duplicate error under first column and keep button position */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+        <div>
+          {error.includes('already exists') && (
+            <span className="text-red-500 text-sm">{error}</span>
+          )}
+        </div>
+        <div className="flex justify-end">
+          <Button
+            onClick={handleAdd}
+            disabled={!word.trim() || !meaning.trim()}
+            className={`px-6 py-2 rounded-xl font-medium transition-all duration-200 ${
+              !word.trim() || !meaning.trim()
+                ? `${darkMode ? 'bg-gray-600 text-gray-400' : 'bg-gray-200 text-gray-400'} cursor-not-allowed`
+                : 'bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white shadow-lg hover:shadow-xl'
+            }`}
+          >
+            <i className="fas fa-plus mr-2"></i>
+            Add Word
+          </Button>
+        </div>
       </div>
     </div>
   );

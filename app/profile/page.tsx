@@ -142,7 +142,7 @@ export default function ProfilePage() {
               <div className="flex flex-col">
                 {/* Profile Info */}
                 <div className="p-6 flex flex-col md:flex-row gap-6 items-start">
-                  <motion.div whileHover={{ scale: 1.05 }} className="relative group">
+                  <motion.div className="relative group">
                     <div className="absolute -inset-1 bg-gradient-to-r from-neo-mint to-purist-blue rounded-full blur opacity-30 group-hover:opacity-70 transition duration-300"></div>
                     <Avatar className="w-28 h-28 border-4 border-background">
                       <AvatarImage src="/placeholder.svg?height=112&width=112" alt="John Doe" />
@@ -213,21 +213,21 @@ export default function ProfilePage() {
 
                     <div className="mt-6 grid grid-cols-3 gap-4 text-center">
                       <motion.div
-                        whileHover={{ y: -5 }}
+                        
                         className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm rounded-lg p-3"
                       >
                         <p className="text-2xl font-bold gradient-text">{stats.points}</p>
                         <p className="text-sm text-muted-foreground">Points</p>
                       </motion.div>
                       <motion.div
-                        whileHover={{ y: -5 }}
+                        
                         className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm rounded-lg p-3"
                       >
                         <p className="text-2xl font-bold gradient-text">{stats.completionRate}%</p>
                         <p className="text-sm text-muted-foreground">Completion</p>
                       </motion.div>
                       <motion.div
-                        whileHover={{ y: -5 }}
+                        
                         className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm rounded-lg p-3"
                       >
                         <div className="flex justify-center gap-4">
@@ -296,7 +296,7 @@ export default function ProfilePage() {
             <AnimatePresence mode="wait">
               <motion.div key={activeTab} initial="hidden" animate="visible" exit="exit" variants={tabVariants}>
                 <TabsContent value="submissions" className="mt-6">                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <motion.div whileHover={{ y: -5 }} transition={{ type: "spring" as const, stiffness: 300, damping: 20 }}>
+                    <motion.div  >
                       <FeedPost
                         id="profile-post-1"
                         username="John Doe"
@@ -308,7 +308,7 @@ export default function ProfilePage() {
                         likes={18}
                         comments={5}
                       />
-                    </motion.div>                    <motion.div whileHover={{ y: -5 }} transition={{ type: "spring" as const, stiffness: 300, damping: 20 }}>
+                    </motion.div>                    <motion.div  >
                       <FeedPost
                         id="profile-post-2"
                         username="John Doe"
@@ -320,7 +320,7 @@ export default function ProfilePage() {
                         likes={24}
                         comments={7}
                       />
-                    </motion.div>                    <motion.div whileHover={{ y: -5 }} transition={{ type: "spring" as const, stiffness: 300, damping: 20 }}>
+                    </motion.div>                    <motion.div  >
                       <FeedPost
                         id="profile-post-3"
                         username="John Doe"
@@ -332,7 +332,7 @@ export default function ProfilePage() {
                         likes={32}
                         comments={12}
                       />
-                    </motion.div>                    <motion.div whileHover={{ y: -5 }} transition={{ type: "spring" as const, stiffness: 300, damping: 20 }}>
+                    </motion.div>                    <motion.div  >
                       <FeedPost
                         id="profile-post-4"
                         username="John Doe"
@@ -527,8 +527,8 @@ export default function ProfilePage() {
 
                 <TabsContent value="achievements" className="mt-6">                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                     <motion.div
-                      whileHover={{ y: -5, boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1)" }}
-                      transition={{ type: "spring" as const, stiffness: 300, damping: 20 }}
+                      
+                      
                     >
                       <Card className="border-none shadow-lg overflow-hidden">
                         <CardContent className="p-6 flex flex-col items-center text-center">
@@ -547,7 +547,7 @@ export default function ProfilePage() {
                     </motion.div>
 
                     <motion.div
-                      whileHover={{ y: -5, boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1)" }}
+                      
                       transition={{ type: "spring", stiffness: 300, damping: 20 }}
                     >
                       <Card className="border-none shadow-lg overflow-hidden">
@@ -567,7 +567,7 @@ export default function ProfilePage() {
                     </motion.div>
 
                     <motion.div
-                      whileHover={{ y: -5, boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1)" }}
+                      
                       transition={{ type: "spring", stiffness: 300, damping: 20 }}
                     >
                       <Card className="border-none shadow-lg overflow-hidden">
@@ -587,7 +587,7 @@ export default function ProfilePage() {
                     </motion.div>
 
                     <motion.div
-                      whileHover={{ y: -5, boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1)" }}
+                      
                       transition={{ type: "spring", stiffness: 300, damping: 20 }}
                     >
                       <Card className="border-none shadow-lg overflow-hidden">
@@ -607,7 +607,7 @@ export default function ProfilePage() {
                     </motion.div>
 
                     <motion.div
-                      whileHover={{ y: -5, boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1)" }}
+                      
                       transition={{ type: "spring", stiffness: 300, damping: 20 }}
                     >
                       <Card className="border-none shadow-lg overflow-hidden">
@@ -627,7 +627,7 @@ export default function ProfilePage() {
                     </motion.div>
 
                     <motion.div
-                      whileHover={{ y: -5, boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1)" }}
+                      
                       transition={{ type: "spring", stiffness: 300, damping: 20 }}
                     >
                       <Card className="border-none shadow-lg overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900">

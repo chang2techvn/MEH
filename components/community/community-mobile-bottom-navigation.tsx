@@ -93,8 +93,8 @@ export function CommunityMobileBottomNavigation({ isVisible = true }: CommunityM
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <motion.div 
-                      whileHover={{ scale: 1.05 }} 
-                      whileTap={{ scale: 0.95 }}
+                       
+                      
                       className="flex flex-col items-center min-w-0"
                     >
                       <Button
@@ -139,8 +139,8 @@ export function CommunityMobileBottomNavigation({ isVisible = true }: CommunityM
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <motion.div 
-                      whileHover={{ scale: 1.05 }} 
-                      whileTap={{ scale: 0.95 }}
+                       
+                      
                       className="flex flex-col items-center min-w-0"
                     >
                       <Button
@@ -176,8 +176,8 @@ export function CommunityMobileBottomNavigation({ isVisible = true }: CommunityM
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <motion.div 
-                      whileHover={{ scale: 1.05 }} 
-                      whileTap={{ scale: 0.95 }}
+                       
+                      
                       className="flex flex-col items-center min-w-0"
                     >
                       <Button
@@ -227,8 +227,8 @@ export function CommunityMobileBottomNavigation({ isVisible = true }: CommunityM
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <motion.div 
-                      whileHover={{ scale: 1.05 }} 
-                      whileTap={{ scale: 0.95 }}
+                       
+                      
                       className="flex flex-col items-center min-w-0"
                     >
                       <Button
@@ -264,8 +264,8 @@ export function CommunityMobileBottomNavigation({ isVisible = true }: CommunityM
                 <DropdownMenu open={profileDropdownOpen} onOpenChange={setProfileDropdownOpen}>
                   <DropdownMenuTrigger asChild>
                     <motion.div 
-                      whileHover={{ scale: 1.05 }} 
-                      whileTap={{ scale: 0.95 }}
+                       
+                      
                       className="flex flex-col items-center min-w-0"
                     >
                       <Button
@@ -313,8 +313,8 @@ export function CommunityMobileBottomNavigation({ isVisible = true }: CommunityM
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <motion.div 
-                        whileHover={{ scale: 1.05 }} 
-                        whileTap={{ scale: 0.95 }}
+                         
+                        
                         className="flex flex-col items-center min-w-0"
                       >
                         <Button

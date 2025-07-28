@@ -185,7 +185,7 @@ export default function EnhancedVideoEvaluationDisplay({
     return (
       <motion.div
         className="p-2 sm:p-4 rounded-lg border bg-white dark:bg-gray-800 shadow-sm hover:shadow-md transition-all duration-200"
-        whileHover={{ scale: 1.01 }}
+        
         onClick={() => setExpanded(true)}
       >
         <div className="flex items-center justify-between">

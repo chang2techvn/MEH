@@ -1,6 +1,6 @@
 import type React from "react"
 import type { Metadata } from "next"
-import { Outfit } from "next/font/google"
+import { Inter } from "next/font/google"
 import "./globals.css"
 import { AuthProvider } from "@/contexts/auth-context"
 import { Toaster } from "@/components/ui/toaster"
@@ -14,13 +14,13 @@ import ServiceWorkerRegistration from "@/components/service-worker-registration"
 import { ScrollToTopButton } from "@/components/ui/scroll-to-top-button"
 
 
-// Tối ưu font loading
-const outfit = Outfit({
+// Tối ưu font loading - Inter font for modern UI
+const inter = Inter({
   subsets: ["latin"],
   display: "swap",
   preload: true,
   weight: ["400", "500", "600", "700"],
-  variable: "--font-outfit",
+  variable: "--font-inter",
   fallback: ["system-ui", "sans-serif"],
 })
 
@@ -88,7 +88,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning className={outfit.variable}>
+    <html lang="en" suppressHydrationWarning className={inter.variable}>
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta
@@ -109,7 +109,7 @@ export default function RootLayout({
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
 
         {/* Preload critical assets */}
-        <link rel="preload" href="/fonts/outfit-var.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
+        <link rel="preload" href="/fonts/inter-var.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
         <link rel="preload" href="/images/hero-bg.webp" as="image" />
 
         {/* PWA assets */}
@@ -121,7 +121,7 @@ export default function RootLayout({
         {/* Preload critical CSS */}
         <link rel="preload" href="/_next/static/css/app.css" as="style" />
       </head>
-      <body className={outfit.className}>        <AuthProvider>
+      <body className={inter.className}>        <AuthProvider>
           <ThemeProvider>
             <ChallengeProvider>
               <ChatProvider>

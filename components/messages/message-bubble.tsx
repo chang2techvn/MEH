@@ -136,8 +136,7 @@ export default function MessageBubble({
                     opacity: showReactions || hasReacted ? 1 : 0,
                     scale: showReactions || hasReacted ? 1 : 0.8,
                   }}
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
+                  
                   onClick={handleReaction}
                   className={`absolute ${
                     isFromCurrentUser ? "left-0 -translate-x-full -ml-2" : "right-0 translate-x-full mr-2"

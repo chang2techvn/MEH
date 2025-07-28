@@ -47,7 +47,7 @@ export function PostHeader({
 
   return (
     <div className="flex items-start gap-4">
-      <div className="hover-scale-small">
+      <div>
         <Avatar className="h-12 w-12 border-2 border-white dark:border-gray-800"><Image
             src={userImage || "/placeholder.svg"}
             alt={username}

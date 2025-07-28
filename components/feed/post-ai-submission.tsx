@@ -196,7 +196,7 @@ export function PostAISubmission({
           </motion.div>
         ) : (
           <motion.div
-            whileHover={{ scale: 1.02 }}
+            
             transition={{ type: "spring", stiffness: 400, damping: 10 }}
           >
             <Button

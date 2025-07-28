@@ -90,7 +90,7 @@ export const VocabularyEntry: React.FC<VocabularyEntryProps> = ({
             variant="ghost"
             size="icon"
             onClick={() => onRemove(entry.id)}
-            className={`h-8 w-8 rounded-full transition-all duration-200 hover:scale-110 ${
+            className={`h-8 w-8 rounded-full transition-all duration-200 ${
               darkMode ? 'hover:bg-red-600/20 text-gray-400 hover:text-red-400' : 'hover:bg-red-50 text-gray-500 hover:text-red-500'
             }`}
           >

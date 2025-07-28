@@ -69,7 +69,7 @@ const OptimizedAIAvatar = ({
         isSelected 
           ? 'border-blue-400 shadow-lg shadow-blue-400/30' 
           : (darkMode ? 'border-gray-500' : 'border-gray-300')
-      } border-2 transition-all duration-300 group-hover:scale-105 ${className}`}
+      } border-2 transition-all duration-300 ${className}`}
       style={{ width: size, height: size }}
       {...props}
     >
@@ -116,7 +116,7 @@ export const AICard: React.FC<AICardProps> = ({ ai, isSelected, onToggle, darkMo
         isSelected 
           ? (darkMode ? 'bg-gradient-to-br from-blue-900/30 to-indigo-900/30 border-2 border-blue-500/50 shadow-lg shadow-blue-500/20' : 'bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200 shadow-lg shadow-blue-200/50') 
           : (darkMode ? 'bg-gray-700/50 hover:bg-gray-700 border border-gray-600' : 'bg-white hover:bg-gray-50 border border-gray-200 shadow-sm hover:shadow-md')
-      } transform hover:scale-[1.01] hover:-translate-y-0.5 flex items-start`}
+      } flex items-start`}
       onClick={() => onToggle(ai.id)}
     >
       <div className="relative flex-shrink-0">

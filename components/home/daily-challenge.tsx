@@ -720,8 +720,8 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
             initial={{ y: 10, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.3 }}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
+            
+           
           >
             <Button
               onClick={handleRetry}
@@ -809,7 +809,7 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
                           className="hidden"
                           disabled={isUploadingVideo}
                         />
-                        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                        <motion.div >
                           <Button
                             onClick={triggerFileInput}
                             disabled={isUploadingVideo}
@@ -846,7 +846,7 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
                           className="hidden"
                           disabled={isUploadingVideo}
                         />
-                        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                        <motion.div >
                           <Button
                             onClick={triggerFileInput}
                             disabled={isUploadingVideo}
@@ -992,7 +992,7 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
                                     setProgress((step.id / steps.length) * 100)
                                   }
                                 }}
-                                whileHover={{ scale: 1.05 }}
+                                
                                 transition={{ type: "spring", stiffness: 400, damping: 10 }}
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
@@ -1096,7 +1096,7 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
                 <span className="text-xs sm:text-sm">{steps[activeStep - 1].name}</span>
               </div>
               <div className="flex gap-2 justify-end">
-                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                <motion.div >
                   <Button
                     size="sm"
                     onClick={handleNextStep}

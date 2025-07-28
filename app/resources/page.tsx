@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import ReactMarkdown from 'react-markdown';
 import {
   Sheet,
   SheetContent,
@@ -28,6 +29,7 @@ import SmoothScrollIndicator from '@/components/ui/smooth-scroll-indicator';
 import { Sidebar } from '@/components/ai-hub/sidebar/Sidebar';
 import { MessageItem } from '@/components/ai-hub/chat/MessageItem';
 import { ChatInput } from '@/components/ai-hub/chat/ChatInput';
+import { Message } from '@/types/ai-hub.types';
 
 // Only lazy load the non-essential right sidebar (stats)
 const LearningStatsSidebar = lazy(() => import('@/components/ai-hub/learning-stats/LearningStatsSidebar').then((mod) => ({ default: mod.LearningStatsSidebar })));
@@ -120,6 +122,7 @@ import { useChatSessions } from '@/hooks/use-chat-sessions';
 import { useAuth } from '@/contexts/auth-context';
 import { supabase } from '@/lib/supabase';
 import { useMobile } from "@/hooks/use-mobile";
+import { singleChatService } from '@/lib/single-chat-service';
 
 export default function ResourcesPage() {
   const router = useRouter();
@@ -135,7 +138,14 @@ export default function ResourcesPage() {
   const [maxAvatars, setMaxAvatars] = useState(3);
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [singleChatMessages, setSingleChatMessages] = useState<Message[]>([]);
+  const [singleChatProcessing, setSingleChatProcessing] = useState(false);
   const isMobile = useMobile();
+
+  // Debug: Log singleChatMessages changes
+  useEffect(() => {
+    console.log('🔄 singleChatMessages updated:', singleChatMessages);
+  }, [singleChatMessages]);
 
   // Authentication check - MUST be called before any early returns
   const { user, isLoading: authLoading, isAuthenticated } = useAuth();
@@ -146,13 +156,11 @@ export default function ResourcesPage() {
   // Use real chat sessions from Supabase
   const { sessions: chatSessions, loading: sessionsLoading } = useChatSessions();
   
-  // Initialize selectedAIs with first 2 active AIs when data loads
+  // Initialize selectedAIs as empty array by default - no AI selected initially
   useEffect(() => {
-    if (aiAssistants.length > 0 && selectedAIs.length === 0) {
-      const defaultAIs = aiAssistants.slice(0, 2).map(ai => ai.id);
-      setSelectedAIs(defaultAIs);
-    }
-  }, [aiAssistants, selectedAIs.length]);
+    // Don't auto-select any AIs - let user choose
+    // The chat will work in single-chat mode when no AIs are selected
+  }, [aiAssistants]);
 
   const selectedAIsStable = useMemo(() => selectedAIs, [selectedAIs]);
   const { 
@@ -214,15 +222,87 @@ export default function ResourcesPage() {
     setReplyMode(null);
   };
 
-  // Enhanced send message that handles reply mode
-  const enhancedSendMessage = (content: string, mediaUrl?: string | null, mediaType?: string | null) => {
-    if (replyMode?.isActive) {
-      // Send as reply
+  // Enhanced send message that handles both single chat and group chat modes
+  const enhancedSendMessage = async (content: string, mediaUrl?: string | null, mediaType?: string | null) => {
+    if (selectedAIs.length === 0) {
+      // Single chat mode - no AIs selected
+      await handleSingleChatMessage(content);
+    } else if (replyMode?.isActive) {
+      // Group chat reply mode
       replyToMessage(content, replyMode.messageId, replyMode.aiId);
       setReplyMode(null); // Exit reply mode after sending
     } else {
-      // Send as normal message
+      // Group chat normal mode
       sendNaturalMessage(content);
+    }
+  };
+
+  // Handle single chat message
+  const handleSingleChatMessage = async (content: string) => {
+    console.log('🚀 Starting single chat message:', content);
+    
+    const userMessageId = singleChatService.generateMessageId();
+    const assistantMessageId = singleChatService.generateMessageId();
+    
+    // Add user message with correct Message interface
+    const userMessage = {
+      id: userMessageId,
+      sender: 'user',
+      content,
+      timestamp: new Date(),
+      type: 'text' as const,
+      isTyping: false,
+      mediaUrl: null
+    };
+    
+    console.log('📤 Adding user message:', userMessage);
+    setSingleChatMessages(prev => {
+      const newMessages = [...prev, userMessage];
+      console.log('💾 Updated messages after user:', newMessages);
+      return newMessages;
+    });
+    setSingleChatProcessing(true);
+    
+    try {
+      console.log('🤖 Calling AI service...');
+      // Get AI response
+      const aiResponse = await singleChatService.sendMessage(content);
+      console.log('✅ AI response received:', aiResponse);
+      
+      // Add assistant message with correct Message interface
+      const assistantMessage = {
+        id: assistantMessageId,
+        sender: 'assistant',
+        content: aiResponse.content,
+        timestamp: new Date(),
+        type: 'text' as const,
+        isTyping: false,
+        mediaUrl: null,
+        highlights: aiResponse.highlights,
+        vocabulary: aiResponse.vocabulary
+      };
+      
+      console.log('📥 Adding assistant message:', assistantMessage);
+      setSingleChatMessages(prev => {
+        const newMessages = [...prev, assistantMessage];
+        console.log('💾 Final messages:', newMessages);
+        return newMessages;
+      });
+    } catch (error) {
+      console.error('❌ Error in single chat:', error);
+      // Add error message with correct Message interface
+      const errorMessage = {
+        id: assistantMessageId,
+        sender: 'assistant',
+        content: "I'm sorry, there was an error processing your request. Please try again.",
+        timestamp: new Date(),
+        type: 'text' as const,
+        isTyping: false,
+        mediaUrl: null
+      };
+      setSingleChatMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setSingleChatProcessing(false);
     }
   };
 
@@ -391,21 +471,30 @@ export default function ResourcesPage() {
   const handleNewChat = () => {
     setCurrentChatId(null);
     clearSession(); // Clear current session and messages
-    // Keep current selected AIs instead of resetting
-    // setSelectedAIs(['ai1', 'ai3']); // Remove this line
+    // Reset to no AIs selected - single chat mode
+    setSelectedAIs([]);
+    // Clear single chat messages
+    setSingleChatMessages([]);
+    setSingleChatProcessing(false);
   };
 
   const getChatTitle = () => {
     if (currentChat) {
       return currentChat.title;
     }
-    return `Cuộc trò chuyện với ${selectedAIs.length} AI`;
+    if (selectedAIs.length === 0) {
+      return "English Learning Assistant";
+    }
+    return `Conversation with ${selectedAIs.length} people`;
   };
 
   const getChatSubtitle = () => {
     if (currentChat) {
       const participantNames = currentChat.participants.map(id => getAIById(id)?.name).filter(Boolean);
       return participantNames.join(', ');
+    }
+    if (selectedAIs.length === 0) {
+      return "Your personal English tutor";
     }
     return selectedAIs.map(aiId => getAIById(aiId)?.name).join(', ');
   };
@@ -530,43 +619,69 @@ export default function ResourcesPage() {
             </button>
             <div className="flex items-center min-w-0 flex-1">
               <div className="flex -space-x-2 sm:-space-x-3 mr-2 sm:mr-4 flex-shrink-0">
-                {selectedAIs.slice(0, maxAvatars).map((aiId) => {
-                  const ai = getAIById(aiId);
-                  const avatarSize = isMobile ? 32 : 48; // Use mobile hook for consistency
-                  return (
-                    <TooltipProvider key={aiId}>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div className="transition-transform duration-300 hover:scale-110">
-                            <OptimizedAvatar
-                              src={ai?.avatar}
-                              alt={ai?.name || 'AI Avatar'}
-                              size={avatarSize}
-                              className={`border-2 shadow-lg ${darkMode ? 'border-gray-700' : 'border-white'}`}
-                              fallbackText={ai?.name?.substring(0, 2) || 'AI'}
-                              priority={true} // High priority for main header avatars
-                            />
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>{ai?.name} - {ai?.role}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  );
-                })}
-                {selectedAIs.length > maxAvatars && (
-                  <div 
-                    className={`border-2 rounded-full flex items-center justify-center shadow-lg ${
-                      darkMode ? 'border-gray-700 bg-gray-600' : 'border-white bg-gray-200'
-                    }`}
-                    style={{ 
-                      width: isMobile ? 32 : 48, 
-                      height: isMobile ? 32 : 48 
-                    }}
-                  >
-                    <span className="text-xs font-medium">+{selectedAIs.length - maxAvatars}</span>
-                  </div>
+                {selectedAIs.length === 0 ? (
+                  // Single chat mode - show assistant avatar
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div>
+                          <OptimizedAvatar
+                            src={singleChatService.getAssistantAvatar()}
+                            alt={singleChatService.getAssistantName()}
+                            size={isMobile ? 32 : 48}
+                            className={`border-2 shadow-lg ${darkMode ? 'border-gray-700' : 'border-white'}`}
+                            fallbackText="EA"
+                            priority={true}
+                          />
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{singleChatService.getAssistantName()} - English Learning Assistant</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                ) : (
+                  // Group chat mode - show selected AIs
+                  <>
+                    {selectedAIs.slice(0, maxAvatars).map((aiId) => {
+                      const ai = getAIById(aiId);
+                      const avatarSize = isMobile ? 32 : 48; // Use mobile hook for consistency
+                      return (
+                        <TooltipProvider key={aiId}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div>
+                                <OptimizedAvatar
+                                  src={ai?.avatar}
+                                  alt={ai?.name || 'AI Avatar'}
+                                  size={avatarSize}
+                                  className={`border-2 shadow-lg ${darkMode ? 'border-gray-700' : 'border-white'}`}
+                                  fallbackText={ai?.name?.substring(0, 2) || 'AI'}
+                                  priority={true} // High priority for main header avatars
+                                />
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>{ai?.name} - {ai?.role}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      );
+                    })}
+                    {selectedAIs.length > maxAvatars && (
+                      <div 
+                        className={`border-2 rounded-full flex items-center justify-center shadow-lg ${
+                          darkMode ? 'border-gray-700 bg-gray-600' : 'border-white bg-gray-200'
+                        }`}
+                        style={{ 
+                          width: isMobile ? 32 : 48, 
+                          height: isMobile ? 32 : 48 
+                        }}
+                      >
+                        <span className="text-xs font-medium">+{selectedAIs.length - maxAvatars}</span>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
               
@@ -680,11 +795,11 @@ export default function ResourcesPage() {
                     <div
                       key={ai.id}
                       onClick={() => toggleAISelection(ai.id)}
-                      className={`p-3 sm:p-4 rounded-xl flex items-center cursor-pointer transition-all touch-target ${
+                      className={`p-3 sm:p-4 rounded-xl flex items-center cursor-pointer transition-colors touch-target ${
                         selectedAIs.includes(ai.id) 
                           ? (darkMode ? 'bg-green-900/20 border border-green-800' : 'bg-green-50 border border-green-200') 
                           : (darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100')
-                      } transform hover:scale-[1.02] transition-all duration-300`}
+                      }`}
                     >
                       <OptimizedAvatar
                         src={ai.avatar}
@@ -777,41 +892,77 @@ export default function ResourcesPage() {
           className={`flex-1 chat-mobile smooth-auto-scroll ${darkMode ? 'bg-gradient-to-b from-gray-900 to-gray-800' : 'bg-gradient-to-b from-gray-50 to-white'}`}
           ref={chatContainerRef}
         >
-          <div className="w-full space-y-4 sm:space-y-6 px-3 sm:px-4 md:px-6 lg:px-8 xl:px-12 2xl:px-16 py-4 sm:py-6">
-            {messages.map((message) => {
-              const isUser = message.sender === 'user';
-              // For AI messages, sender will be the AI name (not ID)
-              const ai = isUser ? null : getAIByName(message.sender);
-              
-              return (
-                <MessageItem
-                  key={message.id}
-                  message={message}
-                  ai={ai ?? undefined}
-                  darkMode={darkMode}
-                  onReply={startReplyMode}
-                />
-              );
-            })}
+          <div className="w-full space-y-6 sm:space-y-8 px-3 sm:px-4 md:px-6 lg:px-8 xl:px-12 2xl:px-16 py-6 sm:py-8">
+            {selectedAIs.length === 0 ? (
+              // Single chat mode - show single chat messages
+              (() => {
+                console.log('🔍 Rendering single chat messages:', singleChatMessages);
+                return singleChatMessages.map((message) => {
+                  console.log('🎨 Rendering message:', message);
+                  const isUser = message.sender === 'user';
+                  // Get AI character from service for single chat assistant
+                  const assistantCharacter = isUser ? undefined : singleChatService.getAssistantCharacter();
+                  
+                  return (
+                    <MessageItem
+                      key={message.id}
+                      message={message}
+                      ai={assistantCharacter}
+                      darkMode={darkMode}
+                      onReply={() => {}} // No reply function for single chat
+                    />
+                  );
+                });
+              })()
+            ) : (
+              // Group chat mode - show group chat messages
+              messages.map((message) => {
+                const isUser = message.sender === 'user';
+                // For AI messages, sender will be the AI name (not ID)
+                const ai = isUser ? null : getAIByName(message.sender);
+                
+                return (
+                  <MessageItem
+                    key={message.id}
+                    message={message}
+                    ai={ai ?? undefined}
+                    darkMode={darkMode}
+                    onReply={startReplyMode}
+                  />
+                );
+              })
+            )}
           </div>
         </ScrollArea>
         
         {/* Independent Typing Indicator - Above Reply/Input Area */}
-        {typingAIs.length > 0 && (
+        {(selectedAIs.length === 0 ? singleChatProcessing : typingAIs.length > 0) && (
           <div className="px-3 sm:px-4 md:px-6 lg:px-8 xl:px-12 2xl:px-16 py-2">
             <div className="flex items-center space-x-2">
               {/* Smaller Avatars */}
               <div className="flex -space-x-1">
-                {typingAIs.map((ai) => (
+                {selectedAIs.length === 0 ? (
+                  // Single chat assistant avatar
                   <OptimizedAvatar
-                    key={ai.id}
-                    src={ai.avatar}
-                    alt={ai.name}
+                    src={singleChatService.getAssistantAvatar()}
+                    alt={singleChatService.getAssistantName()}
                     size={16}
                     className="shadow-sm border border-white"
-                    fallbackText={ai.name.substring(0, 1)}
+                    fallbackText="EA"
                   />
-                ))}
+                ) : (
+                  // Group chat typing AIs
+                  typingAIs.map((ai) => (
+                    <OptimizedAvatar
+                      key={ai.id}
+                      src={ai.avatar}
+                      alt={ai.name}
+                      size={16}
+                      className="shadow-sm border border-white"
+                      fallbackText={ai.name.substring(0, 1)}
+                    />
+                  ))
+                )}
               </div>
               {/* Compact Typing Indicator */}
               <div className={`rounded-lg px-2 py-1 ${darkMode ? 'bg-gray-700/95 border border-gray-600/50' : 'bg-white/95 border border-gray-200/50'} shadow-md backdrop-blur-sm`}>
@@ -822,9 +973,12 @@ export default function ResourcesPage() {
                     <div className="w-1 h-1 rounded-full bg-orange-400 animate-bounce" style={{ animationDelay: '0.4s' }}></div>
                   </div>
                   <span className={`text-[10px] font-medium ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                    {typingAIs.length === 1 
+                    {selectedAIs.length === 0 
                       ? 'typing...'
-                      : `${typingAIs.length} typing...`
+                      : (typingAIs.length === 1 
+                        ? 'typing...'
+                        : `${typingAIs.length} typing...`
+                      )
                     }
                   </span>
                 </div>
@@ -859,13 +1013,15 @@ export default function ResourcesPage() {
         <ChatInput 
           onSendMessage={enhancedSendMessage}
           darkMode={darkMode}
-          disabled={(isProcessing && !isAutoInteracting) || selectedAIs.length === 0}
+          disabled={selectedAIs.length === 0 ? singleChatProcessing : (isProcessing && !isAutoInteracting)}
           placeholder={
             replyMode?.isActive 
               ? `Phản hồi ${replyMode.aiName}...` 
-              : ((isProcessing && !isAutoInteracting) ? "Đang xử lý..." : 
-                 isAutoInteracting ? "AI đang tương tác..." :
-                 "Nhập tin nhắn của bạn...")
+              : selectedAIs.length === 0
+                ? (singleChatProcessing ? "Đang xử lý..." : "Nhập câu hỏi tiếng Anh của bạn...")
+                : ((isProcessing && !isAutoInteracting) ? "Đang xử lý..." : 
+                   isAutoInteracting ? "AI đang tương tác..." :
+                   "Nhập tin nhắn của bạn...")
           }
         />
       </div>

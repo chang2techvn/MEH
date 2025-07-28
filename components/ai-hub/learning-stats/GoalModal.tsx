@@ -66,6 +66,27 @@ export const GoalModal: React.FC<GoalModalProps> = ({ isOpen, onClose, darkMode,
     }
   }, [isOpen]);
 
+  const handleKeyPress = (e: React.KeyboardEvent, field: 'title' | 'target' | 'deadline') => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      
+      if (field === 'title' && formData.title.trim()) {
+        // Move to target input
+        const targetInput = document.getElementById('target-input') as HTMLInputElement;
+        targetInput?.focus();
+      } else if (field === 'target' && formData.target.trim()) {
+        // Move to deadline input
+        const deadlineInput = document.getElementById('deadline-input') as HTMLInputElement;
+        deadlineInput?.focus();
+      } else if (field === 'deadline' && formData.deadline) {
+        // Submit form if all fields are filled
+        if (formData.title.trim() && formData.target && formData.deadline) {
+          handleSubmit(e as any);
+        }
+      }
+    }
+  };
+
   const validateForm = () => {
     const newErrors: { [key: string]: string } = {};
 
@@ -184,10 +205,11 @@ export const GoalModal: React.FC<GoalModalProps> = ({ isOpen, onClose, darkMode,
             <Input
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              onKeyPress={(e) => handleKeyPress(e, 'title')}
               placeholder="e.g., Learn 50 new words this week"
               className={`${
-                darkMode ? 'bg-gray-800 border-gray-600 focus:border-orange-500' : 'border-gray-300 focus:border-orange-500'
-              } focus:ring-2 focus:ring-orange-500/20 transition-all duration-200 ${
+                darkMode ? 'bg-gray-800 border-gray-600' : 'border-gray-300'
+              } transition-all duration-200 ${
                 errors.title ? 'border-red-500 bg-red-50 dark:bg-red-900/20' : ''
               }`}
             />
@@ -207,15 +229,17 @@ export const GoalModal: React.FC<GoalModalProps> = ({ isOpen, onClose, darkMode,
             </label>
             <div className="relative">
               <Input
+                id="target-input"
                 type="number"
                 value={formData.target}
                 onChange={(e) => setFormData({ ...formData, target: e.target.value })}
+                onKeyPress={(e) => handleKeyPress(e, 'target')}
                 placeholder="50"
                 min="1"
                 max="10000"
                 className={`pr-16 ${
-                  darkMode ? 'bg-gray-800 border-gray-600 focus:border-orange-500' : 'border-gray-300 focus:border-orange-500'
-                } focus:ring-2 focus:ring-orange-500/20 transition-all duration-200 ${
+                  darkMode ? 'bg-gray-800 border-gray-600' : 'border-gray-300'
+                } transition-all duration-200 ${
                   errors.target ? 'border-red-500 bg-red-50 dark:bg-red-900/20' : ''
                 }`}
               />
@@ -239,13 +263,15 @@ export const GoalModal: React.FC<GoalModalProps> = ({ isOpen, onClose, darkMode,
               Deadline
             </label>
             <Input
+              id="deadline-input"
               type="date"
               value={formData.deadline}
               onChange={(e) => setFormData({ ...formData, deadline: e.target.value })}
+              onKeyPress={(e) => handleKeyPress(e, 'deadline')}
               min={new Date().toISOString().split('T')[0]}
               className={`${
-                darkMode ? 'bg-gray-800 border-gray-600 focus:border-orange-500' : 'border-gray-300 focus:border-orange-500'
-              } focus:ring-2 focus:ring-orange-500/20 transition-all duration-200 ${
+                darkMode ? 'bg-gray-800 border-gray-600' : 'border-gray-300'
+              } transition-all duration-200 ${
                 errors.deadline ? 'border-red-500 bg-red-50 dark:bg-red-900/20' : ''
               }`}
             />
@@ -269,7 +295,7 @@ export const GoalModal: React.FC<GoalModalProps> = ({ isOpen, onClose, darkMode,
                   key={priority.value}
                   type="button"
                   onClick={() => setFormData({ ...formData, priority: priority.value as Goal['priority'] })}
-                  className={`p-3 rounded-xl border-2 text-sm font-medium transition-all duration-200 hover:scale-[1.02] flex items-center justify-center space-x-2 ${
+                  className={`p-3 rounded-xl border-2 text-sm font-medium transition-all duration-200 flex items-center justify-center space-x-2 ${
                     formData.priority === priority.value
                       ? `${darkMode ? priority.darkColor : priority.color} border-opacity-100 shadow-md`
                       : `${darkMode ? 'bg-gray-800 border-gray-600 text-gray-400 hover:bg-gray-700 hover:text-gray-300' : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'}`
@@ -299,7 +325,7 @@ export const GoalModal: React.FC<GoalModalProps> = ({ isOpen, onClose, darkMode,
             <Button
               type="submit"
               disabled={isSubmitting || !formData.title.trim() || !formData.target || !formData.deadline}
-              className="flex-1 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
+              className="flex-1 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
             >
               {isSubmitting ? (
                 <>
