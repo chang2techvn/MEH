@@ -1,9 +1,92 @@
-import React from 'react';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import React, { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Message, AICharacter } from '@/types/ai-hub.types';
 import { formatTime, highlightText } from '@/lib/utils/format';
+import { useAuthState } from '@/contexts/auth-context';
+
+// Optimized Avatar Component for Messages with next/image
+const OptimizedMessageAvatar = ({ 
+  src, 
+  alt, 
+  size = 48, 
+  className = "",
+  fallbackText,
+  darkMode = false,
+  ...props 
+}: {
+  src?: string;
+  alt: string;
+  size?: number;
+  className?: string;
+  fallbackText: string;
+  darkMode?: boolean;
+  [key: string]: any;
+}) => {
+  const [imageError, setImageError] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+  
+  // Don't render until mounted to avoid hydration issues
+  if (!mounted) {
+    return (
+      <div 
+        className={`relative overflow-hidden rounded-full flex items-center justify-center animate-pulse bg-orange-100 border-2 ${darkMode ? 'border-gray-700' : 'border-white'} shadow-md ${className}`}
+        style={{ width: size, height: size }}
+        {...props}
+      >
+        <span 
+          className="text-orange-800 font-medium select-none" 
+          style={{ fontSize: size * 0.4 }}
+        >
+          {fallbackText}
+        </span>
+      </div>
+    );
+  }
+  
+  return (
+    <div 
+      className={`relative overflow-hidden rounded-full flex items-center justify-center bg-orange-100 border-2 ${darkMode ? 'border-gray-700' : 'border-white'} shadow-md ${className}`}
+      style={{ width: size, height: size }}
+      {...props}
+    >
+      {src && !imageError ? (
+        <Image
+          src={src}
+          alt={alt}
+          width={size * 2} // 2x resolution for retina displays
+          height={size * 2}
+          quality={100} // Maximum quality
+          priority={size >= 40} // Priority for larger avatars in chat
+          className="object-cover rounded-full transition-all duration-300"
+          style={{ 
+            width: size, 
+            height: size,
+            imageRendering: 'crisp-edges' // Ensures sharp rendering
+          }}
+          onError={() => setImageError(true)}
+          sizes={`${size}px`}
+          // Add loading optimization
+          loading={size >= 40 ? 'eager' : 'lazy'}
+          // Prevent drag
+          draggable={false}
+        />
+      ) : (
+        <span 
+          className="text-orange-800 font-medium select-none" 
+          style={{ fontSize: size * 0.4 }}
+        >
+          {fallbackText}
+        </span>
+      )}
+    </div>
+  );
+};
 
 interface MessageItemProps {
   message: Message;
@@ -14,6 +97,29 @@ interface MessageItemProps {
 
 export const MessageItem: React.FC<MessageItemProps> = ({ message, ai, darkMode, onReply }) => {
   const isUser = message.sender === 'user';
+  const { user: currentUser } = useAuthState();
+  const [avatarSize, setAvatarSize] = useState(48);
+
+  // Handle responsive avatar sizing
+  useEffect(() => {
+    const updateSize = () => {
+      if (typeof window !== 'undefined') {
+        if (window.innerWidth < 640) {
+          setAvatarSize(32);
+        } else if (window.innerWidth < 1024) {
+          setAvatarSize(40);
+        } else {
+          setAvatarSize(48);
+        }
+      }
+    };
+
+    updateSize();
+    if (typeof window !== 'undefined') {
+      window.addEventListener('resize', updateSize);
+      return () => window.removeEventListener('resize', updateSize);
+    }
+  }, []);
 
   return (
     <div 
@@ -22,12 +128,13 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message, ai, darkMode,
     >
       {!isUser && ai && (
         <div className="mr-2 sm:mr-3 flex-shrink-0">
-          <Avatar className={`w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 shadow-md border-2 ${darkMode ? 'border-gray-700' : 'border-white'}`}>
-            <AvatarImage src={ai.avatar} alt={ai.name} className="object-cover" />
-            <AvatarFallback className="bg-orange-100 text-orange-800 text-xs sm:text-sm">
-              {ai.name?.substring(0, 2)}
-            </AvatarFallback>
-          </Avatar>
+          <OptimizedMessageAvatar
+            src={ai.avatar}
+            alt={ai.name}
+            size={avatarSize} // Use responsive state
+            fallbackText={ai.name?.substring(0, 2) || 'AI'}
+            darkMode={darkMode}
+          />
         </div>
       )}
       <div className="max-w-[85%] sm:max-w-[75%] lg:max-w-[70%]">
@@ -173,10 +280,13 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message, ai, darkMode,
       </div>
       {isUser && (
         <div className="ml-2 sm:ml-3 flex-shrink-0">
-          <Avatar className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 shadow-md border-2 border-white">
-            <AvatarImage src="https://readdy.ai/api/search-image?query=A%20professional%20young%20Vietnamese%20person%20with%20a%20friendly%20smile%2C%20wearing%20smart%20casual%20attire%2C%20against%20a%20clean%20light%20blue%20background%2C%20photorealistic%20portrait%2C%20high%20quality%2C%20professional%20lighting&width=100&height=100&seq=user&orientation=squarish" />
-            <AvatarFallback className="bg-orange-100 text-orange-800 text-xs sm:text-sm">ND</AvatarFallback>
-          </Avatar>
+          <OptimizedMessageAvatar
+            src={currentUser?.avatar || "/placeholder-user.jpg"}
+            alt={currentUser?.name || "User avatar"}
+            size={avatarSize} // Use responsive state
+            fallbackText={currentUser?.name?.substring(0, 2)?.toUpperCase() || "ND"}
+            darkMode={darkMode}
+          />
         </div>
       )}
     </div>

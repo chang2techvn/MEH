@@ -1,6 +1,10 @@
 "use client"
 
 import { motion, AnimatePresence } from "framer-motion"
+import { useState, useEffect, Suspense, lazy } from "react"
+import { toast } from "@/hooks/use-toast"
+
+// Critical above-the-fold components - NO lazy loading
 import MainHeader from "@/components/ui/main-header"
 import { MobileNavigation } from "@/components/home/mobile-navigation"
 import { CommunityMobileBottomNavigation } from "@/components/community/community-mobile-bottom-navigation"
@@ -18,19 +22,22 @@ import { usePostManagement } from "@/hooks/use-post-management"
 import { useCommunityData } from "@/hooks/use-community-data"
 import { StoryViewer } from "@/components/community/story-viewer"
 import type { Story } from "@/hooks/use-stories"
-import { useState, useEffect } from "react"
-import { toast } from "@/hooks/use-toast"
 
-// Import community components
+// Import essential community components directly - NO lazy loading
 import {
   LeftSidebar,
   RightSidebar,
   StoriesSection,
   CreatePostCard,
-  CreatePostModal,
-  EnhancedStoryCreator,
   PostSkeleton,
 } from "@/components/community"
+
+// Only lazy load user-interaction modals
+const CreatePostModal = lazy(() => import("@/components/community").then((mod) => ({ default: mod.CreatePostModal })))
+const EnhancedStoryCreator = lazy(() => import("@/components/community").then((mod) => ({ default: mod.EnhancedStoryCreator })))
+
+// Simple loading fallback for modals only
+const ModalLoadingFallback = () => <div className="animate-pulse bg-gray-200 dark:bg-gray-800 rounded-lg h-32 w-full"></div>
 
 export default function CommunityPage() {
   const { isMobile } = useMobile()
@@ -341,21 +348,22 @@ export default function CommunityPage() {
         </main>
 
         {/* Create Post Modal */}
-        <CreatePostModal
-          showNewPostForm={postManagement.showNewPostForm}
-          setShowNewPostForm={postManagement.setShowNewPostForm}
-          newPostContent={postManagement.newPostContent}
-          setNewPostContent={postManagement.setNewPostContent}
-          isPostingContent={postManagement.isPostingContent}
-          selectedFeeling={postManagement.selectedFeeling}
-          setSelectedFeeling={postManagement.setSelectedFeeling}
-          location={postManagement.location}
-          setLocation={postManagement.setLocation}
-          taggedPeople={postManagement.taggedPeople}
-          setTaggedPeople={postManagement.setTaggedPeople}
-          selectedDate={postManagement.selectedDate}
-          setSelectedDate={postManagement.setSelectedDate}
-          selectedMedia={postManagement.selectedMedia}
+        <Suspense fallback={<ModalLoadingFallback />}>
+          <CreatePostModal
+            showNewPostForm={postManagement.showNewPostForm}
+            setShowNewPostForm={postManagement.setShowNewPostForm}
+            newPostContent={postManagement.newPostContent}
+            setNewPostContent={postManagement.setNewPostContent}
+            isPostingContent={postManagement.isPostingContent}
+            selectedFeeling={postManagement.selectedFeeling}
+            setSelectedFeeling={postManagement.setSelectedFeeling}
+            location={postManagement.location}
+            setLocation={postManagement.setLocation}
+            taggedPeople={postManagement.taggedPeople}
+            setTaggedPeople={postManagement.setTaggedPeople}
+            selectedDate={postManagement.selectedDate}
+            setSelectedDate={postManagement.setSelectedDate}
+            selectedMedia={postManagement.selectedMedia}
           setSelectedMedia={postManagement.setSelectedMedia}
           mediaPreviews={postManagement.mediaPreviews}
           setMediaPreviews={postManagement.setMediaPreviews}
@@ -375,6 +383,7 @@ export default function CommunityPage() {
           handlePersonTag={postManagement.handlePersonTag}
           removeTaggedPerson={postManagement.removeTaggedPerson}
         />
+        </Suspense>
 
         {/* Story Viewer */}
         <StoryViewer
@@ -415,7 +424,9 @@ export default function CommunityPage() {
         />
 
         {/* Enhanced Story Creator */}
-        <EnhancedStoryCreator isOpen={showStoryCreator} onClose={() => setShowStoryCreator(false)} />
+        <Suspense fallback={<ModalLoadingFallback />}>
+          <EnhancedStoryCreator isOpen={showStoryCreator} onClose={() => setShowStoryCreator(false)} />
+        </Suspense>
 
         {/* Floating Story Reaction Animations */}
         <AnimatePresence>

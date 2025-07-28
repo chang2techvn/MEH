@@ -522,6 +522,14 @@ export function useNaturalConversation(selectedAIIds: string[]) {
       }));
 
       setMessages(transformedMessages);
+      
+      // Auto-scroll to bottom when loading conversation history
+      if (transformedMessages.length > 0) {
+        // Use a longer delay to ensure DOM has updated with new messages and ScrollArea has rendered
+        setTimeout(() => {
+          scrollToBottom();
+        }, 300);
+      }
     } catch (error) {
       console.error('Error loading conversation history:', error);
       setError(error instanceof Error ? error.message : 'Failed to load conversation');

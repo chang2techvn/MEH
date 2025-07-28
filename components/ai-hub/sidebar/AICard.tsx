@@ -1,5 +1,5 @@
-import React from 'react';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import React, { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
 import { AICharacter } from '@/types/ai-hub.types';
 
@@ -9,6 +9,105 @@ interface AICardProps {
   onToggle: (aiId: string) => void;
   darkMode: boolean;
 }
+
+// Optimized Avatar Component with next/image
+const OptimizedAIAvatar = ({ 
+  src, 
+  alt, 
+  size = 32, 
+  className = "",
+  fallbackText,
+  isSelected = false,
+  darkMode = false,
+  ...props 
+}: {
+  src?: string;
+  alt: string;
+  size?: number;
+  className?: string;
+  fallbackText: string;
+  isSelected?: boolean;
+  darkMode?: boolean;
+  [key: string]: any;
+}) => {
+  const [imageError, setImageError] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+  
+  // Don't render until mounted to avoid hydration issues
+  if (!mounted) {
+    return (
+      <div 
+        className={`relative overflow-hidden rounded-full flex items-center justify-center animate-pulse ${
+          isSelected 
+            ? 'border-blue-400 shadow-lg shadow-blue-400/30' 
+            : (darkMode ? 'border-gray-500' : 'border-gray-300')
+        } border-2 bg-gradient-to-br from-gray-100 to-gray-200 ${className}`}
+        style={{ width: size, height: size }}
+        {...props}
+      >
+        <span 
+          className={`font-semibold select-none ${
+            isSelected 
+              ? 'text-blue-800' 
+              : 'text-gray-700'
+          }`} 
+          style={{ fontSize: size * 0.4 }}
+        >
+          {fallbackText}
+        </span>
+      </div>
+    );
+  }
+  
+  return (
+    <div 
+      className={`relative overflow-hidden rounded-full flex items-center justify-center ${
+        isSelected 
+          ? 'border-blue-400 shadow-lg shadow-blue-400/30' 
+          : (darkMode ? 'border-gray-500' : 'border-gray-300')
+      } border-2 transition-all duration-300 group-hover:scale-105 ${className}`}
+      style={{ width: size, height: size }}
+      {...props}
+    >
+      {src && !imageError ? (
+        <Image
+          src={src}
+          alt={alt}
+          width={size * 2} // 2x resolution for retina displays
+          height={size * 2}
+          quality={100} // Maximum quality
+          className="object-cover rounded-full transition-all duration-300"
+          style={{ 
+            width: size, 
+            height: size,
+            imageRendering: 'crisp-edges' // Ensures sharp rendering
+          }}
+          onError={() => setImageError(true)}
+          sizes={`${size}px`}
+          // Add loading optimization
+          loading="lazy"
+          // Prevent drag
+          draggable={false}
+        />
+      ) : (
+        <span 
+          className={`font-semibold select-none ${
+            isSelected 
+              ? 'text-blue-800' 
+              : 'text-gray-700'
+          }`} 
+          style={{ fontSize: size * 0.4 }}
+        >
+          {fallbackText}
+        </span>
+      )}
+    </div>
+  );
+};
 
 export const AICard: React.FC<AICardProps> = ({ ai, isSelected, onToggle, darkMode }) => {
   return (
@@ -21,20 +120,14 @@ export const AICard: React.FC<AICardProps> = ({ ai, isSelected, onToggle, darkMo
       onClick={() => onToggle(ai.id)}
     >
       <div className="relative flex-shrink-0">
-        <Avatar className={`w-8 h-8 border-2 ${
-          isSelected 
-            ? 'border-blue-400 shadow-lg shadow-blue-400/30' 
-            : (darkMode ? 'border-gray-500' : 'border-gray-300')
-        } transition-all duration-300 group-hover:scale-105`}>
-          <AvatarImage src={ai.avatar} alt={ai.name} className="object-cover" />
-          <AvatarFallback className={`text-xs font-semibold ${
-            isSelected 
-              ? 'bg-gradient-to-br from-blue-100 to-indigo-100 text-blue-800' 
-              : 'bg-gradient-to-br from-gray-100 to-gray-200 text-gray-700'
-          }`}>
-            {ai.name.substring(0, 2)}
-          </AvatarFallback>
-        </Avatar>
+        <OptimizedAIAvatar
+          src={ai.avatar}
+          alt={ai.name}
+          size={32}
+          fallbackText={ai.name.substring(0, 2)}
+          isSelected={isSelected}
+          darkMode={darkMode}
+        />
         <div className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border border-white ${
           ai.online ? 'bg-blue-500' : 'bg-gray-400'
         } transition-all duration-300`}></div>

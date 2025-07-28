@@ -19,13 +19,14 @@ import { MobileNavigation } from "@/components/home/mobile-navigation"
 import { MainContent } from "@/components/home/main-content"
 import { LeaderboardModal } from "@/components/home/leaderboard-modal"
 import { MobileBottomNavigation } from "@/components/home/mobile-bottom-navigation"
+import { Sidebar } from "@/components/home/sidebar"
+import ChallengeTabs from "@/components/challenge/challenge-tabs"
 
-// Non-critical components - keep lazy loading  
-const Sidebar = lazy(() => import("@/components/home/sidebar").then((mod) => ({ default: mod.Sidebar })))
-const ChallengeTabs = lazy(() => import("@/components/challenge/challenge-tabs"))
+// Only lazy load non-essential modals that appear on user interaction
 const CreateChallengeModal = lazy(() => import("@/components/challenge/create-challenge-modal"))
-// Loading fallback component
-const LoadingFallback = () => <div className="animate-pulse bg-gray-200 dark:bg-gray-800 rounded-lg h-32 w-full"></div>
+
+// Simple loading fallback for modals only
+const ModalLoadingFallback = () => <div className="animate-pulse bg-gray-200 dark:bg-gray-800 rounded-lg h-32 w-full"></div>
 
 export default function Home() {
   const [mounted, setMounted] = useState(false)
@@ -159,12 +160,10 @@ export default function Home() {
                 ? "lg:hidden" // Hide only on desktop when collapsed
                 : "md:block" // Show only on desktop/tablet screens (md and up)
             }`}>
-              <Suspense fallback={<LoadingFallback />}>
-                <Sidebar 
-                  onPracticeToolClick={handlePracticeToolClick}
-                  onViewLeaderboard={handleViewLeaderboard}
-                />
-              </Suspense>
+              <Sidebar 
+                onPracticeToolClick={handlePracticeToolClick}
+                onViewLeaderboard={handleViewLeaderboard}
+              />
             </div>
           </div>          {/* Challenge Tabs Section - Full width below Main Content + Sidebar */}          <div className="w-full">
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
@@ -250,26 +249,26 @@ export default function Home() {
               </div>
             </div>
             
-            <Suspense fallback={<LoadingFallback />}>
-              <ChallengeTabs
-                searchTerm={searchTerm}
-                onSelectedChallengeChange={handleSelectedChallengeChange}
-                filterTab={filterTab}
-                onFilterTabChange={handleFilterTabChange}
-              />
-            </Suspense>
+            <ChallengeTabs
+              searchTerm={searchTerm}
+              onSelectedChallengeChange={handleSelectedChallengeChange}
+              filterTab={filterTab}
+              onFilterTabChange={handleFilterTabChange}
+            />
           </div>
         </div>
       </main>
 
-      <CreateChallengeModal
-        open={createModalOpen}
-        onOpenChange={setCreateModalOpen}
-        onChallengeCreated={() => {
-          setNewPostAdded(true)
-          toast({ title: "Challenge created successfully!", description: "Your new challenge has been added."})
-        }}  
-      />
+      <Suspense fallback={<ModalLoadingFallback />}>
+        <CreateChallengeModal
+          open={createModalOpen}
+          onOpenChange={setCreateModalOpen}
+          onChallengeCreated={() => {
+            setNewPostAdded(true)
+            toast({ title: "Challenge created successfully!", description: "Your new challenge has been added."})
+          }}  
+        />
+      </Suspense>
 
       {/* Leaderboard Modal - Only used on desktop, mobile uses the one in MobileHeaderButtons */}
       {!isMobile && (

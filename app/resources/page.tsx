@@ -1,6 +1,8 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, Suspense, lazy } from 'react';
+import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -19,20 +21,110 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
+// Critical above-the-fold components - NO lazy loading for immediate rendering
 import MainHeader from "@/components/ui/main-header";
 import { MobileNavigation } from "@/components/home/mobile-navigation";
+import SmoothScrollIndicator from '@/components/ui/smooth-scroll-indicator';
 import { Sidebar } from '@/components/ai-hub/sidebar/Sidebar';
 import { MessageItem } from '@/components/ai-hub/chat/MessageItem';
 import { ChatInput } from '@/components/ai-hub/chat/ChatInput';
-import { LearningStatsSidebar } from '@/components/ai-hub/learning-stats/LearningStatsSidebar';
-import SmoothScrollIndicator from '@/components/ui/smooth-scroll-indicator';
+
+// Only lazy load the non-essential right sidebar (stats)
+const LearningStatsSidebar = lazy(() => import('@/components/ai-hub/learning-stats/LearningStatsSidebar').then((mod) => ({ default: mod.LearningStatsSidebar })));
+
+// Only keep minimal loading fallback for the stats sidebar
+const StatsLoadingFallback = () => <div className="animate-pulse bg-gray-200 dark:bg-gray-800 rounded-lg h-32 w-full"></div>;
+
+// Optimized Avatar Component with next/image
+const OptimizedAvatar = ({ 
+  src, 
+  alt, 
+  size = 48, 
+  className = "",
+  fallbackText,
+  priority = false,
+  ...props 
+}: {
+  src?: string;
+  alt: string;
+  size?: number;
+  className?: string;
+  fallbackText: string;
+  priority?: boolean;
+  [key: string]: any;
+}) => {
+  const [imageError, setImageError] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+  
+  // Don't render until mounted to avoid hydration issues
+  if (!mounted) {
+    return (
+      <div 
+        className={`relative overflow-hidden rounded-full bg-green-100 flex items-center justify-center animate-pulse ${className}`}
+        style={{ width: size, height: size }}
+        {...props}
+      >
+        <span className="text-green-800 font-medium" style={{ fontSize: size * 0.4 }}>
+          {fallbackText}
+        </span>
+      </div>
+    );
+  }
+  
+  return (
+    <div 
+      className={`relative overflow-hidden rounded-full bg-green-100 flex items-center justify-center ${className}`}
+      style={{ width: size, height: size }}
+      {...props}
+    >
+      {src && !imageError ? (
+        <Image
+          src={src}
+          alt={alt}
+          width={size * 2} // 2x resolution for retina displays
+          height={size * 2}
+          quality={100} // Maximum quality
+          priority={priority || size >= 48} // Priority for larger avatars or when specified
+          className="object-cover rounded-full transition-all duration-300"
+          style={{ 
+            width: size, 
+            height: size,
+            imageRendering: 'crisp-edges' // Ensures sharp rendering
+          }}
+          onError={() => setImageError(true)}
+          sizes={`${size}px`}
+          // Add loading optimization
+          loading={priority ? 'eager' : 'lazy'}
+          // Prevent drag
+          draggable={false}
+        />
+      ) : (
+        <span 
+          className="text-green-800 font-medium select-none" 
+          style={{ fontSize: size * 0.4 }}
+        >
+          {fallbackText}
+        </span>
+      )}
+    </div>
+  );
+};
+
 import { useAIAssistants } from '@/hooks/use-ai-assistants';
 import { useNaturalConversation } from '@/hooks/use-natural-conversation';
 import { useChatSessions } from '@/hooks/use-chat-sessions';
 import { useAuth } from '@/contexts/auth-context';
+import { supabase } from '@/lib/supabase';
 import { useMobile } from "@/hooks/use-mobile";
 
 export default function ResourcesPage() {
+  const router = useRouter();
+  const [mounted, setMounted] = useState(false); // Add mounted state like other routes
+  const [authChecked, setAuthChecked] = useState(false); // New state to track if auth has been thoroughly checked
   const [isSidebarOpen, setIsSidebarOpen] = useState(false); // mobile: đóng mặc định
   const [isDesktopSidebarCollapsed, setIsDesktopSidebarCollapsed] = useState(false); // desktop: thu nhỏ sidebar
   const [isStatsSidebarOpen, setIsStatsSidebarOpen] = useState(false);
@@ -134,7 +226,83 @@ export default function ResourcesPage() {
     }
   };
 
+  // Handle authentication redirect in useEffect to avoid render-time side effects
+  // ENHANCED LOGIC: Multiple safeguards to prevent false redirects
+  useEffect(() => {
+    // Skip if component not mounted yet
+    if (!mounted) return;
+    
+    // Skip if auth is still loading
+    if (authLoading) return;
+    
+    // Skip if already checked to prevent multiple calls
+    if (authChecked) return;
+    
+    // Additional check: Look for stored session as backup
+    const checkStoredSession = async () => {
+      try {
+        // Check Supabase session directly
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        // If we have a valid session but user/isAuthenticated is false, wait longer
+        if (session && session.user && (!user || !isAuthenticated)) {
+          console.log('Session exists but user data not loaded yet, waiting...');
+          // Set a flag to check again later
+          setTimeout(() => setAuthChecked(false), 1000);
+          return;
+        }
+        
+        // Check localStorage for additional confirmation
+        const localSession = localStorage.getItem('sb-' + process.env.NEXT_PUBLIC_SUPABASE_URL?.split('//')[1]?.split('.')[0] + '-auth-token');
+        if (localSession && (!user || !isAuthenticated)) {
+          try {
+            const parsedSession = JSON.parse(localSession);
+            if (parsedSession.access_token && parsedSession.refresh_token) {
+              console.log('Local session found, giving more time for auth to resolve');
+              // Set a flag to check again later
+              setTimeout(() => setAuthChecked(false), 1500);
+              return;
+            }
+          } catch (e) {
+            console.log('Error parsing local session');
+          }
+        }
+        
+        // Mark as checked to prevent multiple calls
+        setAuthChecked(true);
+        
+        // Only redirect if we're absolutely sure there's no authentication
+        if (!session || !session.user) {
+          console.log('No valid session found, redirecting to login');
+          
+          // Triple check with a delay to be absolutely sure
+          setTimeout(async () => {
+            const { data: { session: finalCheck } } = await supabase.auth.getSession();
+            if (!finalCheck || !finalCheck.user) {
+              router.push('/auth/login');
+            }
+          }, 500); // Increased delay for final check
+        }
+      } catch (error) {
+        console.error('Error checking session:', error);
+        // Don't redirect on error, retry later
+        setTimeout(() => setAuthChecked(false), 2000);
+      }
+    };
+    
+    // Add debounce to prevent multiple checks
+    const timeoutId = setTimeout(() => {
+      checkStoredSession();
+    }, 300); // Initial delay
+    
+    return () => clearTimeout(timeoutId);
+  }, [mounted, authLoading, isAuthenticated, user, router, authChecked]);
+
   // ALL OTHER useEffect HOOKS MUST BE HERE - before any early returns
+  useEffect(() => {
+    setMounted(true); // Set mounted state like other routes
+  }, []);
+
   useEffect(() => {
     const handleResize = () => {
       setMaxAvatars(window.innerWidth < 640 ? 2 : 3);
@@ -153,28 +321,32 @@ export default function ResourcesPage() {
     return () => clearTimeout(timer);
   }, []);
 
-  // Show loading state while authentication is being checked
+  // Early return for hydration - like other routes
+  if (!mounted) {
+    return null;
+  }
+
+  // Show loading state while authentication is being checked OR during auth resolution
+  // Extended loading to prevent false authentication failures
   if (authLoading) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Đang tải...</p>
+      <div className="min-h-screen bg-gradient-to-b from-background via-background to-background/80 dark:from-background dark:via-background/90 dark:to-background/80 flex items-center justify-center">
+        <div className="animate-pulse flex flex-col items-center">
+          <div className="h-12 w-48 bg-gray-200 dark:bg-gray-800 rounded-lg mb-4"></div>
+          <div className="h-4 w-64 bg-gray-200 dark:bg-gray-800 rounded-lg"></div>
         </div>
       </div>
     );
   }
 
-  // Redirect to login if not authenticated
-  if (!isAuthenticated || !user) {
+  // Show loading state if authentication is still being resolved
+  // Give more time before showing "not authenticated" state
+  if (mounted && !authLoading && (!isAuthenticated || !user)) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-800 mb-4">Cần đăng nhập</h2>
-          <p className="text-gray-600 mb-6">Bạn cần đăng nhập để sử dụng tính năng AI Hub</p>
-          <Button onClick={() => window.location.href = '/auth'}>
-            Đăng nhập
-          </Button>
+      <div className="min-h-screen bg-gradient-to-b from-background via-background to-background/80 dark:from-background dark:via-background/90 dark:to-background/80 flex items-center justify-center">
+        <div className="animate-pulse flex flex-col items-center">
+          <div className="h-12 w-48 bg-gray-200 dark:bg-gray-800 rounded-lg mb-4"></div>
+          <div className="h-4 w-64 bg-gray-200 dark:bg-gray-800 rounded-lg"></div>
         </div>
       </div>
     );
@@ -246,12 +418,12 @@ export default function ResourcesPage() {
   // Show loading state
   if (aiLoading) {
     return (
-      <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="flex min-h-screen flex-col bg-gradient-to-b from-background via-background to-background/80 dark:from-background dark:via-background/90 dark:to-background/80">
         <MainHeader mobileMenuOpen={mobileMenuOpen} setMobileMenuOpen={setMobileMenuOpen} />
         <div className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600 dark:text-gray-400">Đang tải AI assistants...</p>
+          <div className="animate-pulse flex flex-col items-center">
+            <div className="h-12 w-48 bg-gray-200 dark:bg-gray-800 rounded-lg mb-4"></div>
+            <div className="h-4 w-64 bg-gray-200 dark:bg-gray-800 rounded-lg"></div>
           </div>
         </div>
       </div>
@@ -261,12 +433,17 @@ export default function ResourcesPage() {
   // Show error state
   if (aiError) {
     return (
-      <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="flex min-h-screen flex-col bg-gradient-to-b from-background via-background to-background/80 dark:from-background dark:via-background/90 dark:to-background/80">
         <MainHeader mobileMenuOpen={mobileMenuOpen} setMobileMenuOpen={setMobileMenuOpen} />
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
-            <p className="text-red-600 mb-4">Lỗi khi tải AI assistants: {aiError}</p>
-            <Button onClick={() => window.location.reload()}>Thử lại</Button>
+            <div className="animate-pulse flex flex-col items-center">
+              <div className="h-12 w-48 bg-red-200 dark:bg-red-800 rounded-lg mb-4"></div>
+              <div className="h-4 w-64 bg-red-200 dark:bg-red-800 rounded-lg mb-6"></div>
+            </div>
+            <Button onClick={() => window.location.reload()} variant="outline">
+              Thử lại
+            </Button>
           </div>
         </div>
       </div>
@@ -274,8 +451,13 @@ export default function ResourcesPage() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Main Header */}
+    <div className="flex min-h-screen flex-col bg-gradient-to-b from-background via-background to-background/80 dark:from-background dark:via-background/90 dark:to-background/80">
+      {/* Background decorations - optimized with contain property */}
+      <div className="absolute top-10 sm:top-20 left-2 sm:left-10 w-32 h-32 sm:w-64 sm:h-64 rounded-full bg-neo-mint/10 dark:bg-purist-blue/10 blur-3xl -z-10 animate-blob contain-paint"></div>
+      <div className="absolute bottom-10 sm:bottom-20 right-2 sm:right-10 w-32 h-32 sm:w-64 sm:h-64 rounded-full bg-cantaloupe/10 dark:bg-cassis/10 blur-3xl -z-10 animate-blob animation-delay-2000 contain-paint"></div>
+      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-48 h-48 sm:w-96 sm:h-96 rounded-full bg-mellow-yellow/5 dark:bg-mellow-yellow/5 blur-3xl -z-10 animate-blob animation-delay-4000 contain-paint"></div>
+      
+      {/* Critical above-the-fold components - NO Suspense */}
       <MainHeader mobileMenuOpen={mobileMenuOpen} setMobileMenuOpen={setMobileMenuOpen} />
       
       {/* Mobile Navigation */}
@@ -350,16 +532,21 @@ export default function ResourcesPage() {
               <div className="flex -space-x-2 sm:-space-x-3 mr-2 sm:mr-4 flex-shrink-0">
                 {selectedAIs.slice(0, maxAvatars).map((aiId) => {
                   const ai = getAIById(aiId);
+                  const avatarSize = isMobile ? 32 : 48; // Use mobile hook for consistency
                   return (
                     <TooltipProvider key={aiId}>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <Avatar className={`w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 border-2 ${darkMode ? 'border-gray-700' : 'border-white'} shadow-lg transition-transform duration-300 hover:scale-110`}>
-                            <AvatarImage src={ai?.avatar} alt={ai?.name} className="object-cover" />
-                            <AvatarFallback className="bg-green-100 text-green-800 text-xs sm:text-sm">
-                              {ai?.name.substring(0, 2)}
-                            </AvatarFallback>
-                          </Avatar>
+                          <div className="transition-transform duration-300 hover:scale-110">
+                            <OptimizedAvatar
+                              src={ai?.avatar}
+                              alt={ai?.name || 'AI Avatar'}
+                              size={avatarSize}
+                              className={`border-2 shadow-lg ${darkMode ? 'border-gray-700' : 'border-white'}`}
+                              fallbackText={ai?.name?.substring(0, 2) || 'AI'}
+                              priority={true} // High priority for main header avatars
+                            />
+                          </div>
                         </TooltipTrigger>
                         <TooltipContent>
                           <p>{ai?.name} - {ai?.role}</p>
@@ -369,9 +556,17 @@ export default function ResourcesPage() {
                   );
                 })}
                 {selectedAIs.length > maxAvatars && (
-                  <Avatar className={`w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 border-2 ${darkMode ? 'border-gray-700' : 'border-white'} ${darkMode ? 'bg-gray-600' : 'bg-gray-200'} flex items-center justify-center shadow-lg`}>
+                  <div 
+                    className={`border-2 rounded-full flex items-center justify-center shadow-lg ${
+                      darkMode ? 'border-gray-700 bg-gray-600' : 'border-white bg-gray-200'
+                    }`}
+                    style={{ 
+                      width: isMobile ? 32 : 48, 
+                      height: isMobile ? 32 : 48 
+                    }}
+                  >
                     <span className="text-xs font-medium">+{selectedAIs.length - maxAvatars}</span>
-                  </Avatar>
+                  </div>
                 )}
               </div>
               
@@ -491,12 +686,13 @@ export default function ResourcesPage() {
                           : (darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100')
                       } transform hover:scale-[1.02] transition-all duration-300`}
                     >
-                      <Avatar className="w-10 h-10 sm:w-12 sm:h-12 border-2 border-gray-200 shadow-md flex-shrink-0">
-                        <AvatarImage src={ai.avatar} alt={ai.name} className="object-cover" />
-                        <AvatarFallback className="bg-green-100 text-green-800 text-xs sm:text-sm">
-                          {ai.name.substring(0, 2)}
-                        </AvatarFallback>
-                      </Avatar>
+                      <OptimizedAvatar
+                        src={ai.avatar}
+                        alt={ai.name}
+                        size={48}
+                        className="border-2 border-gray-200 shadow-md flex-shrink-0"
+                        fallbackText={ai.name.substring(0, 2)}
+                      />
                       <div className="ml-3 sm:ml-4 flex-1 min-w-0">
                         <h3 className="font-medium text-sm sm:text-base line-clamp-1">{ai.name}</h3>
                         <p className={`text-xs sm:text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'} line-clamp-1`}>
@@ -607,16 +803,14 @@ export default function ResourcesPage() {
               {/* Smaller Avatars */}
               <div className="flex -space-x-1">
                 {typingAIs.map((ai) => (
-                  <Avatar key={ai.id} className="w-4 h-4 shadow-sm border border-white rounded-full">
-                    <AvatarImage
-                      src={ai.avatar}
-                      alt={ai.name}
-                      className="object-cover rounded-full"
-                    />
-                    <AvatarFallback className="bg-orange-100 text-orange-800 text-[8px] rounded-full">
-                      {ai.name.substring(0, 1)}
-                    </AvatarFallback>
-                  </Avatar>
+                  <OptimizedAvatar
+                    key={ai.id}
+                    src={ai.avatar}
+                    alt={ai.name}
+                    size={16}
+                    className="shadow-sm border border-white"
+                    fallbackText={ai.name.substring(0, 1)}
+                  />
                 ))}
               </div>
               {/* Compact Typing Indicator */}
@@ -678,11 +872,13 @@ export default function ResourcesPage() {
       
       {/* Desktop Learning Stats Sidebar */}
       <div className={`hidden xl:block transition-all duration-300 ${isStatsDesktopCollapsed ? 'w-0' : 'w-80'}`}>
-        <LearningStatsSidebar 
-          darkMode={darkMode} 
-          collapsed={isStatsDesktopCollapsed}
-          onCollapseToggle={() => setIsStatsDesktopCollapsed(!isStatsDesktopCollapsed)}
-        />
+        <Suspense fallback={<StatsLoadingFallback />}>
+          <LearningStatsSidebar 
+            darkMode={darkMode} 
+            collapsed={isStatsDesktopCollapsed}
+            onCollapseToggle={() => setIsStatsDesktopCollapsed(!isStatsDesktopCollapsed)}
+          />
+        </Suspense>
       </div>
 
       {/* Mobile Stats Sidebar */}
@@ -705,7 +901,9 @@ export default function ResourcesPage() {
               </Button>
             </div>
             <div className="h-full overflow-auto">
-              <LearningStatsSidebar darkMode={darkMode} />
+              <Suspense fallback={<StatsLoadingFallback />}>
+                <LearningStatsSidebar darkMode={darkMode} />
+              </Suspense>
             </div>
           </div>
         </div>
