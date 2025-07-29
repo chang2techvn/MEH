@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { LearningGoal } from '@/hooks/use-learning-goals';
+import { LearningGoal, useLearningGoals } from '@/hooks/use-learning-goals';
 import { VocabularyInputForm } from './VocabularyInputForm';
-import { VocabularyList } from './VocabularyList';
+import { VocabularyList, VocabularyListRef } from './VocabularyList';
 
 interface VocabularyItem {
   id: string;
@@ -30,11 +30,39 @@ export const GoalProgressModal: React.FC<GoalProgressModalProps> = ({
 }) => {
   const [loading, setLoading] = useState(false);
   const [vocabularyEntries, setVocabularyEntries] = useState<VocabularyItem[]>([]);
+  const [existingVocabulary, setExistingVocabulary] = useState<VocabularyItem[]>([]);
+  const [fetchingExisting, setFetchingExisting] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [latestEntryId, setLatestEntryId] = useState<string | undefined>();
+  const { fetchGoalProgress } = useLearningGoals();
+  const vocabularyListRef = useRef<VocabularyListRef>(null);
+
+  // Fetch existing vocabulary when modal opens
+  useEffect(() => {
+    const loadExistingVocabulary = async () => {
+      if (isOpen && goal) {
+        setFetchingExisting(true);
+        try {
+          const existingEntries = await fetchGoalProgress(goal.id);
+          setExistingVocabulary(existingEntries);
+        } catch (error) {
+          console.error('Error loading existing vocabulary:', error);
+        } finally {
+          setFetchingExisting(false);
+        }
+      }
+    };
+
+    loadExistingVocabulary();
+  }, [isOpen, goal, fetchGoalProgress]);
 
   // Reset entries when modal opens/closes
   useEffect(() => {
     if (!isOpen) {
       setVocabularyEntries([]);
+      setExistingVocabulary([]);
+      setSaveSuccess(false);
+      setLatestEntryId(undefined);
     }
   }, [isOpen]);
 
@@ -66,32 +94,60 @@ export const GoalProgressModal: React.FC<GoalProgressModalProps> = ({
 
   // Add new vocabulary entry
   const handleAddVocabulary = (word: string, meaning: string) => {
+    const newEntryId = `new-${Date.now()}`;
     const newEntry: VocabularyItem = {
-      id: Date.now().toString(),
+      id: newEntryId,
       word: word.trim(),
       meaning: meaning.trim(),
       timestamp: new Date(),
-      index: vocabularyEntries.length + 1
+      index: totalVocabularyCount + 1
     };
 
     setVocabularyEntries([...vocabularyEntries, newEntry]);
+    setLatestEntryId(newEntryId);
+    
+    // Auto-scroll to the newly added vocabulary after a short delay
+    setTimeout(() => {
+      vocabularyListRef.current?.scrollToEntry(newEntryId);
+    }, 100);
   };
 
-  // Remove vocabulary entry
+  // Remove vocabulary entry (only allow removing new entries, not existing ones)
   const handleRemoveVocabulary = (id: string) => {
-    const updatedEntries = vocabularyEntries
-      .filter(entry => entry.id !== id)
-      .map((entry, index) => ({ ...entry, index: index + 1 }));
-    setVocabularyEntries(updatedEntries);
+    // Only remove if it's a new entry (starts with 'new-')
+    if (id.startsWith('new-')) {
+      const updatedEntries = vocabularyEntries
+        .filter(entry => entry.id !== id)
+        .map((entry, index) => ({ 
+          ...entry, 
+          index: existingVocabulary.length + index + 1 
+        }));
+      setVocabularyEntries(updatedEntries);
+      
+      // Reset latest entry ID if the removed entry was the latest
+      if (latestEntryId === id) {
+        setLatestEntryId(undefined);
+      }
+    }
   };
 
-  // Clear all entries
+  // Clear all new entries (keep existing ones)
   const handleClearAll = () => {
     setVocabularyEntries([]);
+    setLatestEntryId(undefined);
   };
 
-  // Get existing words for duplicate check
-  const existingWords = vocabularyEntries.map(entry => entry.word);
+  // Get existing words for duplicate check (both existing and new entries)
+  const existingWords = [
+    ...existingVocabulary.map(entry => entry.word.toLowerCase()),
+    ...vocabularyEntries.map(entry => entry.word.toLowerCase())
+  ];
+
+  // Get total vocabulary count (existing + new)
+  const totalVocabularyCount = existingVocabulary.length + vocabularyEntries.length;
+
+  // Combine existing and new vocabulary for display
+  const allVocabulary = [...existingVocabulary, ...vocabularyEntries];
 
   // Submit progress
   const handleSubmit = async () => {
@@ -99,8 +155,28 @@ export const GoalProgressModal: React.FC<GoalProgressModalProps> = ({
 
     setLoading(true);
     try {
+      // Map category to valid activity_type values
+      const getActivityType = (category: string) => {
+        switch (category) {
+          case 'vocabulary':
+            return 'vocabulary_learned';
+          case 'grammar':
+            return 'grammar_practice';
+          case 'speaking':
+            return 'speaking_session';
+          case 'listening':
+            return 'listening_exercise';
+          case 'reading':
+            return 'reading_comprehension';
+          case 'writing':
+            return 'writing_practice';
+          default:
+            return 'vocabulary_learned'; // fallback
+        }
+      };
+
       const progressData = {
-        activity_type: `${goal.category}_practice`,
+        activity_type: getActivityType(goal.category),
         progress_value: vocabularyEntries.length,
         activity_data: {
           entries: vocabularyEntries.map(entry => ({
@@ -112,11 +188,51 @@ export const GoalProgressModal: React.FC<GoalProgressModalProps> = ({
         }
       };
 
+      // Save to database
       await onProgress(goal.id, progressData);
       
-      // Reset form
+      // Show success feedback
+      setSaveSuccess(true);
+      
+      // Move new entries to existing vocabulary list
+      const newExistingEntries = vocabularyEntries.map(entry => ({
+        ...entry,
+        // Update ID to match database format (will be overwritten by actual data from DB)
+        id: `temp-${entry.id}` // Temporary ID until we refresh from DB
+      }));
+      
+      // Update existing vocabulary state immediately for UI feedback
+      setExistingVocabulary(prev => [...prev, ...newExistingEntries]);
+      
+      // Clear new entries form
       setVocabularyEntries([]);
-      onClose();
+      
+      // Focus back to input for continuous adding
+      setTimeout(() => {
+        const wordInput = document.querySelector('input[placeholder*="vocabulary"]') as HTMLInputElement;
+        if (wordInput) {
+          wordInput.focus();
+        }
+      }, 600);
+      
+      // Hide success message after 3 seconds
+      setTimeout(() => {
+        setSaveSuccess(false);
+      }, 3000);
+      
+      // Refresh existing vocabulary from database to get accurate data
+      setTimeout(async () => {
+        try {
+          const refreshedEntries = await fetchGoalProgress(goal.id);
+          setExistingVocabulary(refreshedEntries);
+        } catch (error) {
+          console.error('Error refreshing vocabulary:', error);
+        }
+      }, 500);
+      
+      // Show success message (optional)
+      // You can add a toast notification here if you have one
+      
     } catch (error) {
       console.error('Error updating progress:', error);
       alert('An error occurred while updating progress!');
@@ -145,7 +261,7 @@ export const GoalProgressModal: React.FC<GoalProgressModalProps> = ({
                 <i className={`fas ${getCategoryIcon(goal.category)} text-white text-lg`}></i>
               </div>
               <div>
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Update Progress</h2>
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Goal Progress</h2>
                 <p className={`text-sm mt-1 ${darkMode ? 'text-gray-400' : 'text-orange-600'}`}>
                   {goal.title}
                 </p>
@@ -162,6 +278,16 @@ export const GoalProgressModal: React.FC<GoalProgressModalProps> = ({
               <i className="fas fa-times text-lg"></i>
             </Button>
           </div>
+          
+          {/* Success Message */}
+          {saveSuccess && (
+            <div className="mt-4 p-3 bg-green-100 dark:bg-green-900/20 border border-green-300 dark:border-green-600 rounded-lg flex items-center animate-in fade-in duration-300">
+              <i className="fas fa-check-circle text-green-600 dark:text-green-400 mr-2"></i>
+              <span className="text-green-800 dark:text-green-200 text-sm font-medium">
+                Progress saved successfully! Your vocabulary has been added to the goal.
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Goal Info */}
@@ -171,6 +297,11 @@ export const GoalProgressModal: React.FC<GoalProgressModalProps> = ({
               <Badge className="bg-orange-100 text-orange-800 px-2 py-1 text-xs">
                 {goal.current + vocabularyEntries.length}/{goal.target} {goal.unit}
               </Badge>
+              {existingVocabulary.length > 0 && (
+                <Badge className="bg-blue-100 text-blue-800 px-2 py-1 text-xs">
+                  {existingVocabulary.length} existing words
+                </Badge>
+              )}
               <Badge className={`text-xs px-2 py-1 ${goal.priority === 'high' ? 'bg-red-100 text-red-800' : goal.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800'}`}>
                 {goal.priority === 'high' ? 'High Priority' : goal.priority === 'medium' ? 'Medium Priority' : 'Low Priority'}
               </Badge>
@@ -213,12 +344,24 @@ export const GoalProgressModal: React.FC<GoalProgressModalProps> = ({
 
           {/* Right Column - Vocabulary List */}
           <div className="w-1/2 p-5 flex flex-col min-h-0">
-            <VocabularyList
-              entries={vocabularyEntries}
-              darkMode={darkMode}
-              onRemove={handleRemoveVocabulary}
-              onClearAll={handleClearAll}
-            />
+            {fetchingExisting ? (
+              <div className="flex items-center justify-center py-8">
+                <i className="fas fa-spinner fa-spin mr-2 text-orange-500"></i>
+                <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                  Loading existing vocabulary...
+                </span>
+              </div>
+            ) : (
+              <VocabularyList
+                ref={vocabularyListRef}
+                entries={allVocabulary}
+                darkMode={darkMode}
+                onRemove={handleRemoveVocabulary}
+                onClearAll={handleClearAll}
+                existingCount={existingVocabulary.length}
+                latestEntryId={latestEntryId}
+              />
+            )}
           </div>
         </div>
 
@@ -227,7 +370,12 @@ export const GoalProgressModal: React.FC<GoalProgressModalProps> = ({
           <div className="flex items-center gap-2">
             <i className="fas fa-info-circle text-orange-500"></i>
             <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-              {vocabularyEntries.length > 0 ? `Will add ${vocabularyEntries.length} words to progress` : 'Add vocabulary to update progress'}
+              {vocabularyEntries.length > 0 
+                ? `Will add ${vocabularyEntries.length} new words to your progress` 
+                : existingVocabulary.length > 0 
+                  ? `${existingVocabulary.length} words already saved for this goal`
+                  : 'Add vocabulary to update progress'
+              }
             </span>
           </div>
           <div className="flex gap-3">
@@ -237,7 +385,8 @@ export const GoalProgressModal: React.FC<GoalProgressModalProps> = ({
               disabled={loading}
               className={`${darkMode ? 'bg-gray-700 border-gray-600 hover:bg-gray-600' : 'hover:bg-gray-50'}`}
             >
-              Cancel
+              <i className="fas fa-times mr-2"></i>
+              Close
             </Button>
             <Button
               onClick={handleSubmit}
@@ -247,13 +396,12 @@ export const GoalProgressModal: React.FC<GoalProgressModalProps> = ({
               {loading ? (
                 <>
                   <i className="fas fa-spinner fa-spin mr-2"></i>
-                  Updating...
+                  Saving...
                 </>
               ) : (
                 <>
                   <i className="fas fa-check mr-2"></i>
-                  Update Progress ({vocabularyEntries.length})
-                </>
+                  Update Progress ({vocabularyEntries.length})                </>
               )}
             </Button>
           </div>

@@ -11,8 +11,11 @@ import { VocabularyModal } from './VocabularyModal';
 import { GoalModal } from './GoalModal';
 import { GoalProgressModal } from './GoalProgressModal';
 import { GoalsListModal } from './GoalsListModal';
-import { useLearningGoals, useVocabulary, useStudyStreaks, LearningGoal } from '@/hooks/use-learning-goals';
+import { NewVocabularyModal } from './NewVocabularyModal';
+import { useLearningGoals, useVocabulary, LearningGoal } from '@/hooks/use-learning-goals';
 import { Skeleton } from '@/components/ui/skeleton';
+import { pronounceVocabulary } from '@/lib/text-to-speech';
+import { useToast } from '@/hooks/use-toast';
 
 interface LearningStatsSidebarProps {
   darkMode: boolean;
@@ -25,16 +28,19 @@ export const LearningStatsSidebar: React.FC<LearningStatsSidebarProps> = ({
   collapsed, 
   onCollapseToggle 
 }) => {
+  const { toast } = useToast();
+  
   const [isVocabularyModalOpen, setIsVocabularyModalOpen] = useState(false);
+  const [isNewVocabularyModalOpen, setIsNewVocabularyModalOpen] = useState(false);
   const [isGoalModalOpen, setIsGoalModalOpen] = useState(false);
   const [isGoalsListModalOpen, setIsGoalsListModalOpen] = useState(false);
   const [isProgressModalOpen, setIsProgressModalOpen] = useState(false);
   const [selectedGoal, setSelectedGoal] = useState<LearningGoal | null>(null);
+  const [selectedVocabularyId, setSelectedVocabularyId] = useState<string | null>(null);
   
   // Use real database hooks
   const { goals, loading: goalsLoading, createGoal, updateGoalProgress } = useLearningGoals();
-  const { recentVocabulary, loading: vocabLoading } = useVocabulary();
-  const { streaks, loading: streaksLoading } = useStudyStreaks();
+  const { recentVocabulary, loading: vocabLoading, createVocabularyEntry } = useVocabulary();
 
   const handleProgressUpdate = async (goalId: string, progressData: any) => {
     await updateGoalProgress(goalId, progressData);
@@ -46,6 +52,30 @@ export const LearningStatsSidebar: React.FC<LearningStatsSidebarProps> = ({
     if (goal.current < goal.target) {
       setSelectedGoal(goal);
       setIsProgressModalOpen(true);
+    }
+  };
+
+  const handleVocabularyClick = (vocabularyId: string) => {
+    setSelectedVocabularyId(vocabularyId);
+    setIsVocabularyModalOpen(true);
+  };
+
+  // Handle pronunciation
+  const handlePronunciation = async (term: string, pronunciation?: string) => {
+    try {
+      await pronounceVocabulary(term, pronunciation, (error) => {
+        // Only show toast for actual errors, not interruptions
+        if (!error.includes('interrupted') && !error.includes('canceled')) {
+          toast({
+            title: "Pronunciation Error",
+            description: error,
+            variant: "destructive",
+          });
+        }
+      });
+    } catch (error) {
+      // Silent catch for interrupted/canceled errors
+      console.debug('Pronunciation handling completed:', error);
     }
   };
 
@@ -131,6 +161,7 @@ export const LearningStatsSidebar: React.FC<LearningStatsSidebarProps> = ({
                 <Button
                   variant="ghost"
                   size="sm"
+                  onClick={() => setIsNewVocabularyModalOpen(true)}
                   className={`h-6 w-6 rounded-lg text-xs transition-colors duration-150 ${darkMode ? 'hover:bg-gray-700 text-gray-400 hover:text-orange-400' : 'hover:bg-orange-100 text-gray-500 hover:text-orange-600'}`}
                 >
                   <i className="fas fa-plus"></i>
@@ -163,7 +194,8 @@ export const LearningStatsSidebar: React.FC<LearningStatsSidebarProps> = ({
                     {recentVocabulary.map((word) => (
                       <div 
                         key={word.id} 
-                        className={`p-2.5 rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-white'} flex items-center justify-between shadow-sm transition-colors duration-150 transform translate3d-0`}
+                        onClick={() => handleVocabularyClick(word.id)}
+                        className={`p-2.5 rounded-lg ${darkMode ? 'bg-gray-800 hover:bg-gray-700' : 'bg-white hover:bg-gray-50'} flex items-center justify-between shadow-sm transition-all duration-150 transform translate3d-0 cursor-pointer`}
                         style={{
                           contain: 'layout style paint',
                           backfaceVisibility: 'hidden'
@@ -185,6 +217,10 @@ export const LearningStatsSidebar: React.FC<LearningStatsSidebarProps> = ({
                           <button 
                             className={`text-xs ${darkMode ? 'text-gray-400 hover:text-orange-400' : 'text-gray-500 hover:text-orange-600'} transition-colors duration-150 p-0.5`}
                             title="Phát âm"
+                            onClick={(e) => {
+                              e.stopPropagation(); // Prevent triggering the vocabulary click
+                              handlePronunciation(word.term, word.pronunciation);
+                            }}
                           >
                             <i className="fas fa-volume-up"></i>
                           </button>
@@ -372,13 +408,15 @@ export const LearningStatsSidebar: React.FC<LearningStatsSidebarProps> = ({
       )}
 
       {/* Modals */}
-      <VocabularyModal
-        isOpen={isVocabularyModalOpen}
-        onClose={() => setIsVocabularyModalOpen(false)}
-        darkMode={darkMode}
-      />
-
-      <GoalsListModal
+        <VocabularyModal 
+          isOpen={isVocabularyModalOpen} 
+          onClose={() => {
+            setIsVocabularyModalOpen(false);
+            setSelectedVocabularyId(null);
+          }}
+          darkMode={darkMode}
+          selectedVocabularyId={selectedVocabularyId || undefined}
+        />      <GoalsListModal
         isOpen={isGoalsListModalOpen}
         onClose={() => setIsGoalsListModalOpen(false)}
         darkMode={darkMode}
@@ -407,6 +445,12 @@ export const LearningStatsSidebar: React.FC<LearningStatsSidebarProps> = ({
           onProgress={handleProgressUpdate}
         />
       )}
+
+      <NewVocabularyModal
+        isOpen={isNewVocabularyModalOpen}
+        onClose={() => setIsNewVocabularyModalOpen(false)}
+        darkMode={darkMode}
+      />
     </div>
   );
 };

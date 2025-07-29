@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/auth-context';
 
@@ -33,14 +33,6 @@ export interface VocabularyEntry {
   source?: string;
   last_reviewed: string;
   created_at: string;
-}
-
-export interface StudyStreak {
-  id: string;
-  category: string;
-  current_streak: number;
-  longest_streak: number;
-  last_activity_date: string;
 }
 
 export const useLearningGoals = () => {
@@ -217,6 +209,50 @@ export const useLearningGoals = () => {
     fetchGoals();
   }, [user?.id]);
 
+  const fetchGoalProgress = useCallback(async (goalId: string) => {
+    if (!user?.id) {
+      return [];
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('learning_progress')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('goal_id', goalId)
+        .eq('activity_type', 'vocabulary_learned')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        throw error;
+      }
+
+      // Extract vocabulary entries from activity_data
+      const vocabularyEntries: any[] = [];
+      data?.forEach((progress) => {
+        if (progress.activity_data?.entries) {
+          progress.activity_data.entries.forEach((entry: any, index: number) => {
+            const vocabularyEntry = {
+              id: `${progress.id}-${index}`,
+              word: entry.word,
+              meaning: entry.meaning,
+              timestamp: new Date(entry.timestamp || progress.created_at),
+              index: entry.index || index + 1,
+              progressId: progress.id,
+              created_at: progress.created_at
+            };
+            vocabularyEntries.push(vocabularyEntry);
+          });
+        }
+      });
+
+      return vocabularyEntries;
+    } catch (err) {
+      console.error('Error fetching goal progress:', err);
+      return [];
+    }
+  }, [user?.id]);
+
   return {
     goals,
     loading,
@@ -226,6 +262,7 @@ export const useLearningGoals = () => {
     deleteGoal,
     toggleGoalCompletion,
     updateGoalProgress,
+    fetchGoalProgress,
     refetch: fetchGoals
   };
 };
@@ -271,6 +308,47 @@ export const useVocabulary = () => {
 
   const fetchRecentVocabulary = () => fetchVocabulary(5);
 
+  const createVocabularyEntry = async (vocabularyData: {
+    term: string;
+    meaning: string;
+    pronunciation?: string;
+    definition?: string;
+    example_sentence?: string;
+    example_translation?: string;
+    difficulty_level?: 'beginner' | 'intermediate' | 'advanced';
+    category?: string;
+    mastery_level?: 'learning' | 'familiar' | 'mastered';
+    source?: string;
+  }) => {
+    if (!user?.id) {
+      throw new Error('User not authenticated');
+    }
+
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('vocabulary_entries')
+        .insert([{
+          ...vocabularyData,
+          user_id: user.id
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Refresh recent vocabulary to show new entry
+      await fetchRecentVocabulary();
+      
+      return data;
+    } catch (err) {
+      console.error('Error creating vocabulary entry:', err);
+      throw err instanceof Error ? err : new Error('Failed to create vocabulary entry');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchRecentVocabulary();
   }, [user?.id]);
@@ -282,45 +360,7 @@ export const useVocabulary = () => {
     error,
     fetchVocabulary,
     fetchRecentVocabulary,
+    createVocabularyEntry,
     refetch: fetchRecentVocabulary
-  };
-};
-
-export const useStudyStreaks = () => {
-  const [streaks, setStreaks] = useState<StudyStreak[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const { user } = useAuth();
-
-  const fetchStreaks = async () => {
-    if (!user?.id) return;
-
-    try {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from('study_streaks')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('category');
-
-      if (error) throw error;
-      setStreaks(data || []);
-    } catch (err) {
-      console.error('Error fetching study streaks:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch streaks');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchStreaks();
-  }, [user?.id]);
-
-  return {
-    streaks,
-    loading,
-    error,
-    refetch: fetchStreaks
   };
 };

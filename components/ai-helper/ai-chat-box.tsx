@@ -390,23 +390,36 @@ export function AIChatBox({ onClose, onMinimize, buttonPosition, initialPosition
                   transition={{ duration: 0.3 }}
                 >
                   <motion.div
-                    animate={{
-                      y: [0, -10, 0],
-                      scale: [1, 1.05, 1],
+                    animate={{ 
+                      scale: [1, 1.02, 1],
+                      rotate: [0, 1, -1, 0]
                     }}
-                    transition={{
-                      duration: 4,
-                      repeat: Number.POSITIVE_INFINITY,
+                    transition={{ 
+                      duration: 8,
+                      repeat: Infinity,
                       repeatType: "reverse",
+                      ease: "easeInOut"
                     }}
+                    className="relative inline-block mb-3"
                   >
-                    <Image
-                      src="https://yvsjynosfwyhvisqhasp.supabase.co/storage/v1/object/public/posts/images/825ef58d-31bc-4ad9-9c99-ed7fb15cf8a1.jfif"
-                      alt="AI Assistant"
-                      width={64}
-                      height={64}
-                      className="h-16 w-16 mx-auto mb-3 rounded-full object-cover"
-                    />
+                    <div className="relative w-16 h-16 rounded-full overflow-hidden">
+                      <Image
+                        src="https://yvsjynosfwyhvisqhasp.supabase.co/storage/v1/object/public/posts/images/825ef58d-31bc-4ad9-9c99-ed7fb15cf8a1.jfif"
+                        alt="AI Assistant"
+                        width={64}
+                        height={64}
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 to-purple-500/20 animate-pulse"></div>
+                      <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                        className="absolute inset-0"
+                      >
+                        <Sparkles className="absolute top-1 right-1 h-3 w-3 text-yellow-400 opacity-70" />
+                        <Sparkles className="absolute bottom-1 left-1 h-2 w-2 text-blue-400 opacity-50" />
+                      </motion.div>
+                    </div>
                   </motion.div>
                   <h3 className="text-lg font-medium mb-2">Welcome to Hani Assistant</h3>
                   <p className="text-muted-foreground mb-4">

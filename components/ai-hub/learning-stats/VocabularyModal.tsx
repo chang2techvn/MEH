@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -11,17 +11,22 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useVocabulary, VocabularyEntry } from '@/hooks/use-learning-goals';
+import { pronounceVocabulary } from '@/lib/text-to-speech';
+import { useToast } from '@/hooks/use-toast';
 
 interface VocabularyModalProps {
   isOpen: boolean;
   onClose: () => void;
   darkMode: boolean;
+  selectedVocabularyId?: string; // Add selected vocabulary ID prop
 }
 
-export const VocabularyModal: React.FC<VocabularyModalProps> = ({ isOpen, onClose, darkMode }) => {
+export const VocabularyModal: React.FC<VocabularyModalProps> = ({ isOpen, onClose, darkMode, selectedVocabularyId }) => {
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [sortBy, setSortBy] = useState('created_at');
+  const vocabularyRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
 
   // Use real database data
   const { vocabulary, loading, error, fetchVocabulary } = useVocabulary();
@@ -32,6 +37,38 @@ export const VocabularyModal: React.FC<VocabularyModalProps> = ({ isOpen, onClos
       fetchVocabulary(); // Fetch all vocabulary (no limit)
     }
   }, [isOpen]);
+
+  // Scroll to selected vocabulary after data loads
+  useEffect(() => {
+    if (selectedVocabularyId && vocabulary.length > 0 && vocabularyRefs.current[selectedVocabularyId]) {
+      // Use setTimeout to ensure the modal is fully rendered
+      setTimeout(() => {
+        vocabularyRefs.current[selectedVocabularyId]?.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'center' 
+        });
+      }, 300);
+    }
+  }, [selectedVocabularyId, vocabulary.length]);
+
+  // Handle pronunciation
+  const handlePronunciation = async (term: string, pronunciation?: string) => {
+    try {
+      await pronounceVocabulary(term, pronunciation, (error) => {
+        // Only show toast for actual errors, not interruptions
+        if (!error.includes('interrupted') && !error.includes('canceled')) {
+          toast({
+            title: "Pronunciation Error",
+            description: error,
+            variant: "destructive",
+          });
+        }
+      });
+    } catch (error) {
+      // Silent catch for interrupted/canceled errors
+      console.debug('Pronunciation handling completed:', error);
+    }
+  };
 
   // Get unique categories from real data
   const categories = ['All', ...Array.from(new Set(vocabulary.map(word => word.category)))];
@@ -267,7 +304,8 @@ export const VocabularyModal: React.FC<VocabularyModalProps> = ({ isOpen, onClos
                 {filteredVocabulary.map((word, index) => (
                   <div
                     key={word.id}
-                    className={`p-5 rounded-xl ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-white hover:bg-gray-50'} border ${darkMode ? 'border-gray-600' : 'border-gray-200'} shadow-sm transition-all duration-300 animate-fadeIn group cursor-pointer`}
+                    ref={(el) => { vocabularyRefs.current[word.id] = el; }}
+                    className={`p-5 rounded-xl ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-white hover:bg-gray-50'} border ${darkMode ? 'border-gray-600' : 'border-gray-200'} shadow-sm transition-all duration-300 animate-fadeIn group cursor-pointer ${selectedVocabularyId === word.id ? 'ring-2 ring-orange-500' : ''}`}
                     style={{ animationDelay: `${index * 50}ms` }}
                   >
                     <div className="flex items-start justify-between mb-3">
@@ -323,6 +361,7 @@ export const VocabularyModal: React.FC<VocabularyModalProps> = ({ isOpen, onClos
                           size="icon"
                           className="h-8 w-8 rounded-lg hover:bg-neo-mint/10 hover:text-neo-mint dark:hover:bg-purist-blue/10 dark:hover:text-purist-blue transition-all duration-200"
                           title="Pronounce"
+                          onClick={() => handlePronunciation(word.term, word.pronunciation)}
                         >
                           <i className="fas fa-volume-up text-sm"></i>
                         </Button>
