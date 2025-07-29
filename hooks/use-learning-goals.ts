@@ -317,7 +317,6 @@ export const useVocabulary = () => {
     example_translation?: string;
     difficulty_level?: 'beginner' | 'intermediate' | 'advanced';
     category?: string;
-    mastery_level?: 'learning' | 'familiar' | 'mastered';
     source?: string;
   }) => {
     if (!user?.id) {
@@ -330,7 +329,11 @@ export const useVocabulary = () => {
         .from('vocabulary_entries')
         .insert([{
           ...vocabularyData,
-          user_id: user.id
+          user_id: user.id,
+          mastery_level: 1, // Default mastery level as integer
+          usage_count: 1,   // Default usage count
+          difficulty_level: vocabularyData.difficulty_level || 'beginner',
+          category: vocabularyData.category || 'general'
         }])
         .select()
         .single();
