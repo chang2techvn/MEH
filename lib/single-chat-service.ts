@@ -26,7 +26,7 @@ export class SingleChatService {
    */
   async sendMessage(message: string): Promise<{ content: string; highlights?: string[]; vocabulary?: any[] }> {
     try {
-      const systemPrompt = `You are Ivy, an AI smartest learning assistant.
+      const systemPrompt = `You are Hani, an AI smartest learning assistant.
 IMPORTANT RESPONSE FORMAT:
 Your response must ALWAYS have exactly 2 parts:
 
@@ -81,7 +81,7 @@ When explaining English words or concepts:
 - Include 2-3 practical examples in a table or list format
 - Use simple, easy-to-understand language
 
-Remember: You are Ivy, always respond with both Main Answer and English Learning Tips sections. The content never over 100 words.
+Remember: You are Hani, always respond with both Main Answer and English Learning Tips sections. The content never over 100 words.
 
 Make your response visually appealing, educational, and perfectly formatted with proper markdown syntax.`;
 
@@ -150,14 +150,14 @@ Make your response visually appealing, educational, and perfectly formatted with
    * Get the default avatar/logo for single chat mode
    */
   getAssistantAvatar(): string {
-    return 'https://sdmntprukwest.oaiusercontent.com/files/00000000-6178-6243-a963-6830a6c5e8c2/raw?se=2025-07-28T23%3A23%3A17Z&sp=r&sv=2024-08-04&sr=b&scid=b32de84c-687b-5e0e-934d-3f0f487f65cc&skoid=04233560-0ad7-493e-8bf0-1347c317d021&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2025-07-28T19%3A07%3A47Z&ske=2025-07-29T19%3A07%3A47Z&sks=b&skv=2024-08-04&sig=RDvWMG8dCr2Yeg6CtLJEmMHPt8ZyNu5QwE5jLoPbZnQ%3D';
+    return 'https://yvsjynosfwyhvisqhasp.supabase.co/storage/v1/object/public/posts/images/825ef58d-31bc-4ad9-9c99-ed7fb15cf8a1.jfif';
   }
 
   /**
    * Get the assistant name for single chat mode
    */
   getAssistantName(): string {
-    return 'Ivy';
+    return 'Hani';
   }
 
   /**
@@ -165,12 +165,12 @@ Make your response visually appealing, educational, and perfectly formatted with
    */
   getAssistantCharacter() {
     return {
-      id: 'ivy-assistant-single',
-      name: 'Ivy',
+      id: 'Hani-assistant-single',
+      name: 'Hani',
       role: 'English Tutor',
       field: 'English Education',
-      description: 'Your personal English learning assistant Ivy',
-      avatar: 'https://sdmntprukwest.oaiusercontent.com/files/00000000-6178-6243-a963-6830a6c5e8c2/raw?se=2025-07-28T23%3A23%3A17Z&sp=r&sv=2024-08-04&sr=b&scid=b32de84c-687b-5e0e-934d-3f0f487f65cc&skoid=04233560-0ad7-493e-8bf0-1347c317d021&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2025-07-28T19%3A07%3A47Z&ske=2025-07-29T19%3A07%3A47Z&sks=b&skv=2024-08-04&sig=RDvWMG8dCr2Yeg6CtLJEmMHPt8ZyNu5QwE5jLoPbZnQ%3D',
+      description: 'Your personal English learning assistant Hani',
+      avatar: 'https://yvsjynosfwyhvisqhasp.supabase.co/storage/v1/object/public/posts/images/825ef58d-31bc-4ad9-9c99-ed7fb15cf8a1.jfif',
       online: true,
       animation: ''
     };

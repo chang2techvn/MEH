@@ -564,7 +564,7 @@ export default function ResourcesPage() {
       return currentChat.title;
     }
     if (selectedAIs.length === 0) {
-      return "Ivy Assistant - Single Chat";
+      return "Hani Assistant - Single Chat";
     }
     return `Conversation with ${selectedAIs.length} people`;
   };
@@ -575,7 +575,7 @@ export default function ResourcesPage() {
       return participantNames.join(', ');
     }
     if (selectedAIs.length === 0) {
-      return "Don't choose anybody, enter something to start a single chat with Ivy";
+      return "Don't choose anybody, enter something to start a single chat with Hani";
     }
     return selectedAIs.map(aiId => getAIById(aiId)?.name).join(', ');
   };
@@ -736,7 +736,7 @@ export default function ResourcesPage() {
                         </div>
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p>{singleChatService.getAssistantName()} - Ivy Assistant</p>
+                        <p>{singleChatService.getAssistantName()} - Hani Assistant</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>

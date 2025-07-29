@@ -20,7 +20,7 @@ interface VocabularyModalProps {
 
 export const VocabularyModal: React.FC<VocabularyModalProps> = ({ isOpen, onClose, darkMode }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('Tất cả');
+  const [selectedCategory, setSelectedCategory] = useState('All');
   const [sortBy, setSortBy] = useState('created_at');
 
   // Use real database data
@@ -34,18 +34,18 @@ export const VocabularyModal: React.FC<VocabularyModalProps> = ({ isOpen, onClos
   }, [isOpen]);
 
   // Get unique categories from real data
-  const categories = ['Tất cả', ...Array.from(new Set(vocabulary.map(word => word.category)))];
+  const categories = ['All', ...Array.from(new Set(vocabulary.map(word => word.category)))];
   
   const sortOptions = [
-    { value: 'created_at', label: 'Ngày thêm' },
-    { value: 'usage_count', label: 'Tần suất sử dụng' },
-    { value: 'term', label: 'Thứ tự ABC' },
-    { value: 'mastery_level', label: 'Độ thành thạo' }
+    { value: 'created_at', label: 'Date Added' },
+    { value: 'usage_count', label: 'Usage Frequency' },
+    { value: 'term', label: 'Alphabetical' },
+    { value: 'mastery_level', label: 'Mastery Level' }
   ];
 
   const filteredVocabulary = vocabulary
     .filter(word => 
-      (selectedCategory === 'Tất cả' || word.category === selectedCategory) &&
+      (selectedCategory === 'All' || word.category === selectedCategory) &&
       (word.term.toLowerCase().includes(searchTerm.toLowerCase()) || 
        word.meaning.toLowerCase().includes(searchTerm.toLowerCase()))
     )
@@ -72,11 +72,11 @@ export const VocabularyModal: React.FC<VocabularyModalProps> = ({ isOpen, onClos
   };
 
   const getMasteryLabel = (masteryLevel: number) => {
-    if (masteryLevel <= 1) return 'Mới học';
-    if (masteryLevel <= 2) return 'Cơ bản';
-    if (masteryLevel <= 3) return 'Trung bình';
-    if (masteryLevel <= 4) return 'Khá';
-    return 'Thành thạo';
+    if (masteryLevel <= 1) return 'Beginner';
+    if (masteryLevel <= 2) return 'Basic';
+    if (masteryLevel <= 3) return 'Intermediate';
+    if (masteryLevel <= 4) return 'Good';
+    return 'Master';
   };
 
   if (!isOpen) return null;
@@ -92,23 +92,32 @@ export const VocabularyModal: React.FC<VocabularyModalProps> = ({ isOpen, onClos
       {/* Modal */}
       <div className={`relative w-full max-w-6xl mx-4 h-[80vh] ${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl shadow-2xl transform transition-all duration-300 animate-fadeIn flex flex-col`}>
         {/* Header */}
-        <div className={`p-6 border-b ${darkMode ? 'border-gray-700' : 'border-gray-200'} flex items-center justify-between flex-shrink-0`}>
-          <div>
-            <h2 className="text-2xl font-bold bg-gradient-to-r from-orange-500 to-orange-600 bg-clip-text text-transparent">
-              Kho từ vựng của bạn
-            </h2>
-            <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'} mt-1`}>
-              Tổng cộng {vocabulary.length} từ vựng
-            </p>
+        <div className={`px-6 py-5 border-b ${darkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-gradient-to-r from-neo-mint/5 to-purist-blue/5'} flex-shrink-0`}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-neo-mint to-purist-blue flex items-center justify-center shadow-lg">
+                <i className="fas fa-book text-white text-lg"></i>
+              </div>
+              <div>
+                <h2 className="text-xl font-semibold bg-gradient-to-r from-neo-mint to-purist-blue bg-clip-text text-transparent">
+                  Your Vocabulary Collection
+                </h2>
+                <p className={`text-sm mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                  Total {vocabulary.length} words learned
+                </p>
+              </div>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onClose}
+              className={`h-9 w-9 rounded-xl transition-all duration-200 ${
+                darkMode ? 'hover:bg-gray-700 text-gray-400 hover:text-white' : 'hover:bg-neo-mint/10 text-gray-500 hover:text-neo-mint'
+              }`}
+            >
+              <i className="fas fa-times text-lg"></i>
+            </Button>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onClose}
-            className={`h-10 w-10 rounded-full ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} transition-all duration-200`}
-          >
-            <i className="fas fa-times text-lg"></i>
-          </Button>
         </div>
 
         {/* Controls */}
@@ -117,10 +126,10 @@ export const VocabularyModal: React.FC<VocabularyModalProps> = ({ isOpen, onClos
             {/* Search */}
             <div className="flex-1 relative">
               <Input
-                placeholder="Tìm kiếm từ vựng..."
+                placeholder="Search vocabulary..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className={`pl-10 ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'} transition-all duration-200`}
+                className={`pl-10 rounded-xl ${darkMode ? 'bg-gray-700 border-gray-600 focus:ring-purist-blue' : 'bg-gray-50 border-gray-200 focus:ring-neo-mint'} transition-all duration-200`}
               />
               <i className="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
             </div>
@@ -130,7 +139,7 @@ export const VocabularyModal: React.FC<VocabularyModalProps> = ({ isOpen, onClos
               <DropdownMenuTrigger asChild>
                 <Button 
                   variant="outline" 
-                  className={`min-w-[140px] justify-between ${darkMode ? 'bg-gray-700 border-gray-600 hover:bg-gray-600' : 'hover:bg-gray-50'}`}
+                  className={`min-w-[140px] justify-between rounded-xl ${darkMode ? 'bg-gray-700 border-gray-600 hover:bg-gray-600' : 'hover:bg-neo-mint/5 border-gray-200 hover:border-neo-mint/20'} transition-all duration-200`}
                 >
                   <div className="flex items-center">
                     <i className="fas fa-filter mr-2 text-sm"></i>
@@ -144,7 +153,7 @@ export const VocabularyModal: React.FC<VocabularyModalProps> = ({ isOpen, onClos
                   <DropdownMenuItem
                     key={category}
                     onClick={() => setSelectedCategory(category)}
-                    className={`cursor-pointer ${selectedCategory === category ? 'bg-orange-50 text-orange-600' : ''}`}
+                    className={`cursor-pointer ${selectedCategory === category ? 'bg-neo-mint/10 text-neo-mint dark:bg-purist-blue/10 dark:text-purist-blue' : ''}`}
                   >
                     {category}
                   </DropdownMenuItem>
@@ -157,7 +166,7 @@ export const VocabularyModal: React.FC<VocabularyModalProps> = ({ isOpen, onClos
               <DropdownMenuTrigger asChild>
                 <Button 
                   variant="outline"
-                  className={`min-w-[140px] justify-between ${darkMode ? 'bg-gray-700 border-gray-600 hover:bg-gray-600' : 'hover:bg-gray-50'}`}
+                  className={`min-w-[140px] justify-between rounded-xl ${darkMode ? 'bg-gray-700 border-gray-600 hover:bg-gray-600' : 'hover:bg-neo-mint/5 border-gray-200 hover:border-neo-mint/20'} transition-all duration-200`}
                 >
                   <div className="flex items-center">
                     <i className="fas fa-sort mr-2 text-sm"></i>
@@ -171,7 +180,7 @@ export const VocabularyModal: React.FC<VocabularyModalProps> = ({ isOpen, onClos
                   <DropdownMenuItem
                     key={option.value}
                     onClick={() => setSortBy(option.value)}
-                    className={`cursor-pointer ${sortBy === option.value ? 'bg-orange-50 text-orange-600' : ''}`}
+                    className={`cursor-pointer ${sortBy === option.value ? 'bg-neo-mint/10 text-neo-mint dark:bg-purist-blue/10 dark:text-purist-blue' : ''}`}
                   >
                     {option.label}
                   </DropdownMenuItem>
@@ -219,14 +228,14 @@ export const VocabularyModal: React.FC<VocabularyModalProps> = ({ isOpen, onClos
                   <i className="fas fa-exclamation-triangle"></i>
                 </div>
                 <h3 className={`text-xl font-medium ${darkMode ? 'text-gray-400' : 'text-gray-500'} mb-2`}>
-                  Lỗi tải dữ liệu
+                  Data Loading Error
                 </h3>
                 <p className={`${darkMode ? 'text-gray-500' : 'text-gray-400'} mb-4`}>
                   {error}
                 </p>
-                <Button onClick={() => fetchVocabulary()} variant="outline">
+                <Button onClick={() => fetchVocabulary()} variant="outline" className="rounded-xl">
                   <i className="fas fa-redo mr-2"></i>
-                  Thử lại
+                  Try Again
                 </Button>
               </div>
             ) : vocabulary.length === 0 ? (
@@ -235,10 +244,10 @@ export const VocabularyModal: React.FC<VocabularyModalProps> = ({ isOpen, onClos
                   <i className="fas fa-book-open"></i>
                 </div>
                 <h3 className={`text-xl font-medium ${darkMode ? 'text-gray-400' : 'text-gray-500'} mb-2`}>
-                  Chưa có từ vựng nào
+                  No Vocabulary Yet
                 </h3>
                 <p className={`${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-                  Bắt đầu học để xây dựng kho từ vựng của bạn!
+                  Start learning to build your vocabulary collection!
                 </p>
               </div>
             ) : filteredVocabulary.length === 0 ? (
@@ -247,10 +256,10 @@ export const VocabularyModal: React.FC<VocabularyModalProps> = ({ isOpen, onClos
                   <i className="fas fa-search"></i>
                 </div>
                 <h3 className={`text-xl font-medium ${darkMode ? 'text-gray-400' : 'text-gray-500'} mb-2`}>
-                  Không tìm thấy từ vựng
+                  No Words Found
                 </h3>
                 <p className={`${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-                  Thử thay đổi từ khóa tìm kiếm hoặc bộ lọc
+                  Try changing your search keywords or filters
                 </p>
               </div>
             ) : (
@@ -263,7 +272,7 @@ export const VocabularyModal: React.FC<VocabularyModalProps> = ({ isOpen, onClos
                   >
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex-1">
-                        <h3 className="font-bold text-lg mb-1 group-hover:text-green-600 transition-colors duration-200">
+                        <h3 className="font-bold text-lg mb-1 group-hover:text-neo-mint dark:group-hover:text-purist-blue transition-colors duration-200">
                           {word.term}
                         </h3>
                         {word.pronunciation && (
@@ -273,10 +282,10 @@ export const VocabularyModal: React.FC<VocabularyModalProps> = ({ isOpen, onClos
                         )}
                       </div>
                       <div className="flex flex-col items-end gap-2">
-                        <Badge className="bg-green-100 text-green-800 hover:bg-green-200 transition-colors duration-200">
+                        <Badge className="bg-neo-mint/10 text-neo-mint dark:bg-purist-blue/10 dark:text-purist-blue hover:bg-neo-mint/20 dark:hover:bg-purist-blue/20 transition-colors duration-200 rounded-lg">
                           {word.usage_count}x
                         </Badge>
-                        <Badge className={`text-xs border ${getMasteryColor(word.mastery_level)}`}>
+                        <Badge className={`text-xs border rounded-lg ${getMasteryColor(word.mastery_level)}`}>
                           {getMasteryLabel(word.mastery_level)}
                         </Badge>
                       </div>
@@ -301,27 +310,27 @@ export const VocabularyModal: React.FC<VocabularyModalProps> = ({ isOpen, onClos
                     
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="text-xs">
+                        <Badge variant="outline" className="text-xs rounded-lg">
                           {word.category}
                         </Badge>
                         <span className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-                          {new Date(word.created_at).toLocaleDateString('vi-VN')}
+                          {new Date(word.created_at).toLocaleDateString('en-US')}
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 hover:bg-green-100 hover:text-green-600 transition-all duration-200"
-                          title="Phát âm"
+                          className="h-8 w-8 rounded-lg hover:bg-neo-mint/10 hover:text-neo-mint dark:hover:bg-purist-blue/10 dark:hover:text-purist-blue transition-all duration-200"
+                          title="Pronounce"
                         >
                           <i className="fas fa-volume-up text-sm"></i>
                         </Button>
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 hover:bg-orange-100 hover:text-orange-600 transition-all duration-200"
-                          title="Thêm vào ôn tập"
+                          className="h-8 w-8 rounded-lg hover:bg-neo-mint/10 hover:text-neo-mint dark:hover:bg-purist-blue/10 dark:hover:text-purist-blue transition-all duration-200"
+                          title="Add to Review"
                         >
                           <i className="fas fa-bookmark text-sm"></i>
                         </Button>
@@ -339,25 +348,25 @@ export const VocabularyModal: React.FC<VocabularyModalProps> = ({ isOpen, onClos
           <div className="flex items-center gap-4">
             <Button
               variant="outline"
-              className={`${darkMode ? 'bg-gray-700 border-gray-600 hover:bg-gray-600' : 'hover:bg-gray-50'} transition-all duration-200`}
+              className={`rounded-xl ${darkMode ? 'bg-gray-700 border-gray-600 hover:bg-gray-600' : 'hover:bg-neo-mint/5 border-gray-200 hover:border-neo-mint/20'} transition-all duration-200`}
             >
               <i className="fas fa-download mr-2"></i>
-              Xuất file
+              Export File
             </Button>
             <Button
               variant="outline"
-              className={`${darkMode ? 'bg-gray-700 border-gray-600 hover:bg-gray-600' : 'hover:bg-gray-50'} transition-all duration-200`}
+              className={`rounded-xl ${darkMode ? 'bg-gray-700 border-gray-600 hover:bg-gray-600' : 'hover:bg-neo-mint/5 border-gray-200 hover:border-neo-mint/20'} transition-all duration-200`}
             >
               <i className="fas fa-upload mr-2"></i>
-              Nhập file
+              Import File
             </Button>
           </div>
           <Button
-            className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white transition-all duration-300 shadow-lg"
+            className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-orange-700 text-white transition-all duration-300 shadow-lg rounded-xl"
             onClick={onClose}
           >
             <i className="fas fa-check mr-2"></i>
-            Hoàn thành
+            Complete
           </Button>
         </div>
       </div>

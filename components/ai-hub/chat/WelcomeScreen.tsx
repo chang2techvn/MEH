@@ -83,7 +83,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
             >
               <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden">
                 <Image
-                  src="https://sdmntprukwest.oaiusercontent.com/files/00000000-6178-6243-a963-6830a6c5e8c2/raw?se=2025-07-28T23%3A23%3A17Z&sp=r&sv=2024-08-04&sr=b&scid=b32de84c-687b-5e0e-934d-3f0f487f65cc&skoid=04233560-0ad7-493e-8bf0-1347c317d021&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2025-07-28T19%3A07%3A47Z&ske=2025-07-29T19%3A07%3A47Z&sks=b&skv=2024-08-04&sig=RDvWMG8dCr2Yeg6CtLJEmMHPt8ZyNu5QwE5jLoPbZnQ%3D"
+                  src="https://yvsjynosfwyhvisqhasp.supabase.co/storage/v1/object/public/posts/images/825ef58d-31bc-4ad9-9c99-ed7fb15cf8a1.jfif"
                   alt="AI Hub Avatar"
                   width={80}
                   height={80}
@@ -116,7 +116,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
               transition={{ delay: 0.3 }}
               className={`text-sm sm:text-base md:text-lg ${darkMode ? 'text-gray-300' : 'text-gray-600'} max-w-2xl mx-auto leading-relaxed px-2`}
             >
-              Chat with Ivy from gemini or chat with AI celebrities and famous personalities. Select characters below to start your conversation.
+              Chat with Hani from gemini or chat with AI celebrities and famous personalities. You can chat now or select characters below to start your conversation.
             </motion.p>
           </div>
 

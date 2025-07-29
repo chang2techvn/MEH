@@ -338,7 +338,7 @@ export function AIChatBox({ onClose, onMinimize, buttonPosition, initialPosition
             <Sparkles className="h-5 w-5 text-yellow-300 absolute top-0 left-0 opacity-70" />
             <Bot className="h-5 w-5 text-white relative z-10" />
           </motion.div>
-          <h3 className="font-medium">AI Language Assistant</h3>
+          <h3 className="font-medium">Hani Assistant</h3>
         </div>
         <div className="flex items-center gap-1">
           <Button
@@ -401,14 +401,14 @@ export function AIChatBox({ onClose, onMinimize, buttonPosition, initialPosition
                     }}
                   >
                     <Image
-                      src="https://sdmntprukwest.oaiusercontent.com/files/00000000-6178-6243-a963-6830a6c5e8c2/raw?se=2025-07-28T23%3A23%3A17Z&sp=r&sv=2024-08-04&sr=b&scid=b32de84c-687b-5e0e-934d-3f0f487f65cc&skoid=04233560-0ad7-493e-8bf0-1347c317d021&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2025-07-28T19%3A07%3A47Z&ske=2025-07-29T19%3A07%3A47Z&sks=b&skv=2024-08-04&sig=RDvWMG8dCr2Yeg6CtLJEmMHPt8ZyNu5QwE5jLoPbZnQ%3D"
+                      src="https://yvsjynosfwyhvisqhasp.supabase.co/storage/v1/object/public/posts/images/825ef58d-31bc-4ad9-9c99-ed7fb15cf8a1.jfif"
                       alt="AI Assistant"
                       width={64}
                       height={64}
                       className="h-16 w-16 mx-auto mb-3 rounded-full object-cover"
                     />
                   </motion.div>
-                  <h3 className="text-lg font-medium mb-2">Welcome to AI Assistant</h3>
+                  <h3 className="text-lg font-medium mb-2">Welcome to Hani Assistant</h3>
                   <p className="text-muted-foreground mb-4">
                     I'm your AI language assistant powered by Gemini. How can I help with your English learning today?
                   </p>
