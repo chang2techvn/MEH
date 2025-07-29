@@ -81,6 +81,16 @@ export const LearningStatsSidebar: React.FC<LearningStatsSidebarProps> = ({
 
   return (
     <div className="relative h-full">
+      <style jsx>{`
+        .smooth-container {
+          -webkit-overflow-scrolling: touch;
+          scroll-behavior: smooth;
+        }
+        .translate3d-0 {
+          transform: translate3d(0, 0, 0);
+          backface-visibility: hidden;
+        }
+      `}</style>
       {/* Sidebar Container */}
       <div className={`transition-all duration-300 ease-in-out ${collapsed ? 'w-0' : 'w-80'} ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} ${collapsed ? '' : 'border-l'} flex flex-col h-full overflow-hidden`}
         style={{ minHeight: '100vh' }}
@@ -102,26 +112,36 @@ export const LearningStatsSidebar: React.FC<LearningStatsSidebarProps> = ({
         </div>
         
         {!collapsed && (
-          <div className={`flex-1 overflow-y-auto scrollbar-auto-hide`}>
-          <div className="p-4 pb-8">
+          <div className={`flex-1 overflow-y-auto scrollbar-auto-hide smooth-container`}
+            style={{
+              contain: 'layout style',
+              willChange: 'scroll-position'
+            }}
+          >
+          <div className="p-3 pb-6">
 
             
             {/* Recent Vocabulary Section */}
-            <div className={`p-4 rounded-xl ${darkMode ? 'bg-gradient-to-br from-gray-800/50 to-gray-700/50 border border-gray-700' : 'bg-gradient-to-br from-orange-50 to-red-50 border border-orange-100'} mb-5 shadow-sm`}>
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="font-semibold text-base flex items-center">
+            <div className={`p-3 rounded-xl ${darkMode ? 'bg-gradient-to-br from-gray-800/50 to-gray-700/50 border border-gray-700' : 'bg-gradient-to-br from-orange-50 to-red-50 border border-orange-100'} mb-3 shadow-sm`}>
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-semibold text-sm flex items-center">
                   <i className="fas fa-book-open mr-2 text-orange-500"></i>
                   Recent Vocabulary
                 </h3>
                 <Button
                   variant="ghost"
                   size="sm"
-                  className={`h-7 w-7 rounded-lg text-xs transition-all duration-200 ${darkMode ? 'hover:bg-gray-700 text-gray-400 hover:text-orange-400' : 'hover:bg-orange-100 text-gray-500 hover:text-orange-600'}`}
+                  className={`h-6 w-6 rounded-lg text-xs transition-colors duration-150 ${darkMode ? 'hover:bg-gray-700 text-gray-400 hover:text-orange-400' : 'hover:bg-orange-100 text-gray-500 hover:text-orange-600'}`}
                 >
                   <i className="fas fa-plus"></i>
                 </Button>
               </div>
-              <div className={`max-h-64 overflow-y-auto pr-2 scrollbar-auto-hide`}>
+              <div className={`max-h-64 overflow-y-auto pr-1 scrollbar-auto-hide smooth-container`}
+                style={{
+                  contain: 'layout style paint',
+                  willChange: 'scroll-position'
+                }}
+              >
                 {vocabLoading ? (
                   <div className="space-y-3">
                     {[...Array(3)].map((_, index) => (
@@ -133,33 +153,37 @@ export const LearningStatsSidebar: React.FC<LearningStatsSidebarProps> = ({
                     ))}
                   </div>
                 ) : recentVocabulary.length === 0 ? (
-                  <div className={`text-center py-8 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                    <i className="fas fa-book-open text-2xl mb-2 opacity-50"></i>
-                    <p className="text-sm">No vocabulary entries yet</p>
-                    <p className="text-xs mt-1">Start learning to see your progress!</p>
+                  <div className={`text-center py-6 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                    <i className="fas fa-book-open text-xl mb-2 opacity-50"></i>
+                    <p className="text-xs">No vocabulary entries yet</p>
+                    <p className="text-xs mt-1 opacity-75">Start learning to see your progress!</p>
                   </div>
                 ) : (
-                  <div className="space-y-3">
+                  <div className="space-y-2">
                     {recentVocabulary.map((word) => (
                       <div 
                         key={word.id} 
-                        className={`p-3 rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-white'} flex items-center justify-between shadow-sm transition-all duration-200 hover:shadow-md`}
+                        className={`p-2.5 rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-white'} flex items-center justify-between shadow-sm transition-colors duration-150 transform translate3d-0`}
+                        style={{
+                          contain: 'layout style paint',
+                          backfaceVisibility: 'hidden'
+                        }}
                       >
                         <div className="flex-1 min-w-0">
-                          <div className="font-medium text-sm sm:text-base">{word.term}</div>
+                          <div className="font-medium text-sm">{word.term}</div>
                           {word.pronunciation && (
-                            <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'} font-mono mb-1`}>
+                            <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'} font-mono mb-0.5`}>
                               [{word.pronunciation}]
                             </div>
                           )}
-                          <div className={`text-xs sm:text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'} line-clamp-1`}>{word.meaning}</div>
+                          <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'} line-clamp-1`}>{word.meaning}</div>
                         </div>
-                        <div className="ml-3 flex flex-col items-end gap-1">
-                          <Badge className="bg-orange-100 text-orange-800 hover:bg-orange-200 text-xs">
+                        <div className="ml-2 flex flex-col items-end gap-0.5">
+                          <Badge className="bg-orange-100 text-orange-800 hover:bg-orange-200 text-xs px-1.5 py-0.5">
                             {word.usage_count}x
                           </Badge>
                           <button 
-                            className={`text-xs ${darkMode ? 'text-gray-400 hover:text-orange-400' : 'text-gray-500 hover:text-orange-600'} transition-colors duration-200`}
+                            className={`text-xs ${darkMode ? 'text-gray-400 hover:text-orange-400' : 'text-gray-500 hover:text-orange-600'} transition-colors duration-150 p-0.5`}
                             title="Phát âm"
                           >
                             <i className="fas fa-volume-up"></i>
@@ -172,7 +196,7 @@ export const LearningStatsSidebar: React.FC<LearningStatsSidebarProps> = ({
               </div>
               <Button 
                 variant="ghost" 
-                className={`w-full mt-3 text-sm rounded-xl transition-all duration-200 ${darkMode ? 'hover:bg-gray-700 hover:text-orange-400' : 'hover:bg-orange-100 hover:text-orange-600'}`}
+                className={`w-full mt-2 text-xs rounded-xl transition-colors duration-150 ${darkMode ? 'hover:bg-gray-700 hover:text-orange-400' : 'hover:bg-orange-100 hover:text-orange-600'}`}
                 onClick={() => setIsVocabularyModalOpen(true)}
               >
                 <i className="fas fa-eye mr-2"></i>
@@ -182,12 +206,12 @@ export const LearningStatsSidebar: React.FC<LearningStatsSidebarProps> = ({
 
             
             {/* Goals Section */}
-            <div className={`p-4 rounded-xl ${darkMode ? 'bg-gradient-to-br from-gray-800/50 to-gray-700/50 border border-gray-700' : 'bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-100'} mb-5 shadow-sm`}>
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="font-semibold text-base flex items-center">
+            <div className={`p-3 rounded-xl ${darkMode ? 'bg-gradient-to-br from-gray-800/50 to-gray-700/50 border border-gray-700' : 'bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-100'} mb-3 shadow-sm`}>
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-semibold text-sm flex items-center">
                   <i className="fas fa-flag mr-2 text-amber-500"></i>
                   Learning Goals
-                  <Badge className="ml-2 bg-amber-100 text-amber-800 text-xs">
+                  <Badge className="ml-2 bg-amber-100 text-amber-800 text-xs px-1.5 py-0.5">
                     {goals.filter(g => g.current >= g.target).length}/{goals.length}
                   </Badge>
                 </h3>
@@ -195,23 +219,28 @@ export const LearningStatsSidebar: React.FC<LearningStatsSidebarProps> = ({
                   variant="ghost"
                   size="sm"
                   onClick={() => setIsGoalModalOpen(true)}
-                  className={`h-7 w-7 rounded-lg text-xs transition-all duration-200 ${darkMode ? 'hover:bg-gray-700 text-gray-400 hover:text-amber-400' : 'hover:bg-amber-100 text-gray-500 hover:text-amber-600'}`}
+                  className={`h-6 w-6 rounded-lg text-xs transition-colors duration-150 ${darkMode ? 'hover:bg-gray-700 text-gray-400 hover:text-amber-400' : 'hover:bg-amber-100 text-gray-500 hover:text-amber-600'}`}
                 >
                   <i className="fas fa-plus"></i>
                 </Button>
               </div>
-              <div className="space-y-3 max-h-64 overflow-y-auto scrollbar-auto-hide">
+              <div className="space-y-2 max-h-64 overflow-y-auto scrollbar-auto-hide smooth-container pb-3"
+                style={{
+                  contain: 'layout style paint',
+                  willChange: 'scroll-position'
+                }}
+              >
                 {goalsLoading ? (
-                  <div className="space-y-3">
+                  <div className="space-y-2">
                     {[...Array(3)].map((_, index) => (
-                      <div key={index} className={`p-3 rounded-lg border ${darkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-200'}`}>
+                      <div key={index} className={`p-2.5 rounded-lg border ${darkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-200'}`}>
                         <div className="flex items-start justify-between">
-                          <div className="flex items-start space-x-3 flex-1">
-                            <Skeleton className="w-5 h-5 rounded-full" />
+                          <div className="flex items-start space-x-2 flex-1">
+                            <Skeleton className="w-4 h-4 rounded-full" />
                             <div className="flex-1">
-                              <Skeleton className="h-4 w-3/4 mb-2" />
-                              <Skeleton className="h-3 w-1/2 mb-2" />
-                              <Skeleton className="h-1.5 w-full" />
+                              <Skeleton className="h-3 w-3/4 mb-1" />
+                              <Skeleton className="h-2 w-1/2 mb-1" />
+                              <Skeleton className="h-1 w-full" />
                             </div>
                           </div>
                         </div>
@@ -219,10 +248,10 @@ export const LearningStatsSidebar: React.FC<LearningStatsSidebarProps> = ({
                     ))}
                   </div>
                 ) : goals.length === 0 ? (
-                  <div className={`text-center py-8 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                    <i className="fas fa-flag text-2xl mb-2 opacity-50"></i>
-                    <p className="text-sm">No learning goals yet</p>
-                    <p className="text-xs mt-1">Create your first goal to get started!</p>
+                  <div className={`text-center py-6 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                    <i className="fas fa-flag text-xl mb-2 opacity-50"></i>
+                    <p className="text-xs">No learning goals yet</p>
+                    <p className="text-xs mt-1 opacity-75">Create your first goal to get started!</p>
                   </div>
                 ) : (
                   goals.map((goal) => {
@@ -231,17 +260,21 @@ export const LearningStatsSidebar: React.FC<LearningStatsSidebarProps> = ({
                     return (
                       <div 
                         key={goal.id}
-                        className={`p-3 rounded-lg border transition-all duration-200 hover:shadow-md cursor-pointer ${
+                        className={`p-2.5 rounded-lg border transition-colors duration-150 cursor-pointer transform translate3d-0 ${
                           isCompleted 
                             ? `${darkMode ? 'bg-green-900/20 border-green-700' : 'bg-green-50 border-green-200'} opacity-90`
                             : `${darkMode ? 'bg-gray-800 border-gray-600 hover:bg-gray-750' : 'bg-white border-gray-200 hover:bg-gray-50'}`
                         }`}
                         onClick={() => handleGoalClick(goal)}
+                        style={{
+                          contain: 'layout style paint',
+                          backfaceVisibility: 'hidden'
+                        }}
                       >
                         <div className="flex items-start justify-between">
-                          <div className="flex items-start space-x-3 flex-1">
+                          <div className="flex items-start space-x-2 flex-1">
                             {/* Status Icon */}
-                            <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center mt-0.5 transition-all duration-200 ${
+                            <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center mt-0.5 transition-colors duration-150 ${
                               isCompleted 
                                 ? 'bg-green-500 border-green-500 text-white' 
                                 : `${darkMode ? 'border-gray-500' : 'border-gray-300'}`
@@ -250,16 +283,16 @@ export const LearningStatsSidebar: React.FC<LearningStatsSidebarProps> = ({
                             </div>
                             
                             <div className="flex-1 min-w-0">
-                              <div className={`font-medium text-sm flex items-center ${isCompleted ? 'line-through opacity-75' : ''}`}>
+                              <div className={`font-medium text-xs flex items-center ${isCompleted ? 'line-through opacity-75' : ''}`}>
                                 {goal.title}
                                 {isCompleted && (
-                                  <Badge className="ml-2 bg-green-100 text-green-800 text-xs">
-                                    Completed
+                                  <Badge className="ml-1 bg-green-100 text-green-800 text-xs px-1 py-0">
+                                    Done
                                   </Badge>
                                 )}
                               </div>
-                              <div className="flex items-center space-x-2 mt-1">
-                                <div className="w-4 h-4 rounded bg-gradient-to-r from-amber-500 to-orange-500 flex items-center justify-center">
+                              <div className="flex items-center space-x-1.5 mt-0.5">
+                                <div className="w-3 h-3 rounded bg-gradient-to-r from-amber-500 to-orange-500 flex items-center justify-center">
                                   <i className="fas fa-book text-white text-xs"></i>
                                 </div>
                                 <span className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
@@ -267,9 +300,9 @@ export const LearningStatsSidebar: React.FC<LearningStatsSidebarProps> = ({
                                 </span>
                                 <i className={`fas fa-flag text-xs ${getPriorityColor(goal.priority)}`}></i>
                               </div>
-                              <div className={`w-full h-1.5 ${darkMode ? 'bg-gray-600' : 'bg-gray-200'} rounded-full mt-2`}>
+                              <div className={`w-full h-1 ${darkMode ? 'bg-gray-600' : 'bg-gray-200'} rounded-full mt-1.5`}>
                                 <div 
-                                  className={`h-full rounded-full transition-all duration-300 ${
+                                  className={`h-full rounded-full transition-all duration-200 ${
                                     isCompleted ? 'bg-green-500' : 'bg-gradient-to-r from-amber-500 to-orange-500'
                                   }`}
                                   style={{ width: `${Math.min((goal.current / goal.target) * 100, 100)}%` }}
@@ -285,10 +318,10 @@ export const LearningStatsSidebar: React.FC<LearningStatsSidebarProps> = ({
               </div>
               <Button 
                 variant="ghost" 
-                className={`w-full mt-3 text-sm rounded-xl transition-all duration-200 group ${darkMode ? 'hover:bg-gray-700 hover:text-amber-400' : 'hover:bg-amber-100 hover:text-amber-700'}`}
+                className={`w-full mt-2 text-xs rounded-xl transition-colors duration-150 group ${darkMode ? 'hover:bg-gray-700 hover:text-amber-400' : 'hover:bg-amber-100 hover:text-amber-700'}`}
                 onClick={() => setIsGoalsListModalOpen(true)}
               >
-                <i className="fas fa-eye mr-2 transition-transform duration-200"></i>
+                <i className="fas fa-eye mr-2 transition-transform duration-150"></i>
                 View All Goals
               </Button>
             </div>

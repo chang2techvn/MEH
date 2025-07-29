@@ -154,7 +154,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message, ai, darkMode,
           </div>
         )}
         <div
-          className={`rounded-2xl p-4 sm:p-5 shadow-md min-h-fit ${
+          className={`rounded-2xl p-3 sm:p-4 shadow-md min-h-fit ${
             isUser
               ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white'
               : (darkMode ? 'bg-gray-700 border border-gray-600' : 'bg-white border border-gray-200')
@@ -207,33 +207,33 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message, ai, darkMode,
                           </li>
                         ),
                         h1: ({ children }) => (
-                          <h1 className="text-2xl font-bold text-orange-600 dark:text-orange-400 mt-6 mb-4 break-words leading-tight">
+                          <h1 className="text-2xl font-bold text-orange-600 dark:text-orange-400 mt-3 mb-2 break-words leading-tight">
                             {children}
                           </h1>
                         ),
                         h2: ({ children }) => (
-                          <h2 className="text-xl font-semibold text-orange-600 dark:text-orange-400 mt-5 mb-3 break-words leading-tight">
+                          <h2 className="text-xl font-semibold text-orange-600 dark:text-orange-400 mt-3 mb-2 break-words leading-tight">
                             {children}
                           </h2>
                         ),
                         h3: ({ children }) => (
-                          <h3 className="text-lg font-medium text-orange-600 dark:text-orange-400 mt-4 mb-2 break-words leading-snug">
+                          <h3 className="text-lg font-medium text-orange-600 dark:text-orange-400 mt-2 mb-1 break-words leading-snug">
                             {children}
                           </h3>
                         ),
                         h4: ({ children }) => (
-                          <h4 className="text-base font-medium text-orange-600 dark:text-orange-400 mt-3 mb-2 break-words leading-normal">
+                          <h4 className="text-base font-medium text-orange-600 dark:text-orange-400 mt-2 mb-1 break-words leading-normal">
                             {children}
                           </h4>
                         ),
                         blockquote: ({ children }) => (
-                          <blockquote className="border-l-4 border-orange-300 dark:border-orange-600 pl-4 py-3 bg-orange-50 dark:bg-orange-900/20 italic text-gray-700 dark:text-gray-300 my-4 text-base leading-relaxed">
+                          <blockquote className="border-l-4 border-orange-300 dark:border-orange-600 pl-4 py-2 bg-orange-50 dark:bg-orange-900/20 italic text-gray-700 dark:text-gray-300 my-2 text-base leading-relaxed">
                             {children}
                           </blockquote>
                         ),
                         // Add table support with professional styling
                         table: ({ children }) => (
-                          <div className="overflow-x-auto my-6 border border-gray-200 dark:border-gray-600 rounded-lg shadow-sm">
+                          <div className="overflow-x-auto my-3 border border-gray-200 dark:border-gray-600 rounded-lg shadow-sm">
                             <table className="min-w-full border-collapse">
                               {children}
                             </table>
@@ -287,7 +287,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message, ai, darkMode,
                             type="checkbox"
                             checked={checked}
                             disabled
-                            className="mr-2 accent-orange-500 scale-110"
+                            className="mr-2 accent-orange-500"
                             {...props}
                           />
                         ),

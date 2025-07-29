@@ -17,6 +17,10 @@ interface CurrentChallengeSectionProps {
   showToggle?: boolean
   sidebarCollapsed?: boolean
   onToggleSidebar?: () => void
+  onToggleButtonHoverEnter?: () => void
+  onToggleButtonHoverLeave?: () => void
+  onSidebarHoverEnter?: () => void
+  onSidebarHoverLeave?: () => void
 }
 
 
@@ -33,7 +37,11 @@ export function CurrentChallengeSection({
   challengeLoading,
   showToggle,
   sidebarCollapsed,
-  onToggleSidebar
+  onToggleSidebar,
+  onToggleButtonHoverEnter,
+  onToggleButtonHoverLeave,
+  onSidebarHoverEnter,
+  onSidebarHoverLeave
 }: CurrentChallengeSectionProps) {
   const [watchTimeText, setWatchTimeText] = useState("3:00")
   const { challengeMode } = useChallenge()
@@ -84,6 +92,10 @@ export function CurrentChallengeSection({
         showToggle={showToggle}
         sidebarCollapsed={sidebarCollapsed}
         onToggleSidebar={onToggleSidebar}
+        onToggleButtonHoverEnter={onToggleButtonHoverEnter}
+        onToggleButtonHoverLeave={onToggleButtonHoverLeave}
+        onSidebarHoverEnter={onSidebarHoverEnter}
+        onSidebarHoverLeave={onSidebarHoverLeave}
       >
         <Suspense fallback={<LoadingFallback />}>
           {/* Remount AssignedTask on challenge change to reset step state */}

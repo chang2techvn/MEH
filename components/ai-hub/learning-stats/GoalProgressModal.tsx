@@ -134,7 +134,7 @@ export const GoalProgressModal: React.FC<GoalProgressModalProps> = ({
       />
       
       {/* Modal */}
-      <div className={`relative w-full max-w-4xl h-[90vh] transform transition-all duration-300 animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-4 ${
+      <div className={`relative w-full max-w-4xl h-[90vh] transform transition-all duration-300 animate-in fade-in-0 slide-in-from-bottom-4 ${
         darkMode ? 'bg-gray-900 text-gray-100' : 'bg-white text-gray-900'
       } rounded-2xl shadow-2xl overflow-hidden border ${darkMode ? 'border-gray-700' : 'border-gray-200'} flex flex-col`}>
         {/* Header */}

@@ -69,7 +69,7 @@ const OptimizedAIAvatar = ({
         isSelected 
           ? 'border-blue-400 shadow-lg shadow-blue-400/30' 
           : (darkMode ? 'border-gray-500' : 'border-gray-300')
-      } border-2 transition-all duration-300 ${className}`}
+      } border-2 transition-colors duration-150 ${className}`}
       style={{ width: size, height: size }}
       {...props}
     >
@@ -77,20 +77,18 @@ const OptimizedAIAvatar = ({
         <Image
           src={src}
           alt={alt}
-          width={size * 2} // 2x resolution for retina displays
+          width={size * 2}
           height={size * 2}
-          quality={100} // Maximum quality
-          className="object-cover rounded-full transition-all duration-300"
+          quality={90}
+          className="object-cover rounded-full"
           style={{ 
             width: size, 
             height: size,
-            imageRendering: 'crisp-edges' // Ensures sharp rendering
+            imageRendering: 'crisp-edges'
           }}
           onError={() => setImageError(true)}
           sizes={`${size}px`}
-          // Add loading optimization
           loading="lazy"
-          // Prevent drag
           draggable={false}
         />
       ) : (
@@ -112,49 +110,54 @@ const OptimizedAIAvatar = ({
 export const AICard: React.FC<AICardProps> = ({ ai, isSelected, onToggle, darkMode }) => {
   return (
     <div
-      className={`group p-2 rounded-lg cursor-pointer transition-all duration-300 ${
+      className={`relative group p-2.5 rounded-xl cursor-pointer transition-all duration-150 ease-out will-change-auto min-h-[72px] shadow-sm flex items-start border ${
         isSelected 
-          ? (darkMode ? 'bg-gradient-to-br from-blue-900/30 to-indigo-900/30 border-2 border-blue-500/50 shadow-lg shadow-blue-500/20' : 'bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200 shadow-lg shadow-blue-200/50') 
-          : (darkMode ? 'bg-gray-700/50 hover:bg-gray-700 border border-gray-600' : 'bg-white hover:bg-gray-50 border border-gray-200 shadow-sm hover:shadow-md')
-      } flex items-start`}
+          ? (darkMode ? 'bg-blue-900/30 border-blue-800' : 'bg-blue-50 border-blue-200') 
+          : (darkMode ? 'bg-gray-700/50 hover:bg-gray-700 border-transparent' : 'bg-white hover:bg-gray-50 border-transparent')
+      }`}
+      style={{
+        contain: 'layout style paint',
+        backfaceVisibility: 'hidden',
+        transform: 'translate3d(0, 0, 0)',
+      }}
       onClick={() => onToggle(ai.id)}
     >
       <div className="relative flex-shrink-0">
         <OptimizedAIAvatar
           src={ai.avatar}
           alt={ai.name}
-          size={32}
+          size={28}
           fallbackText={ai.name.substring(0, 2)}
           isSelected={isSelected}
           darkMode={darkMode}
         />
-        <div className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border border-white ${
+        <div className={`absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full border border-white ${
           ai.online ? 'bg-blue-500' : 'bg-gray-400'
-        } transition-all duration-300`}></div>
+        }`}></div>
       </div>
-      <div className="ml-2 flex-1 min-w-0 overflow-hidden">
-        <div className="flex items-start justify-between min-w-0">
+      <div className="ml-2.5 flex-1 min-w-0 overflow-hidden">
+        <div className="flex items-start justify-between min-w-0 mb-1">
           <div className="flex-1 min-w-0 overflow-hidden">
-            <h3 className="font-semibold text-xs line-clamp-1 group-hover:text-blue-600 transition-colors duration-200">{ai.name}</h3>
-            <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'} font-medium truncate mt-0.5`}>{ai.role}</p>
-            <div className="mt-1">
-              <Badge variant="outline" className={`text-xs font-medium px-1.5 py-0.5 h-auto inline-block max-w-full ${
-                isSelected 
-                  ? (darkMode ? 'bg-blue-900/30 text-blue-400 border-blue-500/50' : 'bg-blue-100 text-blue-700 border-blue-300')
-                  : (darkMode ? 'bg-gray-600 text-gray-300 border-gray-500' : 'bg-gray-100 text-gray-600 border-gray-300')
-              } transition-all duration-200`} title={ai.field}>
-                <span className="block truncate">{ai.field}</span>
-              </Badge>
-            </div>
+            <h3 className="font-semibold text-xs line-clamp-1 mb-0.5 transition-colors duration-150">{ai.name}</h3>
+            <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'} font-medium truncate`}>{ai.role}</p>
           </div>
-          {isSelected && (
-            <div className="flex items-center justify-center w-3.5 h-3.5 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-full shadow-sm flex-shrink-0 ml-1">
-              <i className="fas fa-check text-white text-xs"></i>
-            </div>
-          )}
         </div>
-        <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'} line-clamp-3 leading-relaxed mt-1`}>{ai.description}</p>
+        <div className="mb-1">
+          <Badge variant="outline" className={`text-xs font-medium px-1.5 py-0.5 h-auto inline-block max-w-full ${
+            isSelected 
+              ? (darkMode ? 'bg-blue-900/30 text-blue-400 border-blue-500/50' : 'bg-blue-100 text-blue-700 border-blue-300')
+              : (darkMode ? 'bg-gray-600 text-gray-300 border-gray-500' : 'bg-gray-100 text-gray-600 border-gray-300')
+          }`} title={ai.field}>
+            <span className="block truncate">{ai.field}</span>
+          </Badge>
+        </div>
+        <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'} line-clamp-2 leading-tight`}>{ai.description}</p>
       </div>
+      
+      {/* Active indicator - viền trái giống chat history */}
+      <div className={`absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-gradient-to-b from-blue-500 to-indigo-500 rounded-r-full transition-opacity duration-150 ${
+        isSelected ? 'opacity-100' : 'opacity-0'
+      }`}></div>
     </div>
   );
 };

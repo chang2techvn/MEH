@@ -15,9 +15,24 @@ interface HeroSectionProps {
   showToggle?: boolean
   sidebarCollapsed?: boolean
   onToggleSidebar?: () => void
+  onToggleButtonHoverEnter?: () => void
+  onToggleButtonHoverLeave?: () => void
+  onSidebarHoverEnter?: () => void
+  onSidebarHoverLeave?: () => void
 }
 
-export default function HeroSection({ title, description, children, showToggle, sidebarCollapsed, onToggleSidebar }: HeroSectionProps) {
+export default function HeroSection({ 
+  title, 
+  description, 
+  children, 
+  showToggle, 
+  sidebarCollapsed, 
+  onToggleSidebar,
+  onToggleButtonHoverEnter,
+  onToggleButtonHoverLeave,
+  onSidebarHoverEnter,
+  onSidebarHoverLeave
+}: HeroSectionProps) {
   return (
     <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="space-y-4 sm:space-y-6">
       <motion.div variants={staggerItem}>
@@ -34,7 +49,11 @@ export default function HeroSection({ title, description, children, showToggle, 
               {showToggle && onToggleSidebar && (
                 <>
                   {/* Desktop Toggle Button */}
-                  <div className="hidden md:block absolute top-3 sm:top-4 right-3 sm:right-4 z-10">
+                  <div 
+                    className="hidden md:block absolute top-3 sm:top-4 right-3 sm:right-4 z-10"
+                    onMouseEnter={onToggleButtonHoverEnter}
+                    onMouseLeave={onToggleButtonHoverLeave}
+                  >
                     <Button
                       variant="outline"
                       size="icon"

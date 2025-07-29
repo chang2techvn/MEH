@@ -29,6 +29,7 @@ import SmoothScrollIndicator from '@/components/ui/smooth-scroll-indicator';
 import { Sidebar } from '@/components/ai-hub/sidebar/Sidebar';
 import { MessageItem } from '@/components/ai-hub/chat/MessageItem';
 import { ChatInput } from '@/components/ai-hub/chat/ChatInput';
+import { WelcomeScreen } from '@/components/ai-hub/chat/WelcomeScreen';
 import { Message } from '@/types/ai-hub.types';
 
 // Only lazy load the non-essential right sidebar (stats)
@@ -140,6 +141,10 @@ export default function ResourcesPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [singleChatMessages, setSingleChatMessages] = useState<Message[]>([]);
   const [singleChatProcessing, setSingleChatProcessing] = useState(false);
+  const [leftHoverTimer, setLeftHoverTimer] = useState<NodeJS.Timeout | null>(null);
+  const [rightHoverTimer, setRightHoverTimer] = useState<NodeJS.Timeout | null>(null);
+  const [isHoveringLeftArea, setIsHoveringLeftArea] = useState(false);
+  const [isHoveringRightArea, setIsHoveringRightArea] = useState(false);
   const isMobile = useMobile();
 
   // Debug: Log singleChatMessages changes
@@ -261,6 +266,10 @@ export default function ResourcesPage() {
       console.log('💾 Updated messages after user:', newMessages);
       return newMessages;
     });
+    
+    // Auto-scroll after adding user message
+    setTimeout(() => scrollToBottom(), 100);
+    
     setSingleChatProcessing(true);
     
     try {
@@ -288,6 +297,9 @@ export default function ResourcesPage() {
         console.log('💾 Final messages:', newMessages);
         return newMessages;
       });
+      
+      // Auto-scroll after adding assistant message
+      setTimeout(() => scrollToBottom(), 100);
     } catch (error) {
       console.error('❌ Error in single chat:', error);
       // Add error message with correct Message interface
@@ -301,6 +313,9 @@ export default function ResourcesPage() {
         mediaUrl: null
       };
       setSingleChatMessages(prev => [...prev, errorMessage]);
+      
+      // Auto-scroll after adding error message
+      setTimeout(() => scrollToBottom(), 100);
     } finally {
       setSingleChatProcessing(false);
     }
@@ -392,14 +407,81 @@ export default function ResourcesPage() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Tự động thu hẹp right sidebar sau 5 giây khi load trang
+  // Tự động thu hẹp both sidebars sau 5 giây khi load trang
   useEffect(() => {
-    const timer = setTimeout(() => {
+    const leftTimer = setTimeout(() => {
+      setIsDesktopSidebarCollapsed(true);
+    }, 5000);
+    
+    const rightTimer = setTimeout(() => {
       setIsStatsDesktopCollapsed(true);
     }, 5000);
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(leftTimer);
+      clearTimeout(rightTimer);
+    };
   }, []);
+
+  // Handle left sidebar hover auto-expand/collapse
+  const handleLeftSidebarHoverEnter = () => {
+    if (isDesktopSidebarCollapsed) {
+      setIsHoveringLeftArea(true);
+      setIsDesktopSidebarCollapsed(false);
+    }
+    // Clear any existing timer
+    if (leftHoverTimer) {
+      clearTimeout(leftHoverTimer);
+      setLeftHoverTimer(null);
+    }
+  };
+
+  const handleLeftSidebarHoverLeave = () => {
+    setIsHoveringLeftArea(false);
+    // Start timer to auto-collapse after 3 seconds
+    const timer = setTimeout(() => {
+      if (!isHoveringLeftArea) {
+        setIsDesktopSidebarCollapsed(true);
+      }
+    }, 3000);
+    setLeftHoverTimer(timer);
+  };
+
+  // Handle right sidebar hover auto-expand/collapse
+  const handleRightSidebarHoverEnter = () => {
+    if (isStatsDesktopCollapsed) {
+      setIsHoveringRightArea(true);
+      setIsStatsDesktopCollapsed(false);
+    }
+    // Clear any existing timer
+    if (rightHoverTimer) {
+      clearTimeout(rightHoverTimer);
+      setRightHoverTimer(null);
+    }
+  };
+
+  const handleRightSidebarHoverLeave = () => {
+    setIsHoveringRightArea(false);
+    // Start timer to auto-collapse after 3 seconds
+    const timer = setTimeout(() => {
+      if (!isHoveringRightArea) {
+        setIsStatsDesktopCollapsed(true);
+      }
+    }, 3000);
+    setRightHoverTimer(timer);
+  };
+
+  // Cleanup timers on unmount
+  useEffect(() => {
+    return () => {
+      if (leftHoverTimer) {
+        clearTimeout(leftHoverTimer);
+      }
+      if (rightHoverTimer) {
+        clearTimeout(rightHoverTimer);
+      }
+    };
+  }, [leftHoverTimer, rightHoverTimer]);
 
   // Early return for hydration - like other routes
   if (!mounted) {
@@ -445,9 +527,8 @@ export default function ResourcesPage() {
 
   const toggleAISelection = (aiId: string) => {
     if (selectedAIs.includes(aiId)) {
-      if (selectedAIs.length > 1) {
-        setSelectedAIs(selectedAIs.filter(id => id !== aiId));
-      }
+      // Allow deselecting any AI, even if it's the last one
+      setSelectedAIs(selectedAIs.filter(id => id !== aiId));
     } else {
       setSelectedAIs([...selectedAIs, aiId]);
     }
@@ -483,7 +564,7 @@ export default function ResourcesPage() {
       return currentChat.title;
     }
     if (selectedAIs.length === 0) {
-      return "English Learning Assistant";
+      return "Ivy Assistant - Single Chat";
     }
     return `Conversation with ${selectedAIs.length} people`;
   };
@@ -494,7 +575,7 @@ export default function ResourcesPage() {
       return participantNames.join(', ');
     }
     if (selectedAIs.length === 0) {
-      return "Your personal English tutor";
+      return "Don't choose anybody, enter something to start a single chat with Ivy";
     }
     return selectedAIs.map(aiId => getAIById(aiId)?.name).join(', ');
   };
@@ -587,22 +668,41 @@ export default function ResourcesPage() {
       </div>
 
       {/* Sidebar cố định cho desktop */}
-      <div className={`hidden lg:block flex-shrink-0 h-full transition-all duration-300 ${isDesktopSidebarCollapsed ? 'w-0' : 'w-80'}`}>
-        <Sidebar
-          isOpen={true}
-          onToggle={() => setIsDesktopSidebarCollapsed(!isDesktopSidebarCollapsed)}
-          selectedAIs={selectedAIs}
-          onToggleAI={toggleAISelection}
-          activeFilter={activeFilter}
-          onFilterChange={setActiveFilter}
-          darkMode={darkMode}
-          onToggleDarkMode={() => setDarkMode(!darkMode)}
-          collapsed={isDesktopSidebarCollapsed}
-          onCollapseToggle={() => setIsDesktopSidebarCollapsed(!isDesktopSidebarCollapsed)}
-          onChatSelect={handleChatSelect}
-          currentChatId={currentChatId}
-          aiCharacters={aiAssistants}
-        />
+      <div className="relative hidden lg:block flex-shrink-0 h-full">
+        {/* Hover trigger zone when sidebar is collapsed */}
+        {isDesktopSidebarCollapsed && (
+          <div
+            className="absolute left-0 top-0 w-6 h-full z-10 bg-transparent hover:bg-blue-500/5 transition-all duration-200 border-r-2 border-transparent hover:border-blue-500/20 cursor-pointer group"
+            onMouseEnter={handleLeftSidebarHoverEnter}
+            title="Hover để mở rộng sidebar"
+          >
+            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+              <i className="fas fa-chevron-right text-blue-500 text-xs animate-pulse"></i>
+            </div>
+          </div>
+        )}
+        
+        <div 
+          className={`transition-all duration-300 ease-in-out ${isDesktopSidebarCollapsed ? 'w-0' : 'w-80'} h-full`}
+          onMouseEnter={handleLeftSidebarHoverEnter}
+          onMouseLeave={handleLeftSidebarHoverLeave}
+        >
+          <Sidebar
+            isOpen={true}
+            onToggle={() => setIsDesktopSidebarCollapsed(!isDesktopSidebarCollapsed)}
+            selectedAIs={selectedAIs}
+            onToggleAI={toggleAISelection}
+            activeFilter={activeFilter}
+            onFilterChange={setActiveFilter}
+            darkMode={darkMode}
+            onToggleDarkMode={() => setDarkMode(!darkMode)}
+            collapsed={isDesktopSidebarCollapsed}
+            onCollapseToggle={() => setIsDesktopSidebarCollapsed(!isDesktopSidebarCollapsed)}
+            onChatSelect={handleChatSelect}
+            currentChatId={currentChatId}
+            aiCharacters={aiAssistants}
+          />
+        </div>
       </div>
 
       {/* Main Chat Area */}
@@ -636,7 +736,7 @@ export default function ResourcesPage() {
                         </div>
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p>{singleChatService.getAssistantName()} - English Learning Assistant</p>
+                        <p>{singleChatService.getAssistantName()} - Ivy Assistant</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
@@ -892,45 +992,62 @@ export default function ResourcesPage() {
           className={`flex-1 chat-mobile smooth-auto-scroll ${darkMode ? 'bg-gradient-to-b from-gray-900 to-gray-800' : 'bg-gradient-to-b from-gray-50 to-white'}`}
           ref={chatContainerRef}
         >
-          <div className="w-full space-y-6 sm:space-y-8 px-3 sm:px-4 md:px-6 lg:px-8 xl:px-12 2xl:px-16 py-6 sm:py-8">
-            {selectedAIs.length === 0 ? (
-              // Single chat mode - show single chat messages
-              (() => {
-                console.log('🔍 Rendering single chat messages:', singleChatMessages);
-                return singleChatMessages.map((message) => {
-                  console.log('🎨 Rendering message:', message);
-                  const isUser = message.sender === 'user';
-                  // Get AI character from service for single chat assistant
-                  const assistantCharacter = isUser ? undefined : singleChatService.getAssistantCharacter();
-                  
-                  return (
-                    <MessageItem
-                      key={message.id}
-                      message={message}
-                      ai={assistantCharacter}
-                      darkMode={darkMode}
-                      onReply={() => {}} // No reply function for single chat
-                    />
-                  );
-                });
-              })()
+          <div className="w-full h-full">
+            {/* Show Welcome Screen when no messages exist */}
+            {(selectedAIs.length === 0 ? singleChatMessages.length === 0 : messages.length === 0) ? (
+              <WelcomeScreen
+                selectedAIs={selectedAIs}
+                onToggleAI={toggleAISelection}
+                aiCharacters={aiAssistants}
+                darkMode={darkMode}
+                onStartChat={() => {
+                  // Focus on input after selecting AIs
+                  const input = document.querySelector('textarea');
+                  if (input) input.focus();
+                }}
+              />
             ) : (
-              // Group chat mode - show group chat messages
-              messages.map((message) => {
-                const isUser = message.sender === 'user';
-                // For AI messages, sender will be the AI name (not ID)
-                const ai = isUser ? null : getAIByName(message.sender);
-                
-                return (
-                  <MessageItem
-                    key={message.id}
-                    message={message}
-                    ai={ai ?? undefined}
-                    darkMode={darkMode}
-                    onReply={startReplyMode}
-                  />
-                );
-              })
+              <div className="space-y-6 sm:space-y-8 px-3 sm:px-4 md:px-6 lg:px-8 xl:px-12 2xl:px-16 py-6 sm:py-8">
+                {selectedAIs.length === 0 ? (
+                  // Single chat mode - show single chat messages
+                  (() => {
+                    console.log('🔍 Rendering single chat messages:', singleChatMessages);
+                    return singleChatMessages.map((message) => {
+                      console.log('🎨 Rendering message:', message);
+                      const isUser = message.sender === 'user';
+                      // Get AI character from service for single chat assistant
+                      const assistantCharacter = isUser ? undefined : singleChatService.getAssistantCharacter();
+                      
+                      return (
+                        <MessageItem
+                          key={message.id}
+                          message={message}
+                          ai={assistantCharacter}
+                          darkMode={darkMode}
+                          onReply={() => {}} // No reply function for single chat
+                        />
+                      );
+                    });
+                  })()
+                ) : (
+                  // Group chat mode - show group chat messages
+                  messages.map((message) => {
+                    const isUser = message.sender === 'user';
+                    // For AI messages, sender will be the AI name (not ID)
+                    const ai = isUser ? null : getAIByName(message.sender);
+                    
+                    return (
+                      <MessageItem
+                        key={message.id}
+                        message={message}
+                        ai={ai ?? undefined}
+                        darkMode={darkMode}
+                        onReply={startReplyMode}
+                      />
+                    );
+                  })
+                )}
+              </div>
             )}
           </div>
         </ScrollArea>
@@ -1027,14 +1144,33 @@ export default function ResourcesPage() {
       </div>
       
       {/* Desktop Learning Stats Sidebar */}
-      <div className={`hidden xl:block transition-all duration-300 ${isStatsDesktopCollapsed ? 'w-0' : 'w-80'}`}>
-        <Suspense fallback={<StatsLoadingFallback />}>
-          <LearningStatsSidebar 
-            darkMode={darkMode} 
-            collapsed={isStatsDesktopCollapsed}
-            onCollapseToggle={() => setIsStatsDesktopCollapsed(!isStatsDesktopCollapsed)}
-          />
-        </Suspense>
+      <div className="relative hidden xl:block flex-shrink-0 h-full">
+        {/* Hover trigger zone when right sidebar is collapsed */}
+        {isStatsDesktopCollapsed && (
+          <div
+            className="absolute right-0 top-0 w-6 h-full z-10 bg-transparent hover:bg-green-500/5 transition-all duration-200 border-l-2 border-transparent hover:border-green-500/20 cursor-pointer group"
+            onMouseEnter={handleRightSidebarHoverEnter}
+            title="Hover để mở rộng stats sidebar"
+          >
+            <div className="absolute top-1/2 right-1/2 transform translate-x-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+              <i className="fas fa-chevron-left text-green-500 text-xs animate-pulse"></i>
+            </div>
+          </div>
+        )}
+        
+        <div 
+          className={`transition-all duration-300 ease-in-out ${isStatsDesktopCollapsed ? 'w-0' : 'w-80'} h-full`}
+          onMouseEnter={handleRightSidebarHoverEnter}
+          onMouseLeave={handleRightSidebarHoverLeave}
+        >
+          <Suspense fallback={<StatsLoadingFallback />}>
+            <LearningStatsSidebar 
+              darkMode={darkMode} 
+              collapsed={isStatsDesktopCollapsed}
+              onCollapseToggle={() => setIsStatsDesktopCollapsed(!isStatsDesktopCollapsed)}
+            />
+          </Suspense>
+        </div>
       </div>
 
       {/* Mobile Stats Sidebar */}

@@ -19,7 +19,7 @@ export function NavItem({ icon: Icon, label, href, onClick, active = false }: Na
     </>
   )
 
-  const baseClasses = `flex items-center gap-3 2xl:gap-4 p-2 2xl:p-3 rounded-lg transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm ${
+  const baseClasses = `flex items-center gap-3 2xl:gap-4 p-2 2xl:p-3 rounded-lg transition-all duration-200 ${
     active ? "bg-gray-100 dark:bg-gray-700" : "hover:bg-gray-100 dark:hover:bg-gray-700"
   }`
 

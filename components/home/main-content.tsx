@@ -13,6 +13,10 @@ interface MainContentProps {
   showToggle?: boolean
   sidebarCollapsed?: boolean
   onToggleSidebar?: () => void
+  onToggleButtonHoverEnter?: () => void
+  onToggleButtonHoverLeave?: () => void
+  onSidebarHoverEnter?: () => void
+  onSidebarHoverLeave?: () => void
 }
 
 const LoadingFallback = () => (
@@ -22,7 +26,18 @@ const LoadingFallback = () => (
   </div>
 )
 
-export function MainContent({ newPostAdded, setNewPostAdded, isExpanded = false, showToggle, sidebarCollapsed, onToggleSidebar }: MainContentProps) {
+export function MainContent({ 
+  newPostAdded, 
+  setNewPostAdded, 
+  isExpanded = false, 
+  showToggle, 
+  sidebarCollapsed, 
+  onToggleSidebar,
+  onToggleButtonHoverEnter,
+  onToggleButtonHoverLeave,
+  onSidebarHoverEnter,
+  onSidebarHoverLeave
+}: MainContentProps) {
   const { 
     currentChallenge, 
     challengeLoading 
@@ -63,6 +78,10 @@ export function MainContent({ newPostAdded, setNewPostAdded, isExpanded = false,
             showToggle={showToggle}
             sidebarCollapsed={sidebarCollapsed}
             onToggleSidebar={onToggleSidebar}
+            onToggleButtonHoverEnter={onToggleButtonHoverEnter}
+            onToggleButtonHoverLeave={onToggleButtonHoverLeave}
+            onSidebarHoverEnter={onSidebarHoverEnter}
+            onSidebarHoverLeave={onSidebarHoverLeave}
           />
         </Suspense>
       </motion.div>

@@ -90,7 +90,7 @@ export const VocabularyModal: React.FC<VocabularyModalProps> = ({ isOpen, onClos
       />
       
       {/* Modal */}
-      <div className={`relative w-full max-w-6xl mx-4 h-[80vh] ${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl shadow-2xl transform transition-all duration-300 scale-100 animate-fadeIn flex flex-col`}>
+      <div className={`relative w-full max-w-6xl mx-4 h-[80vh] ${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl shadow-2xl transform transition-all duration-300 animate-fadeIn flex flex-col`}>
         {/* Header */}
         <div className={`p-6 border-b ${darkMode ? 'border-gray-700' : 'border-gray-200'} flex items-center justify-between flex-shrink-0`}>
           <div>
@@ -258,7 +258,7 @@ export const VocabularyModal: React.FC<VocabularyModalProps> = ({ isOpen, onClos
                 {filteredVocabulary.map((word, index) => (
                   <div
                     key={word.id}
-                    className={`p-5 rounded-xl ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-white hover:bg-gray-50'} border ${darkMode ? 'border-gray-600' : 'border-gray-200'} shadow-sm hover:shadow-lg transition-all duration-300 animate-fadeIn group cursor-pointer`}
+                    className={`p-5 rounded-xl ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-white hover:bg-gray-50'} border ${darkMode ? 'border-gray-600' : 'border-gray-200'} shadow-sm transition-all duration-300 animate-fadeIn group cursor-pointer`}
                     style={{ animationDelay: `${index * 50}ms` }}
                   >
                     <div className="flex items-start justify-between mb-3">

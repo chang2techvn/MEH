@@ -21,6 +21,7 @@ import { LeaderboardModal } from "@/components/home/leaderboard-modal"
 import { MobileBottomNavigation } from "@/components/home/mobile-bottom-navigation"
 import { Sidebar } from "@/components/home/sidebar"
 import ChallengeTabs from "@/components/challenge/challenge-tabs"
+import { AIChatButton } from "@/components/ai-helper/ai-chat-button"
 
 // Only lazy load non-essential modals that appear on user interaction
 const CreateChallengeModal = lazy(() => import("@/components/challenge/create-challenge-modal"))
@@ -39,6 +40,9 @@ export default function Home() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [isInitialLoad, setIsInitialLoad] = useState(true)
   const [filterTab, setFilterTab] = useState("all")
+  const [hoverTimer, setHoverTimer] = useState<NodeJS.Timeout | null>(null)
+  const [isHoveringSidebar, setIsHoveringSidebar] = useState(false)
+  const [isHoveringToggleButton, setIsHoveringToggleButton] = useState(false)
   const isMobile = useMobile()
   // Handle selected challenge change from ChallengeTabs
   const handleSelectedChallengeChange = useCallback((challenge: any) => {
@@ -86,7 +90,12 @@ export default function Home() {
     }, 5000)
     
     // Cleanup timer if component unmounts
-    return () => clearTimeout(autoCollapseTimer)
+    return () => {
+      clearTimeout(autoCollapseTimer)
+      if (hoverTimer) {
+        clearTimeout(hoverTimer)
+      }
+    }
   }, [])
 
   // Handle user manual toggle (save to localStorage only after auto-collapse)
@@ -98,6 +107,51 @@ export default function Home() {
     if (!isInitialLoad && typeof window !== 'undefined') {
       localStorage.setItem('english-learning-sidebar-collapsed', JSON.stringify(newState))
     }
+  }
+
+  // Handle toggle button hover auto-expand/collapse
+  const handleToggleButtonHoverEnter = () => {
+    if (sidebarCollapsed) {
+      setIsHoveringToggleButton(true)
+      setSidebarCollapsed(false)
+    }
+    // Clear any existing timer
+    if (hoverTimer) {
+      clearTimeout(hoverTimer)
+      setHoverTimer(null)
+    }
+  }
+
+  const handleToggleButtonHoverLeave = () => {
+    setIsHoveringToggleButton(false)
+    // Start timer to auto-collapse after 3 seconds
+    const timer = setTimeout(() => {
+      if (!isHoveringToggleButton && !isHoveringSidebar) {
+        setSidebarCollapsed(true)
+      }
+    }, 3000)
+    setHoverTimer(timer)
+  }
+
+  // Handle sidebar hover to prevent auto-collapse
+  const handleSidebarHoverEnter = () => {
+    setIsHoveringSidebar(true)
+    // Clear any existing timer
+    if (hoverTimer) {
+      clearTimeout(hoverTimer)
+      setHoverTimer(null)
+    }
+  }
+
+  const handleSidebarHoverLeave = () => {
+    setIsHoveringSidebar(false)
+    // Start timer to auto-collapse after 3 seconds if not hovering toggle button
+    const timer = setTimeout(() => {
+      if (!isHoveringToggleButton && !isHoveringSidebar) {
+        setSidebarCollapsed(true)
+      }
+    }, 3000)
+    setHoverTimer(timer)
   }
 
   // Handle practice tool clicks
@@ -152,14 +206,22 @@ export default function Home() {
               showToggle={true}
               sidebarCollapsed={sidebarCollapsed}
               onToggleSidebar={handleToggleSidebar}
+              onToggleButtonHoverEnter={handleToggleButtonHoverEnter}
+              onToggleButtonHoverLeave={handleToggleButtonHoverLeave}
+              onSidebarHoverEnter={handleSidebarHoverEnter}
+              onSidebarHoverLeave={handleSidebarHoverLeave}
             />
 
             {/* Sidebar with conditional rendering and animation */}
-            <div className={`transition-all duration-500 ease-in-out w-full lg:w-80 xl:w-96 2xl:w-[420px] lg:flex-shrink-0 lg:max-w-[35%] lg:-mt-5 xl:-mt-0 hidden md:block ${
-              sidebarCollapsed 
-                ? "lg:hidden" // Hide only on desktop when collapsed
-                : "md:block" // Show only on desktop/tablet screens (md and up)
-            }`}>
+            <div 
+              className={`transition-all duration-500 ease-in-out w-full lg:w-80 xl:w-96 2xl:w-[420px] lg:flex-shrink-0 lg:max-w-[35%] lg:-mt-5 xl:-mt-0 hidden md:block ${
+                sidebarCollapsed 
+                  ? "lg:hidden" // Hide only on desktop when collapsed
+                  : "md:block" // Show only on desktop/tablet screens (md and up)
+              }`}
+              onMouseEnter={handleSidebarHoverEnter}
+              onMouseLeave={handleSidebarHoverLeave}
+            >
               <Sidebar 
                 onPracticeToolClick={handlePracticeToolClick}
                 onViewLeaderboard={handleViewLeaderboard}
@@ -279,6 +341,9 @@ export default function Home() {
       )}
       {/* Mobile Bottom Navigation - Only show on home route */}
       <MobileBottomNavigation />
+
+      {/* AI Chat Button - Only show on home page and desktop */}
+      <AIChatButton />
 
       <footer className="border-t border-white/10 dark:border-gray-800/10 bg-white/40 dark:bg-gray-900/40 backdrop-blur-xl">
           <div className="border-t border-white/10 dark:border-gray-800/10 mt-6 sm:mt-8 pt-6 sm:pt-8 text-center text-xs sm:text-sm text-muted-foreground px-3 sm:px-6">

@@ -486,7 +486,7 @@ export function CreatePostModal(props: CreatePostModalProps) {
                             
                             
                             transition={{ type: "spring", stiffness: 400, damping: 15 }}
-                            className="h-8 w-8 sm:h-9 sm:w-9 md:h-10 md:w-10 rounded-full flex items-center justify-center bg-white dark:bg-gray-700 shadow-sm hover:shadow-md transition-all duration-200 border border-gray-200 dark:border-gray-600"
+                            className="h-8 w-8 sm:h-9 sm:w-9 md:h-10 md:w-10 rounded-full flex items-center justify-center bg-white dark:bg-gray-700 shadow-sm transition-all duration-200 border border-gray-200 dark:border-gray-600"
                             onClick={() => postFileInputRef.current?.click()}
                             aria-label="Add photo or video"
                           >
@@ -518,7 +518,7 @@ export function CreatePostModal(props: CreatePostModalProps) {
                                 
                                 
                                 transition={{ type: "spring", stiffness: 400, damping: 15 }}
-                                className="h-9 w-9 sm:h-10 sm:w-10 rounded-full flex items-center justify-center bg-white dark:bg-gray-700 shadow-sm hover:shadow-md transition-all duration-200 border border-gray-200 dark:border-gray-600"
+                                className="h-9 w-9 sm:h-10 sm:w-10 rounded-full flex items-center justify-center bg-white dark:bg-gray-700 shadow-sm transition-all duration-200 border border-gray-200 dark:border-gray-600"
                                 aria-label="Tag people"
                               >
                                 <Users className="h-4.5 w-4.5 sm:h-5 sm:w-5 text-blue-500" />
@@ -568,7 +568,7 @@ export function CreatePostModal(props: CreatePostModalProps) {
                                 
                                 
                                 transition={{ type: "spring", stiffness: 400, damping: 15 }}
-                                className="h-9 w-9 sm:h-10 sm:w-10 rounded-full flex items-center justify-center bg-white dark:bg-gray-700 shadow-sm hover:shadow-md transition-all duration-200 border border-gray-200 dark:border-gray-600"
+                                className="h-9 w-9 sm:h-10 sm:w-10 rounded-full flex items-center justify-center bg-white dark:bg-gray-700 shadow-sm transition-all duration-200 border border-gray-200 dark:border-gray-600"
                                 aria-label="Add feeling or activity"
                               >
                                 <Smile className="h-4.5 w-4.5 sm:h-5 sm:w-5 text-yellow-500" />
@@ -640,7 +640,7 @@ export function CreatePostModal(props: CreatePostModalProps) {
                                 
                                 
                                 transition={{ type: "spring", stiffness: 400, damping: 15 }}
-                                className="h-9 w-9 sm:h-10 sm:w-10 rounded-full flex items-center justify-center bg-white dark:bg-gray-700 shadow-sm hover:shadow-md transition-all duration-200 border border-gray-200 dark:border-gray-600"
+                                className="h-9 w-9 sm:h-10 sm:w-10 rounded-full flex items-center justify-center bg-white dark:bg-gray-700 shadow-sm transition-all duration-200 border border-gray-200 dark:border-gray-600"
                                 aria-label="Check in location"
                               >
                                 <MapPin className="h-4.5 w-4.5 sm:h-5 sm:w-5 text-red-500" />
@@ -702,7 +702,7 @@ export function CreatePostModal(props: CreatePostModalProps) {
                                 
                                 
                                 transition={{ type: "spring", stiffness: 400, damping: 15 }}
-                                className="h-9 w-9 sm:h-10 sm:w-10 rounded-full flex items-center justify-center bg-white dark:bg-gray-700 shadow-sm hover:shadow-md transition-all duration-200 border border-gray-200 dark:border-gray-600"
+                                className="h-9 w-9 sm:h-10 sm:w-10 rounded-full flex items-center justify-center bg-white dark:bg-gray-700 shadow-sm transition-all duration-200 border border-gray-200 dark:border-gray-600"
                                 aria-label="Add date"
                               >
                                 <CalendarIcon className="h-4.5 w-4.5 sm:h-5 sm:w-5 text-purple-500" />
@@ -757,7 +757,7 @@ export function CreatePostModal(props: CreatePostModalProps) {
                                 
                                 
                                 transition={{ type: "spring", stiffness: 400, damping: 15 }}
-                                className="h-9 w-9 sm:h-10 sm:w-10 rounded-full flex items-center justify-center bg-white dark:bg-gray-700 shadow-sm hover:shadow-md transition-all duration-200 border border-gray-200 dark:border-gray-600"
+                                className="h-9 w-9 sm:h-10 sm:w-10 rounded-full flex items-center justify-center bg-white dark:bg-gray-700 shadow-sm transition-all duration-200 border border-gray-200 dark:border-gray-600"
                                 aria-label="More options"
                               >
                                 <MoreHorizontal className="h-4.5 w-4.5 sm:h-5 sm:w-5" />
@@ -823,7 +823,7 @@ export function CreatePostModal(props: CreatePostModalProps) {
                 className="mt-4"
               >
                 <Button
-                  className="w-full py-2 h-auto text-base font-medium shadow-md hover:shadow-lg transition-all duration-200"
+                  className="w-full py-2 h-auto text-base font-medium shadow-md transition-all duration-200"
                   onClick={handlePostSubmit}
                   disabled={(!newPostContent.trim() && mediaPreviews.length === 0) || isPostingContent}
                   style={{

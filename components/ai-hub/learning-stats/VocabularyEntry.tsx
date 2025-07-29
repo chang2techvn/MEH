@@ -33,7 +33,7 @@ export const VocabularyEntry: React.FC<VocabularyEntryProps> = ({
   };
 
   return (
-    <div className={`p-4 rounded-xl border transition-all duration-200 hover:shadow-sm ${
+    <div className={`p-4 rounded-xl border transition-all duration-200 ${
       darkMode ? 'bg-gray-800/50 border-gray-600 hover:bg-gray-800' : 'bg-white border-gray-200 hover:bg-gray-50'
     }`}>
       <div className="flex items-center justify-between gap-4">

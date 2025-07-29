@@ -162,7 +162,7 @@ export const VocabularyInputForm: React.FC<VocabularyInputFormProps> = ({
             className={`px-6 py-2 rounded-xl font-medium transition-all duration-200 ${
               !word.trim() || !meaning.trim()
                 ? `${darkMode ? 'bg-gray-600 text-gray-400' : 'bg-gray-200 text-gray-400'} cursor-not-allowed`
-                : 'bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white shadow-lg hover:shadow-xl'
+                : 'bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white shadow-lg'
             }`}
           >
             <i className="fas fa-plus mr-2"></i>

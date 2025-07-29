@@ -102,7 +102,7 @@ export default function FeedPost({
         className={`animation-gpu ${isNew ? "relative z-10 mb-3 sm:mb-8 pt-3" : "mb-3 sm:mb-6"}`}
       >
         <Card
-          className={`neo-card border-none bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl shadow-md hover:shadow-2xl transition-shadow duration-300 ${
+          className={`neo-card border-none bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl shadow-md transition-shadow duration-300 ${
             isNew ? "ring-2 ring-neo-mint dark:ring-purist-blue" : ""
           }`}
           style={{ 

@@ -26,9 +26,17 @@ export class SingleChatService {
    */
   async sendMessage(message: string): Promise<{ content: string; highlights?: string[]; vocabulary?: any[] }> {
     try {
-      const systemPrompt = `You are an English language learning assistant and tutor. You help users practice English, explain grammar, provide vocabulary, assist with pronunciation, and support all aspects of English learning.
+      const systemPrompt = `You are Ivy, an AI smartest learning assistant.
+IMPORTANT RESPONSE FORMAT:
+Your response must ALWAYS have exactly 2 parts:
 
-IMPORTANT FORMATTING RULES:
+## 📝 Main Answer
+[Provide the main content answering the user's question - concise and focused]
+
+## 💡 English Learning Tips
+[Provide English learning suggestions related to the question's content - concise and focused]
+
+FORMATTING RULES:
 1. Always provide clear, structured responses using proper markdown formatting
 2. Use **bold** to highlight important English words and key concepts  
 3. Use numbered lists (1. 2. 3.) for step-by-step explanations
@@ -53,15 +61,17 @@ FORMATTING GUIDELINES:
 - For lists, keep content on same line as number/bullet to avoid line breaks
 
 STRUCTURE EXAMPLE:
-## Main Topic
+## 📝 Main Answer
 
-Brief introduction paragraph.
+Brief answer to the user's question with key information.
 
 ### Key Points
 1. **First important point** - detailed explanation
 2. **Second important point** - detailed explanation
 
-### Examples Table
+## 💡 English Learning Tips
+
+### Vocabulary Practice
 | English Term | Pronunciation | Vietnamese Meaning | Example Sentence |
 |--------------|---------------|--------------------|------------------|
 | **optimize** | [ˈɒptɪmaɪz] | tối ưu hóa | We need to **optimize** our website |
@@ -70,6 +80,8 @@ When explaining English words or concepts:
 - **Highlight the main word/concept** in bold
 - Include 2-3 practical examples in a table or list format
 - Use simple, easy-to-understand language
+
+Remember: You are Ivy, always respond with both Main Answer and English Learning Tips sections. The content never over 100 words.
 
 Make your response visually appealing, educational, and perfectly formatted with proper markdown syntax.`;
 
@@ -138,15 +150,14 @@ Make your response visually appealing, educational, and perfectly formatted with
    * Get the default avatar/logo for single chat mode
    */
   getAssistantAvatar(): string {
-    // Return the website logo path - same as in header
-    return '/placeholder-logo.svg'; // Update this to match your header logo
+    return 'https://sdmntprukwest.oaiusercontent.com/files/00000000-6178-6243-a963-6830a6c5e8c2/raw?se=2025-07-28T23%3A23%3A17Z&sp=r&sv=2024-08-04&sr=b&scid=b32de84c-687b-5e0e-934d-3f0f487f65cc&skoid=04233560-0ad7-493e-8bf0-1347c317d021&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2025-07-28T19%3A07%3A47Z&ske=2025-07-29T19%3A07%3A47Z&sks=b&skv=2024-08-04&sig=RDvWMG8dCr2Yeg6CtLJEmMHPt8ZyNu5QwE5jLoPbZnQ%3D';
   }
 
   /**
    * Get the assistant name for single chat mode
    */
   getAssistantName(): string {
-    return 'English Assistant';
+    return 'Ivy';
   }
 
   /**
@@ -154,12 +165,12 @@ Make your response visually appealing, educational, and perfectly formatted with
    */
   getAssistantCharacter() {
     return {
-      id: 'english-assistant-single',
-      name: 'English Assistant',
+      id: 'ivy-assistant-single',
+      name: 'Ivy',
       role: 'English Tutor',
       field: 'English Education',
-      description: 'Your personal English learning assistant',
-      avatar: '/placeholder-logo.svg',
+      description: 'Your personal English learning assistant Ivy',
+      avatar: 'https://sdmntprukwest.oaiusercontent.com/files/00000000-6178-6243-a963-6830a6c5e8c2/raw?se=2025-07-28T23%3A23%3A17Z&sp=r&sv=2024-08-04&sr=b&scid=b32de84c-687b-5e0e-934d-3f0f487f65cc&skoid=04233560-0ad7-493e-8bf0-1347c317d021&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2025-07-28T19%3A07%3A47Z&ske=2025-07-29T19%3A07%3A47Z&sks=b&skv=2024-08-04&sig=RDvWMG8dCr2Yeg6CtLJEmMHPt8ZyNu5QwE5jLoPbZnQ%3D',
       online: true,
       animation: ''
     };

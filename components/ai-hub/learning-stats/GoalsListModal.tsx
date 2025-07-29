@@ -75,7 +75,7 @@ export const GoalsListModal: React.FC<GoalsListModalProps> = ({
       />
       
       {/* Modal */}
-      <div className={`relative w-full max-w-4xl h-[85vh] transform transition-all duration-300 animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-4 ${
+      <div className={`relative w-full max-w-4xl h-[85vh] transform transition-all duration-300 animate-in fade-in-0 slide-in-from-bottom-4 ${
         darkMode ? 'bg-gray-900 text-gray-100' : 'bg-white text-gray-900'
       } rounded-2xl shadow-2xl overflow-hidden border ${darkMode ? 'border-gray-700' : 'border-gray-200'} flex flex-col`}>
         {/* Header */}
@@ -95,7 +95,7 @@ export const GoalsListModal: React.FC<GoalsListModalProps> = ({
             <div className="flex items-center gap-3">
               <Button
                 onClick={onCreateNew}
-                className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white rounded-xl px-4 py-2 font-medium shadow-lg hover:shadow-xl transition-all duration-200"
+                className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white rounded-xl px-4 py-2 font-medium shadow-lg transition-all duration-200"
               >
                 <i className="fas fa-plus mr-2"></i>
                 Add New Goal
@@ -247,7 +247,7 @@ export const GoalsListModal: React.FC<GoalsListModalProps> = ({
               {goals.length === 0 && (
                 <Button
                   onClick={onCreateNew}
-                  className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white rounded-xl px-6 py-3 font-medium shadow-lg hover:shadow-xl transition-all duration-200"
+                  className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white rounded-xl px-6 py-3 font-medium shadow-lg transition-all duration-200"
                 >
                   <i className="fas fa-plus mr-2"></i>
                   Create Your First Goal
@@ -263,7 +263,7 @@ export const GoalsListModal: React.FC<GoalsListModalProps> = ({
                 return (
                   <div 
                     key={goal.id}
-                    className={`p-4 rounded-xl border transition-all duration-200 hover:shadow-lg cursor-pointer ${
+                    className={`p-4 rounded-xl border transition-all duration-200 cursor-pointer ${
                       isCompleted 
                         ? `${darkMode ? 'bg-green-900/20 border-green-700' : 'bg-green-50 border-green-200'} opacity-95`
                         : `${darkMode ? 'bg-gray-800/50 border-gray-600 hover:bg-gray-800' : 'bg-white border-gray-200 hover:bg-gray-50'}`

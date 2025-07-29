@@ -235,7 +235,7 @@ export function ImageViewer({ images, initialIndex, isOpen, onClose, title, auto
                   }}
                   className={`relative w-12 h-12 rounded-md overflow-hidden border-2 transition-all ${
                     index === currentIndex
-                      ? 'border-white scale-110'
+                      ? 'border-white'
                       : 'border-white/30 hover:border-white/60'
                   }`}
                 >

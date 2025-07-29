@@ -64,10 +64,6 @@ export function PostActions({
           ) : (
             <Heart
               className={`h-3 w-3 sm:h-4 sm:w-4 ${liked ? "fill-cassis text-cassis" : ""} transition-colors`}
-              style={{
-                transform: liked ? "scale(1.2)" : "scale(1)",
-                transition: "transform 0.3s ease",
-              }}
             />
           )}
           <span id={`like-count-${username.replace(/\s+/g, "-")}`}>{likeCount}</span>
@@ -77,9 +73,9 @@ export function PostActions({
         <AnimatePresence>
           {showReactions && (
             <motion.div
-              initial={{ opacity: 0, y: 10, scale: 0.9 }}
-              animate={{ opacity: 1, y: -45, scale: 1 }}
-              exit={{ opacity: 0, y: 10, scale: 0.9 }}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: -45 }}
+              exit={{ opacity: 0, y: 10 }}
               transition={{ duration: 0.2 }}
               className="absolute left-0 -top-1 bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl rounded-full p-1.5 sm:p-2 shadow-xl border border-white/20 dark:border-gray-700/30 z-20 flex gap-0.5 sm:gap-1"
               style={{
@@ -96,10 +92,9 @@ export function PostActions({
                       
                       className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-white/20 dark:hover:bg-gray-700/20"
                       onClick={() => onReaction(reaction.emoji)}
-                      initial={{ opacity: 0, scale: 0.5 }}
+                      initial={{ opacity: 0 }}
                       animate={{ 
-                        opacity: 1, 
-                        scale: 1
+                        opacity: 1 
                       }}
                       transition={{ 
                         type: "spring", 
@@ -149,10 +144,6 @@ export function PostActions({
       >
         <Bookmark
           className={`h-3 w-3 sm:h-4 sm:w-4 ${saved ? "fill-neo-mint dark:fill-purist-blue" : ""}`}
-          style={{
-            transform: saved ? "scale(1.2)" : "scale(1)",
-            transition: "transform 0.3s ease",
-          }}
         />
         <span>{saved ? "Saved" : "Save"}</span>
       </Button>

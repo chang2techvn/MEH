@@ -163,7 +163,7 @@ export const GoalModal: React.FC<GoalModalProps> = ({ isOpen, onClose, darkMode,
       />
       
       {/* Modal */}
-      <div className={`relative w-full max-w-lg transform transition-all duration-300 animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-4 ${
+      <div className={`relative w-full max-w-lg transform transition-all duration-300 animate-in fade-in-0 slide-in-from-bottom-4 ${
         darkMode ? 'bg-gray-900 text-gray-100' : 'bg-white text-gray-900'
       } rounded-2xl shadow-2xl overflow-hidden border ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
         
@@ -325,7 +325,7 @@ export const GoalModal: React.FC<GoalModalProps> = ({ isOpen, onClose, darkMode,
             <Button
               type="submit"
               disabled={isSubmitting || !formData.title.trim() || !formData.target || !formData.deadline}
-              className="flex-1 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
+              className="flex-1 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
             >
               {isSubmitting ? (
                 <>

@@ -5,6 +5,7 @@ import type { Message } from "@/hooks/use-gemini-ai"
 
 import { useState, useEffect, useRef, useCallback } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Textarea } from "@/components/ui/textarea"
@@ -86,7 +87,8 @@ export function AIChatBox({ onClose, onMinimize, buttonPosition, initialPosition
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
-    if (messagesEndRef.current) {
+    // Only scroll if there are actual messages (not welcome screen)
+    if (messagesEndRef.current && messages.length > 0) {
       messagesEndRef.current.scrollIntoView({ behavior: "smooth" })
     }
   }, [messages])
@@ -398,7 +400,13 @@ export function AIChatBox({ onClose, onMinimize, buttonPosition, initialPosition
                       repeatType: "reverse",
                     }}
                   >
-                    <Bot className="h-16 w-16 mx-auto mb-3 text-neo-mint dark:text-purist-blue opacity-80" />
+                    <Image
+                      src="https://sdmntprukwest.oaiusercontent.com/files/00000000-6178-6243-a963-6830a6c5e8c2/raw?se=2025-07-28T23%3A23%3A17Z&sp=r&sv=2024-08-04&sr=b&scid=b32de84c-687b-5e0e-934d-3f0f487f65cc&skoid=04233560-0ad7-493e-8bf0-1347c317d021&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2025-07-28T19%3A07%3A47Z&ske=2025-07-29T19%3A07%3A47Z&sks=b&skv=2024-08-04&sig=RDvWMG8dCr2Yeg6CtLJEmMHPt8ZyNu5QwE5jLoPbZnQ%3D"
+                      alt="AI Assistant"
+                      width={64}
+                      height={64}
+                      className="h-16 w-16 mx-auto mb-3 rounded-full object-cover"
+                    />
                   </motion.div>
                   <h3 className="text-lg font-medium mb-2">Welcome to AI Assistant</h3>
                   <p className="text-muted-foreground mb-4">
@@ -494,7 +502,7 @@ export function AIChatBox({ onClose, onMinimize, buttonPosition, initialPosition
                 type="submit"
                 size="icon"
                 disabled={isLoading || !input.trim()}
-                className="absolute right-3 bottom-3 h-9 w-9 rounded-full hover:from-blue-600 hover:via-purple-600 hover:to-pink-600 transition-all duration-300 disabled:opacity-40 shadow-xl hover:shadow-2xl border-2 border-white dark:border-gray-800"
+                className="absolute right-3 bottom-3 h-9 w-9 rounded-full hover:from-blue-600 hover:via-purple-600 hover:to-pink-600 transition-all duration-300 disabled:opacity-40 shadow-xl border-2 border-white dark:border-gray-800"
               >
                 {isLoading ? (
                   <Loader2 className="h-4 w-4 animate-spin text-white" />

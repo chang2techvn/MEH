@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ChatHistory, AICharacter } from '@/types/ai-hub.types';
 import { formatDate } from '@/lib/utils/format';
@@ -21,35 +21,41 @@ export const ChatHistoryItem: React.FC<ChatHistoryItemProps> = ({
   const getAIById = (id: string) => aiCharacters.find(ai => ai.id === id);
   const mainAI = getAIById(chat.participants[0]);
 
-  const handleClick = () => {
+  const handleClick = useCallback(() => {
     if (onChatSelect) {
       onChatSelect(chat.id);
     }
-  };
+  }, [onChatSelect, chat.id]);
 
   return (
     <div
       onClick={handleClick}
-      className={`p-3 sm:p-4 rounded-xl mb-2 sm:mb-3 cursor-pointer transition-all duration-300 relative ${
+      className={`relative p-3 rounded-xl cursor-pointer transition-all duration-150 ease-out min-h-[72px] flex items-center ${
         isActive 
           ? (darkMode ? 'bg-blue-900/30 border border-blue-800' : 'bg-blue-50 border border-blue-200')
-          : (darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100')
+          : (darkMode ? 'hover:bg-gray-700 border border-transparent' : 'hover:bg-gray-100 border border-transparent')
       }`}
+      style={{
+        contain: 'layout style paint',
+        backfaceVisibility: 'hidden',
+        transform: 'translate3d(0, 0, 0)',
+        willChange: 'background-color, border-color'
+      }}
     >
-      <div className="flex items-start gap-3">
+      <div className="flex items-center gap-3 w-full">
         {/* Avatar AI chính */}
-        <Avatar className="w-10 h-10 sm:w-12 sm:h-12 border-2 border-white dark:border-gray-800 shadow-sm flex-shrink-0">
+        <Avatar className="w-10 h-10 border-2 border-white dark:border-gray-800 shadow-sm flex-shrink-0">
           <AvatarImage src={mainAI?.avatar} alt={mainAI?.name} />
-          <AvatarFallback className="bg-blue-100 text-blue-800 text-xs sm:text-sm">
+          <AvatarFallback className="bg-blue-100 text-blue-800 text-sm">
             {mainAI?.name?.substring(0, 2) || '?'}
           </AvatarFallback>
         </Avatar>
         
         {/* Nội dung chat */}
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 py-1">
           {/* Dòng 1: Tiêu đề và thời gian */}
           <div className="flex items-center justify-between mb-1">
-            <h3 className={`font-medium text-sm sm:text-base line-clamp-1 flex-1 mr-2 ${
+            <h3 className={`font-medium text-sm line-clamp-1 flex-1 mr-2 ${
               isActive ? (darkMode ? 'text-blue-400' : 'text-blue-700') : ''
             }`}>
               {chat.title}
@@ -71,7 +77,7 @@ export const ChatHistoryItem: React.FC<ChatHistoryItemProps> = ({
                 {chat.participants.slice(1, 3).map((aiId) => {
                   const ai = getAIById(aiId);
                   return (
-                    <Avatar key={aiId} className="w-5 h-5 sm:w-6 sm:h-6 border border-white dark:border-gray-800 shadow-sm">
+                    <Avatar key={aiId} className="w-5 h-5 border border-white dark:border-gray-800 shadow-sm">
                       <AvatarImage src={ai?.avatar} alt={ai?.name} />
                       <AvatarFallback className="bg-blue-100 text-blue-800 text-xs">
                         {ai?.name?.substring(0, 1) || '?'}
@@ -80,7 +86,7 @@ export const ChatHistoryItem: React.FC<ChatHistoryItemProps> = ({
                   );
                 })}
                 {chat.participants.length > 3 && (
-                  <div className="w-5 h-5 sm:w-6 sm:h-6 bg-gray-200 dark:bg-gray-600 rounded-full flex items-center justify-center border border-white dark:border-gray-800">
+                  <div className="w-5 h-5 bg-gray-200 dark:bg-gray-600 rounded-full flex items-center justify-center border border-white dark:border-gray-800">
                     <span className="text-xs text-gray-600 dark:text-gray-300">+{chat.participants.length - 3}</span>
                   </div>
                 )}
@@ -88,7 +94,7 @@ export const ChatHistoryItem: React.FC<ChatHistoryItemProps> = ({
             )}
             
             {/* Tin nhắn cuối */}
-            <p className={`text-xs sm:text-sm line-clamp-1 flex-1 ${
+            <p className={`text-xs line-clamp-1 flex-1 ${
               isActive 
                 ? (darkMode ? 'text-blue-300' : 'text-blue-600')
                 : (darkMode ? 'text-gray-400' : 'text-gray-600')
@@ -100,9 +106,9 @@ export const ChatHistoryItem: React.FC<ChatHistoryItemProps> = ({
       </div>
       
       {/* Active indicator */}
-      {isActive && (
-        <div className="absolute left-0 top-4 w-1 h-8 bg-gradient-to-b from-blue-500 to-indigo-500 rounded-r-full"></div>
-      )}
+      <div className={`absolute left-0 top-4 w-1 h-8 bg-gradient-to-b from-blue-500 to-indigo-500 rounded-r-full transition-opacity duration-150 ${
+        isActive ? 'opacity-100' : 'opacity-0'
+      }`}></div>
     </div>
   );
 };

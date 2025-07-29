@@ -237,7 +237,7 @@ export function LeaderboardModal({ isOpen, onClose }: LeaderboardModalProps) {
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -20 }}
                       transition={{ delay: index * 0.05 }}
-                      className="group flex items-center gap-2 sm:gap-4 p-2 sm:p-4 rounded-xl bg-white/10 dark:bg-gray-800/10 hover:bg-white/20 dark:hover:bg-gray-800/20 transition-all duration-200 hover:shadow-lg"
+                      className="group flex items-center gap-2 sm:gap-4 p-2 sm:p-4 rounded-xl bg-white/10 dark:bg-gray-800/10 hover:bg-white/20 dark:hover:bg-gray-800/20 transition-all duration-200"
                     >
                       {/* Rank */}
                       <div className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10">

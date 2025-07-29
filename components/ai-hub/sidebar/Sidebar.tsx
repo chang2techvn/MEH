@@ -64,6 +64,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <div className="relative h-full">
+      <style jsx>{`
+        .smooth-container {
+          -webkit-overflow-scrolling: touch;
+          scroll-behavior: smooth;
+        }
+        .chat-item {
+          transform: translate3d(0, 0, 0);
+          backface-visibility: hidden;
+          contain: layout style paint;
+        }
+      `}</style>
       {/* Sidebar Container */}
       <div
         className={`${darkMode ? 'bg-gradient-to-b from-gray-800 to-gray-900 border-gray-700' : 'bg-gradient-to-b from-white to-gray-50 border-gray-200'} ${collapsed ? '' : 'border-r'} transition-all duration-300 ease-in-out flex flex-col h-full shadow-lg ${collapsed ? 'w-0' : 'w-full max-w-sm lg:max-w-none lg:w-80'} overflow-hidden`}
@@ -155,16 +166,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 </div>
                 
                 {/* AI List */}
-                <div className={`flex-1 overflow-y-auto scrollbar-auto-hide`}>
-                  <div className="pt-2 px-2 pb-12 space-y-1.5">
+                <div className={`flex-1 overflow-y-auto scrollbar-auto-hide smooth-container`}
+                  style={{
+                    contain: 'layout style paint',
+                    willChange: 'scroll-position'
+                  }}
+                >
+                  <div className="pt-2 px-2 pb-12 space-y-1">
                     {filteredAIs.map((ai) => (
-                      <AICard
-                        key={ai.id}
-                        ai={ai}
-                        isSelected={selectedAIs.includes(ai.id)}
-                        onToggle={onToggleAI}
-                        darkMode={darkMode}
-                      />
+                      <div key={ai.id} className="chat-item">
+                        <AICard
+                          ai={ai}
+                          isSelected={selectedAIs.includes(ai.id)}
+                          onToggle={onToggleAI}
+                          darkMode={darkMode}
+                        />
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -172,8 +189,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
               
               {/* History Tab */}
               <TabsContent value="history" className="flex-1 overflow-hidden mt-0 pt-0 data-[state=inactive]:hidden">
-                <div className="h-full overflow-y-auto scrollbar-auto-hide">
-                  <div className="px-3 py-2 sm:px-4 sm:py-3">
+                <div 
+                  className="h-full overflow-y-auto scrollbar-auto-hide scroll-smooth smooth-container"
+                  style={{
+                    contain: 'strict',
+                    willChange: 'scroll-position'
+                  }}
+                >
+                  <div className="px-3 py-2 pb-12 space-y-0.5">
                     {sessionsLoading && (
                       <div className="flex items-center justify-center py-8">
                         <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-orange-600"></div>
@@ -209,14 +232,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     )}
                     
                     {!sessionsLoading && !sessionsError && sessions.map((session) => (
-                      <ChatHistoryItem
-                        key={session.id}
-                        chat={session}
-                        aiCharacters={aiCharacters}
-                        darkMode={darkMode}
-                        onChatSelect={onChatSelect}
-                        isActive={currentChatId === session.id}
-                      />
+                      <div key={session.id} className="chat-item">
+                        <ChatHistoryItem
+                          chat={session}
+                          aiCharacters={aiCharacters}
+                          darkMode={darkMode}
+                          onChatSelect={onChatSelect}
+                          isActive={currentChatId === session.id}
+                        />
+                      </div>
                     ))}
                   </div>
                 </div>

@@ -60,7 +60,7 @@ export function useGeminiAI() {
 
       try {
         // Get system prompt based on conversation history
-        const systemPrompt = `You are an English language learning assistant. Help the user with their English learning needs.
+        const systemPrompt = `You are Ivy learning assistant. Help the user with their English learning needs.
         Be concise, helpful, and provide examples when appropriate. Format your responses with markdown for better readability.
         Current conversation history: ${JSON.stringify(messages.map((m) => ({ role: m.role, content: m.content })))}`
 
