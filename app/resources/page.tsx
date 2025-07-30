@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, Suspense, lazy } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
@@ -31,12 +31,7 @@ import { MessageItem } from '@/components/ai-hub/chat/MessageItem';
 import { ChatInput } from '@/components/ai-hub/chat/ChatInput';
 import { WelcomeScreen } from '@/components/ai-hub/chat/WelcomeScreen';
 import { Message } from '@/types/ai-hub.types';
-
-// Only lazy load the non-essential right sidebar (stats)
-const LearningStatsSidebar = lazy(() => import('@/components/ai-hub/learning-stats/LearningStatsSidebar').then((mod) => ({ default: mod.LearningStatsSidebar })));
-
-// Only keep minimal loading fallback for the stats sidebar
-const StatsLoadingFallback = () => <div className="animate-pulse bg-gray-200 dark:bg-gray-800 rounded-lg h-32 w-full"></div>;
+import { LearningStatsSidebar } from '@/components/ai-hub/learning-stats/LearningStatsSidebar';
 
 // Optimized Avatar Component with next/image
 const OptimizedAvatar = ({ 
@@ -810,7 +805,7 @@ export default function ResourcesPage() {
               variant="outline" 
               size="sm"
               onClick={handleNewChat}
-              className={`touch-target !rounded-button whitespace-nowrap cursor-pointer ${darkMode ? 'bg-gray-700 border-gray-600 hover:bg-gray-600' : 'hover:bg-gray-50'} transition-colors duration-200 text-xs sm:text-sm h-8 sm:h-9 px-2 sm:px-3 flex items-center`}
+              className={`touch-target !rounded-button whitespace-nowrap cursor-pointer ${darkMode ? 'bg-gray-700 border-gray-600 hover:bg-gray-600 hover:scale-100 hover:translate-y-0 hover:shadow-none' : 'hover:bg-gray-50 hover:scale-100 hover:translate-y-0 hover:shadow-none'} transition-colors duration-200 text-xs sm:text-sm h-8 sm:h-9 px-2 sm:px-3 flex items-center`}
               title={currentChat ? "Tạo cuộc trò chuyện mới" : "Bắt đầu cuộc trò chuyện mới"}
             >
               <i className="fas fa-plus mr-1 text-xs sm:text-sm"></i>
@@ -868,7 +863,7 @@ export default function ResourcesPage() {
                 <Button 
                   variant="outline" 
                   size="sm"
-                  className={`touch-target !rounded-button whitespace-nowrap cursor-pointer ${darkMode ? 'bg-gray-700 border-gray-600 hover:bg-gray-600' : 'hover:bg-gray-50'} transition-colors duration-200 text-xs sm:text-sm h-8 sm:h-9 px-2 sm:px-3`}
+                  className={`touch-target !rounded-button whitespace-nowrap cursor-pointer ${darkMode ? 'bg-gray-700 border-gray-600 hover:bg-gray-600 hover:scale-100 hover:translate-y-0 hover:shadow-none' : 'hover:bg-gray-50 hover:scale-100 hover:translate-y-0 hover:shadow-none'} transition-colors duration-200 text-xs sm:text-sm h-8 sm:h-9 px-2 sm:px-3`}
                   title="Thêm AI vào cuộc trò chuyện"
                 >
                   <i className="fas fa-user-plus mr-1 text-xs sm:text-sm"></i>
@@ -1163,13 +1158,11 @@ export default function ResourcesPage() {
           onMouseEnter={handleRightSidebarHoverEnter}
           onMouseLeave={handleRightSidebarHoverLeave}
         >
-          <Suspense fallback={<StatsLoadingFallback />}>
-            <LearningStatsSidebar 
-              darkMode={darkMode} 
-              collapsed={isStatsDesktopCollapsed}
-              onCollapseToggle={() => setIsStatsDesktopCollapsed(!isStatsDesktopCollapsed)}
-            />
-          </Suspense>
+          <LearningStatsSidebar 
+            darkMode={darkMode} 
+            collapsed={isStatsDesktopCollapsed}
+            onCollapseToggle={() => setIsStatsDesktopCollapsed(!isStatsDesktopCollapsed)}
+          />
         </div>
       </div>
 
@@ -1193,9 +1186,7 @@ export default function ResourcesPage() {
               </Button>
             </div>
             <div className="h-full overflow-auto">
-              <Suspense fallback={<StatsLoadingFallback />}>
-                <LearningStatsSidebar darkMode={darkMode} />
-              </Suspense>
+              <LearningStatsSidebar darkMode={darkMode} />
             </div>
           </div>
         </div>

@@ -34,35 +34,55 @@ export const GoalProgressModal: React.FC<GoalProgressModalProps> = ({
   const [fetchingExisting, setFetchingExisting] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [latestEntryId, setLatestEntryId] = useState<string | undefined>();
+  const [vocabularyCache, setVocabularyCache] = useState<{ [goalId: string]: VocabularyItem[] }>({});
   const { fetchGoalProgress } = useLearningGoals();
   const vocabularyListRef = useRef<VocabularyListRef>(null);
 
-  // Fetch existing vocabulary when modal opens
+  // Optimized fetch existing vocabulary with caching
   useEffect(() => {
     const loadExistingVocabulary = async () => {
-      if (isOpen && goal) {
-        setFetchingExisting(true);
-        try {
-          const existingEntries = await fetchGoalProgress(goal.id);
-          setExistingVocabulary(existingEntries);
-        } catch (error) {
-          console.error('Error loading existing vocabulary:', error);
-        } finally {
-          setFetchingExisting(false);
-        }
+      if (!isOpen || !goal) return;
+
+      // Check cache first
+      if (vocabularyCache[goal.id]) {
+        setExistingVocabulary(vocabularyCache[goal.id]);
+        return;
+      }
+
+      setFetchingExisting(true);
+      try {
+        const existingEntries = await fetchGoalProgress(goal.id);
+        setExistingVocabulary(existingEntries);
+        // Cache the result
+        setVocabularyCache(prev => ({
+          ...prev,
+          [goal.id]: existingEntries
+        }));
+      } catch (error) {
+        console.error('Error loading existing vocabulary:', error);
+        // Set empty array on error to prevent infinite loading
+        setExistingVocabulary([]);
+      } finally {
+        setFetchingExisting(false);
       }
     };
 
-    loadExistingVocabulary();
-  }, [isOpen, goal, fetchGoalProgress]);
+    // Only load if modal is open and we don't have cached data
+    if (isOpen && goal && !vocabularyCache[goal.id]) {
+      loadExistingVocabulary();
+    } else if (isOpen && goal && vocabularyCache[goal.id]) {
+      // Use cached data immediately
+      setExistingVocabulary(vocabularyCache[goal.id]);
+    }
+  }, [isOpen, goal?.id, fetchGoalProgress]);
 
-  // Reset entries when modal opens/closes
+  // Reset entries when modal opens/closes - optimized
   useEffect(() => {
     if (!isOpen) {
       setVocabularyEntries([]);
-      setExistingVocabulary([]);
       setSaveSuccess(false);
       setLatestEntryId(undefined);
+      // Don't clear existingVocabulary to keep cache
     }
   }, [isOpen]);
 
@@ -242,7 +262,7 @@ export const GoalProgressModal: React.FC<GoalProgressModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
       {/* Backdrop */}
       <div 
         className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300"
@@ -254,16 +274,23 @@ export const GoalProgressModal: React.FC<GoalProgressModalProps> = ({
         darkMode ? 'bg-gray-900 text-gray-100' : 'bg-white text-gray-900'
       } rounded-2xl shadow-2xl overflow-hidden border ${darkMode ? 'border-gray-700' : 'border-gray-200'} flex flex-col`}>
         {/* Header */}
-        <div className={`px-6 py-5 border-b ${darkMode ? 'border-gray-700 bg-gray-800' : 'border-orange-200 bg-gradient-to-r from-orange-50 to-amber-50'} flex-shrink-0`}>
+        <div className={`px-6 py-5 border-b ${darkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-gradient-to-r from-neo-mint/5 to-purist-blue/5'} flex-shrink-0`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 flex items-center justify-center shadow-lg">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-neo-mint to-purist-blue flex items-center justify-center shadow-lg">
                 <i className={`fas ${getCategoryIcon(goal.category)} text-white text-lg`}></i>
               </div>
               <div>
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Goal Progress</h2>
-                <p className={`text-sm mt-1 ${darkMode ? 'text-gray-400' : 'text-orange-600'}`}>
+                <h2 className="text-xl font-semibold bg-gradient-to-r from-neo-mint to-purist-blue bg-clip-text text-transparent">
+                  Goal Progress
+                </h2>
+                <p className={`text-sm mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                   {goal.title}
+                  {fetchingExisting && (
+                    <span className="ml-2 inline-flex items-center">
+                      <i className="fas fa-sync-alt fa-spin text-xs"></i>
+                    </span>
+                  )}
                 </p>
               </div>
             </div>
@@ -271,9 +298,9 @@ export const GoalProgressModal: React.FC<GoalProgressModalProps> = ({
               variant="ghost"
               size="icon"
               onClick={onClose}
-              className={`h-9 w-9 rounded-full ${
-                darkMode ? 'hover:bg-gray-700 text-gray-400 hover:text-white' : 'hover:bg-orange-100 text-gray-500 hover:text-orange-600'
-              } transition-all duration-200`}
+              className={`h-9 w-9 rounded-xl transition-all duration-200 ${
+                darkMode ? 'hover:bg-gray-700 text-gray-400 hover:text-white' : 'hover:bg-neo-mint/10 text-gray-500 hover:text-neo-mint'
+              }`}
             >
               <i className="fas fa-times text-lg"></i>
             </Button>
@@ -291,18 +318,25 @@ export const GoalProgressModal: React.FC<GoalProgressModalProps> = ({
         </div>
 
         {/* Goal Info */}
-        <div className={`p-5 border-b ${darkMode ? 'border-gray-700' : 'border-orange-200'} flex-shrink-0`}>
+        <div className={`p-5 border-b ${darkMode ? 'border-gray-700' : 'border-gray-200'} flex-shrink-0`}>
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
-              <Badge className="bg-orange-100 text-orange-800 px-2 py-1 text-xs">
+              <Badge
+                variant="outline"
+                className="bg-orange-100 text-orange-800 px-2 py-1 text-xs pointer-events-none hover:bg-none transition-none"
+              >
                 {goal.current + vocabularyEntries.length}/{goal.target} {goal.unit}
               </Badge>
-              {existingVocabulary.length > 0 && (
-                <Badge className="bg-blue-100 text-blue-800 px-2 py-1 text-xs">
-                  {existingVocabulary.length} existing words
-                </Badge>
-              )}
-              <Badge className={`text-xs px-2 py-1 ${goal.priority === 'high' ? 'bg-red-100 text-red-800' : goal.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800'}`}>
+              <Badge
+                variant="outline"
+                className={`text-xs px-2 py-1 ${
+                  goal.priority === 'high'
+                    ? 'bg-red-100 text-red-800'
+                    : goal.priority === 'medium'
+                    ? 'bg-yellow-100 text-yellow-800'
+                    : 'bg-gray-100 text-gray-800'
+                } pointer-events-none hover:bg-none transition-none`}
+              >
                 {goal.priority === 'high' ? 'High Priority' : goal.priority === 'medium' ? 'Medium Priority' : 'Low Priority'}
               </Badge>
             </div>
@@ -316,7 +350,7 @@ export const GoalProgressModal: React.FC<GoalProgressModalProps> = ({
           {/* Progress Bar */}
           <div className={`w-full h-1.5 ${darkMode ? 'bg-gray-600' : 'bg-gray-200'} rounded-full overflow-hidden mb-2`}>
             <div 
-              className="h-full bg-gradient-to-r from-orange-500 to-amber-500 transition-all duration-500 rounded-full"
+              className="h-full bg-gradient-to-r from-neo-mint to-purist-blue transition-all duration-500 rounded-full"
               style={{ width: `${Math.min(((goal.current + vocabularyEntries.length) / goal.target) * 100, 100)}%` }}
             />
           </div>
@@ -328,7 +362,7 @@ export const GoalProgressModal: React.FC<GoalProgressModalProps> = ({
         {/* Content - Two Column Layout */}
         <div className="flex-1 overflow-hidden flex min-h-0">
           {/* Left Column - Input Form */}
-          <div className={`w-1/2 p-5 border-r ${darkMode ? 'border-gray-700' : 'border-orange-200'} flex flex-col`}>
+          <div className={`w-1/2 p-5 border-r ${darkMode ? 'border-gray-700' : 'border-gray-200'} flex flex-col`}>
             <div className="mb-4">
               <h3 className="text-lg font-semibold">Add New Vocabulary</h3>
               <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'} mt-1`}>
@@ -345,11 +379,16 @@ export const GoalProgressModal: React.FC<GoalProgressModalProps> = ({
           {/* Right Column - Vocabulary List */}
           <div className="w-1/2 p-5 flex flex-col min-h-0">
             {fetchingExisting ? (
-              <div className="flex items-center justify-center py-8">
-                <i className="fas fa-spinner fa-spin mr-2 text-orange-500"></i>
-                <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+              <div className="flex flex-col items-center justify-center py-12">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-r from-neo-mint to-purist-blue flex items-center justify-center shadow-lg mb-4">
+                  <i className="fas fa-sync-alt fa-spin text-white text-xl"></i>
+                </div>
+                <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'} mb-2`}>
                   Loading existing vocabulary...
                 </span>
+                <div className={`w-32 h-1 ${darkMode ? 'bg-gray-600' : 'bg-gray-200'} rounded-full overflow-hidden`}>
+                  <div className="h-full bg-gradient-to-r from-neo-mint to-purist-blue rounded-full animate-pulse"></div>
+                </div>
               </div>
             ) : (
               <VocabularyList
@@ -366,9 +405,9 @@ export const GoalProgressModal: React.FC<GoalProgressModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className={`p-5 border-t ${darkMode ? 'border-gray-700' : 'border-orange-200'} flex justify-between items-center flex-shrink-0`}>
+        <div className={`p-5 border-t ${darkMode ? 'border-gray-700' : 'border-gray-200'} flex justify-between items-center flex-shrink-0`}>
           <div className="flex items-center gap-2">
-            <i className="fas fa-info-circle text-orange-500"></i>
+            <i className="fas fa-info-circle text-neo-mint"></i>
             <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
               {vocabularyEntries.length > 0 
                 ? `Will add ${vocabularyEntries.length} new words to your progress` 
@@ -383,7 +422,7 @@ export const GoalProgressModal: React.FC<GoalProgressModalProps> = ({
               variant="outline"
               onClick={onClose}
               disabled={loading}
-              className={`${darkMode ? 'bg-gray-700 border-gray-600 hover:bg-gray-600' : 'hover:bg-gray-50'}`}
+              className={`${darkMode ? 'bg-gray-700 border-gray-600 hover:bg-gray-600' : 'hover:bg-gray-50 border-gray-200 hover:border-neo-mint/20'}`}
             >
               <i className="fas fa-times mr-2"></i>
               Close
@@ -391,7 +430,7 @@ export const GoalProgressModal: React.FC<GoalProgressModalProps> = ({
             <Button
               onClick={handleSubmit}
               disabled={loading || vocabularyEntries.length === 0}
-              className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white transition-all duration-300 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              className="bg-gradient-to-r from-neo-mint to-purist-blue hover:from-neo-mint/80 hover:to-purist-blue/80 text-white transition-all duration-300 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (
                 <>

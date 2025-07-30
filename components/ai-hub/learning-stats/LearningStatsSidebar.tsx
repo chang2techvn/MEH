@@ -40,7 +40,14 @@ export const LearningStatsSidebar: React.FC<LearningStatsSidebarProps> = ({
   
   // Use real database hooks
   const { goals, loading: goalsLoading, createGoal, updateGoalProgress } = useLearningGoals();
-  const { recentVocabulary, loading: vocabLoading, createVocabularyEntry } = useVocabulary();
+  const { 
+    vocabulary, 
+    recentVocabulary, 
+    loading: vocabLoading, 
+    createVocabularyEntry, 
+    refreshVocabulary,
+    deleteVocabularyEntry 
+  } = useVocabulary();
 
   const handleProgressUpdate = async (goalId: string, progressData: any) => {
     await updateGoalProgress(goalId, progressData);
@@ -91,7 +98,7 @@ export const LearningStatsSidebar: React.FC<LearningStatsSidebarProps> = ({
   };
 
   const handleGoalClickFromList = (goal: LearningGoal) => {
-    setIsGoalsListModalOpen(false);
+    // Không tắt GoalsListModal, chỉ mở GoalProgressModal đè lên
     if (goal.current < goal.target) {
       setSelectedGoal(goal);
       setIsProgressModalOpen(true);
@@ -161,7 +168,10 @@ export const LearningStatsSidebar: React.FC<LearningStatsSidebarProps> = ({
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => setIsNewVocabularyModalOpen(true)}
+                  onClick={() => {
+                    setIsVocabularyModalOpen(true);
+                    setIsNewVocabularyModalOpen(true);
+                  }}
                   className={`h-6 w-6 rounded-lg text-xs transition-colors duration-150 ${darkMode ? 'hover:bg-gray-700 text-gray-400 hover:text-orange-400' : 'hover:bg-orange-100 text-gray-500 hover:text-orange-600'}`}
                 >
                   <i className="fas fa-plus"></i>
@@ -254,7 +264,10 @@ export const LearningStatsSidebar: React.FC<LearningStatsSidebarProps> = ({
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => setIsGoalModalOpen(true)}
+                  onClick={() => {
+                    setIsGoalsListModalOpen(true);
+                    setIsGoalModalOpen(true);
+                  }}
                   className={`h-6 w-6 rounded-lg text-xs transition-colors duration-150 ${darkMode ? 'hover:bg-gray-700 text-gray-400 hover:text-amber-400' : 'hover:bg-amber-100 text-gray-500 hover:text-amber-600'}`}
                 >
                   <i className="fas fa-plus"></i>
@@ -354,7 +367,7 @@ export const LearningStatsSidebar: React.FC<LearningStatsSidebarProps> = ({
               </div>
               <Button 
                 variant="ghost" 
-                className={`w-full mt-2 text-xs rounded-xl transition-colors duration-150 group ${darkMode ? 'hover:bg-gray-700 hover:text-amber-400' : 'hover:bg-amber-100 hover:text-amber-700'}`}
+                className={`w-full mt-2 text-xs rounded-xl transition-colors duration-150 group ${darkMode ? 'hover:bg-gray-700 hover:text-orange-400' : 'hover:bg-amber-100 hover:text-orange-600'}`}
                 onClick={() => setIsGoalsListModalOpen(true)}
               >
                 <i className="fas fa-eye mr-2 transition-transform duration-150"></i>
@@ -416,6 +429,10 @@ export const LearningStatsSidebar: React.FC<LearningStatsSidebarProps> = ({
           }}
           darkMode={darkMode}
           selectedVocabularyId={selectedVocabularyId || undefined}
+          vocabulary={vocabulary}
+          loading={vocabLoading}
+          onDeleteVocabulary={deleteVocabularyEntry}
+          onCreateNew={() => setIsNewVocabularyModalOpen(true)}
         />      <GoalsListModal
         isOpen={isGoalsListModalOpen}
         onClose={() => setIsGoalsListModalOpen(false)}
@@ -450,6 +467,15 @@ export const LearningStatsSidebar: React.FC<LearningStatsSidebarProps> = ({
         isOpen={isNewVocabularyModalOpen}
         onClose={() => setIsNewVocabularyModalOpen(false)}
         darkMode={darkMode}
+        onSuccess={async () => {
+          // Force refresh vocabulary data
+          try {
+            await refreshVocabulary();
+          } catch (error) {
+            console.error('Failed to refresh vocabulary:', error);
+            // Silent error - real-time subscription should handle it
+          }
+        }}
       />
     </div>
   );

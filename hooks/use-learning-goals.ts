@@ -274,8 +274,16 @@ export const useVocabulary = () => {
   const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
 
-  const fetchVocabulary = async (limit?: number) => {
+  // Cache vocabulary data to avoid refetching
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  const fetchVocabulary = async (limit?: number, forceRefresh = false) => {
     if (!user?.id) return;
+
+    // Skip if already have data and not forcing refresh
+    if (!forceRefresh && vocabulary.length > 0 && !limit) {
+      return;
+    }
 
     try {
       setLoading(true);
@@ -298,6 +306,10 @@ export const useVocabulary = () => {
       } else {
         setVocabulary(data || []);
       }
+      
+      if (!isInitialized) {
+        setIsInitialized(true);
+      }
     } catch (err) {
       console.error('Error fetching vocabulary:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch vocabulary');
@@ -306,7 +318,83 @@ export const useVocabulary = () => {
     }
   };
 
-  const fetchRecentVocabulary = () => fetchVocabulary(5);
+  const fetchRecentVocabulary = () => fetchVocabulary(5, true);
+
+  // Setup real-time subscription
+  useEffect(() => {
+    if (!user?.id) return;
+
+    // Initial fetch
+    fetchVocabulary(); // Fetch all vocabulary
+    fetchRecentVocabulary(); // Fetch recent
+
+    // Setup real-time subscription
+    const subscription = supabase
+      .channel('vocabulary_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'vocabulary_entries',
+          filter: `user_id=eq.${user.id}`
+        },
+        (payload) => {
+          console.log('Real-time vocabulary update:', payload);
+          
+          if (payload.eventType === 'INSERT') {
+            const newEntry = payload.new as VocabularyEntry;
+            console.log('Adding new vocabulary entry:', newEntry.term);
+            
+            // Add to vocabulary list
+            setVocabulary(prev => {
+              // Avoid duplicates
+              const exists = prev.some(vocab => vocab.id === newEntry.id);
+              if (exists) return prev;
+              return [newEntry, ...prev];
+            });
+            
+            // Update recent vocabulary (keep only 5 most recent)
+            setRecentVocabulary(prev => {
+              const exists = prev.some(vocab => vocab.id === newEntry.id);
+              if (exists) return prev;
+              const updated = [newEntry, ...prev];
+              return updated.slice(0, 5);
+            });
+            
+          } else if (payload.eventType === 'DELETE') {
+            const deletedId = payload.old.id;
+            console.log('Deleting vocabulary entry:', deletedId);
+            
+            // Remove from vocabulary list
+            setVocabulary(prev => prev.filter(vocab => vocab.id !== deletedId));
+            
+            // Remove from recent vocabulary
+            setRecentVocabulary(prev => prev.filter(vocab => vocab.id !== deletedId));
+            
+          } else if (payload.eventType === 'UPDATE') {
+            const updatedEntry = payload.new as VocabularyEntry;
+            console.log('Updating vocabulary entry:', updatedEntry.term);
+            
+            // Update in vocabulary list
+            setVocabulary(prev => 
+              prev.map(vocab => vocab.id === updatedEntry.id ? updatedEntry : vocab)
+            );
+            
+            // Update in recent vocabulary if exists
+            setRecentVocabulary(prev => 
+              prev.map(vocab => vocab.id === updatedEntry.id ? updatedEntry : vocab)
+            );
+          }
+        }
+      )
+      .subscribe();
+
+    // Cleanup subscription
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [user?.id]);
 
   const createVocabularyEntry = async (vocabularyData: {
     term: string;
@@ -340,8 +428,12 @@ export const useVocabulary = () => {
 
       if (error) throw error;
 
-      // Refresh recent vocabulary to show new entry
-      await fetchRecentVocabulary();
+      // Immediately update local state for instant UI feedback
+      setVocabulary(prev => [data, ...prev]);
+      setRecentVocabulary(prev => {
+        const updated = [data, ...prev];
+        return updated.slice(0, 5); // Keep only 5 most recent
+      });
       
       return data;
     } catch (err) {
@@ -352,8 +444,38 @@ export const useVocabulary = () => {
     }
   };
 
-  useEffect(() => {
-    fetchRecentVocabulary();
+  const deleteVocabularyEntry = async (vocabularyId: string): Promise<boolean> => {
+    if (!user?.id) return false;
+
+    try {
+      const { error } = await supabase
+        .from('vocabulary_entries')
+        .delete()
+        .eq('id', vocabularyId)
+        .eq('user_id', user.id); // Ensure user can only delete their own vocabulary
+
+      if (error) {
+        console.error('Error deleting vocabulary:', error);
+        setError(error.message);
+        return false;
+      }
+
+      // Immediately update local state for instant UI feedback
+      setVocabulary(prev => prev.filter(vocab => vocab.id !== vocabularyId));
+      setRecentVocabulary(prev => prev.filter(vocab => vocab.id !== vocabularyId));
+      
+      return true;
+    } catch (err) {
+      console.error('Error deleting vocabulary:', err);
+      setError(err instanceof Error ? err.message : 'Failed to delete vocabulary');
+      return false;
+    }
+  };
+
+  // Manual refresh function for edge cases
+  const refreshVocabulary = useCallback(async () => {
+    await fetchVocabulary(undefined, true); // Force refresh all vocabulary
+    await fetchRecentVocabulary(); // Refresh recent
   }, [user?.id]);
 
   return {
@@ -361,9 +483,12 @@ export const useVocabulary = () => {
     recentVocabulary,
     loading,
     error,
+    isInitialized,
     fetchVocabulary,
     fetchRecentVocabulary,
     createVocabularyEntry,
-    refetch: fetchRecentVocabulary
+    deleteVocabularyEntry,
+    refreshVocabulary,
+    refetch: refreshVocabulary
   };
 };

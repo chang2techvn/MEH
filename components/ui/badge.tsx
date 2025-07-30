@@ -26,7 +26,8 @@ const badgeVariants = cva(
 export interface BadgeProps extends React.HTMLAttributes<HTMLDivElement>, VariantProps<typeof badgeVariants> {}
 
 function Badge({ className, variant, ...props }: BadgeProps) {
-  return <div className={cn(badgeVariants({ variant }), className)} {...props} />
+  // Add a global 'badge' class for disabling hover effects via CSS
+  return <div className={cn('badge', badgeVariants({ variant }), className)} {...props} />
 }
 
 export { Badge, badgeVariants }

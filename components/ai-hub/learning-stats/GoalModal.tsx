@@ -167,16 +167,18 @@ export const GoalModal: React.FC<GoalModalProps> = ({ isOpen, onClose, darkMode,
         darkMode ? 'bg-gray-900 text-gray-100' : 'bg-white text-gray-900'
       } rounded-2xl shadow-2xl overflow-hidden border ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
         
-        {/* Header - Updated with orange theme */}
-        <div className={`px-6 py-5 border-b ${darkMode ? 'border-gray-700 bg-gray-800' : 'border-orange-200 bg-gradient-to-r from-orange-50 to-amber-50'}`}>
+        {/* Header - Updated with neo-mint theme */}
+        <div className={`px-6 py-5 border-b ${darkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-gradient-to-r from-neo-mint/5 to-purist-blue/5'}`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 flex items-center justify-center shadow-lg">
-                <i className="fas fa-book text-white text-lg"></i>
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-neo-mint to-purist-blue flex items-center justify-center shadow-lg">
+                <i className="fas fa-flag text-white text-lg"></i>
               </div>
               <div>
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">New Learning Goal</h2>
-                <p className={`text-sm mt-1 ${darkMode ? 'text-gray-400' : 'text-orange-600'}`}>
+                <h2 className="text-xl font-semibold bg-gradient-to-r from-neo-mint to-purist-blue bg-clip-text text-transparent">
+                  New Learning Goal
+                </h2>
+                <p className={`text-sm mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                   Set your vocabulary learning target
                 </p>
               </div>
@@ -185,11 +187,11 @@ export const GoalModal: React.FC<GoalModalProps> = ({ isOpen, onClose, darkMode,
               variant="ghost"
               size="icon"
               onClick={onClose}
-              className={`h-9 w-9 rounded-full ${
-                darkMode ? 'hover:bg-gray-700 text-gray-400 hover:text-white' : 'hover:bg-orange-100 text-gray-500 hover:text-orange-600'
-              } transition-all duration-200`}
+              className={`h-9 w-9 rounded-xl transition-all duration-200 ${
+                darkMode ? 'hover:bg-gray-700 text-gray-400 hover:text-white' : 'hover:bg-neo-mint/10 text-gray-500 hover:text-neo-mint'
+              }`}
             >
-              <i className="fas fa-times"></i>
+              <i className="fas fa-times text-lg"></i>
             </Button>
           </div>
         </div>
@@ -256,25 +258,48 @@ export const GoalModal: React.FC<GoalModalProps> = ({ isOpen, onClose, darkMode,
             )}
           </div>
 
-          {/* Deadline - Updated with orange theme */}
+          {/* Deadline - Updated with inline time selection */}
           <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center">
-              <i className="fas fa-calendar-alt mr-2 text-orange-500"></i>
-              Deadline
-            </label>
-            <Input
-              id="deadline-input"
-              type="date"
-              value={formData.deadline}
-              onChange={(e) => setFormData({ ...formData, deadline: e.target.value })}
-              onKeyPress={(e) => handleKeyPress(e, 'deadline')}
-              min={new Date().toISOString().split('T')[0]}
-              className={`${
-                darkMode ? 'bg-gray-800 border-gray-600' : 'border-gray-300'
-              } transition-all duration-200 ${
-                errors.deadline ? 'border-red-500 bg-red-50 dark:bg-red-900/20' : ''
-              }`}
-            />
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center">
+                <i className="fas fa-calendar-alt mr-2 text-orange-500"></i>
+                Deadline
+              </label>
+              <div className="flex items-center space-x-2">
+                <Button
+                  type="button"
+                  variant={formData.deadline === new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setFormData({ ...formData, deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] })}
+                  className="text-xs px-3 py-1 h-7"
+                >
+                  1 Week
+                </Button>
+                <Button
+                  type="button"
+                  variant={formData.deadline === new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setFormData({ ...formData, deadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] })}
+                  className="text-xs px-3 py-1 h-7"
+                >
+                  1 Month
+                </Button>
+                <Button
+                  type="button"
+                  variant={formData.deadline === new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setFormData({ ...formData, deadline: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] })}
+                  className="text-xs px-3 py-1 h-7"
+                >
+                  3 Months
+                </Button>
+              </div>
+            </div>
+            {formData.deadline && (
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Selected deadline: {new Date(formData.deadline).toLocaleDateString()}
+              </p>
+            )}
             {errors.deadline && (
               <p className="text-red-500 text-sm animate-in fade-in duration-200 flex items-center">
                 <i className="fas fa-exclamation-circle mr-1"></i>
@@ -325,7 +350,7 @@ export const GoalModal: React.FC<GoalModalProps> = ({ isOpen, onClose, darkMode,
             <Button
               type="submit"
               disabled={isSubmitting || !formData.title.trim() || !formData.target || !formData.deadline}
-              className="flex-1 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+              className="flex-1 bg-gradient-to-r from-neo-mint to-purist-blue hover:from-neo-mint/80 hover:to-purist-blue/80 text-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
             >
               {isSubmitting ? (
                 <>

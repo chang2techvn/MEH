@@ -79,15 +79,17 @@ export const GoalsListModal: React.FC<GoalsListModalProps> = ({
         darkMode ? 'bg-gray-900 text-gray-100' : 'bg-white text-gray-900'
       } rounded-2xl shadow-2xl overflow-hidden border ${darkMode ? 'border-gray-700' : 'border-gray-200'} flex flex-col`}>
         {/* Header */}
-        <div className={`px-6 py-5 border-b ${darkMode ? 'border-gray-700 bg-gray-800' : 'border-orange-200 bg-gradient-to-r from-orange-50 to-amber-50'} flex-shrink-0`}>
+        <div className={`px-6 py-5 border-b ${darkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-gradient-to-r from-neo-mint/5 to-purist-blue/5'} flex-shrink-0`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 flex items-center justify-center shadow-lg">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-neo-mint to-purist-blue flex items-center justify-center shadow-lg">
                 <i className="fas fa-flag text-white text-lg"></i>
               </div>
               <div>
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Learning Goals</h2>
-                <p className={`text-sm mt-1 ${darkMode ? 'text-gray-400' : 'text-orange-600'}`}>
+                <h2 className="text-xl font-semibold bg-gradient-to-r from-neo-mint to-purist-blue bg-clip-text text-transparent">
+                  Learning Goals
+                </h2>
+                <p className={`text-sm mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                   Manage and track your learning objectives
                 </p>
               </div>
@@ -95,7 +97,7 @@ export const GoalsListModal: React.FC<GoalsListModalProps> = ({
             <div className="flex items-center gap-3">
               <Button
                 onClick={onCreateNew}
-                className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white rounded-xl px-4 py-2 font-medium shadow-lg transition-all duration-200"
+                className="bg-gradient-to-r from-neo-mint to-purist-blue hover:from-neo-mint/80 hover:to-purist-blue/80 text-white rounded-xl px-4 py-2 text-sm font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
               >
                 <i className="fas fa-plus mr-2"></i>
                 Add New Goal
@@ -104,9 +106,9 @@ export const GoalsListModal: React.FC<GoalsListModalProps> = ({
                 variant="ghost"
                 size="icon"
                 onClick={onClose}
-                className={`h-9 w-9 rounded-full ${
-                  darkMode ? 'hover:bg-gray-700 text-gray-400 hover:text-white' : 'hover:bg-orange-100 text-gray-500 hover:text-orange-600'
-                } transition-all duration-200`}
+                className={`h-9 w-9 rounded-xl transition-all duration-200 ${
+                  darkMode ? 'hover:bg-gray-700 text-gray-400 hover:text-white' : 'hover:bg-neo-mint/10 text-gray-500 hover:text-neo-mint'
+                }`}
               >
                 <i className="fas fa-times text-lg"></i>
               </Button>

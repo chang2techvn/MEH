@@ -19,24 +19,65 @@ interface VocabularyModalProps {
   onClose: () => void;
   darkMode: boolean;
   selectedVocabularyId?: string; // Add selected vocabulary ID prop
+  vocabulary?: VocabularyEntry[]; // Optional vocabulary data from parent
+  loading?: boolean; // Optional loading state from parent
+  onDeleteVocabulary?: (vocabularyId: string) => Promise<boolean>; // Optional delete function from parent
+  onCreateNew?: () => void; // Optional create new vocabulary function
 }
 
-export const VocabularyModal: React.FC<VocabularyModalProps> = ({ isOpen, onClose, darkMode, selectedVocabularyId }) => {
+export const VocabularyModal: React.FC<VocabularyModalProps> = ({ 
+  isOpen, 
+  onClose, 
+  darkMode, 
+  selectedVocabularyId,
+  vocabulary: parentVocabulary,
+  loading: parentLoading,
+  onDeleteVocabulary: parentDeleteVocabulary,
+  onCreateNew
+}) => {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [sortBy, setSortBy] = useState('created_at');
   const vocabularyRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
+  
+  // Confirmation modal state
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{
+    isOpen: boolean;
+    vocabularyId: string;
+    term: string;
+  }>({
+    isOpen: false,
+    vocabularyId: '',
+    term: ''
+  });
 
-  // Use real database data
-  const { vocabulary, loading, error, fetchVocabulary } = useVocabulary();
+  // Use real database data with improved caching
+  const { 
+    vocabulary: hookVocabulary, 
+    loading: hookLoading, 
+    error, 
+    isInitialized, 
+    fetchVocabulary, 
+    deleteVocabularyEntry: hookDeleteVocabulary, 
+    refreshVocabulary 
+  } = useVocabulary();
 
-  // Fetch all vocabulary when modal opens
+  // Use parent-provided data if available, otherwise use hook data
+  const vocabulary = parentVocabulary || hookVocabulary;
+  const loading = parentLoading ?? hookLoading;
+  const deleteVocabularyEntry = parentDeleteVocabulary || hookDeleteVocabulary;
+
+  // Fetch vocabulary data with smart caching
   useEffect(() => {
-    if (isOpen) {
-      fetchVocabulary(); // Fetch all vocabulary (no limit)
+    if (isOpen && !isInitialized) {
+      // Only fetch if not already initialized
+      fetchVocabulary();
+    } else if (isOpen && isInitialized && vocabulary.length === 0) {
+      // Fallback refresh if somehow we lost data
+      refreshVocabulary();
     }
-  }, [isOpen]);
+  }, [isOpen, isInitialized, vocabulary.length]);
 
   // Scroll to selected vocabulary after data loads
   useEffect(() => {
@@ -50,6 +91,77 @@ export const VocabularyModal: React.FC<VocabularyModalProps> = ({ isOpen, onClos
       }, 300);
     }
   }, [selectedVocabularyId, vocabulary.length]);
+
+  // Handle CSV export
+  const handleExportCSV = () => {
+    if (!vocabulary || vocabulary.length === 0) {
+      toast({
+        title: "No data to export",
+        description: "There are no vocabulary entries to export.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Helper function to escape CSV values
+    const escapeCSV = (value: string | number | undefined | null): string => {
+      if (value === null || value === undefined) return '';
+      const str = String(value);
+      // If value contains comma, newline, or quote, wrap in quotes and escape internal quotes
+      if (str.includes(',') || str.includes('\n') || str.includes('\r') || str.includes('"')) {
+        return '"' + str.replace(/"/g, '""') + '"';
+      }
+      return str;
+    };
+
+    // Create CSV content with proper formatting
+    const headers = ['Term', 'Meaning', 'Pronunciation', 'Definition', 'Example Sentence', 'Example Translation', 'Category', 'Difficulty Level', 'Usage Count', 'Mastery Level', 'Date Added'];
+    
+    const csvRows = [
+      headers.join(','),
+      ...vocabulary.map(entry => [
+        escapeCSV(entry.term),
+        escapeCSV(entry.meaning),
+        escapeCSV(entry.pronunciation),
+        escapeCSV(entry.definition),
+        escapeCSV(entry.example_sentence),
+        escapeCSV(entry.example_translation),
+        escapeCSV(entry.category),
+        escapeCSV(entry.difficulty_level),
+        escapeCSV(entry.usage_count),
+        escapeCSV(entry.mastery_level),
+        escapeCSV(entry.created_at ? new Date(entry.created_at).toLocaleDateString('vi-VN') : '')
+      ].join(','))
+    ];
+
+    const csvContent = csvRows.join('\r\n');
+
+    // Add BOM for proper UTF-8 encoding in Excel
+    const BOM = '\uFEFF';
+    const csvWithBOM = BOM + csvContent;
+
+    // Create and download file
+    const blob = new Blob([csvWithBOM], { 
+      type: 'text/csv;charset=utf-8;' 
+    });
+    
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `vocabulary-collection-${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    // Clean up
+    URL.revokeObjectURL(url);
+
+    toast({
+      title: "Export successful",
+      description: `Exported ${vocabulary.length} vocabulary entries to CSV file.`,
+    });
+  };
 
   // Handle pronunciation
   const handlePronunciation = async (term: string, pronunciation?: string) => {
@@ -68,6 +180,64 @@ export const VocabularyModal: React.FC<VocabularyModalProps> = ({ isOpen, onClos
       // Silent catch for interrupted/canceled errors
       console.debug('Pronunciation handling completed:', error);
     }
+  };
+
+  // Handle vocabulary deletion confirmation
+  const handleDeleteVocabulary = (vocabularyId: string, term: string) => {
+    setDeleteConfirmation({
+      isOpen: true,
+      vocabularyId,
+      term
+    });
+  };
+
+  // Confirm and execute deletion
+  const confirmDeleteVocabulary = async () => {
+    try {
+      const { vocabularyId, term } = deleteConfirmation;
+      
+      const success = await deleteVocabularyEntry(vocabularyId);
+      
+      if (success) {
+        toast({
+          title: "Vocabulary Deleted",
+          description: `"${term}" has been removed from your collection.`,
+          variant: "default",
+        });
+        
+        // Real-time subscription will handle UI updates automatically
+        // No need to manually refresh
+      } else {
+        toast({
+          title: "Delete Failed",
+          description: "Failed to delete the vocabulary. Please try again.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error deleting vocabulary:', error);
+      toast({
+        title: "Delete Failed",
+        description: "An error occurred while deleting the vocabulary.",
+        variant: "destructive",
+      });
+    } finally {
+      // Close confirmation modal
+      setDeleteConfirmation({
+        isOpen: false,
+        vocabularyId: '',
+        term: ''
+      });
+    }
+  };
+
+  // Cancel deletion
+  const cancelDeleteVocabulary = () => {
+    setDeleteConfirmation({
+      isOpen: false,
+      vocabularyId: '',
+      term: ''
+    });
   };
 
   // Get unique categories from real data
@@ -141,19 +311,37 @@ export const VocabularyModal: React.FC<VocabularyModalProps> = ({ isOpen, onClos
                 </h2>
                 <p className={`text-sm mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                   Total {vocabulary.length} words learned
+                  {loading && vocabulary.length > 0 && (
+                    <span className="ml-2 inline-flex items-center">
+                      <i className="fas fa-sync-alt fa-spin text-xs"></i>
+                    </span>
+                  )}
                 </p>
               </div>
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onClose}
-              className={`h-9 w-9 rounded-xl transition-all duration-200 ${
-                darkMode ? 'hover:bg-gray-700 text-gray-400 hover:text-white' : 'hover:bg-neo-mint/10 text-gray-500 hover:text-neo-mint'
-              }`}
-            >
-              <i className="fas fa-times text-lg"></i>
-            </Button>
+            <div className="flex items-center space-x-2">
+              {onCreateNew && (
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={onCreateNew}
+                  className="bg-gradient-to-r from-neo-mint to-purist-blue hover:from-neo-mint/80 hover:to-purist-blue/80 text-white rounded-xl px-4 py-2 text-sm font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
+                >
+                  <i className="fas fa-plus mr-2"></i>
+                  Add New Vocabulary
+                </Button>
+              )}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onClose}
+                className={`h-9 w-9 rounded-xl transition-all duration-200 ${
+                  darkMode ? 'hover:bg-gray-700 text-gray-400 hover:text-white' : 'hover:bg-neo-mint/10 text-gray-500 hover:text-neo-mint'
+                }`}
+              >
+                <i className="fas fa-times text-lg"></i>
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -230,7 +418,7 @@ export const VocabularyModal: React.FC<VocabularyModalProps> = ({ isOpen, onClos
         {/* Vocabulary Grid - Scrollable Area */}
         <div className="flex-1 overflow-hidden">
           <div className="h-full overflow-y-auto p-6 scrollbar-auto-hide">
-            {loading ? (
+            {loading && vocabulary.length === 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                 {[...Array(6)].map((_, index) => (
                   <div
@@ -270,7 +458,7 @@ export const VocabularyModal: React.FC<VocabularyModalProps> = ({ isOpen, onClos
                 <p className={`${darkMode ? 'text-gray-500' : 'text-gray-400'} mb-4`}>
                   {error}
                 </p>
-                <Button onClick={() => fetchVocabulary()} variant="outline" className="rounded-xl">
+                <Button onClick={() => refreshVocabulary()} variant="outline" className="rounded-xl">
                   <i className="fas fa-redo mr-2"></i>
                   Try Again
                 </Button>
@@ -305,57 +493,81 @@ export const VocabularyModal: React.FC<VocabularyModalProps> = ({ isOpen, onClos
                   <div
                     key={word.id}
                     ref={(el) => { vocabularyRefs.current[word.id] = el; }}
-                    className={`p-5 rounded-xl ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-white hover:bg-gray-50'} border ${darkMode ? 'border-gray-600' : 'border-gray-200'} shadow-sm transition-all duration-300 animate-fadeIn group cursor-pointer ${selectedVocabularyId === word.id ? 'ring-2 ring-orange-500' : ''}`}
+                    className={`p-5 rounded-xl ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-white hover:bg-gray-50'} border ${darkMode ? 'border-gray-600' : 'border-gray-200'} shadow-sm transition-all duration-300 animate-fadeIn group cursor-pointer ${selectedVocabularyId === word.id ? 'ring-2 ring-orange-500' : ''} flex flex-col`}
                     style={{ animationDelay: `${index * 50}ms` }}
                   >
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex-1">
-                        <h3 className="font-bold text-lg mb-1 group-hover:text-neo-mint dark:group-hover:text-purist-blue transition-colors duration-200">
+                    {/* Header Section - Fixed Height */}
+                    <div className="flex items-start justify-between mb-3 min-h-[60px]">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-bold text-lg mb-1 group-hover:text-neo-mint dark:group-hover:text-purist-blue transition-colors duration-200 line-clamp-1">
                           {word.term}
                         </h3>
-                        {word.pronunciation && (
-                          <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'} font-mono`}>
-                            [{word.pronunciation}]
-                          </p>
-                        )}
+                        <div className="h-5 flex items-center">
+                          {word.pronunciation ? (
+                            <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'} font-mono`}>
+                              [{word.pronunciation}]
+                            </p>
+                          ) : (
+                            <p className={`text-sm ${darkMode ? 'text-gray-500' : 'text-gray-400'} italic`}>
+                              No pronunciation
+                            </p>
+                          )}
+                        </div>
                       </div>
-                      <div className="flex flex-col items-end gap-2">
-                        <Badge className="bg-neo-mint/10 text-neo-mint dark:bg-purist-blue/10 dark:text-purist-blue hover:bg-neo-mint/20 dark:hover:bg-purist-blue/20 transition-colors duration-200 rounded-lg">
-                          {word.usage_count}x
-                        </Badge>
-                        <Badge className={`text-xs border rounded-lg ${getMasteryColor(word.mastery_level)}`}>
-                          {getMasteryLabel(word.mastery_level)}
-                        </Badge>
+                      <div className="flex flex-col items-end gap-2 ml-3">
+                        <div className="h-6 flex items-center">
+                          <Badge className="bg-neo-mint/10 text-neo-mint dark:bg-purist-blue/10 dark:text-purist-blue hover:bg-neo-mint/20 dark:hover:bg-purist-blue/20 transition-colors duration-200 rounded-lg min-w-[40px] text-center">
+                            {word.usage_count}x
+                          </Badge>
+                        </div>
+                        <div className="h-6 flex items-center">
+                          <Badge className={`text-xs border rounded-lg min-w-[80px] text-center ${getMasteryColor(word.mastery_level)}`}>
+                            {getMasteryLabel(word.mastery_level)}
+                          </Badge>
+                        </div>
                       </div>
                     </div>
                     
-                    <p className={`${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-3 font-medium`}>
-                      {word.meaning}
-                    </p>
+                    {/* Meaning Section - Fixed Height */}
+                    <div className="mb-3 min-h-[48px] flex items-start">
+                      <p className={`${darkMode ? 'text-gray-300' : 'text-gray-700'} font-medium line-clamp-2`}>
+                        {word.meaning}
+                      </p>
+                    </div>
                     
-                    {word.example_sentence && (
-                      <div className={`p-3 rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-gray-50'} mb-3`}>
-                        <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'} italic`}>
-                          "{word.example_sentence}"
-                        </p>
-                        {word.example_translation && (
-                          <p className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-500'} mt-1`}>
-                            {word.example_translation}
+                    {/* Example Section - Flexible Height */}
+                    <div className="flex-1 mb-3">
+                      {word.example_sentence ? (
+                        <div className={`p-3 rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-gray-50'}`}>
+                          <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'} italic line-clamp-2`}>
+                            "{word.example_sentence}"
                           </p>
-                        )}
-                      </div>
-                    )}
+                          {word.example_translation && (
+                            <p className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-500'} mt-1 line-clamp-1`}>
+                              {word.example_translation}
+                            </p>
+                          )}
+                        </div>
+                      ) : (
+                        <div className={`p-3 rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-gray-50'} min-h-[60px] flex items-center justify-center`}>
+                          <p className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'} italic`}>
+                            No example sentence
+                          </p>
+                        </div>
+                      )}
+                    </div>
                     
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="text-xs rounded-lg">
+                    {/* Footer Section - Fixed Height */}
+                    <div className="flex items-center justify-between h-8">
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <Badge variant="outline" className="text-xs rounded-lg flex-shrink-0">
                           {word.category}
                         </Badge>
-                        <span className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                        <span className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'} truncate`}>
                           {new Date(word.created_at).toLocaleDateString('en-US')}
                         </span>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-shrink-0 ml-2">
                         <Button
                           variant="ghost"
                           size="icon"
@@ -368,10 +580,14 @@ export const VocabularyModal: React.FC<VocabularyModalProps> = ({ isOpen, onClos
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 rounded-lg hover:bg-neo-mint/10 hover:text-neo-mint dark:hover:bg-purist-blue/10 dark:hover:text-purist-blue transition-all duration-200"
-                          title="Add to Review"
+                          className="h-8 w-8 rounded-lg hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/20 dark:hover:text-red-400 transition-all duration-200"
+                          title="Delete Vocabulary"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteVocabulary(word.id, word.term);
+                          }}
                         >
-                          <i className="fas fa-bookmark text-sm"></i>
+                          <i className="fas fa-trash text-sm"></i>
                         </Button>
                       </div>
                     </div>
@@ -387,21 +603,15 @@ export const VocabularyModal: React.FC<VocabularyModalProps> = ({ isOpen, onClos
           <div className="flex items-center gap-4">
             <Button
               variant="outline"
+              onClick={handleExportCSV}
               className={`rounded-xl ${darkMode ? 'bg-gray-700 border-gray-600 hover:bg-gray-600' : 'hover:bg-neo-mint/5 border-gray-200 hover:border-neo-mint/20'} transition-all duration-200`}
             >
               <i className="fas fa-download mr-2"></i>
               Export File
             </Button>
-            <Button
-              variant="outline"
-              className={`rounded-xl ${darkMode ? 'bg-gray-700 border-gray-600 hover:bg-gray-600' : 'hover:bg-neo-mint/5 border-gray-200 hover:border-neo-mint/20'} transition-all duration-200`}
-            >
-              <i className="fas fa-upload mr-2"></i>
-              Import File
-            </Button>
           </div>
           <Button
-            className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-orange-700 text-white transition-all duration-300 shadow-lg rounded-xl"
+            className="bg-gradient-to-r from-neo-mint to-purist-blue hover:from-neo-mint/80 hover:to-purist-blue/80 text-white transition-all duration-300 shadow-lg rounded-xl"
             onClick={onClose}
           >
             <i className="fas fa-check mr-2"></i>
@@ -409,6 +619,55 @@ export const VocabularyModal: React.FC<VocabularyModalProps> = ({ isOpen, onClos
           </Button>
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirmation.isOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center">
+          {/* Backdrop */}
+          <div 
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+            onClick={cancelDeleteVocabulary}
+          />
+          
+          {/* Confirmation Modal */}
+          <div className={`relative max-w-md mx-4 ${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl shadow-2xl transform transition-all duration-300 animate-fadeIn p-6`}>
+            <div className="text-center">
+              {/* Warning Icon */}
+              <div className="w-16 h-16 mx-auto mb-4 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center">
+                <i className="fas fa-exclamation-triangle text-red-600 dark:text-red-400 text-2xl"></i>
+              </div>
+              
+              {/* Title */}
+              <h3 className={`text-lg font-semibold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                Delete Vocabulary
+              </h3>
+              
+              {/* Message */}
+              <p className={`text-sm mb-6 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                Are you sure you want to delete "<span className="font-medium text-red-600 dark:text-red-400">{deleteConfirmation.term}</span>"? 
+                This action cannot be undone.
+              </p>
+              
+              {/* Buttons */}
+              <div className="flex gap-3 justify-center">
+                <Button
+                  variant="outline"
+                  onClick={cancelDeleteVocabulary}
+                  className={`px-6 rounded-xl ${darkMode ? 'border-gray-600 hover:bg-gray-700' : 'border-gray-300 hover:bg-gray-50'}`}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={confirmDeleteVocabulary}
+                  className="px-6 bg-red-600 hover:bg-red-700 text-white rounded-xl transition-colors duration-200"
+                >
+                  Delete
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

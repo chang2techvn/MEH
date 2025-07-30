@@ -543,3 +543,46 @@ button:active {
     justify-content: space-between;
   }
 }
+
+/* Global button hover effect removal */
+@layer utilities {
+  /* Remove all transform and shadow hover effects on buttons */
+  button:hover,
+  .btn:hover,
+  [role="button"]:hover {
+    transform: none !important;
+    box-shadow: inherit !important;
+    scale: 1 !important;
+    translate: 0 0 !important;
+  }
+  
+  /* Specifically target common hover classes */
+  .hover\:scale-105:hover,
+  .hover\:scale-110:hover,
+  .hover\:scale-125:hover,
+  .hover\:-translate-y-1:hover,
+  .hover\:-translate-y-0\.5:hover,
+  .hover\:-translate-y-2:hover,
+  .hover\:shadow-lg:hover,
+  .hover\:shadow-xl:hover,
+  .hover\:shadow-2xl:hover {
+    transform: none !important;
+    box-shadow: inherit !important;
+    scale: 1 !important;
+    translate: 0 0 !important;
+  }
+  
+  /* Allow only color and background transitions */
+  button {
+    transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, opacity 0.2s ease !important;
+  }
+  
+  /* Disable hover for Badge components globally */
+  .badge {
+    pointer-events: none !important;
+    transition: none !important;
+  }
+  .badge:hover {
+    background-color: unset !important;
+  }
+}

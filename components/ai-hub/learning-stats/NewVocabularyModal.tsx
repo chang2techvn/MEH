@@ -10,7 +10,7 @@ interface NewVocabularyModalProps {
   isOpen: boolean;
   onClose: () => void;
   darkMode: boolean;
-  onSuccess?: () => void;
+  onSuccess?: () => Promise<void> | void;
 }
 
 interface AIVocabularyResponse {
@@ -168,16 +168,22 @@ Respond ONLY with valid JSON in this exact format (no extra text before or after
       }
 
       if (successCount > 0) {
-        // Reset form and close modal
+        // Reset form and show success message
         setVocabularyInput('');
-        onSuccess?.();
-        onClose();
         
         toast({
           title: "Vocabulary Added Successfully!",
           description: `Successfully added ${successCount} vocabulary item(s) to your collection.`,
           variant: "default",
         });
+
+        // Call onSuccess callback first to refresh data
+        if (onSuccess) {
+          await onSuccess();
+        }
+        
+        // Then close modal
+        onClose();
       } else {
         throw new Error('Failed to save any vocabulary items');
       }
@@ -210,15 +216,17 @@ Respond ONLY with valid JSON in this exact format (no extra text before or after
       } rounded-2xl shadow-2xl overflow-hidden border ${darkMode ? 'border-gray-700' : 'border-gray-200'} flex flex-col`}>
         
         {/* Header */}
-        <div className={`px-6 py-5 border-b ${darkMode ? 'border-gray-700 bg-gray-800' : 'border-orange-200 bg-gradient-to-r from-orange-50 to-amber-50'} flex-shrink-0`}>
+        <div className={`px-6 py-5 border-b ${darkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-gradient-to-r from-neo-mint/5 to-purist-blue/5'} flex-shrink-0`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 flex items-center justify-center shadow-lg">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-neo-mint to-purist-blue flex items-center justify-center shadow-lg">
                 <i className="fas fa-brain text-white text-lg"></i>
               </div>
               <div>
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">AI Vocabulary Generator</h2>
-                <p className={`text-sm mt-1 ${darkMode ? 'text-gray-400' : 'text-orange-600'}`}>
+                <h2 className="text-xl font-semibold bg-gradient-to-r from-neo-mint to-purist-blue bg-clip-text text-transparent">
+                  AI Vocabulary Generator
+                </h2>
+                <p className={`text-sm mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                   Let AI analyze and create vocabulary entries
                 </p>
               </div>
@@ -227,9 +235,9 @@ Respond ONLY with valid JSON in this exact format (no extra text before or after
               variant="ghost"
               size="icon"
               onClick={onClose}
-              className={`h-9 w-9 rounded-full ${
-                darkMode ? 'hover:bg-gray-700 text-gray-400 hover:text-white' : 'hover:bg-orange-100 text-gray-500 hover:text-orange-600'
-              } transition-all duration-200`}
+              className={`h-9 w-9 rounded-xl transition-all duration-200 ${
+                darkMode ? 'hover:bg-gray-700 text-gray-400 hover:text-white' : 'hover:bg-neo-mint/10 text-gray-500 hover:text-neo-mint'
+              }`}
             >
               <i className="fas fa-times text-lg"></i>
             </Button>
@@ -307,7 +315,7 @@ Respond ONLY with valid JSON in this exact format (no extra text before or after
             <Button
               onClick={handleAddVocabulary}
               disabled={loading || !vocabularyInput.trim()}
-              className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white transition-all duration-300 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              className="bg-gradient-to-r from-neo-mint to-purist-blue hover:from-neo-mint/80 hover:to-purist-blue/80 text-white transition-all duration-300 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (
                 <>
