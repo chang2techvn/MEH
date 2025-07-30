@@ -168,6 +168,81 @@ export default function ResourcesPage() {
   const isSmallMobile = windowWidth < 640; // sm breakpoint
   const isTablet = windowWidth >= 640 && windowWidth < 1024; // between sm and lg
 
+  // Dynamic padding based on sidebar states for responsive design
+  const getDynamicPadding = () => {
+    // Base padding classes for mobile/tablet (not affected by sidebar states)
+    const baseMobile = "px-4 sm:px-6 md:px-8"; // Increased mobile padding for better UX
+    
+    // Desktop padding that adapts to sidebar states
+    if (windowWidth >= 1024) { // lg breakpoint and above
+      const leftCollapsed = isDesktopSidebarCollapsed;
+      const rightCollapsed = isStatsDesktopCollapsed;
+      
+      if (leftCollapsed && rightCollapsed) {
+        // Both sidebars collapsed - use minimal padding for maximum width utilization
+        return `${baseMobile} lg:px-2 xl:px-3 2xl:px-4`;
+      } else if (leftCollapsed || rightCollapsed) {
+        // One sidebar collapsed - use moderate padding
+        return `${baseMobile} lg:px-3 xl:px-4 2xl:px-6`;
+      } else {
+        // Both sidebars open - use standard padding
+        return `${baseMobile} lg:px-4 xl:px-6 2xl:px-8`;
+      }
+    }
+    
+    // Mobile/tablet default
+    return baseMobile;
+  };
+
+  // Dynamic padding for ScrollArea container (slightly less padding)
+  const getScrollAreaPadding = () => {
+    // Base padding for mobile/tablet
+    const baseMobile = "px-3 sm:px-4 md:px-6";
+    
+    // Desktop padding that adapts to sidebar states
+    if (windowWidth >= 1024) { // lg breakpoint and above
+      const leftCollapsed = isDesktopSidebarCollapsed;
+      const rightCollapsed = isStatsDesktopCollapsed;
+      
+      if (leftCollapsed && rightCollapsed) {
+        // Both sidebars collapsed - use very minimal padding
+        return `${baseMobile} lg:px-1 xl:px-2 2xl:px-3`;
+      } else if (leftCollapsed || rightCollapsed) {
+        // One sidebar collapsed - use moderate padding
+        return `${baseMobile} lg:px-2 xl:px-3 2xl:px-4`;
+      } else {
+        // Both sidebars open - use standard padding
+        return `${baseMobile} lg:px-3 xl:px-4 2xl:px-6`;
+      }
+    }
+    
+    // Mobile/tablet default
+    return baseMobile;
+  };
+
+  // Dynamic max-width based on sidebar states
+  const getDynamicMaxWidth = () => {
+    // Mobile/tablet - always use full width
+    if (windowWidth < 1024) {
+      return "w-full h-full transition-all duration-300";
+    }
+    
+    // Desktop - adjust max-width based on sidebar states
+    const leftCollapsed = isDesktopSidebarCollapsed;
+    const rightCollapsed = isStatsDesktopCollapsed;
+    
+    if (leftCollapsed && rightCollapsed) {
+      // Both sidebars collapsed - use maximum width
+      return "w-full h-full max-w-none transition-all duration-300";
+    } else if (leftCollapsed || rightCollapsed) {
+      // One sidebar collapsed - use larger max-width
+      return "w-full h-full max-w-6xl mx-auto transition-all duration-300";
+    } else {
+      // Both sidebars open - use standard max-width
+      return "w-full h-full max-w-4xl mx-auto transition-all duration-300";
+    }
+  };
+
   // Authentication check - MUST be called before any early returns
   const { user, isLoading: authLoading, isAuthenticated } = useAuth();
 
@@ -1003,10 +1078,10 @@ export default function ResourcesPage() {
         
         {/* Chat Messages - responsive container */}
         <ScrollArea
-          className={`flex-1 chat-mobile smooth-auto-scroll ${darkMode ? 'bg-gradient-to-b from-gray-900 to-gray-800' : 'bg-gradient-to-b from-gray-50 to-white'} px-2 sm:px-4 md:px-6`}
+          className={`flex-1 chat-mobile smooth-auto-scroll ${darkMode ? 'bg-gradient-to-b from-gray-900 to-gray-800' : 'bg-gradient-to-b from-gray-50 to-white'} ${getScrollAreaPadding()}`}
           ref={chatContainerRef}
         >
-          <div className="w-full h-full max-w-4xl mx-auto">
+          <div className={getDynamicMaxWidth()}>
             {/* Show Welcome Screen when no messages exist */}
             {(selectedAIs.length === 0 ? singleChatMessages.length === 0 : messages.length === 0) ? (
               <WelcomeScreen
@@ -1021,7 +1096,7 @@ export default function ResourcesPage() {
                 }}
               />
             ) : (
-              <div className="space-y-6 sm:space-y-8 px-3 sm:px-4 md:px-6 lg:px-8 xl:px-12 2xl:px-16 py-6 sm:py-8">
+              <div className={`space-y-6 sm:space-y-8 ${getDynamicPadding()} py-6 sm:py-8`}>
                 {selectedAIs.length === 0 ? (
                   // Single chat mode - show single chat messages
                   (() => {
@@ -1068,7 +1143,7 @@ export default function ResourcesPage() {
         
         {/* Independent Typing Indicator - Above Reply/Input Area */}
         {(selectedAIs.length === 0 ? singleChatProcessing : typingAIs.length > 0) && (
-          <div className="px-3 sm:px-4 md:px-6 lg:px-8 xl:px-12 2xl:px-16 py-2">
+          <div className={`${getDynamicPadding()} py-2`}>
             <div className="flex items-center space-x-2">
               {/* Smaller Avatars */}
               <div className="flex -space-x-1">
@@ -1120,7 +1195,7 @@ export default function ResourcesPage() {
         
         {/* Reply Mode Indicator - responsive padding */}
         {replyMode?.isActive && (
-          <div className={`px-2 sm:px-4 md:px-6 py-2 ${darkMode ? 'bg-blue-900/20 border-blue-800' : 'bg-blue-50 border-blue-200'} border-t`}>
+          <div className={`${getDynamicPadding()} py-2 ${darkMode ? 'bg-blue-900/20 border-blue-800' : 'bg-blue-50 border-blue-200'} border-t`}>
             <div className="flex items-center justify-between">
               <div className="flex items-center">
                 <i className="fas fa-reply text-blue-600 mr-2"></i>
