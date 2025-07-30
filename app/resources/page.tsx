@@ -32,6 +32,7 @@ import { ChatInput } from '@/components/ai-hub/chat/ChatInput';
 import { WelcomeScreen } from '@/components/ai-hub/chat/WelcomeScreen';
 import { Message } from '@/types/ai-hub.types';
 import { LearningStatsSidebar } from '@/components/ai-hub/learning-stats/LearningStatsSidebar';
+import { useMobile } from "@/hooks/use-mobile";
 
 // Optimized Avatar Component with next/image
 const OptimizedAvatar = ({ 
@@ -117,13 +118,13 @@ import { useNaturalConversation } from '@/hooks/use-natural-conversation';
 import { useChatSessions } from '@/hooks/use-chat-sessions';
 import { useAuth } from '@/contexts/auth-context';
 import { supabase } from '@/lib/supabase';
-import { useMobile } from "@/hooks/use-mobile";
 import { singleChatService } from '@/lib/single-chat-service';
 
 export default function ResourcesPage() {
   const router = useRouter();
   const [mounted, setMounted] = useState(false); // Add mounted state like other routes
   const [authChecked, setAuthChecked] = useState(false); // New state to track if auth has been thoroughly checked
+  const [windowWidth, setWindowWidth] = useState<number>(typeof window !== "undefined" ? window.innerWidth : 0);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false); // mobile: đóng mặc định
   const [isDesktopSidebarCollapsed, setIsDesktopSidebarCollapsed] = useState(false); // desktop: thu nhỏ sidebar
   const [isStatsSidebarOpen, setIsStatsSidebarOpen] = useState(false);
@@ -142,10 +143,30 @@ export default function ResourcesPage() {
   const [isHoveringRightArea, setIsHoveringRightArea] = useState(false);
   const isMobile = useMobile();
 
-  // Debug: Log singleChatMessages changes
+  // Handle window resize for responsive behavior
   useEffect(() => {
-    console.log('🔄 singleChatMessages updated:', singleChatMessages);
-  }, [singleChatMessages]);
+    const handleResize = () => {
+      setWindowWidth(window.innerWidth);
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Hydration and responsive logic
+  useEffect(() => {
+    setMounted(true);
+    
+    // Close mobile sidebars on desktop
+    if (windowWidth >= 1024) { // lg breakpoint
+      setIsSidebarOpen(false);
+      setIsStatsSidebarOpen(false);
+    }
+  }, [windowWidth]);
+
+  // Detect small mobile devices
+  const isSmallMobile = windowWidth < 640; // sm breakpoint
+  const isTablet = windowWidth >= 640 && windowWidth < 1024; // between sm and lg
 
   // Authentication check - MUST be called before any early returns
   const { user, isLoading: authLoading, isAuthenticated } = useAuth();
@@ -625,18 +646,16 @@ export default function ResourcesPage() {
       {/* Critical above-the-fold components - NO Suspense */}
       <MainHeader mobileMenuOpen={mobileMenuOpen} setMobileMenuOpen={setMobileMenuOpen} />
       
-      {/* Mobile Navigation */}
-      {isMobile && (
-        <MobileNavigation 
-          isOpen={mobileMenuOpen} 
-          onClose={() => setMobileMenuOpen(false)} 
-        />
-      )}
+      {/* Mobile Navigation - responsive overlay */}
+      <MobileNavigation 
+        isOpen={mobileMenuOpen} 
+        onClose={() => setMobileMenuOpen(false)} 
+      />
 
-      {/* Main Content Container with proper margins */}
+      {/* Main Content Container with proper margins - responsive layout */}
       <div className="flex-1 bg-gray-50 dark:bg-gray-900">
-        <div className="w-full max-w-none px-3 sm:px-4 md:px-6 lg:px-6 xl:px-8 2xl:px-12 py-4 sm:py-6 lg:py-8">
-          <div className={`flex h-[calc(100vh-120px)] overflow-hidden ${darkMode ? 'bg-gray-900 text-gray-100' : 'bg-gray-50 text-gray-800'} rounded-xl shadow-sm`}>  
+        <div className="w-full max-w-none px-1 sm:px-2 md:px-4 lg:px-6 xl:px-8 2xl:px-12 py-2 sm:py-4 lg:py-6">
+          <div className={`flex h-[calc(100vh-80px)] sm:h-[calc(100vh-100px)] lg:h-[calc(100vh-120px)] overflow-hidden ${darkMode ? 'bg-gray-900 text-gray-100' : 'bg-gray-50 text-gray-800'} rounded-xl shadow-sm`}>  
       {/* Sidebar dạng trượt cho mobile/tablet */}
       <div className={`lg:hidden fixed inset-0 z-50 ${isSidebarOpen ? '' : 'pointer-events-none'}`}>
         {/* Overlay mờ */}
@@ -700,17 +719,17 @@ export default function ResourcesPage() {
         </div>
       </div>
 
-      {/* Main Chat Area */}
+      {/* Main Chat Area - responsive container */}
       <div className="flex-1 flex flex-col h-full overflow-hidden relative">
-        {/* Header */}
-        <div className={`${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border-b px-4 py-4 h-16 flex items-center justify-between`}>
+        {/* Header - responsive padding */}
+        <div className={`${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border-b px-2 sm:px-4 py-2 sm:py-4 h-12 sm:h-16 flex items-center justify-between`}>
           <div className="flex items-center">
-            {/* Nút mở sidebar mobile */}
+            {/* Nút mở sidebar mobile - responsive */}
             <button
-              className={`lg:hidden mr-2 !rounded-button whitespace-nowrap cursor-pointer ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} transition-colors duration-200 p-2`}
+              className={`lg:hidden mr-1 sm:mr-2 !rounded-button whitespace-nowrap cursor-pointer ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} transition-colors duration-200 p-1 sm:p-2`}
               onClick={() => setIsSidebarOpen(true)}
             >
-              <i className="fas fa-bars text-lg"></i>
+              <i className="fas fa-bars text-base sm:text-lg"></i>
             </button>
             <div className="flex items-center min-w-0 flex-1">
               <div className="flex -space-x-2 sm:-space-x-3 mr-2 sm:mr-4 flex-shrink-0">
@@ -982,12 +1001,12 @@ export default function ResourcesPage() {
           </div>
         </div>
         
-        {/* Chat Messages */}
+        {/* Chat Messages - responsive container */}
         <ScrollArea
-          className={`flex-1 chat-mobile smooth-auto-scroll ${darkMode ? 'bg-gradient-to-b from-gray-900 to-gray-800' : 'bg-gradient-to-b from-gray-50 to-white'}`}
+          className={`flex-1 chat-mobile smooth-auto-scroll ${darkMode ? 'bg-gradient-to-b from-gray-900 to-gray-800' : 'bg-gradient-to-b from-gray-50 to-white'} px-2 sm:px-4 md:px-6`}
           ref={chatContainerRef}
         >
-          <div className="w-full h-full">
+          <div className="w-full h-full max-w-4xl mx-auto">
             {/* Show Welcome Screen when no messages exist */}
             {(selectedAIs.length === 0 ? singleChatMessages.length === 0 : messages.length === 0) ? (
               <WelcomeScreen
@@ -1099,9 +1118,9 @@ export default function ResourcesPage() {
           </div>
         )}
         
-        {/* Reply Mode Indicator */}
+        {/* Reply Mode Indicator - responsive padding */}
         {replyMode?.isActive && (
-          <div className={`px-3 sm:px-4 md:px-6 lg:px-8 xl:px-12 2xl:px-16 py-2 ${darkMode ? 'bg-blue-900/20 border-blue-800' : 'bg-blue-50 border-blue-200'} border-t`}>
+          <div className={`px-2 sm:px-4 md:px-6 py-2 ${darkMode ? 'bg-blue-900/20 border-blue-800' : 'bg-blue-50 border-blue-200'} border-t`}>
             <div className="flex items-center justify-between">
               <div className="flex items-center">
                 <i className="fas fa-reply text-blue-600 mr-2"></i>

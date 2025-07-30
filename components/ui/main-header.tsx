@@ -66,9 +66,9 @@ export default function MainHeader({ mobileMenuOpen, setMobileMenuOpen }: MainHe
       }
     }
 
-    // Check if we're on the home page or community page (both use simplified mobile header)
+    // Check if we're on the home page, community page, or resources page (all use simplified mobile header)
     const currentPath = window.location.pathname
-    setIsHomePage(currentPath === '/' || currentPath === '/community')
+    setIsHomePage(currentPath === '/' || currentPath === '/community' || currentPath === '/resources')
 
     window.addEventListener("scroll", handleScroll)
     return () => window.removeEventListener("scroll", handleScroll)
