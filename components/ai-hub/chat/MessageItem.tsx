@@ -139,7 +139,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message, ai, darkMode,
           />
         </div>
       )}
-      <div className={`${isUser ? 'max-w-[85%] sm:max-w-[80%] lg:max-w-[75%] xl:max-w-[70%]' : 'min-w-0 flex-1 max-w-[85%] sm:max-w-[85%] lg:max-w-[80%] xl:max-w-[75%]'}`}>
+      <div className={`${isUser ? 'max-w-[85%] sm:max-w-[80%] lg:max-w-[75%] xl:max-w-[70%]' : 'min-w-0 w-fit max-w-[85%] sm:max-w-[85%] lg:max-w-[80%] xl:max-w-[75%]'}`}>
         {!isUser && ai && (
           <div className="flex items-center mb-1 sm:mb-2 gap-2 min-w-0">
             <span className={`text-sm font-medium truncate ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{ai.name}</span>
@@ -156,7 +156,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message, ai, darkMode,
           className={`rounded-2xl p-2 sm:p-3 shadow-md min-h-fit ${
             isUser 
               ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white inline-block w-fit max-w-full'
-              : 'bg-gray-700 border border-gray-600 dark:bg-gray-700 dark:border-gray-600 bg-white border-gray-200 min-w-0 max-w-full overflow-hidden'
+              : 'bg-gray-700 border border-gray-600 dark:bg-gray-700 dark:border-gray-600 bg-white border-gray-200 inline-block w-fit max-w-full'
           }`}
         >
           {message.type === 'text' && (
@@ -164,8 +164,8 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message, ai, darkMode,
               {isUser ? (
                 <div className="text-sm sm:text-base break-words leading-relaxed">{message.content}</div>
               ) : (
-                <div className="w-full min-w-0 overflow-hidden">
-                  <div className="prose prose-sm sm:prose-base dark:prose-invert max-w-none w-full break-words overflow-wrap-anywhere">
+                <div className="min-w-0">
+                  <div className="prose prose-sm sm:prose-base dark:prose-invert max-w-none break-words overflow-wrap-anywhere">
                     <ReactMarkdown
                       remarkPlugins={[remarkGfm]}
                       components={{

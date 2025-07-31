@@ -29,11 +29,7 @@ export function StoriesSection({
         <div className="flex gap-2 pb-2 min-w-max">
           {/* Add Story Card - Always First */}
           {!loading && (
-            <motion.div
-              whileHover={{ y: -5 }}
-              transition={{ type: "spring", stiffness: 400, damping: 10 }}
-              className="flex-shrink-0"
-            >
+            <div className="flex-shrink-0">
               <div
                 className="w-[90px] sm:w-[110px] h-[160px] sm:h-[200px] rounded-xl relative overflow-hidden cursor-pointer bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center"
                 onClick={() => setShowStoryCreator(true)}
@@ -43,7 +39,7 @@ export function StoriesSection({
                 </div>
                 <p className="text-xs sm:text-sm font-medium">Create Story</p>
               </div>
-            </motion.div>
+            </div>
           )}
 
           {/* Story Cards */}

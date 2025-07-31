@@ -75,7 +75,7 @@ export function useCommunityData() {
                       post.media_url?.includes('.webp')) {
               mediaType = "image"
             }
-          } else if (post.submission_data || post.video_evaluation) {
+          } else if (post.submission_data || post.ai_evaluation) {
             mediaType = "ai-submission"
           }
 
@@ -99,16 +99,11 @@ export function useCommunityData() {
               difficulty: post.submission_data.difficulty || "beginner",
               topic: post.submission_data.topic || "general"
             } : undefined,
-            videoEvaluation: post.video_evaluation ? {
-              pronunciation: post.video_evaluation.pronunciation || 0,
-              fluency: post.video_evaluation.fluency || 0,
-              grammar: post.video_evaluation.grammar || 0,
-              vocabulary: post.video_evaluation.vocabulary || 0,
-              overall: post.video_evaluation.overall || 0,
-              feedback: post.video_evaluation.feedback || "",
-              strengths: post.video_evaluation.strengths || [],
-              improvements: post.video_evaluation.improvements || []
-            } : undefined,
+            videoEvaluation: post.ai_evaluation ? (
+              typeof post.ai_evaluation === 'string' 
+                ? JSON.parse(post.ai_evaluation)
+                : post.ai_evaluation
+            ) : undefined,
             isNew: false
           }
         })
