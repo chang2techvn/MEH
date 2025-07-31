@@ -149,7 +149,8 @@ Respond ONLY with valid JSON in this exact format (no extra text before or after
             continue;
           }
 
-          await createVocabularyEntry({
+          console.log('Attempting to save vocabulary:', vocab.term);
+          const result = await createVocabularyEntry({
             term: vocab.term,
             meaning: vocab.meaning,
             pronunciation: vocab.pronunciation || '',
@@ -161,6 +162,7 @@ Respond ONLY with valid JSON in this exact format (no extra text before or after
             source: 'AI Generated'
           });
           
+          console.log('Vocabulary saved successfully:', vocab.term, result);
           successCount++;
         } catch (saveError) {
           console.error('Failed to save vocabulary:', vocab.term, saveError);
@@ -179,6 +181,7 @@ Respond ONLY with valid JSON in this exact format (no extra text before or after
 
         // Call onSuccess callback first to refresh data
         if (onSuccess) {
+          console.log('Calling onSuccess callback to refresh data');
           await onSuccess();
         }
         

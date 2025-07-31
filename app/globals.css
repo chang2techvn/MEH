@@ -621,6 +621,68 @@ button:active {
   .fixed input::placeholder {
     font-size: 12px !important;
   }
+  
+  /* Prevent auto-zoom on all input types - Enhanced coverage */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="tel"],
+  input[type="url"],
+  input[type="search"],
+  input[type="date"],
+  input[type="time"],
+  input[type="datetime-local"],
+  textarea,
+  select {
+    font-size: 16px !important;
+    transform-origin: left top;
+    zoom: 1 !important;
+    -webkit-text-size-adjust: 100% !important;
+    -moz-text-size-adjust: 100% !important;
+    -ms-text-size-adjust: 100% !important;
+    text-size-adjust: 100% !important;
+  }
+  
+  /* Force input focus to not zoom */
+  input:focus,
+  textarea:focus,
+  select:focus {
+    font-size: 16px !important;
+    zoom: 1 !important;
+    transform: none !important;
+    -webkit-text-size-adjust: none !important;
+    -moz-text-size-adjust: none !important;
+    -ms-text-size-adjust: none !important;
+    text-size-adjust: none !important;
+  }
+  
+  /* Prevent zoom on contenteditable elements */
+  [contenteditable="true"]:focus {
+    font-size: 16px !important;
+    zoom: 1 !important;
+    -webkit-text-size-adjust: none !important;
+  }
+  
+  /* Target specific UI library inputs */
+  .input:focus,
+  .form-input:focus,
+  .form-control:focus {
+    font-size: 16px !important;
+    zoom: 1 !important;
+    transform: none !important;
+  }
+  
+  /* Override any component library zoom behaviors */
+  * input:focus,
+  * textarea:focus,
+  * select:focus {
+    -webkit-text-size-adjust: 100% !important;
+    -moz-text-size-adjust: 100% !important;
+    -ms-text-size-adjust: 100% !important;
+    text-size-adjust: 100% !important;
+    zoom: 1 !important;
+  }
 }
 
 /* Tablet responsive adjustments */
@@ -648,13 +710,225 @@ button:active {
 }
 
 /* Mobile-specific input optimizations for UI components */
+
+/* Responsive pronunciation text - Auto-scaling based on length */
+.pronunciation-text {
+  font-family: monospace;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+/* Mobile pronunciation scaling */
+@media screen and (max-width: 640px) {
+  .pronunciation-text {
+    font-size: 10px;
+  }
+  
+  /* Dynamic scaling for long pronunciation */
+  .pronunciation-text[data-length="long"] {
+    font-size: 8px;
+  }
+  
+  .pronunciation-text[data-length="very-long"] {
+    font-size: 7px;
+  }
+  
+  .pronunciation-text[data-length="extra-long"] {
+    font-size: 6px;
+  }
+}
+
+/* Tablet pronunciation scaling */
+@media screen and (min-width: 641px) and (max-width: 1024px) {
+  .pronunciation-text {
+    font-size: 12px;
+  }
+}
+
+/* Desktop pronunciation scaling */
+@media screen and (min-width: 1025px) {
+  .pronunciation-text {
+    font-size: 14px;
+  }
+}
+
+/* Mobile Toast and Notification Responsive Styling */
 @media screen and (max-width: 768px) {
-  /* Tailwind Input component overrides */
+  /* Toast/Notification containers */
+  [data-sonner-toaster],
+  .toast-container,
+  .notification-container,
+  [role="alert"],
+  [role="status"] {
+    font-size: 9px !important;
+    padding: 4px 8px !important;
+    min-height: auto !important;
+    max-width: 85vw !important;
+    border-radius: 4px !important;
+    line-height: 1.1 !important;
+  }
+  
+  /* Toast titles */
+  [data-sonner-toast] [data-title],
+  .toast-title,
+  .notification-title {
+    font-size: 9px !important;
+    font-weight: 600 !important;
+    line-height: 1.1 !important;
+    margin-bottom: 0 !important;
+  }
+  
+  /* Toast descriptions */
+  [data-sonner-toast] [data-description],
+  .toast-description,
+  .notification-description {
+    font-size: 8px !important;
+    line-height: 1.2 !important;
+    opacity: 0.9 !important;
+    margin-top: 1px !important;
+  }
+  
+  /* Toast action buttons */
+  [data-sonner-toast] button,
+  .toast-action,
+  .notification-action {
+    font-size: 8px !important;
+    padding: 2px 4px !important;
+    height: auto !important;
+    min-height: 20px !important;
+    border-radius: 3px !important;
+  }
+  
+  /* Toast icons */
+  [data-sonner-toast] svg,
+  .toast-icon,
+  .notification-icon {
+    width: 12px !important;
+    height: 12px !important;
+  }
+  
+  /* Success/Error/Warning toast variants */
+  [data-sonner-toast][data-type="success"],
+  [data-sonner-toast][data-type="error"],
+  [data-sonner-toast][data-type="warning"],
+  [data-sonner-toast][data-type="info"] {
+    padding: 4px 8px !important;
+    border-radius: 4px !important;
+  }
+  
+  /* Toast close button */
+  [data-sonner-toast] [data-close-button],
+  .toast-close,
+  .notification-close {
+    width: 16px !important;
+    height: 16px !important;
+    font-size: 8px !important;
+  }
+  
+  /* Modal/Dialog notifications */
+  .fixed [role="alert"],
+  .fixed .toast,
+  .fixed .notification {
+    font-size: 8px !important;
+    padding: 3px 6px !important;
+  }
+  
+  /* Alert dialogs and confirmations */
+  [role="alertdialog"] {
+    padding: 10px !important;
+    max-width: 80vw !important;
+    border-radius: 6px !important;
+  }
+  
+  [role="alertdialog"] h2,
+  [role="alertdialog"] h3,
+  .alert-title {
+    font-size: 12px !important;
+    line-height: 1.1 !important;
+    margin-bottom: 4px !important;
+  }
+  
+  [role="alertdialog"] p,
+  .alert-description {
+    font-size: 9px !important;
+    line-height: 1.2 !important;
+    margin-bottom: 8px !important;
+  }
+  
+  /* Loading/Progress notifications */
+  .loading-toast,
+  .progress-notification {
+    font-size: 8px !important;
+    padding: 4px 8px !important;
+  }
+  
+  /* Floating notifications (top-right, bottom-right, etc.) */
+  .fixed.top-0,
+  .fixed.top-4,
+  .fixed.bottom-0,
+  .fixed.bottom-4 {
+    right: 4px !important;
+    left: 4px !important;
+  }
+  
+  .fixed.top-0 [role="alert"],
+  .fixed.top-4 [role="alert"],
+  .fixed.bottom-0 [role="alert"],
+  .fixed.bottom-4 [role="alert"] {
+    margin: 2px 0 !important;
+    max-width: calc(100vw - 8px) !important;
+  }
+  
+  /* Compact toast positioning */
+  [data-sonner-toaster] {
+    --width: 85vw !important;
+    --offset: 4px !important;
+  }
+  
+  /* Reduce toast gap/spacing */
+  [data-sonner-toast] + [data-sonner-toast] {
+    margin-top: 2px !important;
+  }
+  
+  /* Ultra compact toast content */
+  [data-sonner-toast] > div {
+    gap: 2px !important;
+  }
+  
+  /* Minimal toast padding for content */
+  [data-sonner-toast] [data-content] {
+    padding: 0 !important;
+    gap: 1px !important;
+  }
+}
+@media screen and (max-width: 768px) {
+  /* Tailwind Input component overrides - PREVENT ZOOM */
   .relative input,
   .space-y-2 input,
   .space-y-3 input,
   .flex input {
-    font-size: 14px !important;
+    font-size: 16px !important;
+    -webkit-text-size-adjust: 100% !important;
+    -moz-text-size-adjust: 100% !important;
+    -ms-text-size-adjust: 100% !important;
+    text-size-adjust: 100% !important;
+    zoom: 1 !important;
+  }
+  
+  .relative input:focus,
+  .space-y-2 input:focus,
+  .space-y-3 input:focus,
+  .flex input:focus {
+    font-size: 16px !important;
+    -webkit-text-size-adjust: none !important;
+    -moz-text-size-adjust: none !important;
+    -ms-text-size-adjust: none !important;
+    text-size-adjust: none !important;
+    zoom: 1 !important;
+    transform: none !important;
   }
   
   .relative input::placeholder,
@@ -664,24 +938,73 @@ button:active {
     font-size: 12px !important;
   }
   
-  /* Search inputs */
+  /* Search inputs - PREVENT ZOOM */
   input[placeholder*="Search"],
   input[placeholder*="search"],
-  input[placeholder*="Tìm"] {
-    font-size: 14px !important;
+  input[placeholder*="Tìm"],
+  input[placeholder*="tìm"],
+  input[placeholder*="goals"],
+  input[placeholder*="Goals"],
+  input[placeholder*="goal"],
+  input[placeholder*="Goal"] {
+    font-size: 16px !important;
+    -webkit-text-size-adjust: 100% !important;
+    -moz-text-size-adjust: 100% !important;
+    -ms-text-size-adjust: 100% !important;
+    text-size-adjust: 100% !important;
+    zoom: 1 !important;
+  }
+  
+  input[placeholder*="Search"]:focus,
+  input[placeholder*="search"]:focus,
+  input[placeholder*="Tìm"]:focus,
+  input[placeholder*="tìm"]:focus,
+  input[placeholder*="goals"]:focus,
+  input[placeholder*="Goals"]:focus,
+  input[placeholder*="goal"]:focus,
+  input[placeholder*="Goal"]:focus {
+    font-size: 16px !important;
+    -webkit-text-size-adjust: none !important;
+    -moz-text-size-adjust: none !important;
+    -ms-text-size-adjust: none !important;
+    text-size-adjust: none !important;
+    zoom: 1 !important;
+    transform: none !important;
   }
   
   input[placeholder*="Search"]::placeholder,
   input[placeholder*="search"]::placeholder,
-  input[placeholder*="Tìm"]::placeholder {
+  input[placeholder*="Tìm"]::placeholder,
+  input[placeholder*="tìm"]::placeholder,
+  input[placeholder*="goals"]::placeholder,
+  input[placeholder*="Goals"]::placeholder,
+  input[placeholder*="goal"]::placeholder,
+  input[placeholder*="Goal"]::placeholder {
     font-size: 12px !important;
   }
   
-  /* Form inputs in modals */
+  /* Form inputs in modals - PREVENT ZOOM */
   .rounded-lg input,
   .rounded-xl input,
   .border input {
-    font-size: 14px !important;
+    font-size: 16px !important;
+    -webkit-text-size-adjust: 100% !important;
+    -moz-text-size-adjust: 100% !important;
+    -ms-text-size-adjust: 100% !important;
+    text-size-adjust: 100% !important;
+    zoom: 1 !important;
+  }
+  
+  .rounded-lg input:focus,
+  .rounded-xl input:focus,
+  .border input:focus {
+    font-size: 16px !important;
+    -webkit-text-size-adjust: none !important;
+    -moz-text-size-adjust: none !important;
+    -ms-text-size-adjust: none !important;
+    text-size-adjust: none !important;
+    zoom: 1 !important;
+    transform: none !important;
   }
   
   .rounded-lg input::placeholder,

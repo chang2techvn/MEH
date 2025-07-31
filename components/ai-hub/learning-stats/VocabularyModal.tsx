@@ -460,26 +460,26 @@ export const VocabularyModal: React.FC<VocabularyModalProps> = ({
                 </Button>
               </div>
             ) : vocabulary.length === 0 ? (
-              <div className="text-center py-12">
-                <div className={`text-6xl ${darkMode ? 'text-gray-600' : 'text-gray-300'} mb-4`}>
+              <div className="text-center py-6 sm:py-10">
+                <div className={`text-3xl sm:text-5xl ${darkMode ? 'text-gray-600' : 'text-gray-300'} mb-2 sm:mb-4`}>
                   <i className="fas fa-book-open"></i>
                 </div>
-                <h3 className={`text-xl font-medium ${darkMode ? 'text-gray-400' : 'text-gray-500'} mb-2`}>
+                <h3 className={`text-sm sm:text-xl font-medium ${darkMode ? 'text-gray-400' : 'text-gray-500'} mb-1 sm:mb-2`}>
                   No Vocabulary Yet
                 </h3>
-                <p className={`${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                <p className={`text-xs sm:text-sm ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
                   Start learning to build your vocabulary collection!
                 </p>
               </div>
             ) : filteredVocabulary.length === 0 ? (
-              <div className="text-center py-12">
-                <div className={`text-6xl ${darkMode ? 'text-gray-600' : 'text-gray-300'} mb-4`}>
+              <div className="text-center py-6 sm:py-8">
+                <div className={`text-3xl sm:text-4xl ${darkMode ? 'text-gray-600' : 'text-gray-300'} mb-2 sm:mb-3`}>
                   <i className="fas fa-search"></i>
                 </div>
-                <h3 className={`text-xl font-medium ${darkMode ? 'text-gray-400' : 'text-gray-500'} mb-2`}>
+                <h3 className={`text-sm sm:text-lg font-medium ${darkMode ? 'text-gray-400' : 'text-gray-500'} mb-1 sm:mb-2`}>
                   No Words Found
                 </h3>
-                <p className={`${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                <p className={`text-xs sm:text-sm ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
                   Try changing your search keywords or filters
                 </p>
               </div>
@@ -500,7 +500,12 @@ export const VocabularyModal: React.FC<VocabularyModalProps> = ({
                         </h3>
                         <div className="h-4 sm:h-5 flex items-center">
                           {word.pronunciation ? (
-                            <p className={`text-xs sm:text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'} font-mono`}>
+                            <p className={`pronunciation-text ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}
+                               data-length={
+                                 word.pronunciation.length > 30 ? 'extra-long' :
+                                 word.pronunciation.length > 25 ? 'very-long' :
+                                 word.pronunciation.length > 20 ? 'long' : 'normal'
+                               }>
                               [{word.pronunciation}]
                             </p>
                           ) : (
@@ -510,14 +515,14 @@ export const VocabularyModal: React.FC<VocabularyModalProps> = ({
                           )}
                         </div>
                       </div>
-                      <div className="flex flex-col items-end gap-1 sm:gap-2 ml-2 sm:ml-3">
-                        <div className="h-4 sm:h-6 flex items-center">
-                          <Badge className="bg-neo-mint/10 text-neo-mint dark:bg-purist-blue/10 dark:text-purist-blue hover:bg-neo-mint/20 dark:hover:bg-purist-blue/20 transition-colors duration-200 rounded text-xs sm:text-sm min-w-[32px] sm:min-w-[40px] text-center">
+                      <div className="flex flex-col items-end gap-1 ml-2 sm:ml-3">
+                        <div className="h-3 sm:h-5 flex items-center">
+                          <Badge className="bg-neo-mint/10 text-neo-mint dark:bg-purist-blue/10 dark:text-purist-blue hover:bg-neo-mint/20 dark:hover:bg-purist-blue/20 transition-colors duration-200 rounded text-[9px] sm:text-xs px-1 py-0 min-w-[24px] sm:min-w-[32px] text-center h-4 sm:h-5">
                             {word.usage_count}x
                           </Badge>
                         </div>
-                        <div className="h-4 sm:h-6 flex items-center">
-                          <Badge className={`text-xs border rounded min-w-[60px] sm:min-w-[80px] text-center ${getMasteryColor(word.mastery_level)}`}>
+                        <div className="h-3 sm:h-5 flex items-center">
+                          <Badge className={`text-[9px] sm:text-xs border rounded px-1 py-0 min-w-[44px] sm:min-w-[64px] text-center h-4 sm:h-5 ${getMasteryColor(word.mastery_level)}`}>
                             {getMasteryLabel(word.mastery_level)}
                           </Badge>
                         </div>
@@ -554,36 +559,36 @@ export const VocabularyModal: React.FC<VocabularyModalProps> = ({
                     </div>
                     
                     {/* Footer Section - Compact */}
-                    <div className="flex items-center justify-between h-6 sm:h-8">
-                      <div className="flex items-center gap-1 sm:gap-2 flex-1 min-w-0">
-                        <Badge variant="outline" className="text-xs rounded flex-shrink-0">
+                    <div className="flex items-center justify-between h-5 sm:h-7">
+                      <div className="flex items-center gap-1 flex-1 min-w-0">
+                        <Badge variant="outline" className="text-[9px] sm:text-xs rounded px-1 py-0 h-4 sm:h-5 flex-shrink-0">
                           {word.category}
                         </Badge>
-                        <span className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'} truncate`}>
-                          {new Date(word.created_at).toLocaleDateString('en-US')}
+                        <span className={`text-[9px] sm:text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'} truncate`}>
+                          {new Date(word.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                         </span>
                       </div>
-                      <div className="flex items-center gap-1 flex-shrink-0 ml-1 sm:ml-2">
+                      <div className="flex items-center gap-0.5 flex-shrink-0 ml-1">
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-6 w-6 sm:h-8 sm:w-8 rounded hover:bg-neo-mint/10 hover:text-neo-mint dark:hover:bg-purist-blue/10 dark:hover:text-purist-blue transition-all duration-200"
+                          className="h-5 w-5 sm:h-7 sm:w-7 rounded hover:bg-neo-mint/10 hover:text-neo-mint dark:hover:bg-purist-blue/10 dark:hover:text-purist-blue transition-all duration-200"
                           title="Pronounce"
                           onClick={() => handlePronunciation(word.term, word.pronunciation)}
                         >
-                          <i className="fas fa-volume-up text-xs"></i>
+                          <i className="fas fa-volume-up text-[10px] sm:text-xs"></i>
                         </Button>
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-6 w-6 sm:h-8 sm:w-8 rounded hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/20 dark:hover:text-red-400 transition-all duration-200"
+                          className="h-5 w-5 sm:h-7 sm:w-7 rounded hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/20 dark:hover:text-red-400 transition-all duration-200"
                           title="Delete Vocabulary"
                           onClick={(e) => {
                             e.stopPropagation();
                             handleDeleteVocabulary(word.id, word.term);
                           }}
                         >
-                          <i className="fas fa-trash text-sm"></i>
+                          <i className="fas fa-trash text-[10px] sm:text-xs"></i>
                         </Button>
                       </div>
                     </div>

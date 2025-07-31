@@ -333,7 +333,7 @@ export default function Home() {
       </Suspense>
 
       {/* Leaderboard Modal - Only used on desktop, mobile uses the one in MobileHeaderButtons */}
-      {!isMobile && (
+      {mounted && !isMobile && (
         <LeaderboardModal 
           isOpen={leaderboardModalOpen}
           onClose={() => setLeaderboardModalOpen(false)}

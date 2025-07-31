@@ -33,7 +33,8 @@ import { useAuthState, useAuthActions } from "@/contexts/auth-context"
 import { useChat } from "@/contexts/chat-context-realtime"
 import { useRouter } from "next/navigation"
 import { AICharacter } from "@/types/ai-hub.types"
-import { LearningGoal, useLearningGoals } from "@/hooks/use-learning-goals"
+import { LearningGoal, useLearningGoals, useVocabulary } from "@/hooks/use-learning-goals"
+import { useTheme } from "@/contexts/theme-context"
 
 interface ResourcesMobileBottomNavigationProps {
   isVisible?: boolean
@@ -64,19 +65,14 @@ export function ResourcesMobileBottomNavigation({
   const [goalProgressModalOpen, setGoalProgressModalOpen] = useState(false)
   const [selectedGoal, setSelectedGoal] = useState<LearningGoal | null>(null)
   
-  // Get dark mode from system or local storage
-  const [darkMode, setDarkMode] = useState(false)
-  
-  useEffect(() => {
-    // Check for dark mode preference
-    const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches ||
-                  document.documentElement.classList.contains('dark')
-    setDarkMode(isDark)
-  }, [])
+  // Use theme context instead of manual detection
+  const { theme } = useTheme()
+  const darkMode = theme.mode === 'dark'
   const { user, isAuthenticated } = useAuthState()
   const { logout } = useAuthActions()
   const { toggleDropdown, totalUnreadCount, isDropdownOpen } = useChat()
   const { goals, loading: goalsLoading, createGoal, updateGoalProgress, refetch: refetchGoals } = useLearningGoals()
+  const { vocabulary, loading: vocabularyLoading, refreshVocabulary } = useVocabulary()
   const router = useRouter()
   
   const handleMessageClick = () => {
@@ -478,6 +474,8 @@ export function ResourcesMobileBottomNavigation({
         onClose={() => setVocabularyModalOpen(false)}
         darkMode={darkMode}
         onCreateNew={handleCreateNewVocabulary}
+        vocabulary={vocabulary}
+        loading={vocabularyLoading}
       />
       
       {/* Goals List Modal */}
@@ -504,8 +502,11 @@ export function ResourcesMobileBottomNavigation({
         isOpen={newVocabularyModalOpen}
         onClose={() => setNewVocabularyModalOpen(false)}
         darkMode={darkMode}
-        onSuccess={() => {
+        onSuccess={async () => {
           console.log('New vocabulary created successfully')
+          // Refresh vocabulary data
+          await refreshVocabulary()
+          console.log('Vocabulary data refreshed')
           setNewVocabularyModalOpen(false)
         }}
       />

@@ -35,6 +35,7 @@ import { Message, AICharacter } from '@/types/ai-hub.types';
 import { LearningStatsSidebar } from '@/components/ai-hub/learning-stats/LearningStatsSidebar';
 import { ResourcesMobileBottomNavigation } from '@/components/ai-hub/resources-mobile-bottom-navigation';
 import { useMobile } from "@/hooks/use-mobile";
+import { useTheme } from "@/contexts/theme-context";
 
 // Optimized Avatar Component with next/image
 const OptimizedAvatar = ({ 
@@ -134,7 +135,9 @@ export default function ResourcesPage() {
   const [selectedAIs, setSelectedAIs] = useState<string[]>([]);
   const [inputMessage, setInputMessage] = useState(''); // State for mobile input
   const [activeFilter, setActiveFilter] = useState('Tất cả');
-  const [darkMode, setDarkMode] = useState(false);
+  const { theme, updateTheme } = useTheme();
+  const isDarkMode = theme.mode === 'dark';
+  const toggleDarkMode = () => updateTheme({ mode: isDarkMode ? 'light' : 'dark' });
   const [maxAvatars, setMaxAvatars] = useState(3);
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -769,7 +772,7 @@ export default function ResourcesPage() {
       {/* Main Content Container with proper margins - responsive layout */}
       <div className="flex-1 bg-gray-50 dark:bg-gray-900">
         <div className="w-full max-w-none px-1 sm:px-2 md:px-4 lg:px-6 xl:px-8 2xl:px-12 py-2 sm:py-4 lg:py-6">
-          <div className={`flex h-[calc(100vh-80px)] sm:h-[calc(100vh-100px)] lg:h-[calc(100vh-120px)] overflow-hidden ${darkMode ? 'bg-gray-900 text-gray-100' : 'bg-gray-50 text-gray-800'} rounded-xl shadow-sm`}>  
+          <div className={`flex h-[calc(100vh-80px)] sm:h-[calc(100vh-100px)] lg:h-[calc(100vh-120px)] overflow-hidden ${isDarkMode ? 'bg-gray-900 text-gray-100' : 'bg-gray-50 text-gray-800'} rounded-xl shadow-sm`}>  
       {/* Sidebar dạng trượt cho mobile/tablet */}
       <div className={`lg:hidden fixed inset-0 z-[70] ${isSidebarOpen ? '' : 'pointer-events-none'}`}>
         {/* Overlay mờ */}
@@ -786,8 +789,8 @@ export default function ResourcesPage() {
             onToggleAI={toggleAISelection}
             activeFilter={activeFilter}
             onFilterChange={setActiveFilter}
-            darkMode={darkMode}
-            onToggleDarkMode={() => setDarkMode(!darkMode)}
+            darkMode={isDarkMode}
+            onToggleDarkMode={toggleDarkMode}
             onChatSelect={handleChatSelect}
             currentChatId={currentChatId}
             aiCharacters={aiAssistants}
@@ -822,8 +825,8 @@ export default function ResourcesPage() {
             onToggleAI={toggleAISelection}
             activeFilter={activeFilter}
             onFilterChange={setActiveFilter}
-            darkMode={darkMode}
-            onToggleDarkMode={() => setDarkMode(!darkMode)}
+            darkMode={isDarkMode}
+            onToggleDarkMode={toggleDarkMode}
             collapsed={isDesktopSidebarCollapsed}
             onCollapseToggle={() => setIsDesktopSidebarCollapsed(!isDesktopSidebarCollapsed)}
             onChatSelect={handleChatSelect}
@@ -836,7 +839,7 @@ export default function ResourcesPage() {
       {/* Main Chat Area - responsive container */}
       <div className="flex-1 flex flex-col h-full overflow-hidden relative">
         {/* Header - responsive padding */}
-        <div className={`${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border-b px-2 sm:px-4 py-2 sm:py-4 h-12 sm:h-16 flex items-center justify-between`}>
+        <div className={`${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border-b px-2 sm:px-4 py-2 sm:py-4 h-12 sm:h-16 flex items-center justify-between`}>
           <div className="flex items-center">
             <div className="flex items-center min-w-0 flex-1">
               <div className="flex -space-x-2 sm:-space-x-3 mr-2 sm:mr-4 flex-shrink-0">
@@ -850,7 +853,7 @@ export default function ResourcesPage() {
                             src={singleChatService.getAssistantAvatar()}
                             alt={singleChatService.getAssistantName()}
                             size={isMobile ? 32 : 48}
-                            className={`border-2 shadow-lg ${darkMode ? 'border-gray-700' : 'border-white'}`}
+                            className={`border-2 shadow-lg ${isDarkMode ? 'border-gray-700' : 'border-white'}`}
                             fallbackText="EA"
                             priority={true}
                           />
@@ -876,7 +879,7 @@ export default function ResourcesPage() {
                                   src={ai?.avatar}
                                   alt={ai?.name || 'AI Avatar'}
                                   size={avatarSize}
-                                  className={`border-2 shadow-lg ${darkMode ? 'border-gray-700' : 'border-white'}`}
+                                  className={`border-2 shadow-lg ${isDarkMode ? 'border-gray-700' : 'border-white'}`}
                                   fallbackText={ai?.name?.substring(0, 2) || 'AI'}
                                   priority={true} // High priority for main header avatars
                                 />
@@ -892,7 +895,7 @@ export default function ResourcesPage() {
                     {selectedAIs.length > maxAvatars && (
                       <div 
                         className={`border-2 rounded-full flex items-center justify-center shadow-lg ${
-                          darkMode ? 'border-gray-700 bg-gray-600' : 'border-white bg-gray-200'
+                          isDarkMode ? 'border-gray-700 bg-gray-600' : 'border-white bg-gray-200'
                         }`}
                         style={{ 
                           width: isMobile ? 32 : 48, 
@@ -918,7 +921,7 @@ export default function ResourcesPage() {
                     </div>
                   )}
                 </div>
-                <p className={`text-xs sm:text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'} line-clamp-1`}>
+                <p className={`text-xs sm:text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} line-clamp-1`}>
                   {getChatSubtitle()}
                 </p>
               </div>
@@ -931,7 +934,7 @@ export default function ResourcesPage() {
               variant="outline" 
               size="sm"
               onClick={handleNewChat}
-              className={`touch-target !rounded-button whitespace-nowrap cursor-pointer ${darkMode ? 'bg-gray-700 border-gray-600 hover:bg-gray-600 hover:scale-100 hover:translate-y-0 hover:shadow-none' : 'hover:bg-gray-50 hover:scale-100 hover:translate-y-0 hover:shadow-none'} transition-colors duration-200 text-xs sm:text-sm h-8 sm:h-9 px-2 sm:px-3 flex items-center`}
+              className={`touch-target !rounded-button whitespace-nowrap cursor-pointer ${isDarkMode ? 'bg-gray-700 border-gray-600 hover:bg-gray-600 hover:scale-100 hover:translate-y-0 hover:shadow-none' : 'hover:bg-gray-50 hover:scale-100 hover:translate-y-0 hover:shadow-none'} transition-colors duration-200 text-xs sm:text-sm h-8 sm:h-9 px-2 sm:px-3 flex items-center`}
               title={currentChat ? "Tạo cuộc trò chuyện mới" : "Bắt đầu cuộc trò chuyện mới"}
             >
               <i className="fas fa-plus mr-0 sm:mr-1 text-xs sm:text-sm"></i>
@@ -951,8 +954,8 @@ export default function ResourcesPage() {
                       onClick={toggleAutoInteraction}
                       className={`touch-target !rounded-button whitespace-nowrap cursor-pointer transition-colors duration-200 text-xs sm:text-sm h-8 sm:h-9 px-2 sm:px-3 ${
                         autoInteractionActive
-                          ? (darkMode ? 'bg-green-700 border-green-600 hover:bg-green-600' : 'bg-green-100 border-green-300 hover:bg-green-200')
-                          : (darkMode ? 'bg-gray-700 border-gray-600 hover:bg-gray-600' : 'hover:bg-gray-50')
+                          ? (isDarkMode ? 'bg-green-700 border-green-600 hover:bg-green-600' : 'bg-green-100 border-green-300 hover:bg-green-200')
+                          : (isDarkMode ? 'bg-gray-700 border-gray-600 hover:bg-gray-600' : 'hover:bg-gray-50')
                       }`}
                       title={autoInteractionActive ? "Tắt tương tác tự động" : "Bật tương tác tự động"}
                     >
@@ -983,7 +986,7 @@ export default function ResourcesPage() {
                 <Button 
                   variant="outline" 
                   size="sm"
-                  className={`touch-target !rounded-button whitespace-nowrap cursor-pointer ${darkMode ? 'bg-gray-700 border-gray-600 hover:bg-gray-600 hover:scale-100 hover:translate-y-0 hover:shadow-none' : 'hover:bg-gray-50 hover:scale-100 hover:translate-y-0 hover:shadow-none'} transition-colors duration-200 text-xs sm:text-sm h-8 sm:h-9 px-2 sm:px-3`}
+                  className={`touch-target !rounded-button whitespace-nowrap cursor-pointer ${isDarkMode ? 'bg-gray-700 border-gray-600 hover:bg-gray-600 hover:scale-100 hover:translate-y-0 hover:shadow-none' : 'hover:bg-gray-50 hover:scale-100 hover:translate-y-0 hover:shadow-none'} transition-colors duration-200 text-xs sm:text-sm h-8 sm:h-9 px-2 sm:px-3`}
                   title="Thêm AI vào cuộc trò chuyện"
                 >
                   <i className="fas fa-user-plus mr-0 sm:mr-1 text-xs sm:text-sm"></i>
@@ -992,13 +995,13 @@ export default function ResourcesPage() {
               </SheetTrigger>
               <SheetContent 
                 side="right"
-                className={`w-full sm:max-w-md lg:max-w-lg ${darkMode ? 'bg-gray-800 text-gray-100' : 'bg-white'} border-l ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}
+                className={`w-full sm:max-w-md lg:max-w-lg ${isDarkMode ? 'bg-gray-800 text-gray-100' : 'bg-white'} border-l ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}
               >
                 <SheetHeader className="pb-4">
-                  <SheetTitle className={`text-lg sm:text-xl ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>
+                  <SheetTitle className={`text-lg sm:text-xl ${isDarkMode ? 'text-gray-100' : 'text-gray-900'}`}>
                     Thêm AI vào cuộc trò chuyện
                   </SheetTitle>
-                  <SheetDescription className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                  <SheetDescription className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                     Chọn AI bạn muốn thêm vào cuộc trò chuyện hiện tại
                   </SheetDescription>
                 </SheetHeader>
@@ -1011,8 +1014,8 @@ export default function ResourcesPage() {
                       onClick={() => toggleAISelection(ai.id)}
                       className={`p-3 sm:p-4 rounded-xl flex items-center cursor-pointer transition-colors touch-target ${
                         selectedAIs.includes(ai.id) 
-                          ? (darkMode ? 'bg-green-900/20 border border-green-800' : 'bg-green-50 border border-green-200') 
-                          : (darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100')
+                          ? (isDarkMode ? 'bg-green-900/20 border border-green-800' : 'bg-green-50 border border-green-200') 
+                          : (isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100')
                       }`}
                     >
                       <OptimizedAvatar
@@ -1024,7 +1027,7 @@ export default function ResourcesPage() {
                       />
                       <div className="ml-3 sm:ml-4 flex-1 min-w-0">
                         <h3 className="font-medium text-sm sm:text-base line-clamp-1">{ai.name}</h3>
-                        <p className={`text-xs sm:text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'} line-clamp-1`}>
+                        <p className={`text-xs sm:text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} line-clamp-1`}>
                           {ai.role}
                         </p>
                         <div className="flex items-center mt-1">
@@ -1038,7 +1041,7 @@ export default function ResourcesPage() {
                             }`}></span>
                             {ai.online ? 'Online' : 'Offline'}
                           </span>
-                          <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600'}`}>
+                          <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${isDarkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600'}`}>
                             {ai.field}
                           </span>
                         </div>
@@ -1055,9 +1058,9 @@ export default function ResourcesPage() {
                 </div>
                 
                 {/* Footer with selected count */}
-                <div className={`mt-4 pt-4 border-t ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+                <div className={`mt-4 pt-4 border-t ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
                   <div className="flex items-center justify-between">
-                    <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                    <span className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                       Đã chọn {selectedAIs.length} AI
                     </span>
                     <Button
@@ -1092,7 +1095,7 @@ export default function ResourcesPage() {
         
         {/* Chat Messages - responsive container */}
         <ScrollArea
-          className={`flex-1 chat-mobile smooth-auto-scroll ${darkMode ? 'bg-gradient-to-b from-gray-900 to-gray-800' : 'bg-gradient-to-b from-gray-50 to-white'} ${getScrollAreaPadding()} pb-28 lg:pb-0`}
+          className={`flex-1 chat-mobile smooth-auto-scroll ${isDarkMode ? 'bg-gradient-to-b from-gray-900 to-gray-800' : 'bg-gradient-to-b from-gray-50 to-white'} ${getScrollAreaPadding()} pb-28 lg:pb-0`}
           ref={chatContainerRef}
         >
           <div className={getDynamicMaxWidth()}>
@@ -1102,7 +1105,7 @@ export default function ResourcesPage() {
                 selectedAIs={selectedAIs}
                 onToggleAI={toggleAISelection}
                 aiCharacters={aiAssistants}
-                darkMode={darkMode}
+                darkMode={isDarkMode}
                 onStartChat={() => {
                   // Focus on input after selecting AIs
                   const input = document.querySelector('textarea');
@@ -1126,7 +1129,7 @@ export default function ResourcesPage() {
                           key={message.id}
                           message={message}
                           ai={assistantCharacter}
-                          darkMode={darkMode}
+                          darkMode={isDarkMode}
                           onReply={() => {}} // No reply function for single chat
                         />
                       );
@@ -1144,7 +1147,7 @@ export default function ResourcesPage() {
                         key={message.id}
                         message={message}
                         ai={ai ?? undefined}
-                        darkMode={darkMode}
+                        darkMode={isDarkMode}
                         onReply={startReplyMode}
                       />
                     );
@@ -1185,14 +1188,14 @@ export default function ResourcesPage() {
                 )}
               </div>
               {/* Compact Typing Indicator */}
-              <div className={`rounded-lg px-2 py-1 ${darkMode ? 'bg-gray-700/95 border border-gray-600/50' : 'bg-white/95 border border-gray-200/50'} shadow-md backdrop-blur-sm`}>
+              <div className={`rounded-lg px-2 py-1 ${isDarkMode ? 'bg-gray-700/95 border border-gray-600/50' : 'bg-white/95 border border-gray-200/50'} shadow-md backdrop-blur-sm`}>
                 <div className="flex items-center space-x-1.5">
                   <div className="flex space-x-0.5">
                     <div className="w-1 h-1 rounded-full bg-orange-400 animate-pulse sm:animate-bounce"></div>
                     <div className="w-1 h-1 rounded-full bg-orange-400 animate-pulse sm:animate-bounce" style={{ animationDelay: '0.2s' }}></div>
                     <div className="w-1 h-1 rounded-full bg-orange-400 animate-pulse sm:animate-bounce" style={{ animationDelay: '0.4s' }}></div>
                   </div>
-                  <span className={`text-[10px] font-medium ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                  <span className={`text-[10px] font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                     {selectedAIs.length === 0 
                       ? 'typing...'
                       : (typingAIs.length === 1 
@@ -1209,11 +1212,11 @@ export default function ResourcesPage() {
         
         {/* Reply Mode Indicator - responsive padding */}
         {replyMode?.isActive && (
-          <div className={`${getDynamicPadding()} py-2 ${darkMode ? 'bg-blue-900/20 border-blue-800' : 'bg-blue-50 border-blue-200'} border-t`}>
+          <div className={`${getDynamicPadding()} py-2 ${isDarkMode ? 'bg-blue-900/20 border-blue-800' : 'bg-blue-50 border-blue-200'} border-t`}>
             <div className="flex items-center justify-between">
               <div className="flex items-center">
                 <i className="fas fa-reply text-blue-600 mr-2"></i>
-                <span className={`text-sm ${darkMode ? 'text-blue-400' : 'text-blue-700'}`}>
+                <span className={`text-sm ${isDarkMode ? 'text-blue-400' : 'text-blue-700'}`}>
                   Đang phản hồi <strong>{replyMode.aiName}</strong>
                 </span>
               </div>
@@ -1221,7 +1224,7 @@ export default function ResourcesPage() {
                 variant="ghost"
                 size="sm"
                 onClick={cancelReplyMode}
-                className={`text-xs px-2 py-1 h-6 ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-200'}`}
+                className={`text-xs px-2 py-1 h-6 ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-200'}`}
               >
                 <i className="fas fa-times mr-1"></i>
                 Hủy
@@ -1323,7 +1326,7 @@ export default function ResourcesPage() {
         <div className="hidden lg:block">
           <ChatInput 
             onSendMessage={enhancedSendMessage}
-            darkMode={darkMode}
+            darkMode={isDarkMode}
             disabled={selectedAIs.length === 0 ? singleChatProcessing : (isProcessing && !isAutoInteracting)}
             placeholder={
               replyMode?.isActive 
@@ -1359,7 +1362,7 @@ export default function ResourcesPage() {
           onMouseLeave={handleRightSidebarHoverLeave}
         >
           <LearningStatsSidebar 
-            darkMode={darkMode} 
+            darkMode={isDarkMode} 
             collapsed={isStatsDesktopCollapsed}
             onCollapseToggle={() => setIsStatsDesktopCollapsed(!isStatsDesktopCollapsed)}
           />

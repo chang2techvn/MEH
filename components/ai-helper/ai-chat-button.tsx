@@ -12,6 +12,7 @@ export function AIChatButton() {
   const [isOpen, setIsOpen] = useState(false)
   const [isMinimized, setIsMinimized] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
+  const [mounted, setMounted] = useState(false)
   const buttonRef = useRef<HTMLButtonElement>(null)
   const [buttonPosition, setButtonPosition] = useState({ x: 0, y: 0 })
   const pathname = usePathname()
@@ -56,79 +57,76 @@ export function AIChatButton() {
     "⏳ Be patient — 💡 progress takes time!"
   ]
 
-  // Check if device is mobile
+  // Check if device is mobile and set mounted
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768) // md breakpoint
     }
     
     checkMobile()
+    setMounted(true)
     window.addEventListener("resize", checkMobile)
     return () => window.removeEventListener("resize", checkMobile)
   }, [])
 
-  // Don't render if not on home page or on mobile
-  if (pathname !== "/" || isMobile) {
-    return null
-  }
-
-  // Show message bubble with typing effect and random message rotation
+  // Show first message immediately, then schedule random messages
   useEffect(() => {
-    let messageTimer: NodeJS.Timeout
+    if (!mounted || pathname !== "/" || isMobile) return
+
+    let timer: NodeJS.Timeout
     let typingInterval: NodeJS.Timeout
     let hideTimer: NodeJS.Timeout
-    let nextMessageTimer: NodeJS.Timeout
 
-    const showNextMessage = () => {
-      const currentMessage = messages[currentMessageIndex]
-      
+    const showNext = (msg: string) => {
       setShowMessage(true)
       setIsTyping(true)
       setTypedText("")
-      
       // Typing effect
-      let currentCharIndex = 0
+      let i = 0
       typingInterval = setInterval(() => {
-        if (currentCharIndex <= currentMessage.length) {
-          setTypedText(currentMessage.slice(0, currentCharIndex))
-          currentCharIndex++
+        if (i <= msg.length) {
+          setTypedText(msg.slice(0, i))
+          i++
         } else {
           setIsTyping(false)
           clearInterval(typingInterval)
-          
-          // Hide message after it's fully typed (5 seconds)
+          // hide after 5s
           hideTimer = setTimeout(() => {
             setShowMessage(false)
-            setTypedText("")
-            
-            // Schedule next message after 30-60 seconds
-            const nextDelay = Math.random() * 10000 + 5000 // 20-35 seconds
-            nextMessageTimer = setTimeout(() => {
-              // Move to next message (cycle through all messages)
-              setCurrentMessageIndex((prev) => (prev + 1) % messages.length)
-              showNextMessage()
-            }, nextDelay)
           }, 5000)
         }
-      }, 80) // Speed of typing (80ms per character)
+      }, 80)
     }
 
-    // Start first message after 2 seconds
-    messageTimer = setTimeout(() => {
-      showNextMessage()
-    }, 2000)
+    // show first message immediately
+    const first = messages[0]
+    showNext(first)
 
-    // Cleanup function
+    // schedule random next messages
+    const scheduleRandom = () => {
+      const delay = Math.random() * 20000 + 10000 // 10-30s
+      timer = setTimeout(() => {
+        const idx = Math.floor(Math.random() * (messages.length - 1)) + 1
+        showNext(messages[idx])
+        scheduleRandom()
+      }, delay)
+    }
+    scheduleRandom()
+
     return () => {
-      clearTimeout(messageTimer)
+      clearTimeout(timer)
       clearInterval(typingInterval)
       clearTimeout(hideTimer)
-      clearTimeout(nextMessageTimer)
     }
-  }, [pathname, currentMessageIndex])
+  }, [mounted, pathname, isMobile])
 
   // Update button position when window is resized
   useEffect(() => {
+    // Only run if mounted and should render
+    if (!mounted || pathname !== "/" || isMobile) {
+      return
+    }
+
     const updateButtonPosition = () => {
       if (buttonRef.current) {
         const rect = buttonRef.current.getBoundingClientRect()
@@ -142,7 +140,12 @@ export function AIChatButton() {
     updateButtonPosition()
     window.addEventListener("resize", updateButtonPosition)
     return () => window.removeEventListener("resize", updateButtonPosition)
-  }, [])
+  }, [mounted, pathname, isMobile])
+
+  // Don't render if not on home page, on mobile, or not mounted yet
+  if (!mounted || pathname !== "/" || isMobile) {
+    return null
+  }
 
   const handleClick = () => {
     console.log('Chat button clicked, current isOpen:', isOpen)

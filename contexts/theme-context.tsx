@@ -14,7 +14,7 @@ export const themeColors = [
   { name: "vibrant-orange", value: "#F06F25", variable: "--vibrant-orange" },
 ]
 
-export type ThemeMode = "light" | "dark" | "system"
+export type ThemeMode = "light" | "dark"
 
 interface ThemeSettings {
   mode: ThemeMode
@@ -35,7 +35,7 @@ interface ThemeContextType {
 }
 
 const defaultTheme: ThemeSettings = {
-  mode: "system",
+  mode: "light",
   primaryColor: "vibrant-orange",
   secondaryColor: "vibrant-orange", 
   accentColor: "cantaloupe",
@@ -168,15 +168,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     // Apply theme mode
     if (settings.mode === "dark") {
       document.documentElement.classList.add("dark")
-    } else if (settings.mode === "light") {
+    } else {
       document.documentElement.classList.remove("dark")
-    } else if (settings.mode === "system") {
-      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches
-      if (prefersDark) {
-        document.documentElement.classList.add("dark")
-      } else {
-        document.documentElement.classList.remove("dark")
-      }
     }
   }, [])
 
