@@ -121,7 +121,7 @@ export default function RootLayout({
         {/* Preload critical CSS */}
         <link rel="preload" href="/_next/static/css/app.css" as="style" />
       </head>
-      <body className={inter.className}>        <AuthProvider>
+      <body suppressHydrationWarning className={inter.className}>        <AuthProvider>
           <ThemeProvider>
             <ChallengeProvider>
               <ChatProvider>

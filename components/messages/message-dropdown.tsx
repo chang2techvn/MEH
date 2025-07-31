@@ -33,46 +33,33 @@ function MessageDropdownContent() {
     return otherParticipants.map((p: User) => p.name).join(", ") || "Conversation"
   }, [currentUser])
 
-  // Debug logging with performance monitoring
+  // Debug logging with performance monitoring - Cleanup version
   useEffect(() => {
-    console.log('🔍 MessageDropdown debug:', {
-      loading,
-      currentUser: currentUser?.id,
-      conversationsCount: conversations?.length || 0,
-      authUser: authContext?.user?.email || 'No auth user',
-      isAuthenticated: authContext?.isAuthenticated || false,
-      supabaseAuth: 'checking...'
-    })
-    
-    // Also check Supabase auth directly
-    supabase.auth.getUser().then(({ data: { user }, error }) => {
-      console.log('🔍 Supabase auth check:', {
-        user: user?.email || 'No user',
-        error: error?.message || 'No error',
-        userId: user?.id || 'No ID'
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔍 MessageDropdown debug:', {
+        loading,
+        currentUser: currentUser?.id,
+        conversationsCount: conversations?.length || 0,
+        isAuthenticated: authContext?.isAuthenticated || false
       })
-    })
-  }, [loading, currentUser, conversations, authContext])
+    }
+  }, [loading, currentUser?.id, conversations?.length, authContext?.isAuthenticated])
 
-  // Debug logging
-  console.log('🔍 MessageDropdown state:', {
-    loading,
-    currentUser: currentUser?.id,
-    conversationsCount: conversations?.length || 0,
-    conversations: conversations?.map(c => ({ id: c.id, participants: c.participants.length }))
-  })
+  // Remove direct console.log outside useEffect to prevent infinite logs
 
   // Enhanced user loading with search and pagination
   const loadAvailableUsers = useCallback(async (searchTerm: string = '', page: number = 0) => {
     if (!currentUser || loadingUsers) return
     
     try {
-      console.log('🔍 loadAvailableUsers called:', { 
-        searchTerm, 
-        page, 
-        currentUser: currentUser?.id,
-        currentUserName: currentUser?.name
-      })
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🔍 loadAvailableUsers called:', { 
+          searchTerm, 
+          page, 
+          currentUser: currentUser?.id,
+          currentUserName: currentUser?.name
+        })
+      }
       setLoadingUsers(true)
       setError(null)
       
@@ -80,7 +67,6 @@ function MessageDropdownContent() {
       const offset = page * pageSize
       
       // Check cache first
-      const cacheKey = `${searchTerm}-${page}`
       if (availableUsers.length > 0 && page === 0 && !searchTerm) {
         // Don't reload if we already have users and no search
         setLoadingUsers(false)
@@ -97,13 +83,18 @@ function MessageDropdownContent() {
         })
       })
       
-      // Build query to get users with their profiles
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🔍 Existing conversation user IDs to exclude:', Array.from(existingUserIds))
+      }
+      
+      // Build query to get users with their profiles (optional)
       let query = supabase
         .from('users')
         .select(`
           id, 
           email, 
           last_login,
+          name,
           profiles (
             username,
             full_name,
@@ -112,7 +103,6 @@ function MessageDropdownContent() {
         `)
         .neq('id', currentUser.id)
         .eq('is_active', true)
-        .not('profiles', 'is', null)
         .order('last_login', { ascending: false })
         .range(offset, offset + pageSize - 1)
       
@@ -122,28 +112,47 @@ function MessageDropdownContent() {
         query = query.or(`email.ilike.%${searchTerm}%,profiles.full_name.ilike.%${searchTerm}%,profiles.username.ilike.%${searchTerm}%`)
       }
       
-      // If we have existing conversations, exclude those users
-      // Temporarily disable exclude logic for debugging
-      /*
-      if (existingUserIds.size > 0) {
+      // If we have existing conversations, exclude those users from "Start New Chat"
+      // Add option to disable exclude for testing
+      const shouldExcludeExistingUsers = true // Re-enabled after fixing profile issues
+      
+      if (existingUserIds.size > 0 && shouldExcludeExistingUsers) {
         const existingUserIdsList = Array.from(existingUserIds)
+        if (process.env.NODE_ENV === 'development') {
+          console.log('🔍 Excluding existing conversation users:', existingUserIdsList)
+        }
         // Use individual .neq() for each ID since .not('in') has syntax issues
         existingUserIdsList.forEach(userId => {
           query = query.neq('id', userId)
         })
+      } else if (process.env.NODE_ENV === 'development') {
+        console.log('🔍 Not excluding users - showing all available users for testing')
       }
-      */
-      
-      console.log('🔍 Exclude logic temporarily disabled - showing all users for debugging')
       
       const { data: users, error } = await query
       
-      console.log('📊 loadAvailableUsers result:', { 
-        usersFound: users?.length || 0, 
-        error: error?.message,
-        searchTerm,
-        page 
-      })
+      if (process.env.NODE_ENV === 'development') {
+        console.log('📊 loadAvailableUsers result:', { 
+          usersFound: users?.length || 0, 
+          error: error?.message,
+          searchTerm,
+          page,
+          totalUsersInDB: 'checking...'
+        })
+        
+        // Also check total users in database for debugging
+        const { count } = await supabase
+          .from('users')
+          .select('*', { count: 'exact', head: true })
+          .neq('id', currentUser.id)
+          .eq('is_active', true)
+        
+        console.log('📊 Database stats:', {
+          totalActiveUsers: count,
+          existingConversationUsers: existingUserIds.size,
+          availableForNewChat: (count || 0) - existingUserIds.size
+        })
+      }
       
       if (error) {
         console.error('Error loading users:', error)
@@ -151,7 +160,7 @@ function MessageDropdownContent() {
         return
       }
       
-      // Process users with validation - fix data mapping
+      // Process users with validation - fix data mapping with fallbacks
       const newUsers: User[] = (users || [])
         .filter(user => {
           const shouldInclude = user?.id && user.id !== currentUser.id
@@ -169,7 +178,15 @@ function MessageDropdownContent() {
           // Handle profiles data - could be an array or object depending on query
           const profile = Array.isArray(user.profiles) ? user.profiles[0] : user.profiles
           const safeProfile = profile || {}
-          const displayName = safeProfile.full_name || safeProfile.username || user.email?.split('@')[0] || 'Unknown User'
+          
+          // Use multiple fallbacks for display name
+          const displayName = 
+            user.name ||  // Direct name from users table
+            safeProfile.full_name || 
+            safeProfile.username || 
+            user.email?.split('@')[0] || 
+            'Unknown User'
+            
           const avatarUrl = safeProfile.avatar_url || '/placeholder-user.jpg'
                    
           return {
@@ -190,10 +207,12 @@ function MessageDropdownContent() {
       
       setHasMoreUsers(newUsers.length === pageSize)
       
-      console.log('✅ loadAvailableUsers completed:', {
-        newUsersCount: newUsers.length,
-        totalAvailableUsers: page === 0 ? newUsers.length : availableUsers.length + newUsers.length
-      })
+      if (process.env.NODE_ENV === 'development') {
+        console.log('✅ loadAvailableUsers completed:', {
+          newUsersCount: newUsers.length,
+          totalAvailableUsers: page === 0 ? newUsers.length : availableUsers.length + newUsers.length
+        })
+      }
       
     } catch (error) {
       console.error('Error loading available users:', error)
@@ -540,7 +559,17 @@ function MessageDropdownContent() {
                 </div>
               ) : filteredAvailableUsers.length === 0 ? (
                 <div className="p-4 text-center text-gray-500 dark:text-gray-400">
-                  {searchTerm ? 'No users found' : 'No new users to chat with'}
+                  {searchTerm ? (
+                    <>
+                      <p className="text-sm mb-2">No users found matching "{searchTerm}"</p>
+                      <p className="text-xs">Try a different search term</p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-sm mb-2">All users already have conversations</p>
+                      <p className="text-xs">Check your existing conversations in "Messages"</p>
+                    </>
+                  )}
                 </div>
               ) : (
                 filteredAvailableUsers.map((user) => (

@@ -15,17 +15,15 @@ import ContentCreationStep from "@/components/challenge/content-creation-step"
 import PostPreview from "../feed/post-preview"
 import PublishSuccess from "../ui/publish-success"
 import ContentComparisonFeedback from "../ai-evaluation-display/content-comparison-feedback"
-import { submitUserContent, publishSubmission } from "@/app/actions/user-submissions"
 import { createCommunityPost } from "@/app/actions/community-posts"
 import { formatTime } from "@/components/youtube/youtube-api"
 import { getVideoSettings } from "@/app/actions/admin-settings"
 import { compareVideoContentWithUserContent, type ContentComparison } from "@/app/actions/content-comparison"
-import { v4 as uuidv4 } from "uuid"
 import type { VideoEvaluation } from "@/lib/gemini-video-evaluation"
 import { uploadVideoToStorage, deleteVideoFromStorage, type VideoUploadResult } from "@/lib/video-storage"
 import { useAuthState } from "@/contexts/auth-context"
 import { useChallenge } from "@/contexts/challenge-context"
-import { getChallenges } from "@/app/actions/youtube-video"
+
 
 interface DailyChallengeProps {
   userId: string

@@ -43,7 +43,7 @@ export default function Home() {
   const [hoverTimer, setHoverTimer] = useState<NodeJS.Timeout | null>(null)
   const [isHoveringSidebar, setIsHoveringSidebar] = useState(false)
   const [isHoveringToggleButton, setIsHoveringToggleButton] = useState(false)
-  const isMobile = useMobile()
+  const { isMobile } = useMobile()
   // Handle selected challenge change from ChallengeTabs
   const handleSelectedChallengeChange = useCallback((challenge: any) => {
     setSelectedChallenge(challenge)
@@ -162,7 +162,6 @@ export default function Home() {
 
   // Handle leaderboard view
   const handleViewLeaderboard = () => {
-    console.log("View leaderboard clicked")
     setLeaderboardModalOpen(true)
   }
 

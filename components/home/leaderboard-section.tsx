@@ -106,10 +106,18 @@ export function LeaderboardSection({ users = [], loading = false, onViewAll }: L
 
         <Button
           variant="outline"
-          className="w-full mt-4 bg-white/20 dark:bg-gray-800/20 backdrop-blur-sm border-white/20 dark:border-gray-700/20 hover:bg-white/30 dark:hover:bg-gray-800/30"
-          onClick={onViewAll}
+          className="w-full mt-4 bg-white/20 dark:bg-gray-800/20 backdrop-blur-sm border-white/20 dark:border-gray-700/20 relative z-10 transition-all duration-300 hover:!bg-neo-mint/10 dark:hover:!bg-neo-mint/10 hover:!border-neo-mint/40 dark:hover:!border-neo-mint/40"
+          onClick={(e) => {
+            e.preventDefault()
+            e.stopPropagation()
+            if (onViewAll) {
+              onViewAll()
+            }
+          }}
         >
-          View All Leaderboard
+          <span className="font-medium hover:!text-neo-mint dark:hover:!text-neo-mint transition-colors duration-300">
+            View All Leaderboard
+          </span>
         </Button>
       </div>
     </Card>

@@ -2,7 +2,13 @@
 
 import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -167,7 +173,17 @@ export function LeaderboardModal({ isOpen, onClose }: LeaderboardModalProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-[90%] max-w-sm sm:max-w-2xl h-[80vh] sm:h-[85vh] flex flex-col overflow-hidden bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl border-white/20 dark:border-gray-800/20 mx-auto my-auto rounded-2xl sm:rounded-xl">
+      <DialogContent 
+        className="w-[90%] max-w-sm sm:max-w-2xl h-[80vh] sm:h-[85vh] flex flex-col overflow-hidden bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl border-white/20 dark:border-gray-800/20 mx-auto my-auto rounded-2xl sm:rounded-xl !z-[9999]"
+        style={{
+          position: 'fixed',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          zIndex: 9999,
+          display: isOpen ? 'flex' : 'none'
+        }}
+      >
         <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center gap-2 sm:gap-3 text-lg sm:text-xl md:text-2xl font-bold bg-gradient-to-r from-neo-mint to-purist-blue bg-clip-text text-transparent">
             <div className="relative">
@@ -176,6 +192,9 @@ export function LeaderboardModal({ isOpen, onClose }: LeaderboardModalProps) {
             </div>
             Global Leaderboard
           </DialogTitle>
+          <DialogDescription>
+            View the top performers and compete with learners worldwide
+          </DialogDescription>
         </DialogHeader>
 
         {/* Content Area - Scrollable */}
