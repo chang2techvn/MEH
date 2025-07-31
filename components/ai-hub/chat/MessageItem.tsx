@@ -125,11 +125,11 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message, ai, darkMode,
 
   return (
     <div 
-      className={`flex ${isUser ? 'justify-end' : 'justify-start'} message-slide-in px-2 sm:px-3 group mb-4 sm:mb-6`}
+      className={`flex ${isUser ? 'justify-end' : 'justify-start'} message-slide-in px-1 sm:px-3 group mb-3 sm:mb-6`}
       data-message-id={message.id}
     >
       {!isUser && ai && (
-        <div className="mr-2 sm:mr-3 flex-shrink-0">
+        <div className="mr-1 sm:mr-3 flex-shrink-0">
           <OptimizedMessageAvatar
             src={ai.avatar}
             alt={ai.name}
@@ -139,102 +139,101 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message, ai, darkMode,
           />
         </div>
       )}
-      <div className="max-w-[90%] sm:max-w-[85%] lg:max-w-[80%] xl:max-w-[75%]">
+      <div className={`${isUser ? 'max-w-[85%] sm:max-w-[80%] lg:max-w-[75%] xl:max-w-[70%]' : 'min-w-0 flex-1 max-w-[85%] sm:max-w-[85%] lg:max-w-[80%] xl:max-w-[75%]'}`}>
         {!isUser && ai && (
-          <div className="flex flex-col sm:flex-row sm:items-center mb-2 sm:mb-3 space-y-1 sm:space-y-0">
-            <div className="flex items-center flex-wrap gap-2">
-              <span className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{ai.name}</span>
-              <Badge variant="outline" className={`text-xs ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-50'}`}>
-                {ai.field}
-              </Badge>
-            </div>
-            <span className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'} sm:ml-3`}>
-              {formatTime(message.timestamp)}
-            </span>
+          <div className="flex items-center mb-1 sm:mb-2 gap-2 min-w-0">
+            <span className={`text-sm font-medium truncate ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{ai.name}</span>
+            <Badge 
+              variant="outline" 
+              className={`text-[7px] h-5 px-2 py-0 max-w-[80px] sm:max-w-[120px] truncate leading-none flex-shrink-0 ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-50'}`}
+              title={ai.field} // Show full text on hover
+            >
+              {ai.field}
+            </Badge>
           </div>
         )}
         <div
-          className={`rounded-2xl p-3 sm:p-4 shadow-md min-h-fit ${
-            isUser
-              ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white'
-              : (darkMode ? 'bg-gray-700 border border-gray-600' : 'bg-white border border-gray-200')
+          className={`rounded-2xl p-2 sm:p-3 shadow-md min-h-fit ${
+            isUser 
+              ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white inline-block w-fit max-w-full'
+              : 'bg-gray-700 border border-gray-600 dark:bg-gray-700 dark:border-gray-600 bg-white border-gray-200 min-w-0 max-w-full overflow-hidden'
           }`}
         >
           {message.type === 'text' && (
             <div>
               {isUser ? (
-                <div className="text-base break-words leading-relaxed">{message.content}</div>
+                <div className="text-sm sm:text-base break-words leading-relaxed">{message.content}</div>
               ) : (
-                <div>
-                  <div className="prose prose-sm dark:prose-invert max-w-none w-full overflow-hidden">
+                <div className="w-full min-w-0 overflow-hidden">
+                  <div className="prose prose-sm sm:prose-base dark:prose-invert max-w-none w-full break-words overflow-wrap-anywhere">
                     <ReactMarkdown
                       remarkPlugins={[remarkGfm]}
                       components={{
-                        // Custom styling for markdown elements with ChatGPT-like typography
+                        // Custom styling for markdown elements with mobile-first responsive design
                         strong: ({ children }) => (
-                          <strong className="text-orange-600 dark:text-orange-400 font-semibold">
+                          <strong className="text-orange-600 dark:text-orange-400 font-semibold break-words word-break-break-word">
                             {children}
                           </strong>
                         ),
                         em: ({ children }) => (
-                          <em className="text-blue-600 dark:text-blue-400">
+                          <em className="text-blue-600 dark:text-blue-400 break-words word-break-break-word">
                             {children}
                           </em>
                         ),
                         code: ({ children }) => (
-                          <code className="bg-gray-100 dark:bg-gray-700 text-orange-600 dark:text-orange-400 px-1.5 py-0.5 rounded text-sm font-mono">
+                          <code className="bg-gray-100 dark:bg-gray-700 text-orange-600 dark:text-orange-400 px-1 sm:px-1.5 py-0.5 rounded text-xs sm:text-sm font-mono break-all word-break-break-all overflow-wrap-anywhere">
                             {children}
                           </code>
                         ),
                         p: ({ children }) => (
-                          <p className="mb-4 leading-relaxed text-gray-700 dark:text-gray-300 text-base break-words">
+                          <p className="mb-2 sm:mb-3 leading-relaxed text-gray-700 dark:text-gray-300 text-sm sm:text-base break-words word-break-break-word overflow-wrap-anywhere">
                             {children}
                           </p>
                         ),
                         ul: ({ children }) => (
-                          <ul className="list-disc list-outside space-y-2 ml-6 my-4 text-gray-700 dark:text-gray-300 text-base leading-normal">
+                          <ul className="list-disc list-outside space-y-1 sm:space-y-2 ml-2 sm:ml-3 my-2 sm:my-3 text-gray-700 dark:text-gray-300 text-sm sm:text-base leading-normal break-words overflow-hidden">
                             {children}
                           </ul>
                         ),
                         ol: ({ children }) => (
-                          <ol className="list-decimal list-outside space-y-2 ml-6 my-4 text-gray-700 dark:text-gray-300 text-base leading-normal">
+                          <ol className="list-decimal list-outside space-y-1 sm:space-y-2 ml-2 sm:ml-3 my-2 sm:my-3 text-gray-700 dark:text-gray-300 text-sm sm:text-base leading-normal break-words overflow-hidden">
                             {children}
                           </ol>
                         ),
                         li: ({ children }) => (
-                          <li className="leading-normal mb-1 pl-2">
+                          <li className="leading-normal mb-1 pl-1 sm:pl-2 break-words word-break-break-word overflow-wrap-anywhere">
                             {children}
                           </li>
                         ),
                         h1: ({ children }) => (
-                          <h1 className="text-2xl font-bold text-orange-600 dark:text-orange-400 mt-3 mb-2 break-words leading-tight">
+                          <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-orange-600 dark:text-orange-400 mt-2 sm:mt-3 mb-1 sm:mb-2 break-words leading-tight">
                             {children}
                           </h1>
                         ),
                         h2: ({ children }) => (
-                          <h2 className="text-xl font-semibold text-orange-600 dark:text-orange-400 mt-3 mb-2 break-words leading-tight">
+                          <h2 className="text-base sm:text-lg md:text-xl font-semibold text-orange-600 dark:text-orange-400 mt-2 sm:mt-3 mb-1 sm:mb-2 break-words leading-tight">
                             {children}
                           </h2>
                         ),
                         h3: ({ children }) => (
-                          <h3 className="text-lg font-medium text-orange-600 dark:text-orange-400 mt-2 mb-1 break-words leading-snug">
+                          <h3 className="text-sm sm:text-base md:text-lg font-medium text-orange-600 dark:text-orange-400 mt-1 sm:mt-2 mb-1 break-words leading-snug">
                             {children}
                           </h3>
                         ),
                         h4: ({ children }) => (
-                          <h4 className="text-base font-medium text-orange-600 dark:text-orange-400 mt-2 mb-1 break-words leading-normal">
+                          <h4 className="text-sm sm:text-base font-medium text-orange-600 dark:text-orange-400 mt-1 sm:mt-2 mb-1 break-words leading-normal">
                             {children}
                           </h4>
                         ),
                         blockquote: ({ children }) => (
-                          <blockquote className="border-l-4 border-orange-300 dark:border-orange-600 pl-4 py-2 bg-orange-50 dark:bg-orange-900/20 italic text-gray-700 dark:text-gray-300 my-2 text-base leading-relaxed">
+                          <blockquote className="border-l-2 sm:border-l-4 border-orange-300 dark:border-orange-600 pl-2 sm:pl-4 py-1 sm:py-2 bg-orange-50 dark:bg-orange-900/20 italic text-gray-700 dark:text-gray-300 my-1 sm:my-2 text-sm sm:text-base leading-relaxed break-words">
                             {children}
                           </blockquote>
                         ),
-                        // Add table support with professional styling
+                        // Add table support with mobile-first responsive styling
                         table: ({ children }) => (
-                          <div className="overflow-x-auto my-3 border border-gray-200 dark:border-gray-600 rounded-lg shadow-sm">
-                            <table className="min-w-full border-collapse">
+                          <div className="overflow-x-auto my-2 sm:my-3 border border-gray-200 dark:border-gray-600 rounded-lg shadow-sm max-w-full">
+                            <table className="min-w-full border-collapse text-xs sm:text-sm table-fixed w-full">
                               {children}
                             </table>
                           </div>
@@ -255,12 +254,12 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message, ai, darkMode,
                           </tr>
                         ),
                         th: ({ children }) => (
-                          <th className="px-4 py-3 text-left font-semibold text-orange-600 dark:text-orange-400 text-sm">
+                          <th className="px-1 sm:px-2 py-1 sm:py-2 text-left font-semibold text-orange-600 dark:text-orange-400 text-xs sm:text-sm break-words word-break-break-word overflow-wrap-anywhere">
                             {children}
                           </th>
                         ),
                         td: ({ children }) => (
-                          <td className="px-4 py-3 text-gray-700 dark:text-gray-300 text-sm leading-normal">
+                          <td className="px-1 sm:px-2 py-1 sm:py-2 text-gray-700 dark:text-gray-300 text-xs sm:text-sm leading-normal break-words word-break-break-word overflow-wrap-anywhere">
                             {children}
                           </td>
                         ),
@@ -270,14 +269,14 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message, ai, darkMode,
                             href={href}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline decoration-2 underline-offset-2 break-words cursor-pointer transition-all duration-200 hover:decoration-blue-600 dark:hover:decoration-blue-400 text-base"
+                            className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline decoration-2 underline-offset-2 break-all cursor-pointer transition-all duration-200 hover:decoration-blue-600 dark:hover:decoration-blue-400 text-sm sm:text-base"
                           >
                             {children}
                           </a>
                         ),
                         // Add strikethrough support (from remark-gfm)
                         del: ({ children }) => (
-                          <del className="text-gray-500 dark:text-gray-400 line-through text-base">
+                          <del className="text-gray-500 dark:text-gray-400 line-through text-sm sm:text-base break-words">
                             {children}
                           </del>
                         ),
@@ -293,7 +292,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message, ai, darkMode,
                         ),
                         // Enhanced code block support with professional styling
                         pre: ({ children }) => (
-                          <pre className="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-4 rounded-lg overflow-x-auto my-5 text-sm font-mono leading-relaxed shadow-sm">
+                          <pre className="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-2 sm:p-4 rounded-lg overflow-x-auto my-2 sm:my-5 text-xs sm:text-sm font-mono leading-relaxed shadow-sm break-words">
                             {children}
                           </pre>
                         ),
@@ -417,7 +416,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message, ai, darkMode,
         </div>
       </div>
       {isUser && (
-        <div className="ml-2 sm:ml-3 flex-shrink-0">
+        <div className="ml-1 sm:ml-3 flex-shrink-0">
           <OptimizedMessageAvatar
             src={currentUser?.avatar || "/placeholder-user.jpg"}
             alt={currentUser?.name || "User avatar"}

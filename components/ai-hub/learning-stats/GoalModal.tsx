@@ -155,7 +155,7 @@ export const GoalModal: React.FC<GoalModalProps> = ({ isOpen, onClose, darkMode,
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-2 sm:p-4">
       {/* Backdrop */}
       <div 
         className="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-300"
@@ -163,22 +163,22 @@ export const GoalModal: React.FC<GoalModalProps> = ({ isOpen, onClose, darkMode,
       />
       
       {/* Modal */}
-      <div className={`relative w-full max-w-lg transform transition-all duration-300 animate-in fade-in-0 slide-in-from-bottom-4 ${
+      <div className={`relative w-full max-w-sm sm:max-w-lg transform transition-all duration-300 animate-in fade-in-0 slide-in-from-bottom-4 ${
         darkMode ? 'bg-gray-900 text-gray-100' : 'bg-white text-gray-900'
-      } rounded-2xl shadow-2xl overflow-hidden border ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+      } rounded-xl sm:rounded-2xl shadow-2xl overflow-hidden border ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
         
-        {/* Header - Updated with neo-mint theme */}
-        <div className={`px-6 py-5 border-b ${darkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-gradient-to-r from-neo-mint/5 to-purist-blue/5'}`}>
+        {/* Header - Mobile optimized */}
+        <div className={`px-3 sm:px-6 py-3 sm:py-5 border-b ${darkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-gradient-to-r from-neo-mint/5 to-purist-blue/5'}`}>
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-neo-mint to-purist-blue flex items-center justify-center shadow-lg">
-                <i className="fas fa-flag text-white text-lg"></i>
+            <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-gradient-to-r from-neo-mint to-purist-blue flex items-center justify-center shadow-lg flex-shrink-0">
+                <i className="fas fa-flag text-white text-sm sm:text-lg"></i>
               </div>
-              <div>
-                <h2 className="text-xl font-semibold bg-gradient-to-r from-neo-mint to-purist-blue bg-clip-text text-transparent">
+              <div className="min-w-0 flex-1">
+                <h2 className="text-sm sm:text-xl font-semibold bg-gradient-to-r from-neo-mint to-purist-blue bg-clip-text text-transparent truncate">
                   New Learning Goal
                 </h2>
-                <p className={`text-sm mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                <p className={`text-xs sm:text-sm mt-0.5 sm:mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'} truncate`}>
                   Set your vocabulary learning target
                 </p>
               </div>
@@ -187,21 +187,21 @@ export const GoalModal: React.FC<GoalModalProps> = ({ isOpen, onClose, darkMode,
               variant="ghost"
               size="icon"
               onClick={onClose}
-              className={`h-9 w-9 rounded-xl transition-all duration-200 ${
+              className={`h-8 w-8 sm:h-9 sm:w-9 rounded-lg sm:rounded-xl transition-all duration-200 flex-shrink-0 ${
                 darkMode ? 'hover:bg-gray-700 text-gray-400 hover:text-white' : 'hover:bg-neo-mint/10 text-gray-500 hover:text-neo-mint'
               }`}
             >
-              <i className="fas fa-times text-lg"></i>
+              <i className="fas fa-times text-sm sm:text-lg"></i>
             </Button>
           </div>
         </div>
 
-        {/* Form - Simplified */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+        {/* Form - Mobile optimized */}
+        <form onSubmit={handleSubmit} className="p-3 sm:p-6 space-y-4 sm:space-y-6">
           {/* Goal Title */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center">
-              <i className="fas fa-lightbulb mr-2 text-orange-500"></i>
+          <div className="space-y-1.5 sm:space-y-2">
+            <label className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center">
+              <i className="fas fa-lightbulb mr-1.5 sm:mr-2 text-orange-500 text-xs sm:text-sm"></i>
               What do you want to achieve?
             </label>
             <Input
@@ -209,24 +209,24 @@ export const GoalModal: React.FC<GoalModalProps> = ({ isOpen, onClose, darkMode,
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
               onKeyPress={(e) => handleKeyPress(e, 'title')}
               placeholder="e.g., Learn 50 new words this week"
-              className={`${
+              className={`h-9 sm:h-10 text-xs sm:text-sm ${
                 darkMode ? 'bg-gray-800 border-gray-600' : 'border-gray-300'
               } transition-all duration-200 ${
                 errors.title ? 'border-red-500 bg-red-50 dark:bg-red-900/20' : ''
               }`}
             />
             {errors.title && (
-              <p className="text-red-500 text-sm animate-in fade-in duration-200 flex items-center">
-                <i className="fas fa-exclamation-circle mr-1"></i>
+              <p className="text-red-500 text-xs sm:text-sm animate-in fade-in duration-200 flex items-center">
+                <i className="fas fa-exclamation-circle mr-1 text-xs"></i>
                 {errors.title}
               </p>
             )}
           </div>
 
-          {/* Target Amount - Updated with orange theme */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center">
-              <i className="fas fa-bullseye mr-2 text-orange-500"></i>
+          {/* Target Amount - Mobile optimized */}
+          <div className="space-y-1.5 sm:space-y-2">
+            <label className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center">
+              <i className="fas fa-bullseye mr-1.5 sm:mr-2 text-orange-500 text-xs sm:text-sm"></i>
               How many words?
             </label>
             <div className="relative">
@@ -239,39 +239,39 @@ export const GoalModal: React.FC<GoalModalProps> = ({ isOpen, onClose, darkMode,
                 placeholder="50"
                 min="1"
                 max="10000"
-                className={`pr-16 ${
+                className={`pr-12 sm:pr-16 h-9 sm:h-10 text-xs sm:text-sm ${
                   darkMode ? 'bg-gray-800 border-gray-600' : 'border-gray-300'
                 } transition-all duration-200 ${
                   errors.target ? 'border-red-500 bg-red-50 dark:bg-red-900/20' : ''
                 }`}
               />
-              <div className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-orange-600 dark:text-orange-400 font-medium flex items-center">
+              <div className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 text-xs sm:text-sm text-orange-600 dark:text-orange-400 font-medium flex items-center">
                 <i className="fas fa-book mr-1 text-xs"></i>
                 words
               </div>
             </div>
             {errors.target && (
-              <p className="text-red-500 text-sm animate-in fade-in duration-200 flex items-center">
-                <i className="fas fa-exclamation-circle mr-1"></i>
+              <p className="text-red-500 text-xs sm:text-sm animate-in fade-in duration-200 flex items-center">
+                <i className="fas fa-exclamation-circle mr-1 text-xs"></i>
                 {errors.target}
               </p>
             )}
           </div>
 
-          {/* Deadline - Updated with inline time selection */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center">
-                <i className="fas fa-calendar-alt mr-2 text-orange-500"></i>
+          {/* Deadline - Mobile optimized with responsive quick buttons */}
+          <div className="space-y-1.5 sm:space-y-2">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0">
+              <label className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center">
+                <i className="fas fa-calendar-alt mr-1.5 sm:mr-2 text-orange-500 text-xs sm:text-sm"></i>
                 Deadline
               </label>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center gap-1 sm:gap-2">
                 <Button
                   type="button"
                   variant={formData.deadline === new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] ? "default" : "outline"}
                   size="sm"
                   onClick={() => setFormData({ ...formData, deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] })}
-                  className="text-xs px-3 py-1 h-7"
+                  className="text-xs px-2 sm:px-3 py-1 h-6 sm:h-7"
                 >
                   1 Week
                 </Button>
@@ -280,7 +280,7 @@ export const GoalModal: React.FC<GoalModalProps> = ({ isOpen, onClose, darkMode,
                   variant={formData.deadline === new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] ? "default" : "outline"}
                   size="sm"
                   onClick={() => setFormData({ ...formData, deadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] })}
-                  className="text-xs px-3 py-1 h-7"
+                  className="text-xs px-2 sm:px-3 py-1 h-6 sm:h-7"
                 >
                   1 Month
                 </Button>
@@ -289,7 +289,7 @@ export const GoalModal: React.FC<GoalModalProps> = ({ isOpen, onClose, darkMode,
                   variant={formData.deadline === new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] ? "default" : "outline"}
                   size="sm"
                   onClick={() => setFormData({ ...formData, deadline: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] })}
-                  className="text-xs px-3 py-1 h-7"
+                  className="text-xs px-2 sm:px-3 py-1 h-6 sm:h-7"
                 >
                   3 Months
                 </Button>
@@ -301,65 +301,65 @@ export const GoalModal: React.FC<GoalModalProps> = ({ isOpen, onClose, darkMode,
               </p>
             )}
             {errors.deadline && (
-              <p className="text-red-500 text-sm animate-in fade-in duration-200 flex items-center">
-                <i className="fas fa-exclamation-circle mr-1"></i>
+              <p className="text-red-500 text-xs sm:text-sm animate-in fade-in duration-200 flex items-center">
+                <i className="fas fa-exclamation-circle mr-1 text-xs"></i>
                 {errors.deadline}
               </p>
             )}
           </div>
 
-          {/* Priority - Updated with icons and orange theme */}
-          <div className="space-y-3">
-            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center">
-              <i className="fas fa-flag mr-2 text-orange-500"></i>
+          {/* Priority - Mobile optimized with compact grid */}
+          <div className="space-y-2 sm:space-y-3">
+            <label className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center">
+              <i className="fas fa-flag mr-1.5 sm:mr-2 text-orange-500 text-xs sm:text-sm"></i>
               Priority
             </label>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-3 gap-2 sm:gap-3">
               {priorities.map((priority) => (
                 <button
                   key={priority.value}
                   type="button"
                   onClick={() => setFormData({ ...formData, priority: priority.value as Goal['priority'] })}
-                  className={`p-3 rounded-xl border-2 text-sm font-medium transition-all duration-200 flex items-center justify-center space-x-2 ${
+                  className={`p-2 sm:p-3 rounded-lg sm:rounded-xl border-2 text-xs sm:text-sm font-medium transition-all duration-200 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 ${
                     formData.priority === priority.value
                       ? `${darkMode ? priority.darkColor : priority.color} border-opacity-100 shadow-md`
                       : `${darkMode ? 'bg-gray-800 border-gray-600 text-gray-400 hover:bg-gray-700 hover:text-gray-300' : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'}`
                   }`}
                 >
                   <i className={`fas ${priority.icon} text-xs`}></i>
-                  <span>{priority.label}</span>
+                  <span className="text-xs sm:text-sm">{priority.label}</span>
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Footer Actions - Updated with orange theme */}
-          <div className={`pt-6 border-t ${darkMode ? 'border-gray-700' : 'border-orange-200'} flex gap-3`}>
+          {/* Footer Actions - Mobile optimized */}
+          <div className={`pt-4 sm:pt-6 border-t ${darkMode ? 'border-gray-700' : 'border-orange-200'} flex flex-col sm:flex-row gap-2 sm:gap-3`}>
             <Button
               type="button"
               variant="outline"
               onClick={onClose}
-              className={`flex-1 ${
+              className={`flex-1 h-9 sm:h-10 text-xs sm:text-sm ${
                 darkMode ? 'border-gray-600 hover:bg-gray-700 text-gray-300' : 'border-orange-200 hover:bg-orange-100 text-gray-700'
               } transition-all duration-200`}
               disabled={isSubmitting}
             >
-              <i className="fas fa-times mr-2"></i>
+              <i className="fas fa-times mr-1.5 sm:mr-2 text-xs"></i>
               Cancel
             </Button>
             <Button
               type="submit"
               disabled={isSubmitting || !formData.title.trim() || !formData.target || !formData.deadline}
-              className="flex-1 bg-gradient-to-r from-neo-mint to-purist-blue hover:from-neo-mint/80 hover:to-purist-blue/80 text-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+              className="flex-1 h-9 sm:h-10 text-xs sm:text-sm bg-gradient-to-r from-neo-mint to-purist-blue hover:from-neo-mint/80 hover:to-purist-blue/80 text-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
             >
               {isSubmitting ? (
                 <>
-                  <i className="fas fa-spinner fa-spin mr-2"></i>
+                  <i className="fas fa-spinner fa-spin mr-1.5 sm:mr-2 text-xs"></i>
                   Creating...
                 </>
               ) : (
                 <>
-                  <i className="fas fa-plus mr-2"></i>
+                  <i className="fas fa-plus mr-1.5 sm:mr-2 text-xs"></i>
                   Create Goal
                 </>
               )}

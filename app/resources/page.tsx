@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import ReactMarkdown from 'react-markdown';
@@ -30,8 +31,9 @@ import { Sidebar } from '@/components/ai-hub/sidebar/Sidebar';
 import { MessageItem } from '@/components/ai-hub/chat/MessageItem';
 import { ChatInput } from '@/components/ai-hub/chat/ChatInput';
 import { WelcomeScreen } from '@/components/ai-hub/chat/WelcomeScreen';
-import { Message } from '@/types/ai-hub.types';
+import { Message, AICharacter } from '@/types/ai-hub.types';
 import { LearningStatsSidebar } from '@/components/ai-hub/learning-stats/LearningStatsSidebar';
+import { ResourcesMobileBottomNavigation } from '@/components/ai-hub/resources-mobile-bottom-navigation';
 import { useMobile } from "@/hooks/use-mobile";
 
 // Optimized Avatar Component with next/image
@@ -127,9 +129,10 @@ export default function ResourcesPage() {
   const [windowWidth, setWindowWidth] = useState<number>(typeof window !== "undefined" ? window.innerWidth : 0);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false); // mobile: đóng mặc định
   const [isDesktopSidebarCollapsed, setIsDesktopSidebarCollapsed] = useState(false); // desktop: thu nhỏ sidebar
-  const [isStatsSidebarOpen, setIsStatsSidebarOpen] = useState(false);
+  // Mobile stats sidebar removed - no longer needed
   const [isStatsDesktopCollapsed, setIsStatsDesktopCollapsed] = useState(false); // desktop: thu nhỏ stats sidebar
   const [selectedAIs, setSelectedAIs] = useState<string[]>([]);
+  const [inputMessage, setInputMessage] = useState(''); // State for mobile input
   const [activeFilter, setActiveFilter] = useState('Tất cả');
   const [darkMode, setDarkMode] = useState(false);
   const [maxAvatars, setMaxAvatars] = useState(3);
@@ -160,7 +163,7 @@ export default function ResourcesPage() {
     // Close mobile sidebars on desktop
     if (windowWidth >= 1024) { // lg breakpoint
       setIsSidebarOpen(false);
-      setIsStatsSidebarOpen(false);
+      // Mobile stats sidebar removed
     }
   }, [windowWidth]);
 
@@ -171,7 +174,7 @@ export default function ResourcesPage() {
   // Dynamic padding based on sidebar states for responsive design
   const getDynamicPadding = () => {
     // Base padding classes for mobile/tablet (not affected by sidebar states)
-    const baseMobile = "px-4 sm:px-6 md:px-8"; // Increased mobile padding for better UX
+    const baseMobile = "px-2 sm:px-6 md:px-8"; // Reduced mobile padding for better space utilization
     
     // Desktop padding that adapts to sidebar states
     if (windowWidth >= 1024) { // lg breakpoint and above
@@ -269,6 +272,7 @@ export default function ResourcesPage() {
     chatContainerRef, 
     sendNaturalMessage,
     replyToMessage,
+    createSession,
     loadSession,
     clearSession,
     // Auto-interaction functions
@@ -612,9 +616,7 @@ export default function ResourcesPage() {
     setIsSidebarOpen(!isSidebarOpen);
   };
 
-  const toggleStatsSidebar = () => {
-    setIsStatsSidebarOpen(!isStatsSidebarOpen);
-  };
+  // toggleStatsSidebar removed - mobile stats sidebar no longer needed
 
   const toggleAISelection = (aiId: string) => {
     if (selectedAIs.includes(aiId)) {
@@ -648,6 +650,43 @@ export default function ResourcesPage() {
     // Clear single chat messages
     setSingleChatMessages([]);
     setSingleChatProcessing(false);
+  };
+
+  // Handler for AI selection from mobile bottom navigation
+  const handleMobileAISelection = async (ai: AICharacter) => {
+    // Start new chat with selected AI
+    handleNewChat();
+    // Switch to multi-chat mode with selected AI
+    setSelectedAIs([ai.id]);
+    // Create a new session with this AI
+    try {
+      await createSession(`Trò chuyện với ${ai.name}`);
+    } catch (error) {
+      console.error('Error creating session:', error);
+    }
+  };
+
+  // Handler for multi-AI chat start from mobile bottom navigation
+  const handleMobileStartChat = async (selectedAIIds: string[]) => {
+    // Start new chat
+    handleNewChat();
+    // Switch to multi-chat mode with selected AIs
+    setSelectedAIs(selectedAIIds);
+    // Create a new session with these AIs
+    try {
+      const aiNames = selectedAIIds.map(id => {
+        const ai = aiAssistants.find(a => a.id === id);
+        return ai?.name || 'AI';
+      }).join(', ');
+      await createSession(`Trò chuyện với ${aiNames}`);
+    } catch (error) {
+      console.error('Error creating session:', error);
+    }
+  };
+
+  // Handler for chat selection from mobile bottom navigation
+  const handleMobileChatSelection = (chatId: string) => {
+    handleChatSelect(chatId);
   };
 
   const getChatTitle = () => {
@@ -713,10 +752,10 @@ export default function ResourcesPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-gradient-to-b from-background via-background to-background/80 dark:from-background dark:via-background/90 dark:to-background/80">
-      {/* Background decorations - optimized with contain property */}
-      <div className="absolute top-10 sm:top-20 left-2 sm:left-10 w-32 h-32 sm:w-64 sm:h-64 rounded-full bg-neo-mint/10 dark:bg-purist-blue/10 blur-3xl -z-10 animate-blob contain-paint"></div>
-      <div className="absolute bottom-10 sm:bottom-20 right-2 sm:right-10 w-32 h-32 sm:w-64 sm:h-64 rounded-full bg-cantaloupe/10 dark:bg-cassis/10 blur-3xl -z-10 animate-blob animation-delay-2000 contain-paint"></div>
-      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-48 h-48 sm:w-96 sm:h-96 rounded-full bg-mellow-yellow/5 dark:bg-mellow-yellow/5 blur-3xl -z-10 animate-blob animation-delay-4000 contain-paint"></div>
+      {/* Background decorations - disabled on mobile for better performance */}
+      <div className="absolute top-10 sm:top-20 left-2 sm:left-10 w-32 h-32 sm:w-64 sm:h-64 rounded-full bg-neo-mint/10 dark:bg-purist-blue/10 blur-3xl -z-10 hidden sm:animate-blob sm:block contain-paint"></div>
+      <div className="absolute bottom-10 sm:bottom-20 right-2 sm:right-10 w-32 h-32 sm:w-64 sm:h-64 rounded-full bg-cantaloupe/10 dark:bg-cassis/10 blur-3xl -z-10 hidden sm:animate-blob sm:animation-delay-2000 sm:block contain-paint"></div>
+      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-48 h-48 sm:w-96 sm:h-96 rounded-full bg-mellow-yellow/5 dark:bg-mellow-yellow/5 blur-3xl -z-10 hidden sm:animate-blob sm:animation-delay-4000 sm:block contain-paint"></div>
       
       {/* Critical above-the-fold components - NO Suspense */}
       <MainHeader mobileMenuOpen={mobileMenuOpen} setMobileMenuOpen={setMobileMenuOpen} />
@@ -799,13 +838,6 @@ export default function ResourcesPage() {
         {/* Header - responsive padding */}
         <div className={`${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border-b px-2 sm:px-4 py-2 sm:py-4 h-12 sm:h-16 flex items-center justify-between`}>
           <div className="flex items-center">
-            {/* Nút mở sidebar mobile - responsive */}
-            <button
-              className={`lg:hidden mr-1 sm:mr-2 !rounded-button whitespace-nowrap cursor-pointer ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} transition-colors duration-200 p-1 sm:p-2`}
-              onClick={() => setIsSidebarOpen(true)}
-            >
-              <i className="fas fa-bars text-base sm:text-lg"></i>
-            </button>
             <div className="flex items-center min-w-0 flex-1">
               <div className="flex -space-x-2 sm:-space-x-3 mr-2 sm:mr-4 flex-shrink-0">
                 {selectedAIs.length === 0 ? (
@@ -902,15 +934,9 @@ export default function ResourcesPage() {
               className={`touch-target !rounded-button whitespace-nowrap cursor-pointer ${darkMode ? 'bg-gray-700 border-gray-600 hover:bg-gray-600 hover:scale-100 hover:translate-y-0 hover:shadow-none' : 'hover:bg-gray-50 hover:scale-100 hover:translate-y-0 hover:shadow-none'} transition-colors duration-200 text-xs sm:text-sm h-8 sm:h-9 px-2 sm:px-3 flex items-center`}
               title={currentChat ? "Tạo cuộc trò chuyện mới" : "Bắt đầu cuộc trò chuyện mới"}
             >
-              <i className="fas fa-plus mr-1 text-xs sm:text-sm"></i>
-              <span className="hidden xs:inline sm:hidden lg:inline">
+              <i className="fas fa-plus mr-0 sm:mr-1 text-xs sm:text-sm"></i>
+              <span className="hidden sm:inline">
                 {currentChat ? "Chat mới" : "Tạo mới"}
-              </span>
-              <span className="xs:hidden sm:inline lg:hidden">
-                {currentChat ? "Mới" : "Tạo"}
-              </span>
-              <span className="xxs:hidden xs:hidden sm:hidden">
-                <i className="fas fa-plus text-xs"></i>
               </span>
             </Button>
             
@@ -960,9 +986,8 @@ export default function ResourcesPage() {
                   className={`touch-target !rounded-button whitespace-nowrap cursor-pointer ${darkMode ? 'bg-gray-700 border-gray-600 hover:bg-gray-600 hover:scale-100 hover:translate-y-0 hover:shadow-none' : 'hover:bg-gray-50 hover:scale-100 hover:translate-y-0 hover:shadow-none'} transition-colors duration-200 text-xs sm:text-sm h-8 sm:h-9 px-2 sm:px-3`}
                   title="Thêm AI vào cuộc trò chuyện"
                 >
-                  <i className="fas fa-user-plus mr-1 text-xs sm:text-sm"></i>
-                  <span className="hidden md:inline">Thêm AI</span>
-                  <span className="md:hidden">AI</span>
+                  <i className="fas fa-user-plus mr-0 sm:mr-1 text-xs sm:text-sm"></i>
+                  <span className="hidden sm:inline">Thêm AI</span>
                 </Button>
               </SheetTrigger>
               <SheetContent 
@@ -1053,17 +1078,6 @@ export default function ResourcesPage() {
               </SheetContent>
             </Sheet>
             
-            {/* Stats toggle for mobile/tablet - hidden on desktop */}
-            <Button 
-              variant="ghost" 
-              size="icon"
-              onClick={toggleStatsSidebar}
-              className="xl:hidden touch-target !rounded-button whitespace-nowrap cursor-pointer h-8 w-8 sm:h-9 sm:w-9"
-              title="Thống kê học tập"
-            >
-              <i className="fas fa-chart-bar text-sm"></i>
-            </Button>
-            
             {/* More options button */}
             <Button 
               variant="ghost" 
@@ -1078,7 +1092,7 @@ export default function ResourcesPage() {
         
         {/* Chat Messages - responsive container */}
         <ScrollArea
-          className={`flex-1 chat-mobile smooth-auto-scroll ${darkMode ? 'bg-gradient-to-b from-gray-900 to-gray-800' : 'bg-gradient-to-b from-gray-50 to-white'} ${getScrollAreaPadding()}`}
+          className={`flex-1 chat-mobile smooth-auto-scroll ${darkMode ? 'bg-gradient-to-b from-gray-900 to-gray-800' : 'bg-gradient-to-b from-gray-50 to-white'} ${getScrollAreaPadding()} pb-28 lg:pb-0`}
           ref={chatContainerRef}
         >
           <div className={getDynamicMaxWidth()}>
@@ -1096,7 +1110,7 @@ export default function ResourcesPage() {
                 }}
               />
             ) : (
-              <div className={`space-y-6 sm:space-y-8 ${getDynamicPadding()} py-6 sm:py-8`}>
+              <div className={`space-y-3 sm:space-y-6 ${getDynamicPadding()} py-4 sm:py-8`}>
                 {selectedAIs.length === 0 ? (
                   // Single chat mode - show single chat messages
                   (() => {
@@ -1174,9 +1188,9 @@ export default function ResourcesPage() {
               <div className={`rounded-lg px-2 py-1 ${darkMode ? 'bg-gray-700/95 border border-gray-600/50' : 'bg-white/95 border border-gray-200/50'} shadow-md backdrop-blur-sm`}>
                 <div className="flex items-center space-x-1.5">
                   <div className="flex space-x-0.5">
-                    <div className="w-1 h-1 rounded-full bg-orange-400 animate-bounce"></div>
-                    <div className="w-1 h-1 rounded-full bg-orange-400 animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                    <div className="w-1 h-1 rounded-full bg-orange-400 animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+                    <div className="w-1 h-1 rounded-full bg-orange-400 animate-pulse sm:animate-bounce"></div>
+                    <div className="w-1 h-1 rounded-full bg-orange-400 animate-pulse sm:animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                    <div className="w-1 h-1 rounded-full bg-orange-400 animate-pulse sm:animate-bounce" style={{ animationDelay: '0.4s' }}></div>
                   </div>
                   <span className={`text-[10px] font-medium ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                     {selectedAIs.length === 0 
@@ -1216,20 +1230,110 @@ export default function ResourcesPage() {
           </div>
         )}
         
-        <ChatInput 
-          onSendMessage={enhancedSendMessage}
-          darkMode={darkMode}
-          disabled={selectedAIs.length === 0 ? singleChatProcessing : (isProcessing && !isAutoInteracting)}
-          placeholder={
-            replyMode?.isActive 
-              ? `Phản hồi ${replyMode.aiName}...` 
-              : selectedAIs.length === 0
-                ? (singleChatProcessing ? "Đang xử lý..." : "Nhập câu hỏi tiếng Anh của bạn...")
-                : ((isProcessing && !isAutoInteracting) ? "Đang xử lý..." : 
-                   isAutoInteracting ? "AI đang tương tác..." :
-                   "Nhập tin nhắn của bạn...")
-          }
-        />
+        {/* Mobile Chat Input - positioned above bottom navigation */}
+        <div className="lg:hidden fixed bottom-20 left-0 right-0 z-50 mx-4">
+          <div className="relative">
+            <Input
+              value={inputMessage}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setInputMessage(e.target.value)}
+              onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  const isInputDisabled = selectedAIs.length === 0 ? singleChatProcessing : (isProcessing && !isAutoInteracting);
+                  if (!isInputDisabled && inputMessage.trim()) {
+                    enhancedSendMessage(inputMessage);
+                    setInputMessage('');
+                  }
+                }
+              }}
+              placeholder={
+                replyMode?.isActive 
+                  ? `Reply to ${replyMode.aiName}...` 
+                  : selectedAIs.length === 0
+                    ? (singleChatProcessing ? "Processing..." : "Type your English question...")
+                    : ((isProcessing && !isAutoInteracting) ? "Processing..." : 
+                       isAutoInteracting ? "AI is interacting..." :
+                       "Type your message...")
+              }
+              disabled={selectedAIs.length === 0 ? singleChatProcessing : (isProcessing && !isAutoInteracting)}
+              className={`
+                w-full h-10 pl-10 pr-16 text-sm rounded-full
+                backdrop-blur-xl bg-white/5 dark:bg-black/5
+                border border-white/15 dark:border-white/8
+                shadow-2xl shadow-black/10 dark:shadow-black/30
+                text-gray-900 dark:text-white
+                placeholder:text-gray-700/90 dark:placeholder:text-gray-200/80
+                focus:bg-white/8 dark:focus:bg-black/8
+                focus:border-white/25 dark:focus:border-white/15
+                focus:ring-1 focus:ring-orange-400/40
+                transition-all duration-300 ease-out
+                hover:bg-white/6 dark:hover:bg-black/6
+                hover:border-white/20 dark:hover:border-white/12
+              `}
+            />
+            
+            {/* Left buttons group */}
+            <div className="absolute left-1.5 top-1/2 transform -translate-y-1/2 flex items-center">
+              {/* Attach Button */}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 rounded-full backdrop-blur-xl bg-white/5 dark:bg-white/3 hover:bg-white/12 dark:hover:bg-white/8 border border-white/15 dark:border-white/8 transition-all duration-200"
+              >
+                <i className="fas fa-paperclip text-xs text-gray-800 dark:text-gray-100"></i>
+              </Button>
+            </div>
+            
+            {/* Right buttons group */}
+            <div className="absolute right-1.5 top-1/2 transform -translate-y-1/2 flex items-center gap-1">
+              {/* Send Button - only show when there's text */}
+              {inputMessage.trim() && (
+                <Button
+                  onClick={() => {
+                    const isInputDisabled = selectedAIs.length === 0 ? singleChatProcessing : (isProcessing && !isAutoInteracting);
+                    if (!isInputDisabled && inputMessage.trim()) {
+                      enhancedSendMessage(inputMessage);
+                      setInputMessage('');
+                    }
+                  }}
+                  disabled={selectedAIs.length === 0 ? singleChatProcessing : (isProcessing && !isAutoInteracting)}
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 rounded-full backdrop-blur-xl bg-orange-500/60 hover:bg-orange-500/70 text-white border border-orange-400/20 disabled:opacity-50 transition-all duration-200 shadow-lg"
+                >
+                  <i className="fas fa-paper-plane text-xs"></i>
+                </Button>
+              )}
+              
+              {/* Voice Button */}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 rounded-full backdrop-blur-xl bg-white/5 dark:bg-white/3 hover:bg-white/12 dark:hover:bg-white/8 border border-white/15 dark:border-white/8 transition-all duration-200"
+              >
+                <i className="fas fa-microphone text-xs text-gray-800 dark:text-gray-100"></i>
+              </Button>
+            </div>
+          </div>
+        </div>
+        
+        {/* Desktop Chat Input */}
+        <div className="hidden lg:block">
+          <ChatInput 
+            onSendMessage={enhancedSendMessage}
+            darkMode={darkMode}
+            disabled={selectedAIs.length === 0 ? singleChatProcessing : (isProcessing && !isAutoInteracting)}
+            placeholder={
+              replyMode?.isActive 
+                ? `Phản hồi ${replyMode.aiName}...` 
+                : selectedAIs.length === 0
+                  ? (singleChatProcessing ? "Đang xử lý..." : "Nhập câu hỏi tiếng Anh của bạn...")
+                  : ((isProcessing && !isAutoInteracting) ? "Đang xử lý..." : 
+                     isAutoInteracting ? "AI đang tương tác..." :
+                     "Nhập tin nhắn của bạn...")
+            }
+          />
+        </div>
       </div>
       
       {/* Desktop Learning Stats Sidebar */}
@@ -1260,35 +1364,20 @@ export default function ResourcesPage() {
         </div>
       </div>
 
-      {/* Mobile Stats Sidebar */}
-      {isStatsSidebarOpen && (
-        <div className="lg:hidden fixed inset-0 z-50">
-          <div 
-            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-            onClick={() => setIsStatsSidebarOpen(false)}
-          />
-          <div className={`fixed right-0 top-0 h-full w-full max-w-sm ${darkMode ? 'bg-gray-800' : 'bg-white'} shadow-xl transform transition-transform duration-300 ${isStatsSidebarOpen ? 'translate-x-0' : 'translate-x-full'}`}>
-            <div className="flex items-center justify-between p-4 border-b">
-              <h2 className="font-semibold text-lg">Thống kê học tập</h2>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setIsStatsSidebarOpen(false)}
-                className="touch-target"
-              >
-                <i className="fas fa-times"></i>
-              </Button>
-            </div>
-            <div className="h-full overflow-auto">
-              <LearningStatsSidebar darkMode={darkMode} />
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Mobile Stats Sidebar - REMOVED */}
       
       {/* Smooth Scroll Indicator - Only show when auto-scrolling */}
       <SmoothScrollIndicator 
         isAutoScrolling={isAutoScrolling}
+      />
+
+      {/* Mobile Bottom Navigation */}
+      <ResourcesMobileBottomNavigation 
+        onSelectAI={handleMobileAISelection}
+        onStartChat={handleMobileStartChat}
+        onSelectChat={handleMobileChatSelection}
+        selectedAIs={selectedAIs}
+        onToggleAI={toggleAISelection}
       />
           </div>
         </div>

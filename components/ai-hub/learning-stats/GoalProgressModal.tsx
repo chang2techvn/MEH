@@ -35,6 +35,7 @@ export const GoalProgressModal: React.FC<GoalProgressModalProps> = ({
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [latestEntryId, setLatestEntryId] = useState<string | undefined>();
   const [vocabularyCache, setVocabularyCache] = useState<{ [goalId: string]: VocabularyItem[] }>({});
+  const [activeTab, setActiveTab] = useState<'add' | 'list'>('add'); // New state for mobile tabs
   const { fetchGoalProgress } = useLearningGoals();
   const vocabularyListRef = useRef<VocabularyListRef>(null);
 
@@ -126,10 +127,17 @@ export const GoalProgressModal: React.FC<GoalProgressModalProps> = ({
     setVocabularyEntries([...vocabularyEntries, newEntry]);
     setLatestEntryId(newEntryId);
     
+    // Auto-switch to list tab on mobile after adding vocabulary
+    if (window.innerWidth < 640) {
+      setTimeout(() => {
+        setActiveTab('list');
+      }, 300);
+    }
+    
     // Auto-scroll to the newly added vocabulary after a short delay
     setTimeout(() => {
       vocabularyListRef.current?.scrollToEntry(newEntryId);
-    }, 100);
+    }, window.innerWidth < 640 ? 400 : 100);
   };
 
   // Remove vocabulary entry (only allow removing new entries, not existing ones)
@@ -262,32 +270,33 @@ export const GoalProgressModal: React.FC<GoalProgressModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-1 sm:p-4">
       {/* Backdrop */}
       <div 
         className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300"
         onClick={onClose}
       />
       
-      {/* Modal */}
-      <div className={`relative w-full max-w-4xl h-[90vh] transform transition-all duration-300 animate-in fade-in-0 slide-in-from-bottom-4 ${
+      {/* Modal - Ultra compact for mobile */}
+      <div className={`relative w-full max-w-[95vw] sm:max-w-4xl h-[98vh] sm:h-[90vh] transform transition-all duration-300 animate-in fade-in-0 slide-in-from-bottom-4 ${
         darkMode ? 'bg-gray-900 text-gray-100' : 'bg-white text-gray-900'
-      } rounded-2xl shadow-2xl overflow-hidden border ${darkMode ? 'border-gray-700' : 'border-gray-200'} flex flex-col`}>
-        {/* Header */}
-        <div className={`px-6 py-5 border-b ${darkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-gradient-to-r from-neo-mint/5 to-purist-blue/5'} flex-shrink-0`}>
+      } rounded-lg sm:rounded-2xl shadow-2xl overflow-hidden border ${darkMode ? 'border-gray-700' : 'border-gray-200'} flex flex-col`}>
+        
+        {/* Header - Ultra compact for mobile */}
+        <div className={`px-2 sm:px-6 py-2 sm:py-5 border-b ${darkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-gradient-to-r from-neo-mint/5 to-purist-blue/5'} flex-shrink-0`}>
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-neo-mint to-purist-blue flex items-center justify-center shadow-lg">
-                <i className={`fas ${getCategoryIcon(goal.category)} text-white text-lg`}></i>
+            <div className="flex items-center space-x-1.5 sm:space-x-3 min-w-0 flex-1">
+              <div className="w-7 h-7 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-gradient-to-r from-neo-mint to-purist-blue flex items-center justify-center shadow-lg flex-shrink-0">
+                <i className={`fas ${getCategoryIcon(goal.category)} text-white text-xs sm:text-lg`}></i>
               </div>
-              <div>
-                <h2 className="text-xl font-semibold bg-gradient-to-r from-neo-mint to-purist-blue bg-clip-text text-transparent">
+              <div className="min-w-0 flex-1">
+                <h2 className="text-xs sm:text-xl font-semibold bg-gradient-to-r from-neo-mint to-purist-blue bg-clip-text text-transparent truncate">
                   Goal Progress
                 </h2>
-                <p className={`text-sm mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                <p className={`text-xs sm:text-sm mt-0 sm:mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'} truncate`}>
                   {goal.title}
                   {fetchingExisting && (
-                    <span className="ml-2 inline-flex items-center">
+                    <span className="ml-1 sm:ml-2 inline-flex items-center">
                       <i className="fas fa-sync-alt fa-spin text-xs"></i>
                     </span>
                   )}
@@ -298,29 +307,29 @@ export const GoalProgressModal: React.FC<GoalProgressModalProps> = ({
               variant="ghost"
               size="icon"
               onClick={onClose}
-              className={`h-9 w-9 rounded-xl transition-all duration-200 ${
+              className={`h-7 w-7 sm:h-9 sm:w-9 rounded-lg sm:rounded-xl transition-all duration-200 flex-shrink-0 ${
                 darkMode ? 'hover:bg-gray-700 text-gray-400 hover:text-white' : 'hover:bg-neo-mint/10 text-gray-500 hover:text-neo-mint'
               }`}
             >
-              <i className="fas fa-times text-lg"></i>
+              <i className="fas fa-times text-xs sm:text-lg"></i>
             </Button>
           </div>
           
-          {/* Success Message */}
+          {/* Success Message - Ultra compact for mobile */}
           {saveSuccess && (
-            <div className="mt-4 p-3 bg-green-100 dark:bg-green-900/20 border border-green-300 dark:border-green-600 rounded-lg flex items-center animate-in fade-in duration-300">
-              <i className="fas fa-check-circle text-green-600 dark:text-green-400 mr-2"></i>
-              <span className="text-green-800 dark:text-green-200 text-sm font-medium">
-                Progress saved successfully! Your vocabulary has been added to the goal.
+            <div className="mt-2 sm:mt-4 p-2 sm:p-3 bg-green-100 dark:bg-green-900/20 border border-green-300 dark:border-green-600 rounded-lg flex items-center animate-in fade-in duration-300">
+              <i className="fas fa-check-circle text-green-600 dark:text-green-400 mr-1 sm:mr-2 text-xs sm:text-sm flex-shrink-0"></i>
+              <span className="text-green-800 dark:text-green-200 text-xs sm:text-sm font-medium">
+                Progress saved successfully!
               </span>
             </div>
           )}
         </div>
 
-        {/* Goal Info */}
-        <div className={`p-5 border-b ${darkMode ? 'border-gray-700' : 'border-gray-200'} flex-shrink-0`}>
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
+        {/* Goal Info - Mobile optimized */}
+        <div className={`p-3 sm:p-5 border-b ${darkMode ? 'border-gray-700' : 'border-gray-200'} flex-shrink-0`}>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0 mb-3 sm:mb-4">
+            <div className="flex items-center gap-2 sm:gap-3">
               <Badge
                 variant="outline"
                 className="bg-orange-100 text-orange-800 px-2 py-1 text-xs pointer-events-none hover:bg-none transition-none"
@@ -337,17 +346,26 @@ export const GoalProgressModal: React.FC<GoalProgressModalProps> = ({
                     : 'bg-gray-100 text-gray-800'
                 } pointer-events-none hover:bg-none transition-none`}
               >
-                {goal.priority === 'high' ? 'High Priority' : goal.priority === 'medium' ? 'Medium Priority' : 'Low Priority'}
+                <span className="hidden sm:inline">
+                  {goal.priority === 'high' ? 'High Priority' : goal.priority === 'medium' ? 'Medium Priority' : 'Low Priority'}
+                </span>
+                <span className="sm:hidden">
+                  {goal.priority === 'high' ? 'High' : goal.priority === 'medium' ? 'Med' : 'Low'}
+                </span>
               </Badge>
             </div>
             {goal.deadline && (
-              <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                Due: {new Date(goal.deadline).toLocaleDateString('en-US')}
+              <span className={`text-xs sm:text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                Due: {new Date(goal.deadline).toLocaleDateString('en-US', { 
+                  month: 'short', 
+                  day: 'numeric',
+                  year: window.innerWidth < 640 ? '2-digit' : 'numeric'
+                })}
               </span>
             )}
           </div>
           
-          {/* Progress Bar */}
+          {/* Progress Bar - Mobile optimized */}
           <div className={`w-full h-1.5 ${darkMode ? 'bg-gray-600' : 'bg-gray-200'} rounded-full overflow-hidden mb-2`}>
             <div 
               className="h-full bg-gradient-to-r from-neo-mint to-purist-blue transition-all duration-500 rounded-full"
@@ -359,56 +377,144 @@ export const GoalProgressModal: React.FC<GoalProgressModalProps> = ({
           </p>
         </div>
 
-        {/* Content - Two Column Layout */}
-        <div className="flex-1 overflow-hidden flex min-h-0">
-          {/* Left Column - Input Form */}
-          <div className={`w-1/2 p-5 border-r ${darkMode ? 'border-gray-700' : 'border-gray-200'} flex flex-col`}>
-            <div className="mb-4">
-              <h3 className="text-lg font-semibold">Add New Vocabulary</h3>
-              <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'} mt-1`}>
-                Add vocabulary words to update your learning progress
-              </p>
-            </div>
-            <VocabularyInputForm
-              darkMode={darkMode}
-              onAdd={handleAddVocabulary}
-              existingWords={existingWords}
-            />
-          </div>
-
-          {/* Right Column - Vocabulary List */}
-          <div className="w-1/2 p-5 flex flex-col min-h-0">
-            {fetchingExisting ? (
-              <div className="flex flex-col items-center justify-center py-12">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-r from-neo-mint to-purist-blue flex items-center justify-center shadow-lg mb-4">
-                  <i className="fas fa-sync-alt fa-spin text-white text-xl"></i>
-                </div>
-                <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'} mb-2`}>
-                  Loading existing vocabulary...
-                </span>
-                <div className={`w-32 h-1 ${darkMode ? 'bg-gray-600' : 'bg-gray-200'} rounded-full overflow-hidden`}>
-                  <div className="h-full bg-gradient-to-r from-neo-mint to-purist-blue rounded-full animate-pulse"></div>
-                </div>
-              </div>
-            ) : (
-              <VocabularyList
-                ref={vocabularyListRef}
-                entries={allVocabulary}
-                darkMode={darkMode}
-                onRemove={handleRemoveVocabulary}
-                onClearAll={handleClearAll}
-                existingCount={existingVocabulary.length}
-                latestEntryId={latestEntryId}
-              />
-            )}
+        {/* Mobile Tab Navigation - Ultra compact */}
+        <div className={`sm:hidden border-b ${darkMode ? 'border-gray-700' : 'border-gray-200'} flex-shrink-0`}>
+          <div className="flex">
+            <button
+              onClick={() => setActiveTab('add')}
+              className={`flex-1 px-2 py-2 text-xs font-medium transition-all duration-200 relative ${
+                activeTab === 'add'
+                  ? `${darkMode ? 'text-neo-mint bg-gray-800' : 'text-neo-mint bg-neo-mint/5'} border-b-2 border-neo-mint`
+                  : `${darkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-600 hover:text-gray-900'} hover:bg-gray-50 dark:hover:bg-gray-800`
+              }`}
+            >
+              <i className="fas fa-plus mr-1 text-xs"></i>
+              Add ({vocabularyEntries.length})
+            </button>
+            <button
+              onClick={() => setActiveTab('list')}
+              className={`flex-1 px-2 py-2 text-xs font-medium transition-all duration-200 relative ${
+                activeTab === 'list'
+                  ? `${darkMode ? 'text-neo-mint bg-gray-800' : 'text-neo-mint bg-neo-mint/5'} border-b-2 border-neo-mint`
+                  : `${darkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-600 hover:text-gray-900'} hover:bg-gray-50 dark:hover:bg-gray-800`
+              }`}
+            >
+              <i className="fas fa-list mr-1 text-xs"></i>
+              All ({totalVocabularyCount})
+            </button>
           </div>
         </div>
 
-        {/* Footer */}
-        <div className={`p-5 border-t ${darkMode ? 'border-gray-700' : 'border-gray-200'} flex justify-between items-center flex-shrink-0`}>
-          <div className="flex items-center gap-2">
-            <i className="fas fa-info-circle text-neo-mint"></i>
-            <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+        {/* Content - Responsive Layout */}
+        <div className="flex-1 overflow-hidden flex min-h-0">
+          {/* Mobile Tab Content - Ultra compact */}
+          <div className="sm:hidden w-full flex flex-col min-h-0">
+            {activeTab === 'add' ? (
+              <div className="p-2 flex flex-col min-h-0">
+                <div className="mb-2">
+                  <h3 className="text-sm font-semibold">Add Vocabulary</h3>
+                  <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'} mt-0.5`}>
+                    Add words to update your progress
+                  </p>
+                </div>
+                <VocabularyInputForm
+                  darkMode={darkMode}
+                  onAdd={handleAddVocabulary}
+                  existingWords={existingWords}
+                />
+                
+                {/* Mobile Quick Stats - Ultra compact */}
+                <div className={`mt-2 p-2 rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-gray-50'} border ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className={darkMode ? 'text-gray-400' : 'text-gray-600'}>
+                      Ready: {vocabularyEntries.length}
+                    </span>
+                    <span className={darkMode ? 'text-gray-400' : 'text-gray-600'}>
+                      Total: {totalVocabularyCount}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="p-2 flex flex-col min-h-0">{/* List tab content - Ultra compact */}
+                {fetchingExisting ? (
+                  <div className="flex flex-col items-center justify-center py-8">
+                    <div className="w-10 h-10 rounded-lg bg-gradient-to-r from-neo-mint to-purist-blue flex items-center justify-center shadow-lg mb-3">
+                      <i className="fas fa-sync-alt fa-spin text-white text-sm"></i>
+                    </div>
+                    <span className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'} mb-2`}>
+                      Loading existing vocabulary...
+                    </span>
+                    <div className={`w-24 h-1 ${darkMode ? 'bg-gray-600' : 'bg-gray-200'} rounded-full overflow-hidden`}>
+                      <div className="h-full bg-gradient-to-r from-neo-mint to-purist-blue rounded-full animate-pulse"></div>
+                    </div>
+                  </div>
+                ) : (
+                  <VocabularyList
+                    ref={vocabularyListRef}
+                    entries={allVocabulary}
+                    darkMode={darkMode}
+                    onRemove={handleRemoveVocabulary}
+                    onClearAll={handleClearAll}
+                    existingCount={existingVocabulary.length}
+                    latestEntryId={latestEntryId}
+                  />
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Desktop Two-Column Layout */}
+          <div className="hidden sm:flex w-full min-h-0">
+            {/* Left Column - Input Form */}
+            <div className={`w-1/2 p-5 border-r ${darkMode ? 'border-gray-700' : 'border-gray-200'} flex flex-col`}>
+              <div className="mb-4">
+                <h3 className="text-lg font-semibold">Add New Vocabulary</h3>
+                <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'} mt-1`}>
+                  Add vocabulary words to update your learning progress
+                </p>
+              </div>
+              <VocabularyInputForm
+                darkMode={darkMode}
+                onAdd={handleAddVocabulary}
+                existingWords={existingWords}
+              />
+            </div>
+
+            {/* Right Column - Vocabulary List */}
+            <div className="w-1/2 p-5 flex flex-col min-h-0">
+              {fetchingExisting ? (
+                <div className="flex flex-col items-center justify-center py-12">
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-r from-neo-mint to-purist-blue flex items-center justify-center shadow-lg mb-4">
+                    <i className="fas fa-sync-alt fa-spin text-white text-xl"></i>
+                  </div>
+                  <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'} mb-2`}>
+                    Loading existing vocabulary...
+                  </span>
+                  <div className={`w-32 h-1 ${darkMode ? 'bg-gray-600' : 'bg-gray-200'} rounded-full overflow-hidden`}>
+                    <div className="h-full bg-gradient-to-r from-neo-mint to-purist-blue rounded-full animate-pulse"></div>
+                  </div>
+                </div>
+              ) : (
+                <VocabularyList
+                  ref={vocabularyListRef}
+                  entries={allVocabulary}
+                  darkMode={darkMode}
+                  onRemove={handleRemoveVocabulary}
+                  onClearAll={handleClearAll}
+                  existingCount={existingVocabulary.length}
+                  latestEntryId={latestEntryId}
+                />
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Footer - Mobile optimized */}
+        <div className={`p-3 sm:p-5 border-t ${darkMode ? 'border-gray-700' : 'border-gray-200'} flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-0 flex-shrink-0`}>
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <i className="fas fa-info-circle text-neo-mint text-sm flex-shrink-0"></i>
+            <span className={`text-xs sm:text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
               {vocabularyEntries.length > 0 
                 ? `Will add ${vocabularyEntries.length} new words to your progress` 
                 : existingVocabulary.length > 0 
@@ -417,30 +523,33 @@ export const GoalProgressModal: React.FC<GoalProgressModalProps> = ({
               }
             </span>
           </div>
-          <div className="flex gap-3">
+          <div className="flex gap-1 sm:gap-3">
             <Button
               variant="outline"
               onClick={onClose}
               disabled={loading}
-              className={`${darkMode ? 'bg-gray-700 border-gray-600 hover:bg-gray-600' : 'hover:bg-gray-50 border-gray-200 hover:border-neo-mint/20'}`}
+              className={`flex-1 sm:flex-none h-8 sm:h-10 text-xs sm:text-sm ${darkMode ? 'bg-gray-700 border-gray-600 hover:bg-gray-600' : 'hover:bg-gray-50 border-gray-200 hover:border-neo-mint/20'}`}
             >
-              <i className="fas fa-times mr-2"></i>
+              <i className="fas fa-times mr-1 sm:mr-2 text-xs"></i>
               Close
             </Button>
             <Button
               onClick={handleSubmit}
               disabled={loading || vocabularyEntries.length === 0}
-              className="bg-gradient-to-r from-neo-mint to-purist-blue hover:from-neo-mint/80 hover:to-purist-blue/80 text-white transition-all duration-300 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 sm:flex-none h-8 sm:h-10 text-xs sm:text-sm bg-gradient-to-r from-neo-mint to-purist-blue hover:from-neo-mint/80 hover:to-purist-blue/80 text-white transition-all duration-300 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (
                 <>
-                  <i className="fas fa-spinner fa-spin mr-2"></i>
-                  Saving...
+                  <i className="fas fa-spinner fa-spin mr-1 sm:mr-2 text-xs"></i>
+                  <span className="hidden sm:inline">Saving...</span>
+                  <span className="sm:hidden">Save</span>
                 </>
               ) : (
                 <>
-                  <i className="fas fa-check mr-2"></i>
-                  Update Progress ({vocabularyEntries.length})                </>
+                  <i className="fas fa-check mr-1 sm:mr-2 text-xs"></i>
+                  <span className="hidden sm:inline">Update Progress ({vocabularyEntries.length})</span>
+                  <span className="sm:hidden">Update ({vocabularyEntries.length})</span>
+                </>
               )}
             </Button>
           </div>

@@ -296,20 +296,20 @@ export const VocabularyModal: React.FC<VocabularyModalProps> = ({
         onClick={onClose}
       />
       
-      {/* Modal */}
-      <div className={`relative w-full max-w-6xl mx-4 h-[80vh] ${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl shadow-2xl transform transition-all duration-300 animate-fadeIn flex flex-col`}>
+      {/* Modal - Reduced height on mobile */}
+      <div className={`relative w-full max-w-6xl mx-2 sm:mx-4 h-[80vh] sm:h-[90vh] lg:h-[85vh] ${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg sm:rounded-2xl shadow-2xl transform transition-all duration-300 animate-fadeIn flex flex-col`}>
         {/* Header */}
-        <div className={`px-6 py-5 border-b ${darkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-gradient-to-r from-neo-mint/5 to-purist-blue/5'} flex-shrink-0`}>
+        <div className={`px-3 sm:px-6 py-2 sm:py-3 border-b ${darkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-gradient-to-r from-neo-mint/5 to-purist-blue/5'} flex-shrink-0`}>
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-neo-mint to-purist-blue flex items-center justify-center shadow-lg">
-                <i className="fas fa-book text-white text-lg"></i>
+            <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
+              <div className="w-6 h-6 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-r from-neo-mint to-purist-blue flex items-center justify-center shadow-lg">
+                <i className="fas fa-book text-white text-xs sm:text-lg"></i>
               </div>
-              <div>
-                <h2 className="text-xl font-semibold bg-gradient-to-r from-neo-mint to-purist-blue bg-clip-text text-transparent">
+              <div className="min-w-0 flex-1">
+                <h2 className="text-sm sm:text-xl font-semibold bg-gradient-to-r from-neo-mint to-purist-blue bg-clip-text text-transparent truncate">
                   Your Vocabulary Collection
                 </h2>
-                <p className={`text-sm mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                <p className={`text-xs sm:text-sm mt-0.5 sm:mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'} truncate`}>
                   Total {vocabulary.length} words learned
                   {loading && vocabulary.length > 0 && (
                     <span className="ml-2 inline-flex items-center">
@@ -319,58 +319,56 @@ export const VocabularyModal: React.FC<VocabularyModalProps> = ({
                 </p>
               </div>
             </div>
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-1 sm:space-x-2 flex-shrink-0">
               {onCreateNew && (
                 <Button
                   variant="default"
-                  size="sm"
                   onClick={onCreateNew}
-                  className="bg-gradient-to-r from-neo-mint to-purist-blue hover:from-neo-mint/80 hover:to-purist-blue/80 text-white rounded-xl px-4 py-2 text-sm font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
+                  className="bg-gradient-to-r from-neo-mint to-purist-blue hover:from-neo-mint/80 hover:to-purist-blue/80 text-white rounded-full sm:rounded-xl h-6 w-6 sm:h-auto sm:w-auto sm:px-4 sm:py-2 text-xs sm:text-sm font-medium transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center"
                 >
-                  <i className="fas fa-plus mr-2"></i>
-                  Add New Vocabulary
+                  <i className="fas fa-plus sm:mr-2 text-xs"></i>
+                  <span className="hidden sm:inline">Add New Vocabulary</span>
                 </Button>
               )}
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={onClose}
-                className={`h-9 w-9 rounded-xl transition-all duration-200 ${
+                className={`h-8 w-8 sm:h-9 sm:w-9 rounded-xl transition-all duration-200 ${
                   darkMode ? 'hover:bg-gray-700 text-gray-400 hover:text-white' : 'hover:bg-neo-mint/10 text-gray-500 hover:text-neo-mint'
                 }`}
               >
-                <i className="fas fa-times text-lg"></i>
+                <i className="fas fa-times text-sm sm:text-lg"></i>
               </Button>
             </div>
           </div>
         </div>
 
         {/* Controls */}
-        <div className={`p-6 border-b ${darkMode ? 'border-gray-700' : 'border-gray-200'} space-y-4 flex-shrink-0`}>
-          <div className="flex flex-col sm:flex-row gap-4">
-            {/* Search */}
-            <div className="flex-1 relative">
+        <div className={`p-2 sm:p-4 border-b ${darkMode ? 'border-gray-700' : 'border-gray-200'} flex-shrink-0`}>
+          {/* Single row with search and filters */}
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* Search - Takes most space */}
+            <div className="relative flex-1">
               <Input
                 placeholder="Search vocabulary..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className={`pl-10 rounded-xl ${darkMode ? 'bg-gray-700 border-gray-600 focus:ring-purist-blue' : 'bg-gray-50 border-gray-200 focus:ring-neo-mint'} transition-all duration-200`}
+                className={`pl-8 h-8 sm:h-10 rounded-lg text-xs sm:text-sm ${darkMode ? 'bg-gray-700 border-gray-600 focus:ring-purist-blue' : 'bg-gray-50 border-gray-200 focus:ring-neo-mint'} transition-all duration-200`}
               />
-              <i className="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+              <i className="fas fa-search absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs"></i>
             </div>
 
-            {/* Category Filter */}
+            {/* Category Filter - Icon only */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button 
                   variant="outline" 
-                  className={`min-w-[140px] justify-between rounded-xl ${darkMode ? 'bg-gray-700 border-gray-600 hover:bg-gray-600' : 'hover:bg-neo-mint/5 border-gray-200 hover:border-neo-mint/20'} transition-all duration-200`}
+                  size="icon"
+                  className={`h-8 w-8 sm:h-10 sm:w-10 rounded-lg ${darkMode ? 'bg-gray-700 border-gray-600 hover:bg-gray-600' : 'hover:bg-neo-mint/5 border-gray-200 hover:border-neo-mint/20'} transition-all duration-200`}
+                  title={`Category: ${selectedCategory}`}
                 >
-                  <div className="flex items-center">
-                    <i className="fas fa-filter mr-2 text-sm"></i>
-                    {selectedCategory}
-                  </div>
-                  <i className="fas fa-chevron-down text-xs"></i>
+                  <i className="fas fa-filter text-xs sm:text-sm"></i>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className={darkMode ? 'bg-gray-800 border-gray-700' : ''}>
@@ -386,18 +384,16 @@ export const VocabularyModal: React.FC<VocabularyModalProps> = ({
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {/* Sort */}
+            {/* Sort - Icon only */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button 
                   variant="outline"
-                  className={`min-w-[140px] justify-between rounded-xl ${darkMode ? 'bg-gray-700 border-gray-600 hover:bg-gray-600' : 'hover:bg-neo-mint/5 border-gray-200 hover:border-neo-mint/20'} transition-all duration-200`}
+                  size="icon"
+                  className={`h-8 w-8 sm:h-10 sm:w-10 rounded-lg ${darkMode ? 'bg-gray-700 border-gray-600 hover:bg-gray-600' : 'hover:bg-neo-mint/5 border-gray-200 hover:border-neo-mint/20'} transition-all duration-200`}
+                  title={`Sort: ${sortOptions.find(opt => opt.value === sortBy)?.label}`}
                 >
-                  <div className="flex items-center">
-                    <i className="fas fa-sort mr-2 text-sm"></i>
-                    {sortOptions.find(opt => opt.value === sortBy)?.label}
-                  </div>
-                  <i className="fas fa-chevron-down text-xs"></i>
+                  <i className="fas fa-sort text-xs sm:text-sm"></i>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className={darkMode ? 'bg-gray-800 border-gray-700' : ''}>
@@ -417,31 +413,31 @@ export const VocabularyModal: React.FC<VocabularyModalProps> = ({
 
         {/* Vocabulary Grid - Scrollable Area */}
         <div className="flex-1 overflow-hidden">
-          <div className="h-full overflow-y-auto p-6 scrollbar-auto-hide">
+          <div className="h-full overflow-y-auto p-2 sm:p-4 scrollbar-auto-hide">
             {loading && vocabulary.length === 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-3">
                 {[...Array(6)].map((_, index) => (
                   <div
                     key={index}
-                    className={`p-5 rounded-xl ${darkMode ? 'bg-gray-700' : 'bg-white'} border ${darkMode ? 'border-gray-600' : 'border-gray-200'} shadow-sm`}
+                    className={`p-2 sm:p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-white'} border ${darkMode ? 'border-gray-600' : 'border-gray-200'} shadow-sm`}
                   >
-                    <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-start justify-between mb-2 sm:mb-3">
                       <div className="flex-1">
-                        <Skeleton className="h-6 w-3/4 mb-2" />
-                        <Skeleton className="h-4 w-1/2" />
+                        <Skeleton className="h-5 sm:h-6 w-3/4 mb-1 sm:mb-2" />
+                        <Skeleton className="h-3 sm:h-4 w-1/2" />
                       </div>
-                      <div className="flex flex-col gap-2">
-                        <Skeleton className="h-5 w-8" />
-                        <Skeleton className="h-5 w-12" />
+                      <div className="flex flex-col gap-1 sm:gap-2">
+                        <Skeleton className="h-4 sm:h-5 w-6 sm:w-8" />
+                        <Skeleton className="h-4 sm:h-5 w-8 sm:w-12" />
                       </div>
                     </div>
-                    <Skeleton className="h-4 w-full mb-3" />
-                    <Skeleton className="h-16 w-full mb-3" />
+                    <Skeleton className="h-3 sm:h-4 w-full mb-2 sm:mb-3" />
+                    <Skeleton className="h-12 sm:h-16 w-full mb-2 sm:mb-3" />
                     <div className="flex items-center justify-between">
-                      <Skeleton className="h-4 w-20" />
-                      <div className="flex gap-2">
-                        <Skeleton className="h-8 w-8 rounded" />
-                        <Skeleton className="h-8 w-8 rounded" />
+                      <Skeleton className="h-3 sm:h-4 w-16 sm:w-20" />
+                      <div className="flex gap-1 sm:gap-2">
+                        <Skeleton className="h-6 sm:h-8 w-6 sm:w-8 rounded" />
+                        <Skeleton className="h-6 sm:h-8 w-6 sm:w-8 rounded" />
                       </div>
                     </div>
                   </div>
@@ -488,68 +484,68 @@ export const VocabularyModal: React.FC<VocabularyModalProps> = ({
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-3">
                 {filteredVocabulary.map((word, index) => (
                   <div
                     key={word.id}
                     ref={(el) => { vocabularyRefs.current[word.id] = el; }}
-                    className={`p-5 rounded-xl ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-white hover:bg-gray-50'} border ${darkMode ? 'border-gray-600' : 'border-gray-200'} shadow-sm transition-all duration-300 animate-fadeIn group cursor-pointer ${selectedVocabularyId === word.id ? 'ring-2 ring-orange-500' : ''} flex flex-col`}
+                    className={`p-2 sm:p-4 rounded-lg ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-white hover:bg-gray-50'} border ${darkMode ? 'border-gray-600' : 'border-gray-200'} shadow-sm transition-all duration-300 animate-fadeIn group cursor-pointer ${selectedVocabularyId === word.id ? 'ring-2 ring-orange-500' : ''} flex flex-col`}
                     style={{ animationDelay: `${index * 50}ms` }}
                   >
-                    {/* Header Section - Fixed Height */}
-                    <div className="flex items-start justify-between mb-3 min-h-[60px]">
+                    {/* Header Section - Compact */}
+                    <div className="flex items-start justify-between mb-2 min-h-[48px] sm:min-h-[60px]">
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-bold text-lg mb-1 group-hover:text-neo-mint dark:group-hover:text-purist-blue transition-colors duration-200 line-clamp-1">
+                        <h3 className="font-bold text-sm sm:text-lg mb-0.5 sm:mb-1 group-hover:text-neo-mint dark:group-hover:text-purist-blue transition-colors duration-200 line-clamp-1">
                           {word.term}
                         </h3>
-                        <div className="h-5 flex items-center">
+                        <div className="h-4 sm:h-5 flex items-center">
                           {word.pronunciation ? (
-                            <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'} font-mono`}>
+                            <p className={`text-xs sm:text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'} font-mono`}>
                               [{word.pronunciation}]
                             </p>
                           ) : (
-                            <p className={`text-sm ${darkMode ? 'text-gray-500' : 'text-gray-400'} italic`}>
+                            <p className={`text-xs sm:text-sm ${darkMode ? 'text-gray-500' : 'text-gray-400'} italic`}>
                               No pronunciation
                             </p>
                           )}
                         </div>
                       </div>
-                      <div className="flex flex-col items-end gap-2 ml-3">
-                        <div className="h-6 flex items-center">
-                          <Badge className="bg-neo-mint/10 text-neo-mint dark:bg-purist-blue/10 dark:text-purist-blue hover:bg-neo-mint/20 dark:hover:bg-purist-blue/20 transition-colors duration-200 rounded-lg min-w-[40px] text-center">
+                      <div className="flex flex-col items-end gap-1 sm:gap-2 ml-2 sm:ml-3">
+                        <div className="h-4 sm:h-6 flex items-center">
+                          <Badge className="bg-neo-mint/10 text-neo-mint dark:bg-purist-blue/10 dark:text-purist-blue hover:bg-neo-mint/20 dark:hover:bg-purist-blue/20 transition-colors duration-200 rounded text-xs sm:text-sm min-w-[32px] sm:min-w-[40px] text-center">
                             {word.usage_count}x
                           </Badge>
                         </div>
-                        <div className="h-6 flex items-center">
-                          <Badge className={`text-xs border rounded-lg min-w-[80px] text-center ${getMasteryColor(word.mastery_level)}`}>
+                        <div className="h-4 sm:h-6 flex items-center">
+                          <Badge className={`text-xs border rounded min-w-[60px] sm:min-w-[80px] text-center ${getMasteryColor(word.mastery_level)}`}>
                             {getMasteryLabel(word.mastery_level)}
                           </Badge>
                         </div>
                       </div>
                     </div>
                     
-                    {/* Meaning Section - Fixed Height */}
-                    <div className="mb-3 min-h-[48px] flex items-start">
-                      <p className={`${darkMode ? 'text-gray-300' : 'text-gray-700'} font-medium line-clamp-2`}>
+                    {/* Meaning Section - Compact */}
+                    <div className="mb-2 min-h-[36px] sm:min-h-[48px] flex items-start">
+                      <p className={`${darkMode ? 'text-gray-300' : 'text-gray-700'} font-medium line-clamp-2 text-xs sm:text-sm`}>
                         {word.meaning}
                       </p>
                     </div>
                     
-                    {/* Example Section - Flexible Height */}
-                    <div className="flex-1 mb-3">
+                    {/* Example Section - Compact */}
+                    <div className="flex-1 mb-2 sm:mb-3">
                       {word.example_sentence ? (
-                        <div className={`p-3 rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-gray-50'}`}>
-                          <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'} italic line-clamp-2`}>
+                        <div className={`p-2 sm:p-3 rounded ${darkMode ? 'bg-gray-800' : 'bg-gray-50'}`}>
+                          <p className={`text-xs sm:text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'} italic line-clamp-2`}>
                             "{word.example_sentence}"
                           </p>
                           {word.example_translation && (
-                            <p className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-500'} mt-1 line-clamp-1`}>
+                            <p className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-500'} mt-0.5 sm:mt-1 line-clamp-1`}>
                               {word.example_translation}
                             </p>
                           )}
                         </div>
                       ) : (
-                        <div className={`p-3 rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-gray-50'} min-h-[60px] flex items-center justify-center`}>
+                        <div className={`p-2 sm:p-3 rounded ${darkMode ? 'bg-gray-800' : 'bg-gray-50'} min-h-[40px] sm:min-h-[60px] flex items-center justify-center`}>
                           <p className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'} italic`}>
                             No example sentence
                           </p>
@@ -557,30 +553,30 @@ export const VocabularyModal: React.FC<VocabularyModalProps> = ({
                       )}
                     </div>
                     
-                    {/* Footer Section - Fixed Height */}
-                    <div className="flex items-center justify-between h-8">
-                      <div className="flex items-center gap-2 flex-1 min-w-0">
-                        <Badge variant="outline" className="text-xs rounded-lg flex-shrink-0">
+                    {/* Footer Section - Compact */}
+                    <div className="flex items-center justify-between h-6 sm:h-8">
+                      <div className="flex items-center gap-1 sm:gap-2 flex-1 min-w-0">
+                        <Badge variant="outline" className="text-xs rounded flex-shrink-0">
                           {word.category}
                         </Badge>
                         <span className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'} truncate`}>
                           {new Date(word.created_at).toLocaleDateString('en-US')}
                         </span>
                       </div>
-                      <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                      <div className="flex items-center gap-1 flex-shrink-0 ml-1 sm:ml-2">
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 rounded-lg hover:bg-neo-mint/10 hover:text-neo-mint dark:hover:bg-purist-blue/10 dark:hover:text-purist-blue transition-all duration-200"
+                          className="h-6 w-6 sm:h-8 sm:w-8 rounded hover:bg-neo-mint/10 hover:text-neo-mint dark:hover:bg-purist-blue/10 dark:hover:text-purist-blue transition-all duration-200"
                           title="Pronounce"
                           onClick={() => handlePronunciation(word.term, word.pronunciation)}
                         >
-                          <i className="fas fa-volume-up text-sm"></i>
+                          <i className="fas fa-volume-up text-xs"></i>
                         </Button>
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 rounded-lg hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/20 dark:hover:text-red-400 transition-all duration-200"
+                          className="h-6 w-6 sm:h-8 sm:w-8 rounded hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/20 dark:hover:text-red-400 transition-all duration-200"
                           title="Delete Vocabulary"
                           onClick={(e) => {
                             e.stopPropagation();
@@ -598,23 +594,27 @@ export const VocabularyModal: React.FC<VocabularyModalProps> = ({
           </div>
         </div>
 
-        {/* Footer */}
-        <div className={`p-6 border-t ${darkMode ? 'border-gray-700' : 'border-gray-200'} flex justify-between items-center flex-shrink-0`}>
-          <div className="flex items-center gap-4">
+        {/* Footer - Compact */}
+        <div className={`p-2 sm:p-4 border-t ${darkMode ? 'border-gray-700' : 'border-gray-200'} flex flex-col sm:flex-row justify-between items-center gap-2 sm:gap-3 flex-shrink-0`}>
+          <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-3 w-full sm:w-auto">
+            <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'} text-center sm:text-left`}>
+              Found {filteredVocabulary.length} of {vocabulary.length} words
+            </p>
             <Button
               variant="outline"
               onClick={handleExportCSV}
-              className={`rounded-xl ${darkMode ? 'bg-gray-700 border-gray-600 hover:bg-gray-600' : 'hover:bg-neo-mint/5 border-gray-200 hover:border-neo-mint/20'} transition-all duration-200`}
+              className={`w-full sm:w-auto rounded-lg text-xs h-8 ${darkMode ? 'bg-gray-700 border-gray-600 hover:bg-gray-600' : 'hover:bg-neo-mint/5 border-gray-200 hover:border-neo-mint/20'} transition-all duration-200`}
             >
-              <i className="fas fa-download mr-2"></i>
-              Export File
+              <i className="fas fa-download mr-1 text-xs"></i>
+              <span className="hidden xs:inline">Export File</span>
+              <span className="xs:hidden">Export</span>
             </Button>
           </div>
           <Button
-            className="bg-gradient-to-r from-neo-mint to-purist-blue hover:from-neo-mint/80 hover:to-purist-blue/80 text-white transition-all duration-300 shadow-lg rounded-xl"
+            className="w-full sm:w-auto bg-gradient-to-r from-neo-mint to-purist-blue hover:from-neo-mint/80 hover:to-purist-blue/80 text-white transition-all duration-300 shadow-lg rounded-lg text-xs h-8"
             onClick={onClose}
           >
-            <i className="fas fa-check mr-2"></i>
+            <i className="fas fa-check mr-1 text-xs"></i>
             Complete
           </Button>
         </div>

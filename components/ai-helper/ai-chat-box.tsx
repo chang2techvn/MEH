@@ -26,6 +26,9 @@ import {
 import { useGeminiAI } from "@/hooks/use-gemini-ai"
 import { motion, AnimatePresence } from "framer-motion"
 import ReactMarkdown from "react-markdown"
+import remarkGfm from "remark-gfm"
+import { Badge } from "@/components/ui/badge"
+import { OptimizedMessageAvatar } from "@/components/optimized/optimized-message-avatar"
 
 interface AIChatBoxProps {
   onClose: () => void
@@ -35,6 +38,16 @@ interface AIChatBoxProps {
 }
 
 export function AIChatBox({ onClose, onMinimize, buttonPosition, initialPosition }: AIChatBoxProps) {
+  // Default AI for chat helper
+  const helperAI = {
+    id: 'helper',
+    name: 'Hani',
+    role: 'Assistant',
+    field: 'Assistant',
+    avatar: 'https://yvsjynosfwyhvisqhasp.supabase.co/storage/v1/object/public/posts/images/825ef58d-31bc-4ad9-9c99-ed7fb15cf8a1.jfif',
+    online: true
+  }
+
   // Calculate position based on button position
   const calculateInitialPosition = () => {
     // Check if mobile/small screen
@@ -73,11 +86,16 @@ export function AIChatBox({ onClose, onMinimize, buttonPosition, initialPosition
   const chatBoxRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const [theme, setTheme] = useState<"light" | "dark" | "gradient">("gradient")
+  const [avatarSize, setAvatarSize] = useState<'sm' | 'md'>('md')
+  
+  // Detect dark mode
+  const darkMode = theme === 'dark'
 
   // Check mobile state
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768)
+      setAvatarSize(window.innerWidth < 640 ? 'sm' : 'md')
     }
     
     checkMobile()
@@ -270,6 +288,8 @@ export function AIChatBox({ onClose, onMinimize, buttonPosition, initialPosition
 
   // Render message content with markdown support
   const renderMessageContent = (message: Message) => {
+    const isUser = message.role === "user"
+    
     if (message.type === "thinking") {
       return (
         <div className="flex items-center space-x-2">
@@ -291,9 +311,84 @@ export function AIChatBox({ onClose, onMinimize, buttonPosition, initialPosition
       )
     }
 
+    if (isUser) {
+      return (
+        <div className="text-xs sm:text-sm break-words leading-relaxed">{message.content}</div>
+      )
+    }
+
     return (
-      <div className="prose prose-sm dark:prose-invert max-w-none">
-        <ReactMarkdown>{message.content}</ReactMarkdown>
+      <div className="w-full min-w-0 overflow-hidden">
+        <div className="prose prose-xs sm:prose-sm dark:prose-invert max-w-none w-full break-words overflow-wrap-anywhere">
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            components={{
+              // Custom styling for markdown elements with mobile-first responsive design
+              strong: ({ children }) => (
+                <strong className="text-orange-600 dark:text-orange-400 font-semibold break-words word-break-break-word">
+                  {children}
+                </strong>
+              ),
+              em: ({ children }) => (
+                <em className="text-blue-600 dark:text-blue-400 break-words word-break-break-word">
+                  {children}
+                </em>
+              ),
+              code: ({ children }) => (
+                <code className="bg-gray-100 dark:bg-gray-700 text-orange-600 dark:text-orange-400 px-1 py-0.5 rounded text-[10px] sm:text-xs font-mono break-all word-break-break-all overflow-wrap-anywhere">
+                  {children}
+                </code>
+              ),
+              p: ({ children }) => (
+                <p className="mb-1 sm:mb-2 leading-relaxed text-gray-700 dark:text-gray-300 text-xs sm:text-sm break-words word-break-break-word overflow-wrap-anywhere">
+                  {children}
+                </p>
+              ),
+              ul: ({ children }) => (
+                <ul className="list-disc list-outside space-y-1 ml-2 sm:ml-3 my-1 sm:my-2 text-gray-700 dark:text-gray-300 text-xs sm:text-sm leading-normal break-words overflow-hidden">
+                  {children}
+                </ul>
+              ),
+              ol: ({ children }) => (
+                <ol className="list-decimal list-outside space-y-1 ml-2 sm:ml-3 my-1 sm:my-2 text-gray-700 dark:text-gray-300 text-xs sm:text-sm leading-normal break-words overflow-hidden">
+                  {children}
+                </ol>
+              ),
+              li: ({ children }) => (
+                <li className="break-words word-break-break-word overflow-wrap-anywhere">
+                  {children}
+                </li>
+              ),
+              h1: ({ children }) => (
+                <h1 className="text-sm sm:text-base font-bold mb-1 sm:mb-2 text-gray-800 dark:text-gray-200 break-words">
+                  {children}
+                </h1>
+              ),
+              h2: ({ children }) => (
+                <h2 className="text-xs sm:text-sm font-semibold mb-1 text-gray-800 dark:text-gray-200 break-words">
+                  {children}
+                </h2>
+              ),
+              h3: ({ children }) => (
+                <h3 className="text-xs sm:text-sm font-medium mb-1 text-gray-800 dark:text-gray-200 break-words">
+                  {children}
+                </h3>
+              ),
+              blockquote: ({ children }) => (
+                <blockquote className="border-l-2 border-orange-500 pl-2 my-1 sm:my-2 text-gray-600 dark:text-gray-400 italic break-words text-xs sm:text-sm">
+                  {children}
+                </blockquote>
+              ),
+              pre: ({ children }) => (
+                <pre className="bg-gray-100 dark:bg-gray-800 p-1 sm:p-2 rounded my-1 sm:my-2 overflow-x-auto text-[10px] sm:text-xs break-words whitespace-pre-wrap">
+                  {children}
+                </pre>
+              ),
+            }}
+          >
+            {message.content}
+          </ReactMarkdown>
+        </div>
       </div>
     )
   }
@@ -460,25 +555,53 @@ export function AIChatBox({ onClose, onMinimize, buttonPosition, initialPosition
                   </div>
                 </motion.div>
               ) : (
-                messages.map((message, index) => (
-                  <motion.div
-                    key={message.id}
-                    className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
-                    initial={{ opacity: 0, y: isMobile ? 0 : 10, scale: isMobile ? 1 : 0.95 }} // Disable animations on mobile
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    transition={{ duration: isMobile ? 0 : 0.2, delay: isMobile ? 0 : 0.05 * index }} // No delay on mobile
-                  >
-                    <div
-                      className={`max-w-[85%] rounded-2xl p-3 ${
-                        message.role === "user"
-                          ? "bg-orange-50 dark:bg-orange-900/20 text-orange-900 dark:text-orange-100 border border-orange-200 dark:border-orange-800"
-                          : "bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
-                      }`}
+                messages.map((message, index) => {
+                  const isUser = message.role === "user"
+                  return (
+                    <motion.div
+                      key={message.id}
+                      className={`flex ${isUser ? 'justify-end' : 'justify-start'} message-slide-in px-1 sm:px-3 group mb-3 sm:mb-6`}
+                      initial={{ opacity: 0, y: isMobile ? 0 : 10, scale: isMobile ? 1 : 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      transition={{ duration: isMobile ? 0 : 0.2, delay: isMobile ? 0 : 0.05 * index }}
                     >
-                      {renderMessageContent(message)}
-                    </div>
-                  </motion.div>
-                ))
+                      {!isUser && (
+                        <div className="mr-1 sm:mr-3 flex-shrink-0">
+                          <OptimizedMessageAvatar
+                            src={helperAI.avatar}
+                            alt={helperAI.name}
+                            size={avatarSize}
+                            fallbackText={helperAI.name?.substring(0, 2) || 'AI'}
+                            darkMode={darkMode}
+                          />
+                        </div>
+                      )}
+                      <div className={`${isUser ? 'max-w-[85%] sm:max-w-[80%] lg:max-w-[75%] xl:max-w-[70%]' : 'min-w-0 flex-1 max-w-[85%] sm:max-w-[85%] lg:max-w-[80%] xl:max-w-[75%]'}`}>
+                        {!isUser && (
+                          <div className="flex items-center mb-1 sm:mb-2 gap-2 min-w-0">
+                            <span className={`text-sm font-medium truncate ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{helperAI.name}</span>
+                            <Badge 
+                              variant="outline" 
+                              className={`text-[7px] h-5 px-2 py-0 max-w-[80px] sm:max-w-[120px] truncate leading-none flex-shrink-0 ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-50'}`}
+                              title={helperAI.field}
+                            >
+                              {helperAI.field}
+                            </Badge>
+                          </div>
+                        )}
+                        <div
+                          className={`rounded-2xl p-2 sm:p-3 shadow-md min-h-fit ${
+                            isUser 
+                              ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white inline-block w-fit max-w-full'
+                              : 'bg-gray-700 border border-gray-600 dark:bg-gray-700 dark:border-gray-600 bg-white border-gray-200 min-w-0 max-w-full overflow-hidden'
+                          }`}
+                        >
+                          {renderMessageContent(message)}
+                        </div>
+                      </div>
+                    </motion.div>
+                  )
+                })
               )}
             </AnimatePresence>
             <div ref={messagesEndRef} />

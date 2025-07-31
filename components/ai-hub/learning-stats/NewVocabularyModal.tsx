@@ -203,7 +203,7 @@ Respond ONLY with valid JSON in this exact format (no extra text before or after
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4">
       {/* Backdrop */}
       <div 
         className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300"
@@ -213,20 +213,20 @@ Respond ONLY with valid JSON in this exact format (no extra text before or after
       {/* Modal */}
       <div className={`relative w-full max-w-lg transform transition-all duration-300 animate-in fade-in-0 slide-in-from-bottom-4 ${
         darkMode ? 'bg-gray-900 text-gray-100' : 'bg-white text-gray-900'
-      } rounded-2xl shadow-2xl overflow-hidden border ${darkMode ? 'border-gray-700' : 'border-gray-200'} flex flex-col`}>
+      } rounded-lg sm:rounded-2xl shadow-2xl overflow-hidden border ${darkMode ? 'border-gray-700' : 'border-gray-200'} flex flex-col max-h-[95vh] sm:max-h-[90vh]`}>
         
         {/* Header */}
-        <div className={`px-6 py-5 border-b ${darkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-gradient-to-r from-neo-mint/5 to-purist-blue/5'} flex-shrink-0`}>
+        <div className={`px-3 py-3 sm:px-6 sm:py-5 border-b ${darkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-gradient-to-r from-neo-mint/5 to-purist-blue/5'} flex-shrink-0`}>
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-neo-mint to-purist-blue flex items-center justify-center shadow-lg">
-                <i className="fas fa-brain text-white text-lg"></i>
+            <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-gradient-to-r from-neo-mint to-purist-blue flex items-center justify-center shadow-lg">
+                <i className="fas fa-brain text-white text-sm sm:text-lg"></i>
               </div>
-              <div>
-                <h2 className="text-xl font-semibold bg-gradient-to-r from-neo-mint to-purist-blue bg-clip-text text-transparent">
+              <div className="min-w-0 flex-1">
+                <h2 className="text-base sm:text-xl font-semibold bg-gradient-to-r from-neo-mint to-purist-blue bg-clip-text text-transparent truncate">
                   AI Vocabulary Generator
                 </h2>
-                <p className={`text-sm mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                <p className={`text-xs sm:text-sm mt-0.5 sm:mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'} truncate`}>
                   Let AI analyze and create vocabulary entries
                 </p>
               </div>
@@ -235,29 +235,29 @@ Respond ONLY with valid JSON in this exact format (no extra text before or after
               variant="ghost"
               size="icon"
               onClick={onClose}
-              className={`h-9 w-9 rounded-xl transition-all duration-200 ${
+              className={`h-8 w-8 sm:h-9 sm:w-9 rounded-lg sm:rounded-xl transition-all duration-200 flex-shrink-0 ${
                 darkMode ? 'hover:bg-gray-700 text-gray-400 hover:text-white' : 'hover:bg-neo-mint/10 text-gray-500 hover:text-neo-mint'
               }`}
             >
-              <i className="fas fa-times text-lg"></i>
+              <i className="fas fa-times text-sm sm:text-lg"></i>
             </Button>
           </div>
         </div>
 
         {/* Content */}
-        <div className="p-6 space-y-6">
+        <div className="p-3 sm:p-6 space-y-4 sm:space-y-6 flex-1 overflow-y-auto">
           {/* Instructions */}
-          <div className={`p-4 rounded-xl ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-blue-50 border-blue-200'} border`}>
-            <div className="flex items-start space-x-3">
-              <i className={`fas fa-info-circle mt-0.5 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}></i>
-              <div>
-                <h3 className={`font-medium ${darkMode ? 'text-blue-300' : 'text-blue-800'} mb-1`}>
+          <div className={`p-3 sm:p-4 rounded-lg sm:rounded-xl ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-blue-50 border-blue-200'} border`}>
+            <div className="flex items-start space-x-2 sm:space-x-3">
+              <i className={`fas fa-info-circle mt-0.5 text-sm sm:text-base ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}></i>
+              <div className="min-w-0 flex-1">
+                <h3 className={`font-medium text-sm sm:text-base ${darkMode ? 'text-blue-300' : 'text-blue-800'} mb-1`}>
                   How it works
                 </h3>
-                <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-blue-700'}`}>
+                <p className={`text-xs sm:text-sm ${darkMode ? 'text-gray-300' : 'text-blue-700'} mb-2`}>
                   Enter one or multiple English words/phrases. AI will automatically generate:
                 </p>
-                <ul className={`text-sm mt-2 space-y-1 ${darkMode ? 'text-gray-400' : 'text-blue-600'}`}>
+                <ul className={`text-xs sm:text-sm space-y-0.5 sm:space-y-1 ${darkMode ? 'text-gray-400' : 'text-blue-600'}`}>
                   <li>• Vietnamese meaning</li>
                   <li>• Pronunciation (IPA)</li>
                   <li>• English definition</li>
@@ -269,9 +269,9 @@ Respond ONLY with valid JSON in this exact format (no extra text before or after
           </div>
 
           {/* Input */}
-          <div className="space-y-3">
-            <Label htmlFor="vocabulary-input" className="text-sm font-medium flex items-center">
-              <i className="fas fa-keyboard mr-2 text-orange-500"></i>
+          <div className="space-y-2 sm:space-y-3">
+            <Label htmlFor="vocabulary-input" className="text-xs sm:text-sm font-medium flex items-center">
+              <i className="fas fa-keyboard mr-1.5 sm:mr-2 text-orange-500 text-xs sm:text-sm"></i>
               Enter vocabulary words
             </Label>
             <Textarea
@@ -279,12 +279,12 @@ Respond ONLY with valid JSON in this exact format (no extra text before or after
               placeholder="Enter English words or phrases (one per line or separated by commas)&#10;&#10;Examples:&#10;achievement&#10;opportunity, challenge&#10;artificial intelligence"
               value={vocabularyInput}
               onChange={(e) => setVocabularyInput(e.target.value)}
-              rows={6}
-              className={`rounded-xl resize-none ${
+              rows={5}
+              className={`rounded-lg sm:rounded-xl resize-none text-xs sm:text-sm p-3 sm:p-4 min-h-[120px] sm:min-h-[140px] ${
                 darkMode 
                   ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-400' 
                   : 'bg-white border-gray-300'
-              } focus:ring-2 focus:ring-orange-500 focus:border-transparent`}
+              } focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200`}
               disabled={loading}
             />
             <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
@@ -294,38 +294,40 @@ Respond ONLY with valid JSON in this exact format (no extra text before or after
         </div>
 
         {/* Footer */}
-        <div className={`p-6 border-t ${darkMode ? 'border-gray-700' : 'border-orange-200'} flex justify-between items-center flex-shrink-0`}>
-          <div className="flex items-center gap-2">
-            <i className="fas fa-magic text-orange-500"></i>
-            <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+        <div className={`p-3 sm:p-6 border-t ${darkMode ? 'border-gray-700' : 'border-orange-200'} flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-0 flex-shrink-0`}>
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <i className="fas fa-magic text-orange-500 text-xs sm:text-sm"></i>
+            <span className={`text-xs sm:text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
               Powered by Gemini AI
             </span>
           </div>
-          <div className="flex gap-3">
+          <div className="flex gap-2 sm:gap-3 w-full sm:w-auto">
             <Button
               type="button"
               variant="outline"
               onClick={onClose}
               disabled={loading}
-              className={`${darkMode ? 'bg-gray-700 border-gray-600 hover:bg-gray-600' : 'hover:bg-gray-50'}`}
+              className={`flex-1 sm:flex-none h-9 sm:h-10 text-xs sm:text-sm ${darkMode ? 'bg-gray-700 border-gray-600 hover:bg-gray-600' : 'hover:bg-gray-50'}`}
             >
-              <i className="fas fa-times mr-2"></i>
+              <i className="fas fa-times mr-1.5 sm:mr-2 text-xs sm:text-sm"></i>
               Cancel
             </Button>
             <Button
               onClick={handleAddVocabulary}
               disabled={loading || !vocabularyInput.trim()}
-              className="bg-gradient-to-r from-neo-mint to-purist-blue hover:from-neo-mint/80 hover:to-purist-blue/80 text-white transition-all duration-300 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 sm:flex-none h-9 sm:h-10 text-xs sm:text-sm bg-gradient-to-r from-neo-mint to-purist-blue hover:from-neo-mint/80 hover:to-purist-blue/80 text-white transition-all duration-300 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (
                 <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Processing...
+                  <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5 sm:mr-2 animate-spin" />
+                  <span className="hidden xs:inline sm:inline">Processing...</span>
+                  <span className="xs:hidden sm:hidden">...</span>
                 </>
               ) : (
                 <>
-                  <i className="fas fa-brain mr-2"></i>
-                  Generate & Add
+                  <i className="fas fa-brain mr-1.5 sm:mr-2 text-xs sm:text-sm"></i>
+                  <span className="hidden xs:inline">Generate & Add</span>
+                  <span className="xs:hidden">Generate</span>
                 </>
               )}
             </Button>

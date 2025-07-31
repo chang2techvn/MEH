@@ -168,7 +168,7 @@ Make your response visually appealing, educational, and perfectly formatted with
       id: 'Hani-assistant-single',
       name: 'Hani',
       role: 'English Tutor',
-      field: 'English Education',
+      field: 'Assistant',
       description: 'Your personal English learning assistant Hani',
       avatar: 'https://yvsjynosfwyhvisqhasp.supabase.co/storage/v1/object/public/posts/images/825ef58d-31bc-4ad9-9c99-ed7fb15cf8a1.jfif',
       online: true,

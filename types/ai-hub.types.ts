@@ -43,6 +43,9 @@ export interface ChatHistory {
   participants: string[];
   lastMessage: string;
   timestamp: Date;
+  aiId?: string;
+  messageCount?: number;
+  isStarred?: boolean;
 }
 
 export interface LearningStats {
