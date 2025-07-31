@@ -277,8 +277,8 @@ export const GoalProgressModal: React.FC<GoalProgressModalProps> = ({
         onClick={onClose}
       />
       
-      {/* Modal - Ultra compact for mobile */}
-      <div className={`relative w-full max-w-[95vw] sm:max-w-4xl h-[98vh] sm:h-[90vh] transform transition-all duration-300 animate-in fade-in-0 slide-in-from-bottom-4 ${
+      {/* Modal - More compact for mobile */}
+      <div className={`relative w-full max-w-[98vw] sm:max-w-4xl h-[82vh] sm:h-[90vh] transform transition-all duration-300 animate-in fade-in-0 slide-in-from-bottom-4 ${
         darkMode ? 'bg-gray-900 text-gray-100' : 'bg-white text-gray-900'
       } rounded-lg sm:rounded-2xl shadow-2xl overflow-hidden border ${darkMode ? 'border-gray-700' : 'border-gray-200'} flex flex-col`}>
         

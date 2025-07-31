@@ -28,11 +28,12 @@ import { VocabularyModal } from "@/components/ai-hub/learning-stats/VocabularyMo
 import { GoalsListModal } from "@/components/ai-hub/learning-stats/GoalsListModal"
 import { GoalModal } from "@/components/ai-hub/learning-stats/GoalModal"
 import { NewVocabularyModal } from "@/components/ai-hub/learning-stats/NewVocabularyModal"
+import { GoalProgressModal } from "@/components/ai-hub/learning-stats/GoalProgressModal"
 import { useAuthState, useAuthActions } from "@/contexts/auth-context"
 import { useChat } from "@/contexts/chat-context-realtime"
 import { useRouter } from "next/navigation"
 import { AICharacter } from "@/types/ai-hub.types"
-import { LearningGoal } from "@/hooks/use-learning-goals"
+import { LearningGoal, useLearningGoals } from "@/hooks/use-learning-goals"
 
 interface ResourcesMobileBottomNavigationProps {
   isVisible?: boolean
@@ -60,6 +61,8 @@ export function ResourcesMobileBottomNavigation({
   const [newVocabularyModalOpen, setNewVocabularyModalOpen] = useState(false)
   const [goalsListModalOpen, setGoalsListModalOpen] = useState(false)
   const [goalCreateModalOpen, setGoalCreateModalOpen] = useState(false)
+  const [goalProgressModalOpen, setGoalProgressModalOpen] = useState(false)
+  const [selectedGoal, setSelectedGoal] = useState<LearningGoal | null>(null)
   
   // Get dark mode from system or local storage
   const [darkMode, setDarkMode] = useState(false)
@@ -73,6 +76,7 @@ export function ResourcesMobileBottomNavigation({
   const { user, isAuthenticated } = useAuthState()
   const { logout } = useAuthActions()
   const { toggleDropdown, totalUnreadCount, isDropdownOpen } = useChat()
+  const { goals, loading: goalsLoading, createGoal, updateGoalProgress, refetch: refetchGoals } = useLearningGoals()
   const router = useRouter()
   
   const handleMessageClick = () => {
@@ -96,13 +100,35 @@ export function ResourcesMobileBottomNavigation({
     setGoalCreateModalOpen(true)
   }
   
-  const handleGoalClick = (goal: LearningGoal) => {
-    // Handle goal click
-    console.log('Goal clicked:', goal)
+  const handleSaveGoal = async (newGoalData: any) => {
+    try {
+      console.log('Starting to create goal with data:', newGoalData)
+      const result = await createGoal(newGoalData)
+      if (result) {
+        console.log('Goal created successfully:', result)
+        setGoalCreateModalOpen(false)
+        // Force refresh goals list to ensure UI updates
+        await refetchGoals()
+        console.log('Goals list refreshed after creation')
+      } else {
+        console.error('Failed to create goal - no result returned')
+      }
+    } catch (error) {
+      console.error('Error in handleSaveGoal:', error)
+    }
   }
   
-  // Dummy goals data for now - explicitly typed as LearningGoal array
-  const dummyGoals: LearningGoal[] = []
+  const handleGoalClick = (goal: LearningGoal) => {
+    // Mở GoalProgressModal nếu goal chưa complete
+    if (goal.current < goal.target) {
+      setSelectedGoal(goal)
+      setGoalProgressModalOpen(true)
+    }
+  }
+  
+  const handleGoalProgress = async (goalId: string, progressData: any) => {
+    await updateGoalProgress(goalId, progressData)
+  }
 
   const handleAISelectionClick = () => {
     setAISelectionModalOpen(true)
@@ -459,7 +485,8 @@ export function ResourcesMobileBottomNavigation({
         isOpen={goalsListModalOpen}
         onClose={() => setGoalsListModalOpen(false)}
         darkMode={darkMode}
-        goals={dummyGoals}
+        goals={goals}
+        loading={goalsLoading}
         onCreateNew={handleCreateNewGoal}
         onGoalClick={handleGoalClick}
       />
@@ -468,10 +495,7 @@ export function ResourcesMobileBottomNavigation({
       <GoalModal
         isOpen={goalCreateModalOpen}
         onClose={() => setGoalCreateModalOpen(false)}
-        onSave={(goal) => {
-          console.log('Goal saved:', goal)
-          setGoalCreateModalOpen(false)
-        }}
+        onSave={handleSaveGoal}
         darkMode={darkMode}
       />
 
@@ -484,6 +508,18 @@ export function ResourcesMobileBottomNavigation({
           console.log('New vocabulary created successfully')
           setNewVocabularyModalOpen(false)
         }}
+      />
+
+      {/* Goal Progress Modal */}
+      <GoalProgressModal
+        isOpen={goalProgressModalOpen}
+        onClose={() => {
+          setGoalProgressModalOpen(false)
+          setSelectedGoal(null)
+        }}
+        darkMode={darkMode}
+        goal={selectedGoal}
+        onProgress={handleGoalProgress}
       />
     </>
   )

@@ -209,7 +209,7 @@ export const GoalModal: React.FC<GoalModalProps> = ({ isOpen, onClose, darkMode,
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
               onKeyPress={(e) => handleKeyPress(e, 'title')}
               placeholder="e.g., Learn 50 new words this week"
-              className={`h-9 sm:h-10 text-xs sm:text-sm ${
+              className={`h-9 sm:h-10 text-xs sm:text-sm placeholder:text-xs sm:placeholder:text-sm ${
                 darkMode ? 'bg-gray-800 border-gray-600' : 'border-gray-300'
               } transition-all duration-200 ${
                 errors.title ? 'border-red-500 bg-red-50 dark:bg-red-900/20' : ''
@@ -239,7 +239,7 @@ export const GoalModal: React.FC<GoalModalProps> = ({ isOpen, onClose, darkMode,
                 placeholder="50"
                 min="1"
                 max="10000"
-                className={`pr-12 sm:pr-16 h-9 sm:h-10 text-xs sm:text-sm ${
+                className={`pr-12 sm:pr-16 h-9 sm:h-10 text-xs sm:text-sm placeholder:text-xs sm:placeholder:text-sm ${
                   darkMode ? 'bg-gray-800 border-gray-600' : 'border-gray-300'
                 } transition-all duration-200 ${
                   errors.target ? 'border-red-500 bg-red-50 dark:bg-red-900/20' : ''

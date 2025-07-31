@@ -96,7 +96,7 @@ export const VocabularyList = forwardRef<VocabularyListRef, VocabularyListProps>
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search..."
-                className={`w-full pl-7 sm:pl-10 h-7 sm:h-10 rounded-md sm:rounded-xl text-xs sm:text-sm transition-none ${
+                className={`w-full pl-7 sm:pl-10 h-7 sm:h-10 rounded-md sm:rounded-xl text-xs sm:text-sm placeholder:text-xs sm:placeholder:text-sm transition-none ${
                   darkMode 
                     ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-400' 
                     : 'bg-white border-gray-300'

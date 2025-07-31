@@ -101,7 +101,7 @@ export const VocabularyInputForm: React.FC<VocabularyInputFormProps> = ({
             }}
             onKeyPress={(e) => handleKeyPress(e, 'word')}
             placeholder="Enter word..."
-            className={`h-8 sm:h-10 text-xs sm:text-sm ${
+            className={`h-8 sm:h-10 text-xs sm:text-sm placeholder:text-xs sm:placeholder:text-sm ${
               darkMode 
                 ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-400' 
                 : 'bg-white border-gray-300'
@@ -127,7 +127,7 @@ export const VocabularyInputForm: React.FC<VocabularyInputFormProps> = ({
             }}
             onKeyPress={(e) => handleKeyPress(e, 'meaning')}
             placeholder="Enter meaning..."
-            className={`h-8 sm:h-10 text-xs sm:text-sm ${
+            className={`h-8 sm:h-10 text-xs sm:text-sm placeholder:text-xs sm:placeholder:text-sm ${
               darkMode 
                 ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-400' 
                 : 'bg-white border-gray-300'

@@ -109,7 +109,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <div className="relative group">
                 <Input
                   placeholder="Tìm kiếm AI..."
-                  className={`pl-10 pr-4 text-sm h-10 ${darkMode ? 'bg-gray-700/50 border-gray-600 focus:bg-gray-700' : 'bg-gray-50 border-gray-200 focus:bg-white'} transition-all duration-300 rounded-xl`}
+                  className={`pl-10 pr-4 text-sm placeholder:text-xs sm:placeholder:text-sm h-10 ${darkMode ? 'bg-gray-700/50 border-gray-600 focus:bg-gray-700' : 'bg-gray-50 border-gray-200 focus:bg-white'} transition-all duration-300 rounded-xl`}
                 />
                 <i className="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-neo-mint transition-colors duration-200 text-sm"></i>
               </div>

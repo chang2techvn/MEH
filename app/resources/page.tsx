@@ -771,7 +771,7 @@ export default function ResourcesPage() {
         <div className="w-full max-w-none px-1 sm:px-2 md:px-4 lg:px-6 xl:px-8 2xl:px-12 py-2 sm:py-4 lg:py-6">
           <div className={`flex h-[calc(100vh-80px)] sm:h-[calc(100vh-100px)] lg:h-[calc(100vh-120px)] overflow-hidden ${darkMode ? 'bg-gray-900 text-gray-100' : 'bg-gray-50 text-gray-800'} rounded-xl shadow-sm`}>  
       {/* Sidebar dạng trượt cho mobile/tablet */}
-      <div className={`lg:hidden fixed inset-0 z-50 ${isSidebarOpen ? '' : 'pointer-events-none'}`}>
+      <div className={`lg:hidden fixed inset-0 z-[70] ${isSidebarOpen ? '' : 'pointer-events-none'}`}>
         {/* Overlay mờ */}
         <div 
           className={`absolute inset-0 bg-black/40 transition-opacity duration-300 ${isSidebarOpen ? 'opacity-100' : 'opacity-0'}`}
@@ -1231,7 +1231,7 @@ export default function ResourcesPage() {
         )}
         
         {/* Mobile Chat Input - positioned above bottom navigation */}
-        <div className="lg:hidden fixed bottom-20 left-0 right-0 z-50 mx-4">
+        <div className="lg:hidden fixed bottom-20 left-0 right-0 z-40 mx-4">
           <div className="relative">
             <Input
               value={inputMessage}
@@ -1256,8 +1256,9 @@ export default function ResourcesPage() {
                        "Type your message...")
               }
               disabled={selectedAIs.length === 0 ? singleChatProcessing : (isProcessing && !isAutoInteracting)}
+              style={{ fontSize: '16px' }} // Prevent zoom on mobile
               className={`
-                w-full h-10 pl-10 pr-16 text-sm rounded-full
+                w-full h-10 pl-10 pr-16 text-sm lg:text-sm rounded-full
                 backdrop-blur-xl bg-white/5 dark:bg-black/5
                 border border-white/15 dark:border-white/8
                 shadow-2xl shadow-black/10 dark:shadow-black/30
@@ -1269,6 +1270,7 @@ export default function ResourcesPage() {
                 transition-all duration-300 ease-out
                 hover:bg-white/6 dark:hover:bg-black/6
                 hover:border-white/20 dark:hover:border-white/12
+                [font-size:16px] lg:[font-size:0.875rem]
               `}
             />
             

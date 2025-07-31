@@ -586,3 +586,107 @@ button:active {
     background-color: unset !important;
   }
 }
+
+/* Prevent zoom on input focus for mobile and optimize text sizes */
+@media screen and (max-width: 768px) {
+  input, textarea, select {
+    font-size: 16px !important;
+  }
+  
+  /* Optimize input text size for better mobile UX */
+  input[type="text"], 
+  input[type="email"], 
+  input[type="password"], 
+  input[type="number"], 
+  input[type="search"],
+  textarea {
+    font-size: 14px !important;
+  }
+  
+  /* Smaller placeholder text on mobile */
+  input::placeholder,
+  textarea::placeholder {
+    font-size: 13px !important;
+  }
+  
+  /* Specific styling for modal inputs */
+  .modal input,
+  [role="dialog"] input,
+  .fixed input {
+    font-size: 14px !important;
+  }
+  
+  .modal input::placeholder,
+  [role="dialog"] input::placeholder,
+  .fixed input::placeholder {
+    font-size: 12px !important;
+  }
+}
+
+/* Tablet responsive adjustments */
+@media screen and (min-width: 769px) and (max-width: 1024px) {
+  input, textarea, select {
+    font-size: 15px !important;
+  }
+  
+  input::placeholder,
+  textarea::placeholder {
+    font-size: 14px !important;
+  }
+}
+
+/* Desktop/Laptop - maintain normal sizes */
+@media screen and (min-width: 1025px) {
+  input, textarea, select {
+    font-size: inherit !important;
+  }
+  
+  input::placeholder,
+  textarea::placeholder {
+    font-size: inherit !important;
+  }
+}
+
+/* Mobile-specific input optimizations for UI components */
+@media screen and (max-width: 768px) {
+  /* Tailwind Input component overrides */
+  .relative input,
+  .space-y-2 input,
+  .space-y-3 input,
+  .flex input {
+    font-size: 14px !important;
+  }
+  
+  .relative input::placeholder,
+  .space-y-2 input::placeholder,
+  .space-y-3 input::placeholder,
+  .flex input::placeholder {
+    font-size: 12px !important;
+  }
+  
+  /* Search inputs */
+  input[placeholder*="Search"],
+  input[placeholder*="search"],
+  input[placeholder*="Tìm"] {
+    font-size: 14px !important;
+  }
+  
+  input[placeholder*="Search"]::placeholder,
+  input[placeholder*="search"]::placeholder,
+  input[placeholder*="Tìm"]::placeholder {
+    font-size: 12px !important;
+  }
+  
+  /* Form inputs in modals */
+  .rounded-lg input,
+  .rounded-xl input,
+  .border input {
+    font-size: 14px !important;
+  }
+  
+  .rounded-lg input::placeholder,
+  .rounded-xl input::placeholder,
+  .border input::placeholder {
+    font-size: 12px !important;
+  }
+}

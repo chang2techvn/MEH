@@ -15,6 +15,7 @@ interface GoalsListModalProps {
   onClose: () => void;
   darkMode: boolean;
   goals: LearningGoal[];
+  loading?: boolean;
   onCreateNew: () => void;
   onGoalClick: (goal: LearningGoal) => void;
 }
@@ -24,6 +25,7 @@ export const GoalsListModal: React.FC<GoalsListModalProps> = ({
   onClose, 
   darkMode, 
   goals,
+  loading = false,
   onCreateNew,
   onGoalClick
 }) => {
@@ -90,7 +92,12 @@ export const GoalsListModal: React.FC<GoalsListModalProps> = ({
                   Learning Goals
                 </h2>
                 <p className={`text-xs sm:text-sm mt-0.5 sm:mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'} truncate`}>
-                  Manage and track your learning objectives
+                  {loading ? 'Loading goals...' : `${goals.length} goals • Manage and track your learning objectives`}
+                  {loading && (
+                    <span className="ml-2 inline-flex items-center">
+                      <i className="fas fa-sync-alt fa-spin text-xs"></i>
+                    </span>
+                  )}
                 </p>
               </div>
             </div>
@@ -127,7 +134,7 @@ export const GoalsListModal: React.FC<GoalsListModalProps> = ({
                 placeholder="Search goals by title or description..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className={`pl-8 sm:pl-10 h-9 sm:h-10 rounded-lg sm:rounded-xl border text-xs sm:text-sm ${
+                className={`pl-8 sm:pl-10 h-9 sm:h-10 rounded-lg sm:rounded-xl border text-xs sm:text-sm placeholder:text-xs sm:placeholder:text-sm ${
                   darkMode ? 'bg-gray-800 border-gray-600 focus:border-orange-500' : 'border-gray-300 focus:border-orange-500'
                 } focus:ring-2 focus:ring-orange-500/20 transition-all duration-200`}
               />
@@ -225,7 +232,17 @@ export const GoalsListModal: React.FC<GoalsListModalProps> = ({
 
         {/* Goals List */}
         <div className="flex-1 overflow-y-auto p-3 sm:p-5 min-h-0">
-          {filteredGoals.length === 0 ? (
+          {loading ? (
+            <div className={`text-center py-8 sm:py-12 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+              <i className="fas fa-spinner fa-spin text-2xl sm:text-3xl mb-3 opacity-50"></i>
+              <h3 className="text-base sm:text-lg font-medium mb-2">
+                Loading your goals...
+              </h3>
+              <p className="text-xs sm:text-sm">
+                Please wait while we fetch your learning goals
+              </p>
+            </div>
+          ) : filteredGoals.length === 0 ? (
             <div className={`text-center py-8 sm:py-12 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
               <i className="fas fa-search text-2xl sm:text-3xl mb-3 opacity-50"></i>
               <h3 className="text-base sm:text-lg font-medium mb-2">

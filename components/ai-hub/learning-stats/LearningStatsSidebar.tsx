@@ -438,6 +438,7 @@ export const LearningStatsSidebar: React.FC<LearningStatsSidebarProps> = ({
         onClose={() => setIsGoalsListModalOpen(false)}
         darkMode={darkMode}
         goals={goals}
+        loading={goalsLoading}
         onCreateNew={handleCreateNewGoal}
         onGoalClick={handleGoalClickFromList}
       />

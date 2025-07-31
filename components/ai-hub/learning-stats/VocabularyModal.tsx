@@ -354,7 +354,7 @@ export const VocabularyModal: React.FC<VocabularyModalProps> = ({
                 placeholder="Search vocabulary..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className={`pl-8 h-8 sm:h-10 rounded-lg text-xs sm:text-sm ${darkMode ? 'bg-gray-700 border-gray-600 focus:ring-purist-blue' : 'bg-gray-50 border-gray-200 focus:ring-neo-mint'} transition-all duration-200`}
+                className={`pl-8 h-8 sm:h-10 rounded-lg text-xs sm:text-sm placeholder:text-xs sm:placeholder:text-sm ${darkMode ? 'bg-gray-700 border-gray-600 focus:ring-purist-blue' : 'bg-gray-50 border-gray-200 focus:ring-neo-mint'} transition-all duration-200`}
               />
               <i className="fas fa-search absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs"></i>
             </div>
