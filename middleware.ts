@@ -8,27 +8,54 @@ export async function middleware(request: NextRequest) {
   // Create a Supabase client configured to use cookies
   const supabase = createMiddlewareClient({ req: request, res })
 
-  // Refresh session if expired - required for Server Components
-  const { data: { session } } = await supabase.auth.getSession()
-  // Protected routes that require authentication
-  const protectedRoutes = [
-    '/profile',
-    '/admin',
-    '/groups/create',
-    '/messages'
-  ]
+  let session = null
+  
+  try {
+    // Refresh session if expired - required for Server Components
+    const { data, error } = await supabase.auth.getSession()
+    session = data.session
+    
+    // Protected routes that require authentication
+    // Note: /profile is handled by client-side auth like /resources
+    const protectedRoutes = [
+      '/admin',
+      '/groups/create', 
+      '/messages'
+    ]
 
-  // Check if the current path is protected
-  const isProtectedRoute = protectedRoutes.some(route => 
-    request.nextUrl.pathname.startsWith(route)
-  )
+    // Check if the current path is protected
+    const isProtectedRoute = protectedRoutes.some(route => 
+      request.nextUrl.pathname.startsWith(route)
+    )
 
-  // Redirect to login if accessing protected route without session
-  if (isProtectedRoute && !session) {
-    const redirectUrl = new URL('/auth/login', request.url)
-    redirectUrl.searchParams.set('redirect', request.nextUrl.pathname)
-    return NextResponse.redirect(redirectUrl)
+    // For protected routes, be more lenient with session checking
+    if (isProtectedRoute) {
+      // Check if we have any auth-related cookies at all
+      const authCookies = request.cookies.getAll().filter(cookie => 
+        cookie.name.includes('auth') || 
+        cookie.name.includes('supabase') ||
+        cookie.name.startsWith('sb-')
+      )
+      
+      // Only redirect if there's no session AND no auth cookies
+      if (!session && authCookies.length === 0) {
+        console.log(`🚫 Redirecting ${request.nextUrl.pathname} - no session and no auth cookies`)
+        const redirectUrl = new URL('/auth/login', request.url)
+        redirectUrl.searchParams.set('redirect', request.nextUrl.pathname)
+        return NextResponse.redirect(redirectUrl)
+      }
+      
+      // If we have auth cookies but no session, let the request through
+      // The client-side context will handle the authentication
+      if (!session && authCookies.length > 0) {
+        console.log(`⏳ Allowing ${request.nextUrl.pathname} - auth cookies present, letting client handle auth`)
+      }
+    }
+  } catch (error) {
+    console.error('🚨 Middleware error:', error)
+    // On error, let the request through and let client handle auth
   }
+  
   // Admin routes - additional check for admin role
   if (request.nextUrl.pathname.startsWith('/admin') && session) {
     try {

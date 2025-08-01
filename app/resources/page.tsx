@@ -134,7 +134,7 @@ export default function ResourcesPage() {
   const [isStatsDesktopCollapsed, setIsStatsDesktopCollapsed] = useState(false); // desktop: thu nhỏ stats sidebar
   const [selectedAIs, setSelectedAIs] = useState<string[]>([]);
   const [inputMessage, setInputMessage] = useState(''); // State for mobile input
-  const [activeFilter, setActiveFilter] = useState('Tất cả');
+  const [activeFilter, setActiveFilter] = useState('All');
   const { theme, updateTheme } = useTheme();
   const isDarkMode = theme.mode === 'dark';
   const toggleDarkMode = () => updateTheme({ mode: isDarkMode ? 'light' : 'dark' });

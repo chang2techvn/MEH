@@ -17,7 +17,6 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AICard } from './AICard';
 import { ChatHistoryItem } from './ChatHistoryItem';
-import { fields } from '@/lib/ai-hub-data';
 import { useChatSessions } from '@/hooks/use-chat-sessions';
 import { AICharacter } from '@/types/ai-hub.types';
 
@@ -54,13 +53,77 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const { sessions, loading: sessionsLoading, error: sessionsError } = useChatSessions();
   
-  const filteredAIs = activeFilter === 'Tất cả'
+  // Get available fields from aiCharacters data
+  const getAvailableFields = (): string[] => {
+    const fields = ['All'];
+    const uniqueFields = [...new Set(aiCharacters.map(ai => ai.field).filter(Boolean))];
+    
+    // Apply the same mapping as in the hook - using English categories
+    const fieldMapping: { [key: string]: string } = {
+      'Comedy & Entertainment': 'Entertainment',
+      'Comedy & Film Production': 'Entertainment',
+      'Entertainment & Film Direction': 'Entertainment',
+      'Hip-hop & Music': 'Music',
+      'K-pop & Music Production': 'Music',
+      'Music & Creative Arts': 'Music',
+      'Music & Emotional Expression': 'Music',
+      'Science Fiction & Education': 'Education',
+      'Politics & International Relations': 'Politics',
+      'Technology': 'Technology',
+      'Business': 'Business',
+      'Education': 'Education',
+      'Healthcare': 'Healthcare',
+      'Travel': 'Travel',
+      'Cooking': 'Food & Cooking',
+      'Food': 'Food & Cooking'
+    };
+    
+    const simplifiedFields = uniqueFields.map(field => fieldMapping[field] || field);
+    const uniqueSimplifiedFields = [...new Set(simplifiedFields)];
+    
+    return [...fields, ...uniqueSimplifiedFields.sort()];
+  };
+
+  const availableFields = getAvailableFields();
+  
+  // Debug: log available fields and filtering
+  console.log('🎯 Available fields:', availableFields);
+  console.log('🎯 Active filter:', activeFilter);
+  console.log('🎯 AI characters count:', aiCharacters.length);
+
+  // Create field mapping for filtering
+  const fieldMapping: { [key: string]: string } = {
+    'Comedy & Entertainment': 'Entertainment',
+    'Comedy & Film Production': 'Entertainment',
+    'Entertainment & Film Direction': 'Entertainment',
+    'Hip-hop & Music': 'Music',
+    'K-pop & Music Production': 'Music',
+    'Music & Creative Arts': 'Music',
+    'Music & Emotional Expression': 'Music',
+    'Science Fiction & Education': 'Education',
+    'Politics & International Relations': 'Politics',
+    'Technology': 'Technology',
+    'Business': 'Business',
+    'Education': 'Education',
+    'Healthcare': 'Healthcare',
+    'Travel': 'Travel',
+    'Cooking': 'Food & Cooking',
+    'Food': 'Food & Cooking'
+  };
+
+  const filteredAIs = activeFilter === 'All'
     ? aiCharacters
-    : aiCharacters.filter(ai => ai.field === activeFilter);
+    : aiCharacters.filter(ai => {
+        const simplifiedField = fieldMapping[ai.field] || ai.field;
+        return simplifiedField === activeFilter;
+      });
 
   const getAIById = (id: string) => {
     return aiCharacters.find(ai => ai.id === id);
   };
+
+  // Debug: log filtered AIs
+  console.log('🎯 Filtered AIs:', filteredAIs.length, 'for filter:', activeFilter);
 
   return (
     <div className="relative h-full">
@@ -147,8 +210,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         <i className="fas fa-chevron-down text-gray-400 text-xs flex-shrink-0 group-hover:text-neo-mint transition-colors duration-200"></i>
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" className={`w-[240px] ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} rounded-xl shadow-xl`}>
-                      {fields.map((field) => (
+                                        <DropdownMenuContent align="start" className={`w-[240px] ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} rounded-xl shadow-xl`}>
+                      {availableFields.map((field) => (
                         <DropdownMenuItem
                           key={field}
                           onClick={() => onFilterChange(field)}

@@ -86,6 +86,11 @@ export function useAIAssistants() {
     return aiAssistants.filter(ai => ai.category === category.toLowerCase());
   };
 
+  const getAIsByField = (field: string): AICharacter[] => {
+    if (field === 'Tất cả') return aiAssistants;
+    return aiAssistants.filter(ai => ai.field === field);
+  };
+
   const getAllCategories = (): string[] => {
     const categories = ['Tất cả'];
     const uniqueCategories = [...new Set(aiAssistants.map(ai => ai.category).filter(Boolean))];
@@ -95,6 +100,37 @@ export function useAIAssistants() {
     return [...categories, ...formattedCategories.sort()];
   };
 
+  const getAllFields = (): string[] => {
+    const fields = ['All'];
+    const uniqueFields = [...new Set(aiAssistants.map(ai => ai.field).filter(Boolean))];
+    
+    // Map complex fields to simpler categories
+    const fieldMapping: { [key: string]: string } = {
+      'Comedy & Entertainment': 'Entertainment',
+      'Comedy & Film Production': 'Entertainment',
+      'Entertainment & Film Direction': 'Entertainment',
+      'Hip-hop & Music': 'Music',
+      'K-pop & Music Production': 'Music',
+      'Music & Creative Arts': 'Music',
+      'Music & Emotional Expression': 'Music',
+      'Science Fiction & Education': 'Education',
+      'Politics & International Relations': 'Politics',
+      'Technology': 'Technology',
+      'Business': 'Business',
+      'Education': 'Education',
+      'Healthcare': 'Healthcare',
+      'Travel': 'Travel',
+      'Cooking': 'Food & Cooking',
+      'Food': 'Food & Cooking'
+    };
+    
+    // Apply mapping and get unique simplified fields
+    const simplifiedFields = uniqueFields.map(field => fieldMapping[field] || field);
+    const uniqueSimplifiedFields = [...new Set(simplifiedFields)];
+    
+    return [...fields, ...uniqueSimplifiedFields.sort()];
+  };
+
   return {
     aiAssistants,
     loading,
@@ -102,6 +138,8 @@ export function useAIAssistants() {
     refetch: fetchAIAssistants,
     getAIById,
     getAIsByCategory,
-    getAllCategories
+    getAIsByField,
+    getAllCategories,
+    getAllFields
   };
 }
