@@ -60,7 +60,6 @@ import ProfileLayout from "@/components/profile/profile-layout"
 import FeedPost from "@/components/feed/feed-post"
 import FeedFilter from "@/components/feed/feed-filter"
 import { PostSkeleton } from "@/components/community"
-import AchievementBadge from "@/components/profile/achievement-badge"
 import EmptyState from "@/components/profile/empty-state"
 import { ProfileSkeleton, StatsSkeleton, PostsSkeleton } from "@/components/profile/profile-skeleton"
 import SEOMeta from "@/components/optimized/seo-meta"
@@ -122,7 +121,7 @@ interface UserPost {
   videoEvaluation?: any
   isNew?: boolean
   title?: string
-  ai_evaluation?: string
+  ai_evaluation?: any // Can be JSONB object or string
 }
 
 interface EditProfile {
@@ -172,13 +171,17 @@ export default function ProfilePage() {
     { label: "Level", value: userStats?.level || 1, icon: Award, color: "text-purple-500" }
   ], [userStats])
   
-  // Debug log
-  console.log('🎯 Rendering statsCards with:', {
-    isLoadingStats,
-    hasUserStats: !!userStats,
-    userStats,
-    statsCards: statsCards.map(card => ({ label: card.label, value: card.value }))
-  })
+  // Debug log - only when necessary
+  // console.log('🎯 Rendering statsCards with:', {
+  //   isLoadingStats,
+  //   hasUserStats: !!userStats,
+  //   userStats,
+  //   statsCards: statsCards.map(card => ({ label: card.label, value: card.value }))
+  // })
+
+  // Only log once when data changes
+  const [lastLoggedFilter, setLastLoggedFilter] = useState('')
+  const [lastLoggedPostsCount, setLastLoggedPostsCount] = useState(0)
 
   // Handle authentication redirect with enhanced logic like resources route
   useEffect(() => {
@@ -263,15 +266,39 @@ export default function ProfilePage() {
       return
     }
 
+    // Only log when filter or posts count changes
+    if (activeFilter !== lastLoggedFilter || userPosts.length !== lastLoggedPostsCount) {
+      console.log('🔍 Filtering posts:', {
+        totalPosts: userPosts.length,
+        activeFilter,
+        searchQuery,
+        samplePost: userPosts[0] ? {
+          id: userPosts[0].id,
+          mediaType: userPosts[0].mediaType,
+          mediaUrl: userPosts[0].mediaUrl,
+          mediaUrls: userPosts[0].mediaUrls,
+          hasAiEvaluation: !!userPosts[0].ai_evaluation,
+          aiEvaluationType: typeof userPosts[0].ai_evaluation
+        } : null
+      })
+      setLastLoggedFilter(activeFilter)
+      setLastLoggedPostsCount(userPosts.length)
+    }
+
     let filtered = [...userPosts]
 
     // Search by content or title
     if (searchQuery) {
       filtered = filtered.filter(post => {
         const searchLower = searchQuery.toLowerCase()
+        // Handle ai_evaluation as object (JSONB) for search
+        const aiEvaluationText = post.ai_evaluation && typeof post.ai_evaluation === 'object' 
+          ? JSON.stringify(post.ai_evaluation).toLowerCase()
+          : (post.ai_evaluation || '').toString().toLowerCase()
+        
         return (
           post.content?.toLowerCase().includes(searchLower) ||
-          post.ai_evaluation?.toLowerCase().includes(searchLower) ||
+          aiEvaluationText.includes(searchLower) ||
           post.title?.toLowerCase().includes(searchLower)
         )
       })
@@ -279,31 +306,54 @@ export default function ProfilePage() {
 
     // Filter by category
     if (activeFilter && activeFilter !== 'All') {
+      console.log(`🎯 Applying filter: ${activeFilter}`)
+      
       if (activeFilter === 'With AI') {
-        filtered = filtered.filter(post => post.ai_evaluation)
+        const aiPosts = filtered.filter(post => {
+          // Check if ai_evaluation has actual data (not null, not empty string, not empty object)
+          const hasAI = post.ai_evaluation && 
+                       post.ai_evaluation !== '' &&
+                       (typeof post.ai_evaluation === 'object' ? 
+                         Object.keys(post.ai_evaluation).length > 0 : 
+                         post.ai_evaluation.toString().trim() !== '')
+          console.log(`Post ${post.id}: hasAI=${hasAI}, ai_evaluation type:`, typeof post.ai_evaluation)
+          return hasAI
+        })
+        console.log(`With AI filter: ${aiPosts.length} posts found`)
+        filtered = aiPosts
       } else if (activeFilter === 'Videos') {
-        filtered = filtered.filter(post => 
-          post.mediaType === 'video' || 
-          post.mediaType === 'youtube' ||
-          post.mediaUrl?.includes('video') || 
-          post.mediaUrls?.some((url: string) => url.includes('video'))
-        )
+        const videoPosts = filtered.filter(post => {
+          // Filter by post_type = 'video' (from database post_type column)
+          const isVideo = post.mediaType === 'video' || post.mediaType === 'youtube'
+          console.log(`Post ${post.id}: isVideo=${isVideo}, mediaType=${post.mediaType}`)
+          return isVideo
+        })
+        console.log(`Videos filter: ${videoPosts.length} posts found`)
+        filtered = videoPosts
       } else if (activeFilter === 'Images') {
-        filtered = filtered.filter(post => 
-          post.mediaType === 'image' ||
-          post.mediaUrl?.includes('image') || 
-          post.mediaUrls?.some((url: string) => url.includes('image'))
-        )
+        const imagePosts = filtered.filter(post => {
+          // Filter by post_type = 'image' (from database post_type column) 
+          const isImage = post.mediaType === 'image'
+          console.log(`Post ${post.id}: isImage=${isImage}, mediaType=${post.mediaType}`)
+          return isImage
+        })
+        console.log(`Images filter: ${imagePosts.length} posts found`)
+        filtered = imagePosts
       } else if (activeFilter === 'Text Only') {
-        filtered = filtered.filter(post => 
-          post.mediaType === 'text' || 
-          (!post.mediaUrl && (!post.mediaUrls || post.mediaUrls.length === 0))
-        )
+        const textPosts = filtered.filter(post => {
+          // Filter by post_type = null or 'text' (from database post_type column)
+          const isTextOnly = post.mediaType === 'text'
+          console.log(`Post ${post.id}: isTextOnly=${isTextOnly}, mediaType=${post.mediaType}`)
+          return isTextOnly
+        })
+        console.log(`Text Only filter: ${textPosts.length} posts found`)
+        filtered = textPosts
       }
     }
 
+    console.log(`🎯 Final filtered posts: ${filtered.length}`)
     setFilteredPosts(filtered)
-  }, [searchQuery, activeFilter, userPosts])
+  }, [searchQuery, activeFilter, userPosts, lastLoggedFilter, lastLoggedPostsCount])
 
   // Initialize edit form when user data is available
   useEffect(() => {
@@ -472,7 +522,7 @@ export default function ProfilePage() {
       const { data: posts, error: postsError } = await supabase
         .rpc('get_user_posts', { 
           user_id_param: user.id, 
-          posts_limit: 10 
+          posts_limit: 50 
         })
 
       if (postsError) throw postsError
@@ -485,33 +535,46 @@ export default function ProfilePage() {
         // Calculate time ago using helper function
         const timeAgo = formatTimeAgo(post.created_at)
 
-        // Determine media type (copy logic from community)
+        // Determine media type based on post_type and content
         let mediaType: 'image' | 'video' | 'youtube' | 'text' | 'ai-submission' = 'text'
         
-        // Check for YouTube
+        // Parse media_urls if it exists (from database it might be JSON string)
+        let mediaUrlsArray: string[] = []
+        if (post.media_urls) {
+          try {
+            mediaUrlsArray = typeof post.media_urls === 'string' 
+              ? JSON.parse(post.media_urls) 
+              : post.media_urls
+          } catch (e) {
+            console.warn('Failed to parse media_urls:', post.media_urls)
+            mediaUrlsArray = []
+          }
+        } else if (post.media_url) {
+          mediaUrlsArray = [post.media_url]
+        }
+        
+        // Check for YouTube first
         const youtubeId = extractYouTubeId(post.content || "")
         if (youtubeId) {
           mediaType = 'youtube'
-        } else if (post.media_url) {
-          // Check if it's a video or image based on URL or post_type
-          if (post.post_type === 'video' || 
-              post.media_url?.includes('video') || 
-              post.media_url?.includes('.mp4') ||
-              post.media_url?.includes('.webm') ||
-              post.media_url?.includes('.mov')) {
-            mediaType = 'video'
-          } else if (post.post_type === 'image' || 
-                    post.media_url?.includes('image') ||
-                    post.media_url?.includes('.jpg') ||
-                    post.media_url?.includes('.jpeg') ||
-                    post.media_url?.includes('.png') ||
-                    post.media_url?.includes('.gif') ||
-                    post.media_url?.includes('.webp')) {
-            mediaType = 'image'
-          }
+        } else if (post.post_type === 'image') {
+          // Image posts - use post_type as definitive source
+          mediaType = 'image'
+        } else if (post.post_type === 'video') {
+          // Video posts - use post_type as definitive source
+          mediaType = 'video'
         } else if (post.post_type === 'challenge' || post.post_type === 'submission') {
           mediaType = 'ai-submission'
+        } else if (post.post_type === null || post.post_type === undefined || post.post_type === 'text' || post.post_type === 'null') {
+          // Text posts - when post_type is null, undefined, 'text', or string 'null'
+          mediaType = 'text'
+        } else {
+          // Fallback to text for other unknown post_types
+          mediaType = 'text'
         }
+
+        // Debug log for media type detection
+        console.log(`📊 Post ${post.id}: post_type="${post.post_type}" (${typeof post.post_type}), ai_evaluation=${!!post.ai_evaluation}, mediaType="${mediaType}"`)
 
         return {
           id: post.id,
@@ -521,15 +584,27 @@ export default function ProfilePage() {
           content: post.content || '',
           mediaType,
           mediaUrl: post.media_url,
-          mediaUrls: post.media_url ? [post.media_url] : [],
+          mediaUrls: mediaUrlsArray, // Use the parsed array
           youtubeVideoId: youtubeId,
           textContent: mediaType === "text" ? post.content : undefined,
           likes: post.likes_count || 0,
           comments: post.comments_count || 0,
           title: post.title,
-          ai_evaluation: null, // Skip heavy JSON for now
-          submission: undefined, // Skip for performance
-          videoEvaluation: undefined, // Skip for performance
+          ai_evaluation: post.ai_evaluation, // Now available from RPC function
+          submission: post.ai_evaluation || post.score ? {
+            type: mediaType === 'video' ? 'video' : 'text',
+            content: post.content || "",
+            difficulty: "intermediate",
+            topic: "pronunciation"
+          } : undefined,
+          videoEvaluation: post.ai_evaluation ? {
+            overallScore: post.score || 0,
+            pronunciation: post.ai_evaluation.pronunciation || {},
+            grammar: post.ai_evaluation.grammar || {},
+            vocabulary: post.ai_evaluation.vocabulary || {},
+            fluency: post.ai_evaluation.fluency || {},
+            feedback: post.ai_evaluation.feedback || "Analysis complete"
+          } : undefined,
           isNew: false
         }
       }) || [])
@@ -554,10 +629,10 @@ export default function ProfilePage() {
     }
   }, [user?.id]) // Only depend on user.id, not the callback functions
 
-  // Debug state changes
+  // Debug log - only log when stats actually change
   useEffect(() => {
-    console.log('🐛 State Debug - isLoadingStats:', isLoadingStats, 'userStats:', userStats)
-  }, [isLoadingStats, userStats])
+    console.log('🐛 State Debug - isLoadingStats:', isLoadingStats, 'userStats level:', userStats?.level, 'totalPosts:', userStats?.totalPosts)
+  }, [isLoadingStats, userStats?.level, userStats?.totalPosts]) // Only depend on specific values
 
   // Handle avatar upload
   const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -1085,12 +1160,9 @@ export default function ProfilePage() {
             className="mt-8"
           >
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid w-full grid-cols-3 bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm">
+              <TabsList className="grid w-full grid-cols-2 bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm">
                 <TabsTrigger value="posts" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-neo-mint data-[state=active]:to-purist-blue data-[state=active]:text-white">
                   Posts
-                </TabsTrigger>
-                <TabsTrigger value="achievements" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-neo-mint data-[state=active]:to-purist-blue data-[state=active]:text-white">
-                  Achievements
                 </TabsTrigger>
                 <TabsTrigger value="activity" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-neo-mint data-[state=active]:to-purist-blue data-[state=active]:text-white">
                   Activity
@@ -1186,37 +1258,6 @@ export default function ProfilePage() {
                     />
                   )}
                 </div>
-              </TabsContent>
-
-              {/* Achievements Tab */}
-              <TabsContent value="achievements" className="mt-6">
-                <Card className="border-none shadow-lg bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Trophy className="h-5 w-5 text-amber-500" />
-                      Achievements & Badges
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                      {/* Achievement Badges */}
-                      {[
-                        { title: "First Post", description: "Created your first post", earned: userStats?.totalPosts && userStats.totalPosts > 0, icon: "📝" },
-                        { title: "Social Butterfly", description: "Received 10+ likes", earned: userStats?.totalLikes && userStats.totalLikes >= 10, icon: "💖" },
-                        { title: "Streak Master", description: "7 day learning streak", earned: userStats?.streakDays && userStats.streakDays >= 7, icon: "🔥" },
-                        { title: "Challenge Accepted", description: "Completed 5 challenges", earned: userStats?.completedChallenges && userStats.completedChallenges >= 5, icon: "🎯" },
-                        { title: "Level Up", description: "Reached level 5", earned: userStats?.level && userStats.level >= 5, icon: "⭐" },
-                        { title: "Community Star", description: "100+ total interactions", earned: (userStats?.totalLikes || 0) + (userStats?.totalComments || 0) >= 100, icon: "🌟" }
-                      ].map((achievement, index) => (
-                        <AchievementBadge
-                          key={achievement.title}
-                          achievement={achievement}
-                          index={index}
-                        />
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
               </TabsContent>
 
               {/* Activity Tab */}
