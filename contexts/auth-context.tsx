@@ -12,6 +12,7 @@ export interface User {
   email: string
   name?: string
   avatar?: string
+  background_url?: string
   role?: string
   studentId?: string
   major?: string
@@ -35,14 +36,16 @@ interface AuthStateContextType {
 }
 
 interface AuthActionsContextType {
-  login: (email: string, password: string, remember?: boolean) => Promise<void>
-  register: (name: string, email: string, password: string) => Promise<void>
+  login: (email: string, password: string) => Promise<void>
+  register: (email: string, password: string, name: string) => Promise<void>
   logout: () => Promise<void>
   resetPassword: (email: string) => Promise<void>
   setNewPassword: (token: string, password: string) => Promise<void>
   loginWithGoogle: () => Promise<void>
   loginWithFacebook: () => Promise<void>
   loginWithGitHub: () => Promise<void>
+  updateUser: (userData: Partial<User>) => void
+  refreshUser: () => Promise<void>
 }
 
 // Create separate contexts
@@ -88,8 +91,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
                 email: session.user.email!,
                 name: profileData.full_name || session.user.email?.split('@')[0],
                 avatar: profileData.avatar_url,
+                background_url: profileData.background_url,
                 role: 'MEMBER',
                 bio: profileData.bio,
+                level: profileData.level || 1,
+                streakDays: profileData.streak_days || 0,
+                experiencePoints: profileData.experience_points || 0,
                 isActive: true,
                 joinedAt: new Date(session.user.created_at),
                 lastActive: new Date(),
@@ -97,6 +104,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
               console.log('🎨 Auth Context - Setting user with avatar:', {
                 name: userData.name,
                 avatar: userData.avatar,
+                level: userData.level,
+                streakDays: userData.streakDays,
                 profileData: profileData
               })
               setUser(userData)
@@ -167,8 +176,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
                 email: session.user.email!,
                 name: profileData.full_name || session.user.email?.split('@')[0],
                 avatar: profileData.avatar_url,
+                background_url: profileData.background_url,
                 role: 'MEMBER',
                 bio: profileData.bio,
+                level: profileData.level || 1,
+                streakDays: profileData.streak_days || 0,
+                experiencePoints: profileData.experience_points || 0,
                 isActive: true,
                 joinedAt: new Date(session.user.created_at),
                 lastActive: new Date(),
@@ -536,6 +549,36 @@ export function AuthProvider({ children }: AuthProviderProps) {
     isAuthenticated: !!user,
   }), [user, isLoading])
 
+  // Update user function
+  const updateUser = useCallback((userData: Partial<User>) => {
+    setUser(prev => prev ? { ...prev, ...userData } : null)
+  }, [])
+
+  const refreshUser = useCallback(async () => {
+    if (!user?.id) return
+
+    try {
+      const { data: profileData, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .single()
+
+      if (profileData && !error) {
+        const updatedUser: User = {
+          ...user,
+          name: profileData.full_name || user.name,
+          avatar: profileData.avatar_url,
+          background_url: profileData.background_url,
+          bio: profileData.bio,
+        }
+        setUser(updatedUser)
+      }
+    } catch (error) {
+      console.error('Error refreshing user data:', error)
+    }
+  }, [user])
+
   const authActions = useMemo(() => ({
     login,
     register,
@@ -545,7 +588,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
     loginWithGoogle,
     loginWithFacebook,
     loginWithGitHub,
-  }), [login, register, logout, resetPassword, setNewPassword, loginWithGoogle, loginWithFacebook, loginWithGitHub])
+    updateUser,
+    refreshUser,
+  }), [login, register, logout, resetPassword, setNewPassword, loginWithGoogle, loginWithFacebook, loginWithGitHub, updateUser, refreshUser])
 
   return (
     <AuthStateContext.Provider value={authState}>

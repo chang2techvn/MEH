@@ -12,6 +12,7 @@ interface EmptyStateProps {
   actionText?: string
   actionUrl?: string
   icon?: React.ReactNode
+  onClick?: () => void
 }
 
 export default function EmptyState({ 
@@ -20,7 +21,8 @@ export default function EmptyState({
   description, 
   actionText, 
   actionUrl,
-  icon 
+  icon,
+  onClick 
 }: EmptyStateProps) {
   const router = useRouter()
 
@@ -40,7 +42,9 @@ export default function EmptyState({
   }
 
   const handleAction = () => {
-    if (actionUrl) {
+    if (onClick) {
+      onClick()
+    } else if (actionUrl) {
       router.push(actionUrl)
     }
   }
@@ -72,7 +76,7 @@ export default function EmptyState({
         {description}
       </motion.p>
 
-      {actionText && actionUrl && (
+      {actionText && (actionUrl || onClick) && (
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}

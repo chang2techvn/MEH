@@ -1068,42 +1068,66 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
+          background_url: string | null
           bio: string | null
+          completed_challenges: number | null
           created_at: string | null
+          experience_points: number | null
           full_name: string | null
           id: string
+          level: number | null
           native_language: string | null
           proficiency_level: string | null
+          streak_days: number | null
           target_language: string | null
           timezone: string | null
+          total_comments: number | null
+          total_likes: number | null
+          total_posts: number | null
           updated_at: string | null
           user_id: string | null
           username: string | null
         }
         Insert: {
           avatar_url?: string | null
+          background_url?: string | null
           bio?: string | null
+          completed_challenges?: number | null
           created_at?: string | null
+          experience_points?: number | null
           full_name?: string | null
           id?: string
+          level?: number | null
           native_language?: string | null
           proficiency_level?: string | null
+          streak_days?: number | null
           target_language?: string | null
           timezone?: string | null
+          total_comments?: number | null
+          total_likes?: number | null
+          total_posts?: number | null
           updated_at?: string | null
           user_id?: string | null
           username?: string | null
         }
         Update: {
           avatar_url?: string | null
+          background_url?: string | null
           bio?: string | null
+          completed_challenges?: number | null
           created_at?: string | null
+          experience_points?: number | null
           full_name?: string | null
           id?: string
+          level?: number | null
           native_language?: string | null
           proficiency_level?: string | null
+          streak_days?: number | null
           target_language?: string | null
           timezone?: string | null
+          total_comments?: number | null
+          total_likes?: number | null
+          total_posts?: number | null
           updated_at?: string | null
           user_id?: string | null
           username?: string | null

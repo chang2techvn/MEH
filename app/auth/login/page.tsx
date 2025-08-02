@@ -39,7 +39,7 @@ export default function LoginPage() {
     e.preventDefault()
 
     try {
-      await login(formData.email, formData.password, formData.rememberMe)
+      await login(formData.email, formData.password)
       // The login function will handle the redirect and toast notification
     } catch (error) {
       // Error is handled in the login function
