@@ -134,14 +134,17 @@ export default function FeedPost({
               title={title}
             />
             
-            <motion.p
-              className="mt-2 text-xs sm:text-base text-gray-800 dark:text-gray-200"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.1 }}
-            >
-              {content.replace(/<[^>]*>/g, '')}
-            </motion.p>
+            {/* Chỉ hiển thị content nếu không phải là text-only post */}
+            {!(mediaType === "text" && textContent) && (
+              <motion.p
+                className="mt-2 text-xs sm:text-base text-gray-800 dark:text-gray-200"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.1 }}
+              >
+                {content.replace(/<[^>]*>/g, '')}
+              </motion.p>
+            )}
 
             <PostMedia
               mediaType={mediaType}

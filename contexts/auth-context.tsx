@@ -17,6 +17,7 @@ export interface User {
   studentId?: string
   major?: string
   academicYear?: string
+  className?: string // Added for class_name from database
   bio?: string
   points?: number
   level?: number
@@ -92,7 +93,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
                 name: profileData.full_name || session.user.email?.split('@')[0],
                 avatar: profileData.avatar_url,
                 background_url: profileData.background_url,
-                role: 'MEMBER',
+                role: profileData.role || 'student',
+                major: profileData.major,
+                academicYear: profileData.academic_year,
+                className: profileData.class_name,
+                studentId: profileData.student_id,
                 bio: profileData.bio,
                 level: profileData.level || 1,
                 streakDays: profileData.streak_days || 0,
@@ -571,8 +576,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
           avatar: profileData.avatar_url,
           background_url: profileData.background_url,
           bio: profileData.bio,
+          role: profileData.role || user.role || 'student',
+          major: profileData.major,
+          academicYear: profileData.academic_year,
+          className: profileData.class_name,
+          studentId: profileData.student_id,
+          level: profileData.level || user.level || 1,
+          streakDays: profileData.streak_days || user.streakDays || 0,
+          experiencePoints: profileData.experience_points || user.experiencePoints || 0,
         }
         setUser(updatedUser)
+        console.log('🔄 User data refreshed with profile:', updatedUser)
       }
     } catch (error) {
       console.error('Error refreshing user data:', error)

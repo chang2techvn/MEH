@@ -5,17 +5,10 @@ import { motion, AnimatePresence } from "framer-motion"
 import { useRouter } from "next/navigation"
 import { toast } from "@/hooks/use-toast"
 import { 
-  User, 
   Camera, 
   Edit3, 
   Save, 
   X, 
-  MapPin, 
-  Calendar, 
-  Trophy, 
-  BookOpen, 
-  MessageCircle,
-  Heart,
   Share2,
   Settings,
   TrendingUp,
@@ -49,7 +42,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
@@ -128,6 +120,11 @@ interface EditProfile {
   name: string
   bio: string
   location: string
+  role?: string
+  major?: string
+  class_name?: string
+  academic_year?: string
+  student_id?: string
 }
 
 export default function ProfilePage() {
@@ -142,7 +139,6 @@ export default function ProfilePage() {
   const [mounted, setMounted] = useState(false) // Add mounted state like resources route
   const [authChecked, setAuthChecked] = useState(false) // New state to track if auth has been thoroughly checked
   const [isEditing, setIsEditing] = useState(false)
-  const [activeTab, setActiveTab] = useState("posts")
   const [userStats, setUserStats] = useState<UserStats | null>(null)
   const [userPosts, setUserPosts] = useState<UserPost[]>([])
   const [filteredPosts, setFilteredPosts] = useState<UserPost[]>([])
@@ -154,22 +150,14 @@ export default function ProfilePage() {
   const [isUploadingBackground, setIsUploadingBackground] = useState(false)
   const [showBackgroundCropper, setShowBackgroundCropper] = useState(false)
   const [selectedBackgroundFile, setSelectedBackgroundFile] = useState<File | null>(null)
+  const [showAvatarCropper, setShowAvatarCropper] = useState(false)
+  const [selectedAvatarFile, setSelectedAvatarFile] = useState<File | null>(null)
   const [isFetchingStats, setIsFetchingStats] = useState(false) // Add flag to prevent multiple calls
   const [editProfile, setEditProfile] = useState<EditProfile>({
     name: '',
     bio: '',
     location: ''
   })
-
-  // Memoize statsCards to avoid recalculation on every render
-  const statsCards = useMemo(() => [
-    { label: "Posts", value: userStats?.totalPosts || 0, icon: BookOpen, color: "text-neo-mint" },
-    { label: "Likes", value: userStats?.totalLikes || 0, icon: Heart, color: "text-rose-500" },
-    { label: "Comments", value: userStats?.totalComments || 0, icon: MessageCircle, color: "text-purist-blue" },
-    { label: "Streak", value: userStats?.streakDays || 0, icon: Trophy, color: "text-amber-500" },
-    { label: "Challenges", value: userStats?.completedChallenges || 0, icon: Target, color: "text-cassis" },
-    { label: "Level", value: userStats?.level || 1, icon: Award, color: "text-purple-500" }
-  ], [userStats])
   
   // Debug log - only when necessary
   // console.log('🎯 Rendering statsCards with:', {
@@ -306,7 +294,7 @@ export default function ProfilePage() {
 
     // Filter by category
     if (activeFilter && activeFilter !== 'All') {
-      console.log(`🎯 Applying filter: ${activeFilter}`)
+      // Reduced logging for better performance
       
       if (activeFilter === 'With AI') {
         const aiPosts = filtered.filter(post => {
@@ -316,37 +304,29 @@ export default function ProfilePage() {
                        (typeof post.ai_evaluation === 'object' ? 
                          Object.keys(post.ai_evaluation).length > 0 : 
                          post.ai_evaluation.toString().trim() !== '')
-          console.log(`Post ${post.id}: hasAI=${hasAI}, ai_evaluation type:`, typeof post.ai_evaluation)
           return hasAI
         })
-        console.log(`With AI filter: ${aiPosts.length} posts found`)
         filtered = aiPosts
       } else if (activeFilter === 'Videos') {
         const videoPosts = filtered.filter(post => {
           // Filter by post_type = 'video' (from database post_type column)
           const isVideo = post.mediaType === 'video' || post.mediaType === 'youtube'
-          console.log(`Post ${post.id}: isVideo=${isVideo}, mediaType=${post.mediaType}`)
           return isVideo
         })
-        console.log(`Videos filter: ${videoPosts.length} posts found`)
         filtered = videoPosts
       } else if (activeFilter === 'Images') {
         const imagePosts = filtered.filter(post => {
           // Filter by post_type = 'image' (from database post_type column) 
           const isImage = post.mediaType === 'image'
-          console.log(`Post ${post.id}: isImage=${isImage}, mediaType=${post.mediaType}`)
           return isImage
         })
-        console.log(`Images filter: ${imagePosts.length} posts found`)
         filtered = imagePosts
       } else if (activeFilter === 'Text Only') {
         const textPosts = filtered.filter(post => {
           // Filter by post_type = null or 'text' (from database post_type column)
           const isTextOnly = post.mediaType === 'text'
-          console.log(`Post ${post.id}: isTextOnly=${isTextOnly}, mediaType=${post.mediaType}`)
           return isTextOnly
         })
-        console.log(`Text Only filter: ${textPosts.length} posts found`)
         filtered = textPosts
       }
     }
@@ -361,7 +341,12 @@ export default function ProfilePage() {
       setEditProfile({
         name: user.name || '',
         bio: user.bio || '',
-        location: ''
+        location: '',
+        role: user.role || '',
+        major: user.major || '',
+        class_name: user.className || '', // Map className to class_name for database
+        academic_year: user.academicYear || '',
+        student_id: user.studentId || ''
       })
     }
   }, [user])
@@ -658,6 +643,14 @@ export default function ProfilePage() {
       return
     }
 
+    // Show cropper dialog
+    setSelectedAvatarFile(file)
+    setShowAvatarCropper(true)
+  }
+
+  const handleAvatarCropComplete = async (croppedBlob: Blob) => {
+    if (!user) return
+
     try {
       setIsUploading(true)
 
@@ -675,14 +668,14 @@ export default function ProfilePage() {
         }
       }
 
-      // Upload to Supabase Storage with organized path
-      const fileExt = file.name.split('.').pop()
+      // Upload cropped image to Supabase Storage
+      const fileExt = selectedAvatarFile?.name.split('.').pop() || 'jpg'
       const fileName = `avatar-${Date.now()}.${fileExt}`
       const filePath = `${user.id}/avatar/${fileName}`
       
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('profile')
-        .upload(filePath, file)
+        .upload(filePath, croppedBlob)
 
       if (uploadError) throw uploadError
 
@@ -719,6 +712,8 @@ export default function ProfilePage() {
       })
     } finally {
       setIsUploading(false)
+      setShowAvatarCropper(false)
+      setSelectedAvatarFile(null)
     }
   }
 
@@ -821,24 +816,47 @@ export default function ProfilePage() {
     if (!user) return
 
     try {
-      const { error } = await supabase
+      console.log('🔄 Updating profile with data:', editProfile)
+      
+      const { data: updatedProfile, error } = await supabase
         .from('profiles')
         .update({
           full_name: editProfile.name,
           bio: editProfile.bio,
-          // Remove major and academic_year as they don't exist in the profiles table
-          // These fields would need to be added to the database schema first
+          role: editProfile.role,
+          major: editProfile.major,
+          class_name: editProfile.class_name,
+          academic_year: editProfile.academic_year,
+          student_id: editProfile.student_id
         })
-        .eq('user_id', user.id) // Changed from 'id' to 'user_id' based on schema
+        .eq('user_id', user.id)
+        .select()
+        .single()
 
-      if (error) throw error
+      if (error) {
+        console.error('Error updating profile:', error)
+        throw error
+      }
+
+      console.log('✅ Profile updated successfully:', updatedProfile)
 
       // Update user context with new data
       if (updateUser) {
         updateUser({
           name: editProfile.name,
-          bio: editProfile.bio
+          bio: editProfile.bio,
+          role: editProfile.role,
+          major: editProfile.major,
+          // Map database fields to user object properties
+          academicYear: editProfile.academic_year,
+          studentId: editProfile.student_id,
+          className: editProfile.class_name
         })
+      }
+
+      // Refresh user data to ensure consistency
+      if (refreshUser) {
+        await refreshUser()
       }
 
       toast({
@@ -848,13 +866,12 @@ export default function ProfilePage() {
       })
 
       setIsEditing(false)
-      // No need to reload - user context will trigger re-render with smooth animation
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating profile:', error)
       toast({
         title: "Update failed",
-        description: "Failed to update profile",
+        description: error.message || "Failed to update profile",
         variant: "destructive"
       })
     }
@@ -919,18 +936,25 @@ export default function ProfilePage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="relative h-64 md:h-80 bg-gradient-to-r from-neo-mint/30 to-purist-blue/30 dark:from-purist-blue/20 dark:to-cassis/20 overflow-hidden"
+          className="relative h-96 md:h-[450px] bg-gradient-to-r from-neo-mint/30 to-purist-blue/30 dark:from-purist-blue/20 dark:to-cassis/20 overflow-hidden mx-8 md:mx-16 lg:mx-24 xl:mx-48 2xl:mx-72 rounded-xl shadow-2xl"
         >
           {/* Background Image */}
           {user?.background_url ? (
-            <div 
-              className="absolute inset-0 bg-cover bg-center"
-              style={{ backgroundImage: `url(${user.background_url})` }}
+            <img 
+              src={user.background_url}
+              alt="Profile background"
+              className="absolute inset-0 w-full h-full object-cover object-center rounded-xl"
+              style={{ 
+                objectFit: 'cover',
+                objectPosition: 'center'
+              }}
+              onLoad={() => console.log('Background image loaded successfully')}
+              onError={(e) => console.error('Background image failed to load:', e)}
             />
           ) : (
-            <div className="absolute inset-0 bg-[url('/placeholder.svg?height=400&width=1200')] bg-cover bg-center opacity-20"></div>
+            <div className="absolute inset-0 bg-[url('/placeholder.svg?height=400&width=1200')] bg-cover bg-center opacity-20 rounded-xl"></div>
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-background to-transparent"></div>
+          <div className="absolute inset-0 bg-gradient-to-t from-background/20 to-transparent rounded-xl"></div>
 
           <div className="absolute top-4 right-4 flex gap-2">
             {/* Upload new background */}
@@ -991,12 +1015,13 @@ export default function ProfilePage() {
           />
         </motion.div>
 
-        <div className="container relative z-10 -mt-20 pb-8 max-w-[600px] xl:max-w-[800px] mx-auto">
+        <div className="relative z-10 -mt-20 pb-8 mx-8 md:mx-16 lg:mx-24 xl:mx-48 2xl:mx-72">
           {/* Profile Info Card */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.1 }}
+            className="max-w-4xl mx-auto"
           >
             <Card className="border-none shadow-2xl bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl">
               <CardContent className="p-6 md:p-8">
@@ -1055,6 +1080,100 @@ export default function ProfilePage() {
                             rows={3}
                           />
                         </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <Label htmlFor="role">Role</Label>
+                            <select
+                              id="role"
+                              value={editProfile.role || ''}
+                              onChange={(e) => setEditProfile(prev => ({ ...prev, role: e.target.value }))}
+                              className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-neo-mint"
+                            >
+                              <option value="">Select Role</option>
+                              <option value="student">Student</option>
+                              <option value="teacher">Teacher</option>
+                              <option value="admin">Admin</option>
+                              <option value="staff">Staff</option>
+                            </select>
+                          </div>
+                          
+                          <div>
+                            <Label htmlFor="academic_year">Academic Year</Label>
+                            <Input
+                              id="academic_year"
+                              value={editProfile.academic_year || ''}
+                              onChange={(e) => setEditProfile(prev => ({ ...prev, academic_year: e.target.value }))}
+                              className="mt-1"
+                              placeholder="e.g., 2024-2025"
+                            />
+                          </div>
+                        </div>
+
+                        {editProfile.role === 'student' && (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                              <Label htmlFor="major">Major</Label>
+                              <Input
+                                id="major"
+                                value={editProfile.major || ''}
+                                onChange={(e) => setEditProfile(prev => ({ ...prev, major: e.target.value }))}
+                                className="mt-1"
+                                placeholder="e.g., Technology"
+                              />
+                            </div>
+                            
+                            <div>
+                              <Label htmlFor="class_name">Class</Label>
+                              <Input
+                                id="class_name"
+                                value={editProfile.class_name || ''}
+                                onChange={(e) => setEditProfile(prev => ({ ...prev, class_name: e.target.value }))}
+                                className="mt-1"
+                                placeholder="e.g., SE07201"
+                              />
+                            </div>
+                          </div>
+                        )}
+
+                        {editProfile.role === 'teacher' && (
+                          <div>
+                            <Label htmlFor="major">Subject</Label>
+                            <Input
+                              id="major"
+                              value={editProfile.major || ''}
+                              onChange={(e) => setEditProfile(prev => ({ ...prev, major: e.target.value }))}
+                              className="mt-1"
+                              placeholder="e.g., English Literature"
+                            />
+                          </div>
+                        )}
+
+                        {editProfile.role === 'staff' && (
+                          <div>
+                            <Label htmlFor="major">Position</Label>
+                            <Input
+                              id="major"
+                              value={editProfile.major || ''}
+                              onChange={(e) => setEditProfile(prev => ({ ...prev, major: e.target.value }))}
+                              className="mt-1"
+                              placeholder="e.g., Academic Coordinator"
+                            />
+                          </div>
+                        )}
+
+                        {editProfile.role === 'student' && (
+                          <div>
+                            <Label htmlFor="student_id">Student ID</Label>
+                            <Input
+                              id="student_id"
+                              value={editProfile.student_id || ''}
+                              onChange={(e) => setEditProfile(prev => ({ ...prev, student_id: e.target.value }))}
+                              className="mt-1"
+                              placeholder="e.g., BC00000"
+                            />
+                          </div>
+                        )}
                         <div className="flex gap-2">
                           <Button onClick={handleProfileUpdate} className="bg-gradient-to-r from-neo-mint to-purist-blue">
                             <Save className="mr-2 h-4 w-4" />
@@ -1066,7 +1185,12 @@ export default function ProfilePage() {
                             setEditProfile({
                               name: user.name || '',
                               bio: user.bio || '',
-                              location: ''
+                              location: '',
+                              role: user.role || '',
+                              major: user.major || '',
+                              class_name: user.className || '', // Map className to class_name for database
+                              academic_year: user.academicYear || '',
+                              student_id: user.studentId || ''
                             })
                           }}>
                             <X className="mr-2 h-4 w-4" />
@@ -1096,6 +1220,49 @@ export default function ProfilePage() {
                         <p className="text-muted-foreground mb-4 max-w-md">
                           {user.bio || "No bio added yet. Click the edit button to add one!"}
                         </p>
+
+                        {/* Profile Information */}
+                        {(user.role || user.major || user.className || user.academicYear || user.studentId) && (
+                          <div className="mb-4 p-3 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 rounded-lg">
+                            <div className="flex items-center gap-2 mb-2">
+                              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Profile Information</h3>
+                              {user.role && (
+                                <Badge variant="secondary" className="capitalize text-xs px-2 py-0.5">
+                                  {user.role}
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+                              {user.academicYear && (
+                                <div className="text-muted-foreground">
+                                  <span className="font-medium">Academic Year:</span> {user.academicYear}
+                                </div>
+                              )}
+                              {user.major && (user.role === 'student' || user.role === 'teacher') && (
+                                <div className="text-muted-foreground">
+                                  <span className="font-medium">
+                                    {user.role === 'teacher' ? 'Subject:' : 'Major:'}
+                                  </span> {user.major}
+                                </div>
+                              )}
+                              {user.major && user.role === 'staff' && (
+                                <div className="text-muted-foreground">
+                                  <span className="font-medium">Position:</span> {user.major}
+                                </div>
+                              )}
+                              {user.className && user.role === 'student' && (
+                                <div className="text-muted-foreground">
+                                  <span className="font-medium">Class:</span> {user.className}
+                                </div>
+                              )}
+                              {user.studentId && user.role === 'student' && (
+                                <div className="text-muted-foreground">
+                                  <span className="font-medium">Student ID:</span> {user.studentId}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
 
                         <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 text-sm text-muted-foreground">
                           <div className="flex items-center gap-1">
@@ -1134,180 +1301,87 @@ export default function ProfilePage() {
             </Card>
           </motion.div>
 
-          {/* Stats Grid */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mt-6"
-          >
-            {statsCards.map((stat, index) => (
-              <Card key={stat.label} className="border-none shadow-lg bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm hover:bg-white/70 dark:hover:bg-gray-900/70 transition-all duration-300">
-                <CardContent className="p-4 text-center">
-                  <stat.icon className={`h-8 w-8 mx-auto mb-2 ${stat.color}`} />
-                  <div className="text-2xl font-bold">{!userStats ? "..." : stat.value}</div>
-                  <div className="text-xs text-muted-foreground">{stat.label}</div>
-                </CardContent>
-              </Card>
-            ))}
-          </motion.div>
-
-          {/* Content Tabs */}
+          {/* Content Section - Only Posts */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.3 }}
-            className="mt-8"
+            className="mt-8 mx-8 md:mx-16 lg:mx-24 xl:mx-48 2xl:mx-72"
           >
-            <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid w-full grid-cols-2 bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm">
-                <TabsTrigger value="posts" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-neo-mint data-[state=active]:to-purist-blue data-[state=active]:text-white">
-                  Posts
-                </TabsTrigger>
-                <TabsTrigger value="activity" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-neo-mint data-[state=active]:to-purist-blue data-[state=active]:text-white">
-                  Activity
-                </TabsTrigger>
-              </TabsList>
+            <div className="max-w-4xl mx-auto">
+            {/* Search and Filter Controls */}
+            <div className="mb-6 space-y-4">
+              {/* Search Input */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Input
+                  placeholder="Search posts..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10 bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm border-white/20 dark:border-gray-700/20"
+                />
+              </div>
 
-              {/* Posts Tab */}
-              <TabsContent value="posts" className="mt-6">
-                {/* Search and Filter Controls */}
-                <div className="mb-6 space-y-4">
-                  {/* Search Input */}
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                    <Input
-                      placeholder="Search posts..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-10 bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm border-white/20 dark:border-gray-700/20"
+              {/* Filter Buttons */}
+              <div className="flex flex-wrap gap-2">
+                {['All', 'With AI', 'Videos', 'Images', 'Text Only'].map((filter) => (
+                  <button
+                    key={filter}
+                    onClick={() => setActiveFilter(filter)}
+                    className={`px-3 py-1 rounded-full text-sm transition-colors ${
+                      activeFilter === filter
+                        ? 'bg-gradient-to-r from-neo-mint to-purist-blue text-white'
+                        : 'bg-white/50 dark:bg-gray-800/50 text-gray-700 dark:text-gray-300 hover:bg-white/70 dark:hover:bg-gray-700/70'
+                    }`}
+                  >
+                    {filter}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Posts Content */}
+            <div className="space-y-6">
+              {isLoadingPosts ? (
+                <PostsSkeleton />
+              ) : filteredPosts.length === 0 ? (
+                <EmptyState 
+                  type="posts"
+                  title={searchQuery ? "No posts found matching your search" : "No posts yet"}
+                  description={searchQuery ? "Try adjusting your search or filters" : "Start sharing your English learning journey!"}
+                />
+              ) : (
+                filteredPosts.map((post, index) => (
+                  <motion.div
+                    key={post.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                  >
+                    <FeedPost
+                      key={post.id}
+                      id={String(post.id)}
+                      username={post.username}
+                      userImage={post.userImage}
+                      timeAgo={post.timeAgo}
+                      content={post.content}
+                      mediaType={post.mediaType || 'text'}
+                      mediaUrl={post.mediaUrl}
+                      mediaUrls={post.mediaUrls}
+                      youtubeVideoId={post.youtubeVideoId}
+                      textContent={post.textContent}
+                      likes={post.likes}
+                      comments={post.comments}
+                      submission={post.submission}
+                      videoEvaluation={post.videoEvaluation}
+                      isNew={post.isNew || false}
+                      title={post.title}
                     />
-                  </div>
-
-                  {/* Filter Buttons */}
-                  <div className="flex flex-wrap gap-2">
-                    {['All', 'With AI', 'Videos', 'Images', 'Text Only'].map((filter) => (
-                      <button
-                        key={filter}
-                        onClick={() => setActiveFilter(filter)}
-                        className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
-                          activeFilter === filter
-                            ? 'bg-gradient-to-r from-neo-mint to-purist-blue text-white shadow-lg'
-                            : 'bg-white/50 dark:bg-gray-800/50 text-gray-700 dark:text-gray-300 hover:bg-white/70 dark:hover:bg-gray-800/70 backdrop-blur-sm'
-                        }`}
-                      >
-                        {filter}
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* Posts Count */}
-                  <div className="text-sm text-muted-foreground">
-                    {searchQuery || activeFilter !== 'All' 
-                      ? `Showing ${filteredPosts.length} of ${userStats?.totalPosts || userPosts.length} posts`
-                      : `${userStats?.totalPosts || userPosts.length} posts total`
-                    }
-                  </div>
-                </div>
-
-                {/* Remove Card wrapper to match community layout */}
-                <div className="space-y-2 sm:space-y-4">
-                  {isLoadingPosts ? (
-                    Array(3)
-                      .fill(0)
-                      .map((_, i) => <PostSkeleton key={i} />)
-                  ) : filteredPosts.length > 0 ? (
-                    <div className="space-y-2 sm:space-y-4">
-                      {filteredPosts.map((post) => (
-                        <div key={post.id} id={`post-${post.id}`}>
-                          <FeedPost
-                            id={String(post.id)}
-                            username={post.username}
-                            userImage={post.userImage}
-                            timeAgo={post.timeAgo}
-                            content={post.content}
-                            mediaType={post.mediaType || 'text'}
-                            mediaUrl={post.mediaUrl}
-                            mediaUrls={post.mediaUrls}
-                            youtubeVideoId={post.youtubeVideoId}
-                            textContent={post.textContent}
-                            likes={post.likes}
-                            comments={post.comments}
-                            submission={post.submission}
-                            videoEvaluation={post.videoEvaluation}
-                            isNew={post.isNew || false}
-                            title={post.title}
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <EmptyState
-                      type="posts"
-                      title={userPosts.length === 0 ? "No posts yet" : "No matching posts"}
-                      description={userPosts.length === 0 
-                        ? "Share your English learning journey with the community!" 
-                        : "Try adjusting your search or filter criteria"
-                      }
-                      actionText={userPosts.length === 0 ? "Create Your First Post" : "Clear Filters"}
-                      actionUrl={userPosts.length === 0 ? "/community" : "#"}
-                      onClick={userPosts.length > 0 ? () => {
-                        setSearchQuery('')
-                        setActiveFilter('All')
-                      } : undefined}
-                    />
-                  )}
-                </div>
-              </TabsContent>
-
-              {/* Activity Tab */}
-              <TabsContent value="activity" className="mt-6">
-                <Card className="border-none shadow-lg bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <TrendingUp className="h-5 w-5 text-purist-blue" />
-                      Recent Activity
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      {/* Mock activity data - replace with real data */}
-                      {[
-                        { action: "Completed challenge", item: "Daily Grammar Quiz", time: "2 hours ago", icon: Target },
-                        { action: "Posted", item: "My English learning progress", time: "1 day ago", icon: BookOpen },
-                        { action: "Received like on", item: "Pronunciation practice video", time: "2 days ago", icon: Heart },
-                        { action: "Commented on", item: "Speaking challenge discussion", time: "3 days ago", icon: MessageCircle },
-                        { action: "Achieved", item: "7-day learning streak", time: "1 week ago", icon: Trophy }
-                      ].map((activity, index) => (
-                        <motion.div
-                          key={index}
-                          initial={{ opacity: 0, x: -20 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: index * 0.1 }}
-                          className="flex items-center gap-4 p-3 rounded-lg bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm"
-                        >
-                          <div className="flex-shrink-0">
-                            <activity.icon className="h-5 w-5 text-neo-mint" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm">
-                              <span className="font-medium">{activity.action}</span>
-                              {activity.item && (
-                                <>
-                                  <span className="text-muted-foreground"> </span>
-                                  <span className="text-purist-blue">"{activity.item}"</span>
-                                </>
-                              )}
-                            </p>
-                            <p className="text-xs text-muted-foreground">{activity.time}</p>
-                          </div>
-                        </motion.div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </Tabs>
+                  </motion.div>
+                ))
+              )}
+            </div>
+            </div>
           </motion.div>
         </div>
       </ProfileLayout>
@@ -1322,8 +1396,22 @@ export default function ProfilePage() {
         onCropComplete={handleBackgroundCropComplete}
         imageFile={selectedBackgroundFile}
         currentImageUrl={user?.background_url}
-        aspectRatio={16 / 9} // Wide aspect ratio for background
+        aspectRatio={2.5} // Adjusted to match the actual container aspect ratio (wider than 16:9)
         title="Crop Background Image"
+      />
+
+      {/* Avatar Image Cropper */}
+      <ImageCropper
+        isOpen={showAvatarCropper}
+        onClose={() => {
+          setShowAvatarCropper(false)
+          setSelectedAvatarFile(null)
+        }}
+        onCropComplete={handleAvatarCropComplete}
+        imageFile={selectedAvatarFile}
+        currentImageUrl={user?.avatar}
+        aspectRatio={1} // Square aspect ratio for avatar
+        title="Crop Profile Picture"
       />
     </>
   )

@@ -21,7 +21,7 @@ export interface CommentData {
 
 // Likes functions
 export async function addLike(postId: string, userId: string, reactionType: string = 'like') {
-  console.log('📤 Adding like to Supabase:', { postId, userId, reactionType })
+  // Reduced logging for performance
   
   try {
     // First, check if user already liked this post
@@ -48,7 +48,7 @@ export async function addLike(postId: string, userId: string, reactionType: stri
       
       if (error) throw error
       
-      console.log('✅ Like updated successfully:', data)
+      // Removed excessive logging
       return { data, isNew: false }
     } else {
       // Create new like
@@ -63,7 +63,7 @@ export async function addLike(postId: string, userId: string, reactionType: stri
       // Update likes_count in posts table
       await updatePostLikesCount(postId)
       
-      console.log('✅ Like added successfully:', data)
+      // Removed excessive logging
       return { data, isNew: true }
     }
   } catch (error) {
@@ -73,7 +73,7 @@ export async function addLike(postId: string, userId: string, reactionType: stri
 }
 
 export async function removeLike(postId: string, userId: string) {
-  console.log('📤 Removing like from Supabase:', { postId, userId })
+  // Reduced logging
   
   try {
     const { data, error } = await supabase
@@ -88,7 +88,7 @@ export async function removeLike(postId: string, userId: string) {
     // Update likes_count in posts table
     await updatePostLikesCount(postId)
     
-    console.log('✅ Like removed successfully:', data)
+    // Removed excessive logging
     return data
   } catch (error) {
     console.error('❌ Error removing like:', error)
@@ -97,7 +97,7 @@ export async function removeLike(postId: string, userId: string) {
 }
 
 export async function getLikesForPost(postId: string) {
-  console.log('📥 Getting likes for post:', postId)
+  // Reduced logging - only on errors
   
   try {
     const { data, error } = await supabase
@@ -108,7 +108,7 @@ export async function getLikesForPost(postId: string) {
     
     if (error) throw error
     
-    console.log(`✅ Found ${data?.length || 0} likes for post`)
+    // Return data without excessive logging
     return data || []
   } catch (error) {
     console.error('❌ Error getting likes:', error)
@@ -139,7 +139,7 @@ export async function checkUserLikedPost(postId: string, userId: string) {
 
 // Comments functions
 export async function addComment(postId: string, userId: string, content: string, parentId?: string) {
-  console.log('📤 Adding comment to Supabase:', { postId, userId, content, parentId })
+  // Reduced logging for better performance
   
   try {
     const { data, error } = await supabase
@@ -168,7 +168,7 @@ export async function addComment(postId: string, userId: string, content: string
     // Update comments_count in posts table
     await updatePostCommentsCount(postId)
     
-    console.log('✅ Comment added successfully:', data)
+    // Removed excessive logging
     return data
   } catch (error) {
     console.error('❌ Error adding comment:', error)
@@ -177,7 +177,7 @@ export async function addComment(postId: string, userId: string, content: string
 }
 
 export async function getCommentsForPost(postId: string, currentUserId?: string) {
-  console.log('📥 Getting comments for post:', postId, 'currentUserId:', currentUserId)
+  // Remove excessive logging - only log errors or important info
   
   try {
     // First, get comments
@@ -199,7 +199,7 @@ export async function getCommentsForPost(postId: string, currentUserId?: string)
     if (commentsError) throw commentsError
     
     if (!comments || comments.length === 0) {
-      console.log('✅ No comments found for post')
+      // Remove log spam
       return []
     }
     
@@ -272,7 +272,7 @@ export async function getCommentsForPost(postId: string, currentUserId?: string)
       }
     })
     
-    console.log(`✅ Found ${transformedData.length} comments for post`)
+    // Return transformed data without excessive logging
     return transformedData
   } catch (error) {
     console.error('❌ Error getting comments:', error)
@@ -281,7 +281,7 @@ export async function getCommentsForPost(postId: string, currentUserId?: string)
 }
 
 export async function deleteComment(commentId: string, userId: string) {
-  console.log('📤 Deleting comment:', { commentId, userId })
+  // Reduced excessive logging
   
   try {
     const { data, error } = await supabase
@@ -299,7 +299,7 @@ export async function deleteComment(commentId: string, userId: string) {
       await updatePostCommentsCount(data.post_id)
     }
     
-    console.log('✅ Comment deleted successfully')
+    // Reduced excessive logging
     return data
   } catch (error) {
     console.error('❌ Error deleting comment:', error)
@@ -309,7 +309,7 @@ export async function deleteComment(commentId: string, userId: string) {
 
 // Comment likes functions
 export async function addCommentLike(commentId: string, userId: string, reactionType: string = 'like') {
-  console.log('📤 Adding comment like to likes table:', { commentId, userId, reactionType })
+  // Reduced excessive logging
   
   try {
     // Check if user already liked this comment
@@ -336,7 +336,7 @@ export async function addCommentLike(commentId: string, userId: string, reaction
       
       if (error) throw error
       
-      console.log('✅ Comment reaction updated successfully:', data)
+      // Reduced excessive logging
       return { data, isNew: false }
     }
     
@@ -357,7 +357,7 @@ export async function addCommentLike(commentId: string, userId: string, reaction
     // Update comment likes count
     await updateCommentLikesCount(commentId)
     
-    console.log('✅ Comment like added successfully:', data)
+    // Reduced excessive logging
     return { data, isNew: true }
   } catch (error) {
     console.error('❌ Error adding comment like:', error)
@@ -366,7 +366,7 @@ export async function addCommentLike(commentId: string, userId: string, reaction
 }
 
 export async function removeCommentLike(commentId: string, userId: string) {
-  console.log('📤 Removing comment like from likes table:', { commentId, userId })
+  // Reduced excessive logging
   
   try {
     const { data, error } = await supabase
@@ -381,7 +381,7 @@ export async function removeCommentLike(commentId: string, userId: string) {
     // Update comment likes count
     await updateCommentLikesCount(commentId)
     
-    console.log('✅ Comment like removed successfully:', data)
+    // Reduced excessive logging
     return data
   } catch (error) {
     console.error('❌ Error removing comment like:', error)
@@ -426,14 +426,15 @@ async function updateCommentLikesCount(commentId: string) {
     
     if (updateError) throw updateError
     
-    console.log(`✅ Updated comment likes_count to ${count}`)
+    // Only log significant changes if needed
+    // console.log(`✅ Updated comment likes_count to ${count}`)
   } catch (error) {
     console.error('❌ Error updating comment likes count:', error)
   }
 }
 
 export async function addReply(parentCommentId: string, userId: string, content: string, postId: string) {
-  console.log('📤 Adding reply to Supabase:', { parentCommentId, userId, content, postId })
+  // Reduced excessive logging
   
   try {
     const { data, error } = await supabase
@@ -462,7 +463,7 @@ export async function addReply(parentCommentId: string, userId: string, content:
     // Update comments_count in posts table
     await updatePostCommentsCount(postId)
     
-    console.log('✅ Reply added successfully:', data)
+    // Reduced excessive logging
     return data
   } catch (error) {
     console.error('❌ Error adding reply:', error)
@@ -487,7 +488,8 @@ async function updatePostLikesCount(postId: string) {
     
     if (updateError) throw updateError
     
-    console.log(`✅ Updated post likes_count to ${count}`)
+    // Only log when necessary for debugging
+    // console.log(`✅ Updated post likes_count to ${count}`)
   } catch (error) {
     console.error('❌ Error updating post likes count:', error)
   }
@@ -509,7 +511,8 @@ async function updatePostCommentsCount(postId: string) {
     
     if (updateError) throw updateError
     
-    console.log(`✅ Updated post comments_count to ${count}`)
+    // Only log when necessary for debugging
+    // console.log(`✅ Updated post comments_count to ${count}`)
   } catch (error) {
     console.error('❌ Error updating post comments count:', error)
   }

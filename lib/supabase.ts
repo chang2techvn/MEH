@@ -49,18 +49,21 @@ const USER_CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
 export const dbHelpers = {
   // User operations
   async getCurrentUser() {
-    console.log('🔍 dbHelpers.getCurrentUser called')
+    // Removed excessive logging - only log when necessary
     
     // Check cache first
     const now = Date.now()
     if (userCache && (now - userCacheTimestamp) < USER_CACHE_DURATION) {
-      console.log('💾 Using cached user data')
+      // Silent cache usage - no need to log every access
       return userCache
     }
     
     try {
       const { data: { user }, error: authError } = await supabase.auth.getUser()
-      console.log('🔐 Auth user result:', { user: user?.email || 'No user', error: authError })
+      // Only log when getting fresh data or on errors
+      if (authError) {
+        console.log('🔐 Auth error:', authError)
+      }
       
       if (!user) {
         console.log('⚠️ No authenticated user, trying to get first user from database as fallback')
@@ -89,7 +92,8 @@ export const dbHelpers = {
           avatar: firstProfile?.avatar_url || firstUser.avatar
         }
         
-        console.log('✅ Using fallback user:', enrichedUser.name, enrichedUser.email)
+        // Reduced logging - only when needed for debugging
+        // console.log('✅ Using fallback user:', enrichedUser.name, enrichedUser.email)
         
         // Cache the result
         userCache = enrichedUser
@@ -133,7 +137,8 @@ export const dbHelpers = {
             avatar: profileData?.avatar_url || userData.avatar
           }
           
-          console.log('✅ Found authenticated user (alternative method):', enrichedUser.name, enrichedUser.email)
+          // Reduced logging for performance
+          // console.log('✅ Found authenticated user (alternative method):', enrichedUser.name, enrichedUser.email)
           return enrichedUser
         }
         
@@ -147,7 +152,8 @@ export const dbHelpers = {
         avatar: profile?.avatar_url || data.avatar
       }
       
-      console.log('✅ Found authenticated user:', enrichedUser.name, enrichedUser.email)
+      // Only log significant events - cache updated
+      // console.log('✅ Found authenticated user:', enrichedUser.name, enrichedUser.email)
       
       // Cache the result
       userCache = enrichedUser
