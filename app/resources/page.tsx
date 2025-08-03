@@ -342,7 +342,6 @@ export default function ResourcesPage() {
 
   // Handle single chat message
   const handleSingleChatMessage = async (content: string) => {
-    console.log('🚀 Starting single chat message:', content);
     
     const userMessageId = singleChatService.generateMessageId();
     const assistantMessageId = singleChatService.generateMessageId();
@@ -358,10 +357,8 @@ export default function ResourcesPage() {
       mediaUrl: null
     };
     
-    console.log('📤 Adding user message:', userMessage);
     setSingleChatMessages(prev => {
       const newMessages = [...prev, userMessage];
-      console.log('💾 Updated messages after user:', newMessages);
       return newMessages;
     });
     
@@ -371,10 +368,8 @@ export default function ResourcesPage() {
     setSingleChatProcessing(true);
     
     try {
-      console.log('🤖 Calling AI service...');
       // Get AI response
       const aiResponse = await singleChatService.sendMessage(content);
-      console.log('✅ AI response received:', aiResponse);
       
       // Add assistant message with correct Message interface
       const assistantMessage = {
@@ -389,10 +384,8 @@ export default function ResourcesPage() {
         vocabulary: aiResponse.vocabulary
       };
       
-      console.log('📥 Adding assistant message:', assistantMessage);
       setSingleChatMessages(prev => {
         const newMessages = [...prev, assistantMessage];
-        console.log('💾 Final messages:', newMessages);
         return newMessages;
       });
       
@@ -439,7 +432,6 @@ export default function ResourcesPage() {
         
         // If we have a valid session but user/isAuthenticated is false, wait longer
         if (session && session.user && (!user || !isAuthenticated)) {
-          console.log('Session exists but user data not loaded yet, waiting...');
           // Set a flag to check again later
           setTimeout(() => setAuthChecked(false), 1000);
           return;
@@ -451,13 +443,11 @@ export default function ResourcesPage() {
           try {
             const parsedSession = JSON.parse(localSession);
             if (parsedSession.access_token && parsedSession.refresh_token) {
-              console.log('Local session found, giving more time for auth to resolve');
               // Set a flag to check again later
               setTimeout(() => setAuthChecked(false), 1500);
               return;
             }
           } catch (e) {
-            console.log('Error parsing local session');
           }
         }
         
@@ -465,9 +455,7 @@ export default function ResourcesPage() {
         setAuthChecked(true);
         
         // Only redirect if we're absolutely sure there's no authentication
-        if (!session || !session.user) {
-          console.log('No valid session found, redirecting to login');
-          
+        if (!session || !session.user) {          
           // Triple check with a delay to be absolutely sure
           setTimeout(async () => {
             const { data: { session: finalCheck } } = await supabase.auth.getSession();
@@ -1117,9 +1105,7 @@ export default function ResourcesPage() {
                 {selectedAIs.length === 0 ? (
                   // Single chat mode - show single chat messages
                   (() => {
-                    console.log('🔍 Rendering single chat messages:', singleChatMessages);
                     return singleChatMessages.map((message) => {
-                      console.log('🎨 Rendering message:', message);
                       const isUser = message.sender === 'user';
                       // Get AI character from service for single chat assistant
                       const assistantCharacter = isUser ? undefined : singleChatService.getAssistantCharacter();
