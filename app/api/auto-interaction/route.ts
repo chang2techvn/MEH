@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getAllActiveApiKeys, incrementUsage } from '@/lib/api-key-manager';
+import { generateUUID } from '@/lib/uuid-utils';
 
 // Create Supabase client for API routes
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -576,7 +577,7 @@ CHỈ TRẢ LỜI NỘI DUNG TIN NHẮN, KHÔNG CẦN ĐỊNH DẠNG GÌ THÊM.`
     // Prepare response
     const interactions = [
       {
-        id: savedMessage?.id || crypto.randomUUID(),
+        id: savedMessage?.id || generateUUID(),
         type: interactionType,
         initiator: selectedInitiatorAI.name,
         target: selectedTargetAI?.name,

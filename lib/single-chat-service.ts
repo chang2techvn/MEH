@@ -4,6 +4,8 @@
  * Uses the general English learning assistant prompt similar to community chatbox
  */
 
+import { generateUUID } from '@/lib/uuid-utils';
+
 export interface SingleChatMessage {
   id: string;
   content: string;
@@ -180,7 +182,7 @@ Make your response visually appealing, educational, and perfectly formatted with
    * Generate a unique message ID
    */
   generateMessageId(): string {
-    return `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    return generateUUID();
   }
 }
 

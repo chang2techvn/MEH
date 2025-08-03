@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Message, AICharacter } from '@/types/ai-hub.types';
 import { formatTime, highlightText } from '@/lib/utils/format';
 import { useAuthState } from '@/contexts/auth-context';
+import { ProcessedMessageContent } from './ProcessedMessageContent';
 
 // Optimized Avatar Component for Messages with next/image
 const OptimizedMessageAvatar = ({ 
@@ -166,144 +167,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message, ai, darkMode,
               ) : (
                 <div className="min-w-0">
                   <div className="prose prose-sm sm:prose-base dark:prose-invert max-w-none break-words overflow-wrap-anywhere">
-                    <ReactMarkdown
-                      remarkPlugins={[remarkGfm]}
-                      components={{
-                        // Custom styling for markdown elements with mobile-first responsive design
-                        strong: ({ children }) => (
-                          <strong className="text-orange-600 dark:text-orange-400 font-semibold break-words word-break-break-word">
-                            {children}
-                          </strong>
-                        ),
-                        em: ({ children }) => (
-                          <em className="text-blue-600 dark:text-blue-400 break-words word-break-break-word">
-                            {children}
-                          </em>
-                        ),
-                        code: ({ children }) => (
-                          <code className="bg-gray-100 dark:bg-gray-700 text-orange-600 dark:text-orange-400 px-1 sm:px-1.5 py-0.5 rounded text-xs sm:text-sm font-mono break-all word-break-break-all overflow-wrap-anywhere">
-                            {children}
-                          </code>
-                        ),
-                        p: ({ children }) => (
-                          <p className="mb-2 sm:mb-3 leading-relaxed text-gray-700 dark:text-gray-300 text-sm sm:text-base break-words word-break-break-word overflow-wrap-anywhere">
-                            {children}
-                          </p>
-                        ),
-                        ul: ({ children }) => (
-                          <ul className="list-disc list-outside space-y-1 sm:space-y-2 ml-2 sm:ml-3 my-2 sm:my-3 text-gray-700 dark:text-gray-300 text-sm sm:text-base leading-normal break-words overflow-hidden">
-                            {children}
-                          </ul>
-                        ),
-                        ol: ({ children }) => (
-                          <ol className="list-decimal list-outside space-y-1 sm:space-y-2 ml-2 sm:ml-3 my-2 sm:my-3 text-gray-700 dark:text-gray-300 text-sm sm:text-base leading-normal break-words overflow-hidden">
-                            {children}
-                          </ol>
-                        ),
-                        li: ({ children }) => (
-                          <li className="leading-normal mb-1 pl-1 sm:pl-2 break-words word-break-break-word overflow-wrap-anywhere">
-                            {children}
-                          </li>
-                        ),
-                        h1: ({ children }) => (
-                          <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-orange-600 dark:text-orange-400 mt-2 sm:mt-3 mb-1 sm:mb-2 break-words leading-tight">
-                            {children}
-                          </h1>
-                        ),
-                        h2: ({ children }) => (
-                          <h2 className="text-base sm:text-lg md:text-xl font-semibold text-orange-600 dark:text-orange-400 mt-2 sm:mt-3 mb-1 sm:mb-2 break-words leading-tight">
-                            {children}
-                          </h2>
-                        ),
-                        h3: ({ children }) => (
-                          <h3 className="text-sm sm:text-base md:text-lg font-medium text-orange-600 dark:text-orange-400 mt-1 sm:mt-2 mb-1 break-words leading-snug">
-                            {children}
-                          </h3>
-                        ),
-                        h4: ({ children }) => (
-                          <h4 className="text-sm sm:text-base font-medium text-orange-600 dark:text-orange-400 mt-1 sm:mt-2 mb-1 break-words leading-normal">
-                            {children}
-                          </h4>
-                        ),
-                        blockquote: ({ children }) => (
-                          <blockquote className="border-l-2 sm:border-l-4 border-orange-300 dark:border-orange-600 pl-2 sm:pl-4 py-1 sm:py-2 bg-orange-50 dark:bg-orange-900/20 italic text-gray-700 dark:text-gray-300 my-1 sm:my-2 text-sm sm:text-base leading-relaxed break-words">
-                            {children}
-                          </blockquote>
-                        ),
-                        // Add table support with mobile-first responsive styling
-                        table: ({ children }) => (
-                          <div className="overflow-x-auto my-2 sm:my-3 border border-gray-200 dark:border-gray-600 rounded-lg shadow-sm max-w-full">
-                            <table className="min-w-full border-collapse text-xs sm:text-sm table-fixed w-full">
-                              {children}
-                            </table>
-                          </div>
-                        ),
-                        thead: ({ children }) => (
-                          <thead className="bg-orange-50 dark:bg-orange-900/30">
-                            {children}
-                          </thead>
-                        ),
-                        tbody: ({ children }) => (
-                          <tbody className="divide-y divide-gray-200 dark:divide-gray-600 bg-white dark:bg-gray-800">
-                            {children}
-                          </tbody>
-                        ),
-                        tr: ({ children }) => (
-                          <tr className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                            {children}
-                          </tr>
-                        ),
-                        th: ({ children }) => (
-                          <th className="px-1 sm:px-2 py-1 sm:py-2 text-left font-semibold text-orange-600 dark:text-orange-400 text-xs sm:text-sm break-words word-break-break-word overflow-wrap-anywhere">
-                            {children}
-                          </th>
-                        ),
-                        td: ({ children }) => (
-                          <td className="px-1 sm:px-2 py-1 sm:py-2 text-gray-700 dark:text-gray-300 text-xs sm:text-sm leading-normal break-words word-break-break-word overflow-wrap-anywhere">
-                            {children}
-                          </td>
-                        ),
-                        // Improved link support with professional styling
-                        a: ({ href, children }) => (
-                          <a
-                            href={href}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline decoration-2 underline-offset-2 break-all cursor-pointer transition-all duration-200 hover:decoration-blue-600 dark:hover:decoration-blue-400 text-sm sm:text-base"
-                          >
-                            {children}
-                          </a>
-                        ),
-                        // Add strikethrough support (from remark-gfm)
-                        del: ({ children }) => (
-                          <del className="text-gray-500 dark:text-gray-400 line-through text-sm sm:text-base break-words">
-                            {children}
-                          </del>
-                        ),
-                        // Add task list support (from remark-gfm)
-                        input: ({ checked, ...props }) => (
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            disabled
-                            className="mr-2 accent-orange-500"
-                            {...props}
-                          />
-                        ),
-                        // Enhanced code block support with professional styling
-                        pre: ({ children }) => (
-                          <pre className="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-2 sm:p-4 rounded-lg overflow-x-auto my-2 sm:my-5 text-xs sm:text-sm font-mono leading-relaxed shadow-sm break-words">
-                            {children}
-                          </pre>
-                        ),
-                        // Add horizontal rule support
-                        hr: () => (
-                          <hr className="border-0 border-t border-gray-300 dark:border-gray-600 my-8" />
-                        )
-                      }}
-                    >
-                      {message.content}
-                    </ReactMarkdown>
+                    <ProcessedMessageContent content={message.content} isDarkMode={darkMode} />
                   </div>
                   {message.vocabulary && message.vocabulary.length > 0 && (
                     <div className={`mt-3 sm:mt-4 p-3 sm:p-4 ${darkMode ? 'bg-gradient-to-r from-orange-900/30 to-orange-900/30 border border-orange-800' : 'bg-gradient-to-r from-orange-50 to-orange-50 border border-orange-100'} rounded-xl`}>

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { getActiveApiKey, incrementUsage, rotateToNextKey } from '@/lib/api-key-manager';
+import { generateUUID } from '@/lib/uuid-utils';
 
 // API Key Manager - sử dụng hệ thống xoay key
 let currentApiKey: string | null = null;
@@ -79,6 +80,20 @@ interface AIPersonality {
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('📥 Received natural-group-chat request');
+    
+    // Parse request body with error handling
+    let requestData;
+    try {
+      requestData = await request.json();
+    } catch (parseError) {
+      console.error('❌ Failed to parse request JSON:', parseError);
+      return NextResponse.json(
+        { error: 'Invalid JSON in request body' },
+        { status: 400 }
+      );
+    }
+    
     const { 
       message, 
       sessionId, 
@@ -86,9 +101,19 @@ export async function POST(request: NextRequest) {
       conversationMode = 'natural_group',
       replyToMessageId,
       replyToAI 
-    }: NaturalConversationRequest = await request.json();
+    }: NaturalConversationRequest = requestData;
+
+    console.log('📋 Request data:', { 
+      messageLength: message?.length, 
+      sessionId, 
+      selectedAIsCount: selectedAIs?.length, 
+      conversationMode,
+      replyToMessageId,
+      replyToAI 
+    });
 
     if (!message || !sessionId || !selectedAIs || selectedAIs.length === 0) {
+      console.error('❌ Missing required fields:', { message: !!message, sessionId: !!sessionId, selectedAIs: selectedAIs?.length });
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
@@ -257,7 +282,7 @@ export async function POST(request: NextRequest) {
               safeEnqueue(`data: ${JSON.stringify({
                 type: 'ai_response',
                 response: {
-                  id: crypto.randomUUID(),
+                  id: generateUUID(),
                   aiId: ai.id,
                   aiName: ai.name,
                   content: response.content,

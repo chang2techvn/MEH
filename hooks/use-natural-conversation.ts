@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { AICharacter, Message, VocabularyItem } from '@/types/ai-hub.types';
 import { useAutoInteraction } from './use-auto-interaction';
 import useSmoothAutoScroll from './use-smooth-auto-scroll';
+import { generateUUID } from '@/lib/uuid-utils';
 
 interface NaturalConversationSession {
   id: string;
@@ -366,7 +367,7 @@ export function useNaturalConversation(selectedAIIds: string[]) {
 
       // Add user message to local state immediately with smooth scroll
       const userMessage: Message = {
-        id: crypto.randomUUID(),
+        id: generateUUID(),
         sender: 'user',
         content,
         timestamp: new Date(),
@@ -394,24 +395,32 @@ export function useNaturalConversation(selectedAIIds: string[]) {
         // Don't throw error, continue with conversation even if saving fails
       }
 
-      // Call natural conversation API
-      const response = await fetch('/api/natural-group-chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          message: content,
-          sessionId: sessionToUse.id,
-          selectedAIs: selectedAIIds,
-          conversationMode: 'natural_group',
-          replyToMessageId: replyToMessageId || undefined,
-          replyToAI: replyToAI || undefined
-        }),
-      });
+      // Call natural conversation API with better error handling
+      let response;
+      try {
+        response = await fetch('/api/natural-group-chat', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            message: content,
+            sessionId: sessionToUse.id,
+            selectedAIs: selectedAIIds,
+            conversationMode: 'natural_group',
+            replyToMessageId: replyToMessageId || undefined,
+            replyToAI: replyToAI || undefined
+          }),
+        });
+      } catch (fetchError) {
+        console.error('❌ Network error when calling API:', fetchError);
+        throw new Error(`Network error: ${fetchError instanceof Error ? fetchError.message : 'Unknown network error'}`);
+      }
 
       if (!response.ok) {
-        throw new Error('Failed to get AI response');
+        const errorText = await response.text().catch(() => 'Unknown error');
+        console.error('❌ API response error:', response.status, errorText);
+        throw new Error(`API error (${response.status}): ${errorText}`);
       }
 
       // Handle streaming response
@@ -457,7 +466,7 @@ export function useNaturalConversation(selectedAIIds: string[]) {
                 setTypingAIs(prev => prev.filter(ai => ai.name !== data.response.aiName));
               } else if (data.type === 'ai_to_ai_interaction') {
                 const interactionMessage: Message = {
-                  id: crypto.randomUUID(),
+                  id: generateUUID(),
                   sender: data.response.targetAI, // This is AI name, not ID
                   content: data.response.response,
                   timestamp: new Date(data.timestamp),
@@ -482,8 +491,28 @@ export function useNaturalConversation(selectedAIIds: string[]) {
       }
 
     } catch (error) {
-      console.error('Error sending message:', error);
-      setError(error instanceof Error ? error.message : 'Failed to send message');
+      console.error('❌ Error sending message:', error);
+      
+      // More detailed error handling for debugging
+      let errorMessage = 'Failed to send message';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+        console.error('❌ Error details:', {
+          name: error.name,
+          message: error.message,
+          stack: error.stack
+        });
+      }
+      
+      // Additional context for mobile debugging
+      console.error('❌ Context:', {
+        selectedAIIds,
+        sessionId: currentSession?.id,
+        isAutoInteracting,
+        userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'Unknown'
+      });
+      
+      setError(errorMessage);
     } finally {
       // Only clear processing state if this wasn't an auto-interaction
       if (!isAutoInteracting) {
