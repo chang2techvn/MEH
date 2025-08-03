@@ -124,14 +124,6 @@ export default function ChallengeTabs({
           }
         }
 
-        console.log('🎬 Practice Challenge mapping:', {
-          databaseId: challenge.id,
-          videoUrl: challenge.video_url,
-          extractedVideoId: videoId,
-          hasTranscript: !!challenge.transcript,
-          transcriptLength: challenge.transcript?.length || 0
-        })
-
         return {
           id: challenge.id, // Keep database ID as main ID for database operations
           databaseId: challenge.id, // Also store as databaseId for clarity

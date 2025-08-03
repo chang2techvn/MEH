@@ -175,7 +175,5 @@ export async function submitUserContent(
 
 export async function publishSubmission(submissionId: string): Promise<void> {
   // Simulate publishing a submission
-  console.log(`Publishing submission with ID: ${submissionId}`)
   await new Promise((resolve) => setTimeout(resolve, 1000))
-  console.log(`Submission with ID: ${submissionId} published successfully.`)
 }

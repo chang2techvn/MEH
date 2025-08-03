@@ -35,16 +35,10 @@ export async function compareVideoContentWithUserContent(
     const videoSettings = await getVideoSettings()
     const minWatchTimeSeconds = videoSettings.minWatchTime
 
-    console.log(`\n🔍 === CONTENT COMPARISON FOR VIDEO ${videoId} ===`)
-    console.log(`Admin Min Watch Time: ${minWatchTimeSeconds} seconds (${Math.round(minWatchTimeSeconds / 60)} minutes)`)
-    console.log(`User Content Length: ${userContent.length} characters`)
-    console.log(`Threshold: ${threshold}%`)
-
     let videoData: any = null
     let error: any = null
     
     // Check unified challenges table for video
-    console.log(`🔍 Checking challenges table for video: ${videoId}`)
     const { data: challengeData, error: challengeError } = await supabaseServer
       .from('challenges')
       .select('transcript, id, title, challenge_type')
@@ -54,12 +48,8 @@ export async function compareVideoContentWithUserContent(
     if (challengeData && !challengeError && challengeData.transcript) {
       videoData = challengeData
       error = null
-      console.log(`✅ Found transcript in challenges table (type: ${challengeData.challenge_type})`)
-      console.log(`📝 Transcript length: ${challengeData.transcript.length} characters`)
     } else {
       error = challengeError
-      console.log(`❌ No transcript found in challenges table`)
-      console.log(`Error details:`, challengeError)
     }
       if (error || !videoData || !videoData.transcript) {
       return {
@@ -82,14 +72,6 @@ export async function compareVideoContentWithUserContent(
     
     const videoTranscript = videoData.transcript
     
-    // Print detailed comparison info to terminal
-    console.log(`Video Transcript Length (from challenges table): ${videoTranscript.length} characters`)
-    console.log(`Challenge Type: ${videoData.challenge_type}`)
-    console.log(`\n📝 --- USER CONTENT ---`)
-    console.log(userContent)
-    console.log(`\n📺 --- LIMITED VIDEO TRANSCRIPT (${minWatchTimeSeconds}s) ---`)
-    console.log(videoTranscript.substring(0, 2000) + (videoTranscript.length > 2000 ? '...' : ''))
-    console.log(`\n⚖️ --- STARTING COMPARISON PROCESS ---`)
     
     // Create a detailed and strict prompt for Gemini AI to evaluate content
     const prompt = `
@@ -149,13 +131,6 @@ export async function compareVideoContentWithUserContent(
       }
     `
 
-    // Print the full prompt being sent to Gemini AI
-    console.log(`\n� === FULL PROMPT SENT TO GEMINI AI ===`)
-    console.log(`Prompt Length: ${prompt.length} characters`)
-    console.log(`\n--- START PROMPT ---`)
-    console.log(prompt)
-    console.log(`--- END PROMPT ---\n`)
-
     // Retry logic with multiple API keys
     let maxRetries = 3
     let currentAttempt = 0
@@ -163,7 +138,6 @@ export async function compareVideoContentWithUserContent(
     while (currentAttempt < maxRetries) {
       try {
         currentAttempt++
-        console.log(`🔄 Content comparison attempt ${currentAttempt}/${maxRetries}`)
         
         // Get active API key for this attempt
         const apiKeyData = await getActiveApiKey('gemini')
@@ -171,11 +145,9 @@ export async function compareVideoContentWithUserContent(
           throw new Error('No active API key found in database')
         }
         
-        console.log(`🔑 Using API key: ${apiKeyData.key_name} for attempt ${currentAttempt}`)
         const genAI = new GoogleGenerativeAI(apiKeyData.decrypted_key)
 
         // Generate content using Gemini AI - Updated to use latest model
-        console.log(`🔄 Sending request to Gemini AI (model: gemini-2.5-flash)...`)
         const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" })
         const result = await model.generateContent(prompt)
         const response = result.response
@@ -183,13 +155,6 @@ export async function compareVideoContentWithUserContent(
 
         // Increment API key usage on successful response
         await incrementUsage(apiKeyData.id)
-        console.log(`📊 API key usage incremented for: ${apiKeyData.key_name}`)
-
-        console.log(`\n✅ --- GEMINI AI RESPONSE RECEIVED ---`)
-        console.log(`Response Length: ${text.length} characters`)
-        console.log(`\n--- START RESPONSE ---`)
-        console.log(text)
-        console.log(`--- END RESPONSE ---`)
         
         // Parse the JSON response
         const jsonMatch = text.match(/```json\n([\s\S]*?)\n```/) || text.match(/({[\s\S]*})/)
@@ -205,15 +170,6 @@ export async function compareVideoContentWithUserContent(
             }
           } as ContentComparison
 
-          console.log(`\n📊 --- FINAL EVALUATION RESULTS ---`)
-          console.log(`Similarity Score: ${result.similarityScore}%`)
-          console.log(`Above Threshold (${threshold}%): ${result.isAboveThreshold}`)
-          console.log(`Key Matches: ${result.keyMatches.length} items`)
-          console.log(`Suggestions: ${result.suggestions.length} items`)
-          console.log(`Word Count: ${result.detailedAnalysis.wordCount}`)
-          console.log(`Keyword Matches: ${result.detailedAnalysis.keywordMatches}`)
-          console.log(`🏁 === END COMPARISON ===\n`)
-
           return result
         }
         
@@ -225,21 +181,18 @@ export async function compareVideoContentWithUserContent(
         // Handle specific error cases for API key management
         if (error instanceof Error && currentAttempt < maxRetries) {
           if (error.message.includes('403') || error.message.includes('Invalid API key')) {
-            console.log(`🚫 API key invalid (403), marking as inactive and trying next key`)
             const currentApiKeyData = await getActiveApiKey('gemini').catch(() => null)
             if (currentApiKeyData) {
               await markKeyAsInactive(currentApiKeyData.id, 'Invalid API key (403 Forbidden)')
             }
             continue // Try with next API key
           } else if (error.message.includes('429') || error.message.includes('quota')) {
-            console.log(`⚠️ API key quota exceeded (429), marking as inactive and trying next key`)
             const currentApiKeyData = await getActiveApiKey('gemini').catch(() => null)
             if (currentApiKeyData) {
               await markKeyAsInactive(currentApiKeyData.id, 'Quota exceeded (429)')
             }
             continue // Try with next API key
           } else if (error.message.includes('500') || error.message.includes('503') || error.message.includes('overloaded')) {
-            console.log(`🔄 Server error (${error.message.includes('503') ? '503' : '500'}), marking key as inactive and trying next key`)
             const currentApiKeyData = await getActiveApiKey('gemini').catch(() => null)
             if (currentApiKeyData) {
               await markKeyAsInactive(currentApiKeyData.id, `Server error (${error.message})`)
@@ -280,8 +233,6 @@ export async function getContentImprovementSuggestions(
     
     // Get active API key from database
     apiKeyData = await getActiveApiKey('gemini')
-    console.log(`🔑 Using API key for suggestions: ${apiKeyData.key_name}`)
-
     const genAI = new GoogleGenerativeAI(apiKeyData.decrypted_key)
     const prompt = `
       Based on the original video transcript (limited to ${minWatchTimeSeconds} seconds that user was required to watch) and the user's content, provide 3-5 specific suggestions for improvement:
@@ -298,7 +249,6 @@ export async function getContentImprovementSuggestions(
     
     // Increment API key usage on successful response
     await incrementUsage(apiKeyData.id)
-    console.log(`📊 API key usage incremented for suggestions: ${apiKeyData.key_name}`)
     
     const jsonMatch = text.match(/\[([\s\S]*?)\]/)
     if (jsonMatch) {

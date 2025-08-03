@@ -34,7 +34,6 @@ function startDailyVideoScheduler() {
       dailyVideoJob.destroy()
     }    // Schedule job to run at 23:59 every day
     dailyVideoJob = cron.schedule('59 23 * * *', async () => {
-      console.log('🕐 Daily video & challenges scheduler triggered at 23:59')
       try {
         // Call the daily-video-refresh endpoint
         const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
@@ -55,7 +54,6 @@ function startDailyVideoScheduler() {
         
         if (response.ok) {
           const data = await response.json()
-          console.log('✅ Daily video & challenges refresh completed successfully:', data.data)
         } else {
           const errorText = await response.text()
           console.error('❌ Daily refresh failed:', response.status, errorText)
@@ -114,7 +112,6 @@ function getDailyVideoSchedulerStatus() {
 
 async function runDailyVideoNow() {
   try {
-    console.log('🚀 Manual trigger: Running daily video & challenges refresh now...')
     
     // Call the daily-video-refresh endpoint
     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
@@ -182,6 +179,5 @@ if (process.env.NODE_ENV === 'production') {
   // Auto-start in production
   setTimeout(() => {
     startDailyVideoScheduler()
-    console.log('🚀 Daily video scheduler auto-started in production mode')
   }, 5000) // Wait 5 seconds for server to fully initialize
 }

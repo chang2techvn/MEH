@@ -10,16 +10,13 @@ export async function extractVideoTranscript(
   videoDuration?: number, 
   maxWatchTimeSeconds?: number
 ): Promise<VideoInfo> {
-  try {
-    console.log(`🎬 Server action: Extracting transcript for video ${videoId}`);
-    
+  try {    
     const result = await extractYouTubeTranscriptForDuration(
       videoId, 
       videoDuration || 0, 
       maxWatchTimeSeconds || 300
     );
     
-    console.log(`✅ Server action: Successfully extracted transcript for video ${videoId}`);
     return result;
     
   } catch (error) {

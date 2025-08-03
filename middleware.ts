@@ -39,17 +39,12 @@ export async function middleware(request: NextRequest) {
       
       // Only redirect if there's no session AND no auth cookies
       if (!session && authCookies.length === 0) {
-        console.log(`🚫 Redirecting ${request.nextUrl.pathname} - no session and no auth cookies`)
         const redirectUrl = new URL('/auth/login', request.url)
         redirectUrl.searchParams.set('redirect', request.nextUrl.pathname)
         return NextResponse.redirect(redirectUrl)
       }
       
-      // If we have auth cookies but no session, let the request through
-      // The client-side context will handle the authentication
-      if (!session && authCookies.length > 0) {
-        console.log(`⏳ Allowing ${request.nextUrl.pathname} - auth cookies present, letting client handle auth`)
-      }
+
     }
   } catch (error) {
     console.error('🚨 Middleware error:', error)

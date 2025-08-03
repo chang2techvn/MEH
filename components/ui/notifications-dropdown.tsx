@@ -54,7 +54,6 @@ export default function NotificationsDropdown() {
       
       // Check if user is authenticated
       if (!isAuthenticated || !user?.id) {
-        console.log('User not authenticated, using sample notifications')
         setSampleNotifications()
         return
       }

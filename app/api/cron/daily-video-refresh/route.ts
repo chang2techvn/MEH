@@ -12,7 +12,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    console.log('🚀 Starting daily auto-generation at 23:59...')
     const startTime = Date.now()
     const today = new Date().toISOString().split('T')[0] // YYYY-MM-DD format
 

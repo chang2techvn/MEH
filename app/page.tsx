@@ -154,11 +154,6 @@ export default function Home() {
     setHoverTimer(timer)
   }
 
-  // Handle practice tool clicks
-  const handlePracticeToolClick = (tool: string) => {
-    console.log(`Practice tool clicked: ${tool}`)
-    // Add navigation logic here
-  }
 
   // Handle leaderboard view
   const handleViewLeaderboard = () => {
@@ -222,7 +217,6 @@ export default function Home() {
               onMouseLeave={handleSidebarHoverLeave}
             >
               <Sidebar 
-                onPracticeToolClick={handlePracticeToolClick}
                 onViewLeaderboard={handleViewLeaderboard}
               />
             </div>

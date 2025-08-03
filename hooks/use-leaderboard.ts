@@ -26,7 +26,6 @@ export function useLeaderboard() {
         dbHelpers.getLeaderboard()
           .then(result => {
             const rawData = result.data || []
-            console.log('📊 Raw leaderboard data loaded:', rawData) // Debug log
             
             // Transform data to match LeaderboardUser interface
             const transformedData: LeaderboardUser[] = rawData.map((user: any, index: number) => ({
@@ -39,7 +38,6 @@ export function useLeaderboard() {
               streak: user.streak_days || 0
             }))
             
-            console.log('📊 Transformed leaderboard data:', transformedData) // Debug log
             setLeaderboardData(transformedData)
           })
           .catch(error => {

@@ -41,8 +41,6 @@ export function useYouTubePlayer(
   const initializePlayer = useCallback(() => {
     if (!playerContainerRef.current || playerInitialized.current) return
 
-    console.log("🎬 Initializing YouTube player with videoId:", videoId)
-
     try {
       playerContainerRef.current.innerHTML = ""
 
@@ -72,7 +70,6 @@ export function useYouTubePlayer(
         },
         events: {
           onReady: (event: any) => {
-            console.log("🎬 YouTube player ready for:", videoId)
             playerReadyRef.current = true
             setPlayerState(prev => ({ ...prev, loading: false }))
             
@@ -80,13 +77,11 @@ export function useYouTubePlayer(
             try {
               event.target.cueVideoById(videoId)
               event.target.pauseVideo()
-              console.log("🎬 Video cued and paused successfully:", videoId)
             } catch (err) {
               console.error("Error loading video:", err)
             }
           },
           onStateChange: (event: any) => {
-            console.log("🎬 Player state changed:", event.data)
             setPlayerState(prev => ({ ...prev, isPlaying: event.data === 1 }))
           },
           onError: (event: any) => {
@@ -97,7 +92,6 @@ export function useYouTubePlayer(
       })
 
       playerInitialized.current = true
-      console.log("🎬 Player initialization completed for:", videoId)
     } catch (err) {
       console.error("Error initializing YouTube player:", err)
       setPlayerState(prev => ({ ...prev, error: true, loading: false }))
@@ -297,7 +291,6 @@ export function useYouTubePlayer(
       if (playerRef.current && playerReadyRef.current && playerState.isPlaying) {
         try {
           playerRef.current.pauseVideo()
-          console.log(`✅ Video auto-paused after reaching required watch time of ${requiredWatchTime} seconds`)
         } catch (err) {
           console.error("Error auto-pausing video:", err)
         }
@@ -335,34 +328,22 @@ export function useYouTubePlayer(
   }, [initializePlayer])
 
   const handlePlayPause = useCallback(() => {
-    console.log("🎮 [handlePlayPause] Called")
-    console.log("🎮 playerRef.current:", !!playerRef.current)
-    console.log("🎮 playerReadyRef.current:", playerReadyRef.current)
-    console.log("🎮 playerState.isPlaying:", playerState.isPlaying)
-    
     if (!playerRef.current || !playerReadyRef.current) {
-      console.error("❌ [handlePlayPause] Player not ready:", {
-        hasPlayer: !!playerRef.current,
-        isReady: playerReadyRef.current
-      })
       return
     }
 
     try {
       // Additional check for player state before calling methods
       const playerStateValue = playerRef.current.getPlayerState()
-      console.log("🎮 YouTube Player State:", playerStateValue)
       
       // Check if player methods are available
       if (typeof playerRef.current.playVideo !== 'function' || 
           typeof playerRef.current.pauseVideo !== 'function') {
-        console.warn("⚠️ Player methods not available, waiting for initialization...")
         return
       }
       
       // Check if player has loaded data (-1 = unstarted, 0 = ended, 1 = playing, 2 = paused, 3 = buffering, 5 = cued)
       if (playerStateValue === -1) {
-        console.log("🎮 Player not ready yet, trying to cue video first")
         try {
           playerRef.current.loadVideoById(videoId)
            // Wait a bit then try to play
@@ -388,7 +369,6 @@ export function useYouTubePlayer(
       }
     } catch (err) {
       console.error("Error controlling YouTube player:", err)
-      console.log("🔧 Player error detected, not reloading to avoid loop")
       // Don't reload automatically to avoid infinite loops
     }
   }, [playerState.isPlaying, videoId])

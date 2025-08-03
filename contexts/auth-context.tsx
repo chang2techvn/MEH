@@ -106,49 +106,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
                 joinedAt: new Date(session.user.created_at),
                 lastActive: new Date(),
               }
-              console.log('🎨 Auth Context - Setting user with avatar:', {
-                name: userData.name,
-                avatar: userData.avatar,
-                level: userData.level,
-                streakDays: userData.streakDays,
-                profileData: profileData
-              })
               setUser(userData)
             } else {
-              // Fallback to auth user data if profile not found
-              const userData: User = {
-                id: session.user.id,
-                email: session.user.email!,
-                name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0],
-                avatar: session.user.user_metadata?.avatar_url,
-                role: 'MEMBER',
-                isActive: true,
-                joinedAt: new Date(session.user.created_at),
-                lastActive: new Date(),
-              }
-              setUser(userData)
+              // Profile not found, try getUserFromDatabase to let trigger create it
+              await getUserFromDatabase(session.user)
             }
           } catch (error) {
-            console.log('Error fetching profile data, using auth data:', error)
-            // Fallback to auth user data
-            const userData: User = {
-              id: session.user.id,
-              email: session.user.email!,
-              name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0],
-              avatar: session.user.user_metadata?.avatar_url,
-              role: 'MEMBER',
-              isActive: true,
-              joinedAt: new Date(session.user.created_at),
-              lastActive: new Date(),
-            }
-            setUser(userData)
-          }
-          
-          // Try to sync with database, but don't fail if it doesn't work
-          try {
-            await createUserInDatabase(session.user)
-          } catch (error) {
-            console.log('Database sync failed, continuing with existing user:', error)
+            console.log('Error fetching profile data, trying getUserFromDatabase:', error)
+            // Fallback to getUserFromDatabase
+            await getUserFromDatabase(session.user)
           }
         }
       } catch (error) {
@@ -163,8 +129,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.email)
-        
         if (event === 'SIGNED_IN' && session?.user) {
           // Fetch user data from profiles table first
           try {
@@ -182,7 +146,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
                 name: profileData.full_name || session.user.email?.split('@')[0],
                 avatar: profileData.avatar_url,
                 background_url: profileData.background_url,
-                role: 'MEMBER',
+                role: profileData.role || 'student',
+                major: profileData.major,
+                academicYear: profileData.academic_year,
+                className: profileData.class_name,
+                studentId: profileData.student_id,
                 bio: profileData.bio,
                 level: profileData.level || 1,
                 streakDays: profileData.streak_days || 0,
@@ -193,40 +161,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
               }
               setUser(userData)
             } else {
-              // Fallback to auth user data if profile not found
-              const userData: User = {
-                id: session.user.id,
-                email: session.user.email!,
-                name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0],
-                avatar: session.user.user_metadata?.avatar_url,
-                role: 'MEMBER',
-                isActive: true,
-                joinedAt: new Date(session.user.created_at),
-                lastActive: new Date(),
-              }
-              setUser(userData)
+              // Profile not found, let getUserFromDatabase handle trigger
+              console.log('Profile not found on sign in, waiting for trigger...')
+              await getUserFromDatabase(session.user)
             }
           } catch (error) {
-            console.log('Error fetching profile data on sign in, using auth data:', error)
-            // Fallback to auth user data
-            const userData: User = {
-              id: session.user.id,
-              email: session.user.email!,
-              name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0],
-              avatar: session.user.user_metadata?.avatar_url,
-              role: 'MEMBER',
-              isActive: true,
-              joinedAt: new Date(session.user.created_at),
-              lastActive: new Date(),
-            }
-            setUser(userData)
-          }
-          
-          // Try to sync with database in background
-          try {
-            await createUserInDatabase(session.user)
-          } catch (error) {
-            console.log('Database sync failed:', error)
+            console.log('Error fetching profile data on sign in, trying getUserFromDatabase:', error)
+            await getUserFromDatabase(session.user)
           }
         } else if (event === 'SIGNED_OUT') {
           setUser(null)
@@ -238,55 +179,115 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     return () => subscription.unsubscribe()
   }, [])
-  // Helper function to create user in database
-  const createUserInDatabase = async (supabaseUser: SupabaseUser) => {
+  // Helper function to get user from database (trigger will create if needed)
+  const getUserFromDatabase = async (supabaseUser: SupabaseUser) => {
     try {
-      const { data, error } = await supabase
-        .from('users')
-        .insert({
-          id: supabaseUser.id, // Supabase auth ID is already a UUID
-          email: supabaseUser.email!,
-          name: supabaseUser.user_metadata?.full_name || supabaseUser.email?.split('@')[0],
-          avatar: supabaseUser.user_metadata?.avatar_url,
-          role: 'student', // Default role
-          is_active: true,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          last_login: new Date().toISOString()
-        })
-        .select()
+      // First, wait a moment for trigger to complete if user just signed up
+      await new Promise(resolve => setTimeout(resolve, 500))
+      
+      // Try to get user from profiles table first (has more complete data)
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', supabaseUser.id)
         .single()
 
-      if (error && error.code !== '23505') { // 23505 is unique violation (user already exists)
-        console.error('Error creating user in database:', error)
-        return null
+      if (profileData && !profileError) {
+        // Use profile data (more complete)
+        const userData: User = {
+          id: supabaseUser.id,
+          email: supabaseUser.email!,
+          name: profileData.full_name || supabaseUser.user_metadata?.full_name || supabaseUser.email?.split('@')[0],
+          avatar: profileData.avatar_url || supabaseUser.user_metadata?.avatar_url,
+          background_url: profileData.background_url,
+          role: profileData.role || 'student',
+          major: profileData.major,
+          academicYear: profileData.academic_year,
+          className: profileData.class_name,
+          studentId: profileData.student_id,
+          bio: profileData.bio,
+          level: profileData.level || 1,
+          streakDays: profileData.streak_days || 0,
+          experiencePoints: profileData.experience_points || 0,
+          isActive: true,
+          joinedAt: new Date(profileData.created_at || supabaseUser.created_at),
+          lastActive: new Date(),
+          preferences: {}
+        }
+        setUser(userData)
+        return userData
       }
 
-      // Update user state with database data if successful
-      if (data) {
-        setUser({
-          id: data.id,
-          email: data.email,
-          name: data.name || undefined,
-          avatar: data.avatar || undefined,
-          role: data.role || undefined,
-          isActive: data.is_active || true,
-          joinedAt: new Date(data.created_at || supabaseUser.created_at),          lastActive: new Date(data.last_login || new Date()),
-          bio: data.bio || undefined,
-          points: data.points || undefined,
-          level: data.level || undefined,
-          experiencePoints: data.experience_points || undefined,
-          streakDays: data.streak_days || undefined,
-          preferences: data.preferences || undefined
-        })
-        return data
+      // If profile not found, check users table
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', supabaseUser.id)
+        .single()
+
+      if (userData && !userError) {
+        // Use users table data as fallback
+        const user: User = {
+          id: userData.id,
+          email: userData.email,
+          name: userData.name || supabaseUser.user_metadata?.full_name || supabaseUser.email?.split('@')[0],
+          avatar: userData.avatar || supabaseUser.user_metadata?.avatar_url,
+          role: userData.role || 'student',
+          isActive: userData.is_active || true,
+          joinedAt: new Date(userData.created_at || supabaseUser.created_at),
+          lastActive: new Date(userData.last_login || new Date()),
+          bio: userData.bio,
+          points: userData.points,
+          level: userData.level || 1,
+          experiencePoints: userData.experience_points || 0,
+          streakDays: userData.streak_days || 0,
+          preferences: userData.preferences || {}
+        }
+        setUser(user)
+        return user
       }
+      
+      // If neither found, wait a bit more for triggers to complete
+      await new Promise(resolve => setTimeout(resolve, 2000))
+      
+      // Try profiles again
+      const { data: retryProfileData } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', supabaseUser.id)
+        .single()
+        
+      if (retryProfileData) {
+        const userData: User = {
+          id: supabaseUser.id,
+          email: supabaseUser.email!,
+          name: retryProfileData.full_name || supabaseUser.user_metadata?.full_name || supabaseUser.email?.split('@')[0],
+          avatar: retryProfileData.avatar_url || supabaseUser.user_metadata?.avatar_url,
+          background_url: retryProfileData.background_url,
+          role: retryProfileData.role || 'student',
+          major: retryProfileData.major,
+          academicYear: retryProfileData.academic_year,
+          className: retryProfileData.class_name,
+          studentId: retryProfileData.student_id,
+          bio: retryProfileData.bio,
+          level: retryProfileData.level || 1,
+          streakDays: retryProfileData.streak_days || 0,
+          experiencePoints: retryProfileData.experience_points || 0,
+          isActive: true,
+          joinedAt: new Date(retryProfileData.created_at || supabaseUser.created_at),
+          lastActive: new Date(),
+          preferences: {}
+        }
+        setUser(userData)
+        return userData
+      }
+      
       return null
     } catch (error) {
-      console.error('Error creating user:', error)
-      // Don't throw error, just log it
+      console.error('Error getting user:', error)
       return null
-    }  }
+    }
+  }
 
   // Login function
   const login = useCallback(async (email: string, password: string, remember = false) => {

@@ -178,20 +178,13 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
         setLoading(true)
         setError(null)
         
-        console.log(`🎯 === FETCH VIDEO USEEFFECT ===`)
-        console.log(`Challenge Mode: ${challengeMode}`)
-        console.log(`Practice Challenge:`, practiceChallenge?.id || "null")
-        console.log(`Loading Settings: ${loadingSettings}`)
-        
         // Reset video watched state when switching challenges
         setVideoWatched(false)
-        console.log("🔄 Video watched state reset for new challenge")
         
         let videoData: VideoData | null = null
         
         if (challengeMode === 'practice' && practiceChallenge) {
           // Load practice challenge video - convert from Challenge to VideoData format
-          console.log("🔍 Loading practice challenge video...")
           videoData = {
             id: practiceChallenge.id,
             title: practiceChallenge.title,
@@ -203,37 +196,14 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
             transcript: practiceChallenge.transcript || '', // Use transcript from database
             topics: practiceChallenge.topics || []
           }
-          console.log("✅ Practice challenge video loaded:", videoData.id)
-          console.log("📝 Practice challenge transcript length:", practiceChallenge.transcript?.length || 0)
         } else {
           // Load daily challenge video (default behavior)
-          console.log("🔍 Fetching today's video...")
           videoData = await getTodayVideo()
-          console.log("✅ Video fetched successfully:", videoData?.id)
         }
         
         setVideoData(videoData)
         
         // Check if video already has transcript from database
-        console.log("=== CHECKING VIDEO TRANSCRIPT ===")
-        
-        
-        // Debug video ID extraction
-        if (videoData) {
-          const extractedVideoId = extractVideoId(videoData.videoUrl || videoData.embedUrl || videoData.id)
-          console.log("🎬 Video ID Debug:")
-          console.log("- Database ID:", videoData.id)
-          console.log("- Video URL:", videoData.videoUrl)
-          console.log("- Embed URL:", videoData.embedUrl)
-          console.log("- Extracted Video ID:", extractedVideoId)
-          
-          // For practice challenges, check if we have a separate videoId field
-          if (challengeMode === 'practice' && practiceChallenge?.videoId) {
-            console.log("- Practice Challenge Video ID:", practiceChallenge.videoId)
-          }
-        }
-        
-        console.log("=== END TRANSCRIPT CHECK ===")
         
       } catch (err) {
         console.error("Error fetching video:", err)

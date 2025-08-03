@@ -3,8 +3,7 @@
 // Function to trigger daily video refresh when no challenges are found
 export async function triggerDailyRefresh(): Promise<{ success: boolean; message: string }> {
   try {
-    console.log("🚀 Triggering daily refresh manually...")
-    
+
     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
     const cronSecret = process.env.CRON_SECRET
     
@@ -28,7 +27,6 @@ export async function triggerDailyRefresh(): Promise<{ success: boolean; message
     }
     
     const data = await response.json()
-    console.log("✅ Daily refresh completed:", data)
     
     return { 
       success: true, 

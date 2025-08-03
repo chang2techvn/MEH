@@ -121,7 +121,7 @@ async function fetchUserProgressData(userId: string) {
     .select('total_points, latest_post_points, latest_post_date')
     .eq('user_id', userId)
     .eq('week_start_date', weekStartDate)
-    .single()
+    .maybeSingle() // Use maybeSingle() instead of single() to handle no records
 
   // Get latest post overall (not just this week) for "Latest Post" display
   const { data: latestPostData, error: latestPostError } = await supabase
@@ -198,9 +198,7 @@ export function useUserProgress() {
         setLoading(true)
         setError(null)
         
-        console.log('Fetching user progress for user:', user.id)
         const progressData = await fetchUserProgressData(user.id)
-        console.log('Final progress data:', progressData)
         setProgressData(progressData)
 
       } catch (err) {

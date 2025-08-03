@@ -67,10 +67,6 @@ export async function createChallenge(
   
   try {
     if (challengeType === 'user_generated') {
-      console.log("🎯 === CREATE USER GENERATED CHALLENGE ===")
-      console.log("📹 Video URL:", options.videoUrl)
-      console.log("👤 User ID:", options.userId)
-      console.log("🎚️ Difficulty:", options.difficulty)
       
       if (!options.videoUrl || !options.userId) {
         console.error("❌ Missing required parameters")
@@ -81,7 +77,6 @@ export async function createChallenge(
       (globalThis as any).currentChallengeDifficulty = options.difficulty || 'intermediate'
       
       // Extract video data from URL
-      console.log("🔍 Extracting video data from URL...")
       const videoData = await extractVideoFromUrl(options.videoUrl)
       if (!videoData) {
         console.error("❌ Could not extract video information")
@@ -90,9 +85,6 @@ export async function createChallenge(
       
       // Clean up global variable
       delete (globalThis as any).currentChallengeDifficulty
-      
-      console.log("✅ Video data extracted successfully")
-      console.log("📝 Video has transcript:", !!videoData.transcript, videoData.transcript?.length || 0, "chars")
       
       // Calculate transcript duration based on difficulty level
       const difficulty = options.difficulty || 'intermediate'
@@ -107,9 +99,6 @@ export async function createChallenge(
       } else {
         transcriptDuration = Math.min(videoData.duration, 180) // Default to intermediate
       }
-      
-      console.log(`🎯 Challenge duration for ${difficulty} level: ${transcriptDuration} seconds (transcript time)`)
-      console.log(`📹 Original video duration: ${videoData.duration} seconds`)
       
       // Create user-generated challenge
       const challengeData: ChallengeData = {
@@ -130,7 +119,6 @@ export async function createChallenge(
         date: today
       }
       
-      console.log("💾 Inserting challenge into database...")
       const { data, error } = await supabase
         .from('challenges')
         .insert(challengeData)
@@ -142,7 +130,6 @@ export async function createChallenge(
         throw error
       }
       
-      console.log("✅ Challenge saved to database:", data.id)
       return data
       
     } else if (challengeType === 'daily') {
@@ -249,9 +236,7 @@ export async function createChallenge(
             
           if (error) throw error
           challenges.push(data)
-          
-          console.log(`✅ Created ${difficulty} practice challenge for ${today}`)
-          
+                    
           // Add delay between requests to avoid rate limiting
           if (missingDifficulties.indexOf(difficulty) < missingDifficulties.length - 1) {
             await new Promise(resolve => setTimeout(resolve, 2000))
@@ -348,8 +333,6 @@ export async function fetchRandomYoutubeVideo(
   // }
 
   try {
-    console.log(`Attempting to fetch a random YouTube video (${minDuration}-${maxDuration} seconds)...`)
-    console.log("Preferred topics:", preferredTopics.length > 0 ? preferredTopics.join(", ") : "Any")    // Try to scrape YouTube for videos
     const videoData = await attemptYouTubeScraping(minDuration, maxDuration, preferredTopics)
 
     // Cache the video for today
@@ -414,8 +397,6 @@ async function attemptYouTubeScraping(
   // Randomly select a search term
   const randomTerm = searchTerms[Math.floor(Math.random() * searchTerms.length)]
 
-  console.log(`Searching YouTube for: "${randomTerm}"`)
-
   try {
     // Add duration filter to the search query
     // YouTube duration filters: short (< 4 min), medium (4-20 min), long (> 20 min)
@@ -438,17 +419,13 @@ async function attemptYouTubeScraping(
     }
 
     const html = await response.text()
-    console.log(`Received HTML response of length: ${html.length}`)
 
     // Extract video IDs using multiple methods
     const videoIds = extractVideoIds(html)
 
     if (videoIds.length === 0) {
-      console.log("No videos found in search results, using fallback")
       throw new Error("No videos found in search results")
     }
-
-    console.log(`Found ${videoIds.length} videos in search results`)
 
     // Try videos one by one until we find one with appropriate duration
     for (const videoId of videoIds) {
@@ -457,13 +434,8 @@ async function attemptYouTubeScraping(
 
         // Check if the video meets our duration requirements
         if (videoDetails.duration >= minDuration && videoDetails.duration <= maxDuration) {
-          console.log(`Selected video ID: ${videoId} with duration: ${videoDetails.duration} seconds`)
           return videoDetails
-        } else {
-          console.log(
-            `Skipping video ID: ${videoId} - duration ${videoDetails.duration} seconds is outside range ${minDuration}-${maxDuration}`,
-          )
-        }
+        } 
       } catch (error) {
         console.error(`Error getting details for video ${videoId}:`, error)
         // Continue to the next video
@@ -587,7 +559,6 @@ async function getVideoDetails(videoId: string, minDuration: number, maxDuration
 
         duration = minutes * 60 + seconds
 
-        console.log(`Parsed duration: ${duration} seconds (${minutes}m ${seconds}s)`)
       } catch (error) {
         console.error("Error parsing duration:", error)
       }
@@ -605,22 +576,15 @@ async function getVideoDetails(videoId: string, minDuration: number, maxDuration
       // Adjust transcript duration based on difficulty level
       if (difficulty === 'beginner') {
         maxWatchTimeSeconds = Math.min(duration, 120) // 2 minutes for beginners
-        console.log(`🎬 User-generated BEGINNER challenge: Using 2-minute time limit: ${maxWatchTimeSeconds} seconds`)
       } else if (difficulty === 'intermediate') {
         maxWatchTimeSeconds = Math.min(duration, 180) // 3 minutes for intermediate
-        console.log(`🎬 User-generated INTERMEDIATE challenge: Using 3-minute time limit: ${maxWatchTimeSeconds} seconds`)
       } else if (difficulty === 'advanced') {
         maxWatchTimeSeconds = Math.min(duration, 300) // 5 minutes for advanced
-        console.log(`🎬 User-generated ADVANCED challenge: Using 5-minute time limit: ${maxWatchTimeSeconds} seconds`)
       } else {
         // Fallback to intermediate
         maxWatchTimeSeconds = Math.min(duration, 180)
-        console.log(`🎬 User-generated challenge (fallback): Using 3-minute time limit: ${maxWatchTimeSeconds} seconds`)
       }
-    } else {
-      console.log(`🎬 Practice challenge: Using admin time limit: ${maxWatchTimeSeconds} seconds`)
-    }
-    
+    } 
     const transcriptResult = await extractYouTubeTranscriptForDuration(videoId, duration, maxWatchTimeSeconds)
     const transcript = transcriptResult.transcript
 
@@ -714,7 +678,6 @@ export async function getTodayVideo(): Promise<VideoData> {
   const today = getTodayDate()
   
   try {    
-    console.log(`🔍 Checking Supabase for today's video (${today})...`)    
     
     // 1. Check Supabase for today's video first
     const { data, error } = await supabaseServer
@@ -724,9 +687,7 @@ export async function getTodayVideo(): Promise<VideoData> {
       .eq('challenge_type', 'daily')
       .single()
       
-    if (data && !error) {
-      console.log("✅ Video already exists for today, using saved video:", data.id)
-      
+    if (data && !error) {      
       // Log transcript information
       if (data.transcript && data.transcript.length > 100) {
         console.log(`📝 Transcript available: ${data.transcript.length} characters`)

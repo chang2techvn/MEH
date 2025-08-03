@@ -63,7 +63,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     // Get user name for mentioning in AI interactions
     const userName = session.users?.profiles?.full_name || 'bạn';
-    console.log(`👤 User name for interaction: ${userName}`);
 
     // Get AI assistant details with birth year for proper addressing
     const { data: aiAssistants, error: aiError } = await supabase
@@ -288,14 +287,12 @@ CHỈ TRẢ LỜI NỘI DUNG TIN NHẮN, KHÔNG CẦN ĐỊNH DẠNG GÌ THÊM.`
         );
       }
 
-      console.log(`🔑 Found ${allApiKeys.length} API keys to try`);
 
       // Try each API key until success
       for (let i = 0; i < allApiKeys.length; i++) {
         const apiKeyResult = allApiKeys[i];
         
         try {
-          console.log(`🔑 Trying API key: ${apiKeyResult.key_name} (attempt ${i + 1}/${allApiKeys.length})`);
 
           geminiResponse = await fetch(
             `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKeyResult.decrypted_key}`,
@@ -323,7 +320,6 @@ CHỈ TRẢ LỜI NỘI DUNG TIN NHẮN, KHÔNG CẦN ĐỊNH DẠNG GÌ THÊM.`
             if (generatedContent) {
               // Increment usage for successful key
               await incrementUsage(apiKeyResult.id);
-              console.log(`✅ Success with API key: ${apiKeyResult.key_name}`);
               
               // Format the content to highlight user name in green for ai_to_user interactions
               if (interactionType === 'ai_to_user' && userName && userName !== 'bạn') {
@@ -335,10 +331,8 @@ CHỈ TRẢ LỜI NỘI DUNG TIN NHẮN, KHÔNG CẦN ĐỊNH DẠNG GÌ THÊM.`
               break; // Success, exit loop
             }
           } else if (geminiResponse.status === 429) {
-            console.log(`⚠️ API key ${apiKeyResult.key_name} rate limited (429), trying next key...`);
             continue; // Try next key
           } else if (geminiResponse.status >= 500) {
-            console.log(`⚠️ API key ${apiKeyResult.key_name} server error (${geminiResponse.status}), trying next key...`);
             continue; // Try next key
           } else {
             // Other error, don't try remaining keys
@@ -485,14 +479,12 @@ CHỈ TRẢ LỜI NỘI DUNG TIN NHẮN, KHÔNG CẦN ĐỊNH DẠNG GÌ THÊM.`
         if (!targetAllApiKeys?.length) {
           console.error('No API keys available for target response');
         } else {
-          console.log(`🔑 Found ${targetAllApiKeys.length} API keys for target response`);
 
           // Try each API key until success
           for (let i = 0; i < targetAllApiKeys.length; i++) {
             const targetApiKeyResult = targetAllApiKeys[i];
             
             try {
-              console.log(`🔑 Trying target API key: ${targetApiKeyResult.key_name} (attempt ${i + 1}/${targetAllApiKeys.length})`);
 
               const targetGeminiResponse = await fetch(
                 `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${targetApiKeyResult.decrypted_key}`,
@@ -555,14 +547,11 @@ CHỈ TRẢ LỜI NỘI DUNG TIN NHẮN, KHÔNG CẦN ĐỊNH DẠNG GÌ THÊM.`
                     };
                   }
                   
-                  console.log(`✅ Target response success with API key: ${targetApiKeyResult.key_name}`);
                   break; // Success, exit loop
                 }
               } else if (targetGeminiResponse.status === 429) {
-                console.log(`⚠️ Target API key ${targetApiKeyResult.key_name} rate limited, trying next...`);
                 continue; // Try next key
               } else if (targetGeminiResponse.status >= 500) {
-                console.log(`⚠️ Target API key ${targetApiKeyResult.key_name} server error (${targetGeminiResponse.status}), trying next...`);
                 continue; // Try next key
               } else {
                 console.error(`Target response API error: ${targetGeminiResponse.status}`);

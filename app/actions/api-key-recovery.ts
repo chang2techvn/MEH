@@ -36,7 +36,6 @@ export async function recoverInactiveApiKeys(serviceName: string = 'gemini'): Pr
   }
 
   try {
-    console.log(`🔄 Starting API key recovery for service: ${serviceName}`)
 
     // Calculate 24 hours ago
     const twentyFourHoursAgo = new Date()
@@ -58,12 +57,10 @@ export async function recoverInactiveApiKeys(serviceName: string = 'gemini'): Pr
     result.totalInactiveKeys = inactiveKeys?.length || 0
 
     if (!inactiveKeys || inactiveKeys.length === 0) {
-      console.log('✅ No inactive keys found that are eligible for recovery')
       result.success = true
       return result
     }
 
-    console.log(`📋 Found ${inactiveKeys.length} inactive keys eligible for recovery`)
 
     // Reset usage counters and reactivate keys
     const recoveryPromises = inactiveKeys.map(async (key) => {
@@ -82,7 +79,6 @@ export async function recoverInactiveApiKeys(serviceName: string = 'gemini'): Pr
           return false
         }
 
-        console.log(`✅ Recovered API key: ${key.key_name}`)
         return true
       } catch (error) {
         result.errors.push(`Error recovering key ${key.key_name}: ${error instanceof Error ? error.message : 'Unknown error'}`)
@@ -95,7 +91,6 @@ export async function recoverInactiveApiKeys(serviceName: string = 'gemini'): Pr
 
     result.success = result.errors.length === 0
     
-    console.log(`🎉 Recovery complete: ${result.recoveredKeys}/${result.totalInactiveKeys} keys recovered`)
 
     // Revalidate any cached data
     revalidatePath('/api/ai')
@@ -173,7 +168,6 @@ export async function getRecoveryStats(serviceName: string = 'gemini') {
  */
 export async function recoverSpecificKey(keyId: string): Promise<boolean> {
   try {
-    console.log(`🔄 Manually recovering API key: ${keyId}`)
 
     const { error } = await supabase
       .from('api_keys')
@@ -188,8 +182,6 @@ export async function recoverSpecificKey(keyId: string): Promise<boolean> {
       console.error(`❌ Failed to recover key ${keyId}:`, error)
       return false
     }
-
-    console.log(`✅ Successfully recovered API key: ${keyId}`)
     
     // Revalidate cached data
     revalidatePath('/api/ai')
@@ -210,7 +202,6 @@ export async function recoverSpecificKey(keyId: string): Promise<boolean> {
  */
 export async function resetDailyUsageCounters(serviceName: string = 'gemini'): Promise<boolean> {
   try {
-    console.log(`🔄 Resetting daily usage counters for service: ${serviceName}`)
 
     const { error } = await supabase
       .from('api_keys')
@@ -224,8 +215,6 @@ export async function resetDailyUsageCounters(serviceName: string = 'gemini'): P
       console.error('❌ Failed to reset daily usage counters:', error)
       return false
     }
-
-    console.log(`✅ Daily usage counters reset for service: ${serviceName}`)
     
     // Revalidate cached data
     revalidatePath('/api/ai')

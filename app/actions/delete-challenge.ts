@@ -8,7 +8,6 @@ export async function deleteChallenge(challengeId: string, userId?: string): Pro
   error?: string
 }> {
   try {
-    console.log(`🗑️ Attempting to delete challenge: ${challengeId}`)
     
     // First, check if the challenge exists and if the user has permission to delete it
     const { data: challenge, error: fetchError } = await supabaseServer
@@ -32,12 +31,6 @@ export async function deleteChallenge(challengeId: string, userId?: string): Pro
       }
     }
     
-    console.log(`📝 Challenge details:`, {
-      id: challenge.id,
-      title: challenge.title,
-      type: challenge.challenge_type,
-      userId: challenge.user_id
-    })
     
     // Check permissions - only allow deletion of user-generated challenges by their creator
     if (challenge.challenge_type !== 'user_generated') {
@@ -69,9 +62,7 @@ export async function deleteChallenge(challengeId: string, userId?: string): Pro
         error: "Failed to delete challenge"
       }
     }
-    
-    console.log(`✅ Successfully deleted challenge: ${challengeId}`)
-    
+        
     // Revalidate the challenges page to update the UI
     revalidatePath('/')
     

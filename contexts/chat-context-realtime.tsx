@@ -171,8 +171,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   // Handle realtime message events - optimized
   const handleNewMessage = useCallback(async (messageData: any) => {
     try {
-      console.log('📨 Realtime message received:', messageData);
-      
       // Create message object directly without fetching user data 
       // (user data should already be available in conversation participants)
       const newMessage: Message = {
@@ -185,8 +183,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         reactions: [],
       }
 
-      console.log('📝 Converted to message object:', newMessage);
-
       setConversations(prev => {
         const newConversations = new Map(prev)
         const conversation = newConversations.get(messageData.conversation_id)
@@ -195,7 +191,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           // Check if message already exists to avoid duplicates - more efficient check
           const messageExists = conversation.messages.some(msg => msg.id === messageData.id)
           if (messageExists) {
-            console.log('⚠️ Message already exists, skipping:', messageData.id);
             return prev
           }
 
@@ -212,21 +207,17 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
             )
             
             if (optimisticIndex !== -1) {
-              console.log('🔄 Replacing optimistic message at index:', optimisticIndex);
               updatedMessages[optimisticIndex] = newMessage
             } else {
-              console.log('➕ Adding new message from current user (no optimistic found)');
               updatedMessages.push(newMessage)
             }
           } else {
-            console.log('➕ Adding new message from other user');
             updatedMessages.push(newMessage)
           }
 
           // Calculate unread count - only increment if sender is not current user
           const newUnreadCount = isFromCurrentUser ? conversation.unreadCount : conversation.unreadCount + 1
 
-          console.log('✅ Adding realtime message to conversation:', messageData.conversation_id);
           const updatedConversation = {
             ...conversation,
             messages: updatedMessages,
@@ -235,9 +226,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           }
 
           newConversations.set(messageData.conversation_id, updatedConversation)
-          console.log('✅ Updated conversation with new message');
-        } else {
-          console.log('❌ Conversation not found for realtime message:', messageData.conversation_id);
         }
         
         return newConversations
@@ -245,8 +233,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
       // Play notification sound for messages from others (optional)
       if (messageData.sender_id !== currentUser?.id) {
-        // Could add notification sound here
-        console.log('🔔 New message from another user')
+        // Could add notification sound here (silently)
       }
 
     } catch (error) {
@@ -336,19 +323,15 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     // Check if we already have a subscription for this conversation
     const existingChannel = channelsRef.current.get(conversationId)
     if (existingChannel) {
-      console.log(`📡 Channel already exists for conversation ${conversationId}, skipping`)
       return
     }
 
     // Check retry limit
     const currentRetries = retryAttemptsRef.current.get(conversationId) || 0
     if (currentRetries >= 3) {
-      console.error(`❌ Max retry attempts reached for conversation ${conversationId}`)
       return
     }
 
-    console.log(`💬 Setting up subscription for conversation ${conversationId} (attempt ${currentRetries + 1})`)
-    
     const channel = supabase
       .channel(`conversation-${conversationId}`, {
         config: {
@@ -365,7 +348,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           filter: `conversation_id=eq.${conversationId}`
         },
         (payload: RealtimePostgresChangesPayload<any>) => {
-          console.log('💬 New message received:', payload)
           handleNewMessage(payload.new)
         }
       )
@@ -378,7 +360,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           filter: `conversation_id=eq.${conversationId}`
         },
         (payload: RealtimePostgresChangesPayload<any>) => {
-          console.log('💬 Message updated:', payload)
           handleMessageUpdate(payload.new)
         }
       )
@@ -386,23 +367,22 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         'broadcast',
         { event: 'typing' },
         (payload) => {
-          console.log('⌨️ Typing event received:', payload)
           handleTypingEvent(payload.payload)
         }
       )
       .subscribe((status, err) => {
-        console.log(`💬 Conversation ${conversationId} subscription status:`, status, err)
-        
         if (status === 'SUBSCRIBED') {
-          console.log(`✅ Successfully subscribed to conversation ${conversationId}`)
           // Reset retry count on successful subscription
           retryAttemptsRef.current.delete(conversationId)
         } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-          console.error(`❌ Failed to subscribe to conversation ${conversationId}:`, status, err)
+          // Only log error once per conversation (reduce noise)
+          const retries = retryAttemptsRef.current.get(conversationId) || 0
+          if (retries === 0) {
+            console.warn(`⚠️ Chat subscription failed for conversation ${conversationId.slice(0, 8)}...`)
+          }
           
           // Don't retry if we're cleaning up
           if (isCleaningUpRef.current) {
-            console.log('🧹 Skipping retry due to cleanup in progress')
             return
           }
           
@@ -410,20 +390,17 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           channelsRef.current.delete(conversationId)
           
           // Update retry count
-          const retries = retryAttemptsRef.current.get(conversationId) || 0
           retryAttemptsRef.current.set(conversationId, retries + 1)
           
           // Retry with exponential backoff if under limit
           if (retries < 2) {
             const retryDelay = Math.min(2000 * Math.pow(2, retries), 8000)
-            console.log(`🔄 Retrying subscription for conversation ${conversationId} in ${retryDelay}ms (attempt ${retries + 2}/3)`)
             setTimeout(() => {
               if (!isCleaningUpRef.current) {
                 setupConversationSubscription(conversationId, retries + 1)
               }
             }, retryDelay)
           } else {
-            console.error(`❌ Max retry attempts reached for conversation ${conversationId}`)
             retryAttemptsRef.current.delete(conversationId)
           }
         }
@@ -434,18 +411,15 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
   const cleanupRealtimeSubscriptions = useCallback(() => {
     if (isCleaningUpRef.current) {
-      console.log('🧹 Cleanup already in progress, skipping')
       return
     }
     
-    console.log('🧹 Starting cleanup of realtime subscriptions')
     isCleaningUpRef.current = true
     
     try {
       // Cleanup individual conversation channels
       const channelEntries = Array.from(channelsRef.current.entries())
       channelEntries.forEach(([conversationId, channel]) => {
-        console.log(`🧹 Cleaning up subscription for conversation ${conversationId}`)
         try {
           // Unsubscribe first to prevent callbacks during removal
           channel.unsubscribe()
@@ -458,7 +432,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
       // Cleanup global channel
       if (globalChannelRef.current) {
-        console.log('🧹 Cleaning up global chat subscription')
         try {
           globalChannelRef.current.unsubscribe()
           supabase.removeChannel(globalChannelRef.current)
@@ -478,7 +451,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       retryAttemptsRef.current.clear()
       globalRetryAttemptsRef.current = 0
       
-      console.log('🧹 Cleanup completed successfully')
     } catch (error) {
       console.error('Error during cleanup:', error)
     } finally {
@@ -492,7 +464,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   // Realtime subscriptions setup (defined after cleanup for better organization)
   const setupRealtimeSubscriptions = useCallback(async () => {
     if (!currentUser || isCleaningUpRef.current || setupInProgressRef.current) {
-      console.log('🔔 Skipping realtime setup - user not ready or setup in progress')
       return
     }
 
@@ -532,7 +503,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
             filter: `user_id=eq.${currentUser.id}`
           },
           (payload: RealtimePostgresChangesPayload<any>) => {
-            console.log('🔔 Global participant update:', payload)
             
             if (payload.eventType === 'UPDATE' && payload.new?.last_read_at !== payload.old?.last_read_at) {
               handleReadStatusUpdate(payload.new.conversation_id, payload.new.last_read_at)
@@ -548,24 +518,17 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           }
         )
         .subscribe((status, err) => {
-          console.log('🔔 Global chat subscription status:', status, err)
-          
           if (status === 'SUBSCRIBED') {
-            console.log('✅ Global chat subscription established')
             globalRetryAttemptsRef.current = 0 // Reset retry count on success
           } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-            console.error('❌ Global chat subscription failed:', status, err)
-            
             // Don't retry if we're cleaning up or already retrying too much
             if (isCleaningUpRef.current || globalRetryAttemptsRef.current >= 3) {
-              console.log('🔔 Skipping global retry due to cleanup or max attempts reached')
               return
             }
             
             globalRetryAttemptsRef.current++
             const retryDelay = Math.min(3000 * globalRetryAttemptsRef.current, 15000)
             
-            console.log(`🔄 Retrying global chat subscription in ${retryDelay}ms (attempt ${globalRetryAttemptsRef.current}/3)`)
             setTimeout(() => {
               if (!isCleaningUpRef.current && !setupInProgressRef.current) {
                 setupRealtimeSubscriptions()
@@ -576,8 +539,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
       globalChannelRef.current = globalChannel
 
-      console.log(`🔔 Global subscription set up, will handle individual conversations via events`)
-
     } catch (error) {
       console.error('❌ Error setting up realtime subscriptions:', error)
       
@@ -586,7 +547,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         globalRetryAttemptsRef.current++
         const retryDelay = Math.min(3000 * globalRetryAttemptsRef.current, 15000)
         
-        console.log(`🔄 Retrying realtime subscriptions after error in ${retryDelay}ms (attempt ${globalRetryAttemptsRef.current}/3)`)
         setTimeout(() => {
           if (!isCleaningUpRef.current && !setupInProgressRef.current) {
             setupRealtimeSubscriptions()
@@ -738,7 +698,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                     }
                   })
                 } else {
-                  console.log(`⚠️ Could not fetch user data for ${p.user_id}:`, userError)
                   // Create a fallback participant with just the user ID
                   otherParticipants.push({
                     user_id: p.user_id,
@@ -823,17 +782,14 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       setConversations(conversationMap)
       
       // Set up realtime subscriptions directly after conversations are loaded
-      console.log('🔔 Setting up realtime subscriptions after loading conversations...');
       setTimeout(async () => {
         // First set up global subscription
         await setupRealtimeSubscriptions()
         
         // Then set up individual conversation subscriptions
         setTimeout(() => {
-          console.log('🔔 Setting up individual conversation subscriptions...');
           conversationMap.forEach((conversation, conversationId) => {
             if (!channelsRef.current.has(conversationId)) {
-              console.log(`🔔 Setting up subscription for conversation ${conversationId}`);
               setupConversationSubscription(conversationId)
             }
           })
@@ -883,7 +839,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
-      console.log(`🧹 Cleaned up conversations: ${prevConversations.size} → ${newConversations.size}`)
       return newConversations
     })
   }, [openChatWindows, minimizedChatWindows])
@@ -1325,12 +1280,9 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   // Handle conversation subscription setup - simplified approach
   useEffect(() => {
     if (currentUser && conversations.size > 0 && !isCleaningUpRef.current) {
-      console.log('🔔 Checking conversation subscriptions...');
-      
       // Set up subscriptions for conversations that don't have them yet
       conversations.forEach((conversation, conversationId) => {
         if (!channelsRef.current.has(conversationId)) {
-          console.log(`🔔 Setting up missing subscription for conversation ${conversationId}`)
           setupConversationSubscription(conversationId)
         }
       })
@@ -1344,7 +1296,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       const channelEntries = Array.from(channelsRef.current.entries())
       channelEntries.forEach(([conversationId, channel]) => {
         if (!currentConversationIds.has(conversationId)) {
-          console.log(`🧹 Removing subscription for conversation ${conversationId}`)
           try {
             channel.unsubscribe()
             supabase.removeChannel(channel)
@@ -1361,7 +1312,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   // Cleanup all subscriptions on unmount
   useEffect(() => {
     return () => {
-      console.log('🧹 ChatProvider unmounting, cleaning up all subscriptions')
       cleanupRealtimeSubscriptions()
     }
   }, [cleanupRealtimeSubscriptions])

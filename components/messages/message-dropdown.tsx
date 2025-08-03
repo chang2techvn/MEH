@@ -35,14 +35,7 @@ function MessageDropdownContent() {
 
   // Debug logging with performance monitoring - Cleanup version
   useEffect(() => {
-    if (process.env.NODE_ENV === 'development') {
-      console.log('🔍 MessageDropdown debug:', {
-        loading,
-        currentUser: currentUser?.id,
-        conversationsCount: conversations?.length || 0,
-        isAuthenticated: authContext?.isAuthenticated || false
-      })
-    }
+    // Debug logging removed for production
   }, [loading, currentUser?.id, conversations?.length, authContext?.isAuthenticated])
 
   // Remove direct console.log outside useEffect to prevent infinite logs

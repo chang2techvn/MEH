@@ -56,11 +56,6 @@ export async function createCommunityPost(
           updated_at: new Date().toISOString()
         })
 
-      if (userCreateError) {
-        console.log('Warning: Could not create user record:', userCreateError.message)
-      } else {
-        console.log('✅ Created user record for:', username)
-      }
     }    // Create post data to match the posts table schema
     const postTitle = challengeType 
       ? `${challengeType === 'daily' ? 'Daily' : 'Practice'} - ${new Date().toLocaleDateString()}`
@@ -123,16 +118,13 @@ export async function createCommunityPost(
 
           if (pointsError) {
             console.error("⚠️ Warning: Could not update user points:", pointsError.message)
-          } else {
-            console.log(`✅ Added ${pointsToAdd} points to user ${username} (${currentPoints} → ${newPoints})`)
-          }
+          } 
         }
       } catch (pointsErr) {
         console.error("⚠️ Warning: Error updating points:", pointsErr)
       }
     }
 
-    console.log("✅ Community post saved successfully:", data.id)
     return data as CommunityPost
 
   } catch (error) {

@@ -32,16 +32,12 @@ export function useCurrentChallenge() {
   useEffect(() => {
     const loadCurrentChallenge = async () => {
       try {
-        console.log(`🔍 Loading challenge for mode: ${challengeMode}`)
-        
         if (challengeMode === 'practice' && practiceChallenge) {
           // Use practice challenge from context
-          console.log("✅ Using practice challenge:", practiceChallenge.id)
           setCurrentChallenge(practiceChallenge)
           setChallengeLoading(false)
         } else {
           // Load daily challenge (default behavior)
-          console.log("🔍 Loading today's video for daily challenge...")
           
           // Set loading to false immediately to show content while fetching
           setChallengeLoading(false)
@@ -50,7 +46,6 @@ export function useCurrentChallenge() {
           getTodayVideo()
             .then(videoData => {
               const challenge = videoDataToChallenge(videoData)
-              console.log("✅ Today's video loaded successfully:", challenge.id)
               setCurrentChallenge(challenge)
               
               // If we're in practice mode but no practice challenge, reset to daily

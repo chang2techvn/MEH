@@ -42,15 +42,10 @@ export default function CreateChallengeModal({ open, onOpenChange, onChallengeCr
   useEffect(() => {
     if (!cachedUser) {
       setUserLoading(true)
-      console.log("🔐 Loading user authentication on component mount...")
       
       supabase.auth.getUser().then(({ data: { user } }) => {
         if (user) {
-          console.log("✅ User cached on mount:", user.id)
           setCachedUser(user)
-        } else {
-          console.log("ℹ️ No authenticated user found")
-          // Don't set error here, user might not be logged in yet
         }
         setUserLoading(false)
       }).catch((err) => {
@@ -74,10 +69,8 @@ export default function CreateChallengeModal({ open, onOpenChange, onChallengeCr
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_OUT' || !session?.user) {
-        console.log("🚪 User signed out, clearing cached user")
         setCachedUser(null)
       } else if (event === 'SIGNED_IN' && session?.user) {
-        console.log("🔑 User signed in, updating cached user")
         setCachedUser(session.user)
         setUserLoading(false)
       }
