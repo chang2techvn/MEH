@@ -640,24 +640,6 @@ export const dbHelpers = {
     return { data: data || [], error }
   },
 
-  async getMessages(limit?: number) {
-    const query = supabase
-      .from('messages')
-      .select(`
-        *,
-        sender:users!sender_id(name, avatar),
-        receiver:users!receiver_id(name, avatar)
-      `)
-      .order('created_at', { ascending: false })
-    
-    if (limit) {
-      query.limit(limit)
-    }
-    
-    const { data, error } = await query
-    return { data: data || [], error }
-  },
-
   async getPosts(options?: { limit?: number }) {
     const query = supabase
       .from('posts')
@@ -1100,18 +1082,6 @@ export const dbHelpers = {
       .from('notification_templates')
       .select('*')
       .order('created_at', { ascending: false })
-    
-    return { data: data || [], error }
-  },
-
-  async getScheduledMessages() {
-    const { data, error } = await supabase
-      .from('scheduled_messages')
-      .select(`
-        *,
-        template:notification_templates(name, content)
-      `)
-      .order('scheduled_for', { ascending: true })
     
     return { data: data || [], error }
   },

@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { toast } from "@/hooks/use-toast"
-import { Key, Loader2, Save, Cpu, HelpCircle, Shield, BarChart } from "lucide-react"
+import { Key, Loader2, Save, Cpu, HelpCircle, BarChart } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import type { ApiKey, AIModel } from "./types"
 import { useAISettings } from "./hooks/use-ai-settings"
@@ -93,14 +93,6 @@ export default function AISettingsPage({ initialApiKeys = [], initialAiModels = 
             </Tooltip>
           </TooltipProvider>
 
-          <Button
-            size="sm"
-            className="bg-gradient-to-r from-neo-mint to-purist-blue hover:from-neo-mint/90 hover:to-purist-blue/90 text-white border-0"
-            onClick={() => router.push("/admin/ai-safety")}
-          >
-            <Shield className="h-4 w-4 mr-2" />
-            AI Safety Settings
-          </Button>
         </div>
       </motion.div>
 

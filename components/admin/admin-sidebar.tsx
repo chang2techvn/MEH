@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { useSidebar } from "@/components/ui/sidebar"
 import {
-  BarChart3,
   BookOpen,
   ChevronDown,
   ChevronRight,
@@ -16,18 +15,14 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
-  MessageSquare,
   Settings,
   Users,
   Video,
   Bell,
   Award,
-  FileText,
   Zap,
   Key,
   Cpu,
-  BarChart,
-  Shield,
 } from "lucide-react"
 
 export function AdminSidebar() {
@@ -36,7 +31,6 @@ export function AdminSidebar() {
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
     content: true,
     users: true,
-    analytics: true,
     ai: true,
   })
 
@@ -75,11 +69,6 @@ export function AdminSidebar() {
           icon: <Award className="h-4 w-4" />,
           href: "/admin/challenges",
         },
-        {
-          title: "Resources",
-          icon: <FileText className="h-4 w-4" />,
-          href: "/admin/resources",
-        },
       ],
     },
     {
@@ -97,33 +86,6 @@ export function AdminSidebar() {
           icon: <Bell className="h-4 w-4" />,
           href: "/admin/notifications",
         },
-        {
-          title: "Messages",
-          icon: <MessageSquare className="h-4 w-4" />,
-          href: "/admin/messages",
-        },
-      ],
-    },
-    {
-      title: "Analytics",
-      icon: <BarChart3 className="h-5 w-5" />,
-      group: "analytics",
-      items: [
-        {
-          title: "Overview",
-          icon: <BarChart className="h-4 w-4" />,
-          href: "/admin/analytics",
-        },
-        {
-          title: "User Engagement",
-          icon: <Users className="h-4 w-4" />,
-          href: "/admin/analytics/engagement",
-        },
-        {
-          title: "Content Performance",
-          icon: <Video className="h-4 w-4" />,
-          href: "/admin/analytics/content",
-        },
       ],
     },
     {
@@ -140,21 +102,6 @@ export function AdminSidebar() {
           title: "AI Assistants",
           icon: <Cpu className="h-4 w-4" />,
           href: "/admin/ai-assistants",
-        },
-        {
-          title: "AI Scoring",
-          icon: <Award className="h-4 w-4" />,
-          href: "/admin/ai-scoring",
-        },
-        {
-          title: "Content Generation",
-          icon: <FileText className="h-4 w-4" />,
-          href: "/admin/ai-generation",
-        },
-        {
-          title: "Safety & Moderation",
-          icon: <Shield className="h-4 w-4" />,
-          href: "/admin/ai-safety",
         },
       ],
     },

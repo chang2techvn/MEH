@@ -1,19 +1,21 @@
 "use client"
 
-import { DialogFooter } from "@/components/ui/dialog"
-
 import { useState, useEffect, useRef } from "react"
 import { motion, AnimatePresence, useInView } from "framer-motion"
 import * as z from "zod"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
+import { useUsers, type UserData } from "@/hooks/use-users"
+import { exportToExcel, type ExportableUser } from "@/lib/export-utils"
+import { AdminHeader } from "@/components/admin/admin-header"
+import { useToast } from "@/components/ui/use-toast"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -21,6 +23,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Progress } from "@/components/ui/progress"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import { Switch } from "@/components/ui/switch"
 import {
   Search,
   Filter,
@@ -67,229 +70,43 @@ import {
   LayoutList,
   Plus,
 } from "lucide-react"
-import { toast } from "@/hooks/use-toast"
-import { exportToExcel, type ExportableUser } from "@/utils/excel-export"
-import { AdminHeader } from "@/components/admin/admin-header"
-import { Switch } from "@/components/ui/switch"
-
-// Types for our user data
-interface UserData {
-  id: string
-  name: string
-  email: string
-  role: "student" | "teacher" | "admin"
-  status: "active" | "pending" | "suspended" | "inactive"
-  level: "beginner" | "intermediate" | "advanced"
-  joinDate: string
-  lastActive: string
-  completedChallenges: number
-  totalChallenges: number
-  avatarUrl?: string
-  bio?: string
-  location?: string
-  phone?: string
-  socialLinks?: {
-    twitter?: string
-    linkedin?: string
-    github?: string
-  }
-  tags?: string[]
-  achievements?: {
-    name: string
-    date: string
-    icon: string
-  }[]
-  recentActivity?: {
-    type: string
-    description: string
-    date: string
-  }[]
-}
 
 // Form schema for adding new users
 const userFormSchema = z.object({
-  name: z.string().min(2),
-  email: z.string().email(),
+  name: z.string().min(2, "Name must be at least 2 characters"),
+  email: z.string().email("Please enter a valid email"),
   role: z.string(),
   status: z.string(),
   level: z.string(),
   bio: z.string().optional(),
   location: z.string().optional(),
   phone: z.string().optional(),
+  username: z.string().optional(),
+  studentId: z.string().optional(),
+  major: z.string().optional(),
+  academicYear: z.string().optional(),
+  className: z.string().optional(),
 })
 
 type UserFormValues = z.infer<typeof userFormSchema>
 
-// Sample user data - we'll use this as our "database"
-const SAMPLE_USERS: UserData[] = [
-  {
-    id: "1",
-    name: "John Doe",
-    email: "john.doe@example.com",
-    role: "student",
-    status: "active",
-    level: "intermediate",
-    joinDate: "2023-04-15",
-    lastActive: "2023-05-10T14:30:00",
-    completedChallenges: 15,
-    totalChallenges: 20,
-    bio: "Passionate language learner with a focus on conversational English.",
-    location: "New York, USA",
-    phone: "+1 (555) 123-4567",
-    tags: ["grammar", "conversation", "business-english"],
-    achievements: [
-      { name: "5-Day Streak", date: "2023-05-05", icon: "zap" },
-      { name: "Conversation Master", date: "2023-04-20", icon: "message-square" },
-    ],
-    recentActivity: [
-      { type: "challenge", description: "Completed Business English Challenge", date: "2023-05-10T10:30:00" },
-      { type: "lesson", description: "Attended Advanced Grammar Webinar", date: "2023-05-08T15:45:00" },
-    ],
-  },
-  {
-    id: "2",
-    name: "Sarah Chen",
-    email: "sarah.chen@example.com",
-    role: "student",
-    status: "active",
-    level: "advanced",
-    joinDate: "2023-01-22",
-    lastActive: "2023-05-11T09:15:00",
-    completedChallenges: 18,
-    totalChallenges: 20,
-    bio: "English literature graduate focusing on academic writing and research.",
-    location: "Boston, USA",
-    tags: ["academic", "writing", "research"],
-  },
-  {
-    id: "3",
-    name: "Mike Johnson",
-    email: "mike.j@example.com",
-    role: "student",
-    status: "pending",
-    level: "beginner",
-    joinDate: "2023-05-01",
-    lastActive: "2023-05-01T11:45:00",
-    completedChallenges: 2,
-    totalChallenges: 5,
-    location: "Toronto, Canada",
-  },
-  {
-    id: "4",
-    name: "Lisa Wong",
-    email: "lisa.w@example.com",
-    role: "teacher",
-    status: "active",
-    level: "advanced",
-    joinDate: "2022-11-15",
-    lastActive: "2023-05-11T16:20:00",
-    completedChallenges: 45,
-    totalChallenges: 50,
-    bio: "TEFL certified instructor with 8 years of experience teaching English in Asia and Europe.",
-    location: "London, UK",
-    tags: ["TEFL", "business-english", "pronunciation"],
-  },
-  {
-    id: "5",
-    name: "David Smith",
-    email: "david.smith@example.com",
-    role: "student",
-    status: "inactive",
-    level: "intermediate",
-    joinDate: "2023-02-10",
-    lastActive: "2023-04-05T10:30:00",
-    completedChallenges: 8,
-    totalChallenges: 20,
-  },
-  {
-    id: "6",
-    name: "Emma Wilson",
-    email: "emma.w@example.com",
-    role: "student",
-    status: "active",
-    level: "beginner",
-    joinDate: "2023-03-22",
-    lastActive: "2023-05-10T13:45:00",
-    completedChallenges: 6,
-    totalChallenges: 10,
-  },
-  {
-    id: "7",
-    name: "James Brown",
-    email: "james.b@example.com",
-    role: "student",
-    status: "suspended",
-    level: "intermediate",
-    joinDate: "2022-12-05",
-    lastActive: "2023-04-20T09:10:00",
-    completedChallenges: 12,
-    totalChallenges: 20,
-  },
-  {
-    id: "8",
-    name: "Olivia Garcia",
-    email: "olivia.g@example.com",
-    role: "teacher",
-    status: "active",
-    level: "advanced",
-    joinDate: "2022-10-18",
-    lastActive: "2023-05-11T11:30:00",
-    completedChallenges: 38,
-    totalChallenges: 40,
-  },
-  {
-    id: "9",
-    name: "Robert Kim",
-    email: "robert.k@example.com",
-    role: "student",
-    status: "active",
-    level: "intermediate",
-    joinDate: "2023-01-30",
-    lastActive: "2023-05-09T15:20:00",
-    completedChallenges: 14,
-    totalChallenges: 20,
-  },
-  {
-    id: "10",
-    name: "Sophia Martinez",
-    email: "sophia.m@example.com",
-    role: "admin",
-    status: "active",
-    level: "advanced",
-    joinDate: "2022-09-12",
-    lastActive: "2023-05-11T17:45:00",
-    completedChallenges: 52,
-    totalChallenges: 55,
-  },
-  {
-    id: "11",
-    name: "Daniel Lee",
-    email: "daniel.l@example.com",
-    role: "student",
-    status: "active",
-    level: "beginner",
-    joinDate: "2023-04-05",
-    lastActive: "2023-05-08T10:15:00",
-    completedChallenges: 4,
-    totalChallenges: 10,
-  },
-  {
-    id: "12",
-    name: "Ava Thompson",
-    email: "ava.t@example.com",
-    role: "student",
-    status: "pending",
-    level: "beginner",
-    joinDate: "2023-05-02",
-    lastActive: "2023-05-02T14:30:00",
-    completedChallenges: 0,
-    totalChallenges: 0,
-  },
-]
-
 export default function UsersPage() {
+  // Use Supabase data from the hook
+  const { 
+    users: dbUsers, 
+    loading: dbLoading, 
+    error: dbError,
+    addUser: addDbUser,
+    updateUser: updateDbUser,
+    deleteUser: deleteDbUser,
+    bulkUpdateUsers,
+    bulkDeleteUsers
+  } = useUsers()
+
+  // Toast hook
+  const { toast } = useToast()
+
   // State management
-  const [users, setUsers] = useState<UserData[]>(SAMPLE_USERS)
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedRole, setSelectedRole] = useState<string | null>(null)
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null)
@@ -299,7 +116,6 @@ export default function UsersPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [userDetailsOpen, setUserDetailsOpen] = useState(false)
   const [selectedUser, setSelectedUser] = useState<UserData | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
   const [bulkActionOpen, setBulkActionOpen] = useState(false)
   const [bulkAction, setBulkAction] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState("all")
@@ -368,6 +184,11 @@ export default function UsersPage() {
   const tableRef = useRef<HTMLDivElement>(null)
   const isTableInView = useInView(tableRef, { once: true })
 
+  // Use real data from Supabase
+  const users = dbUsers
+  const isLoading = dbLoading
+  const [localLoading, setLocalLoading] = useState(false)
+
   // Initialize form for adding new users
   const form = useForm<UserFormValues>({
     // resolver: zodResolver(userFormSchema),
@@ -380,16 +201,13 @@ export default function UsersPage() {
       bio: "",
       location: "",
       phone: "",
+      username: "",
+      studentId: "",
+      major: "",
+      academicYear: "",
+      className: "",
     },
   })
-
-  // Simulate loading state
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsLoading(false)
-    }, 1000)
-    return () => clearTimeout(timer)
-  }, [])
 
   // Handle sorting
   const requestSort = (key: keyof UserData) => {
@@ -488,76 +306,53 @@ export default function UsersPage() {
 
   // Execute bulk action
   const executeBulkAction = async () => {
-    setIsLoading(true)
-
+    if (!bulkAction || selectedUsers.length === 0) return
+    
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-
-      // Apply the action to the selected users
-      const updatedUsers = [...users]
-
+      let success = false
+      
       switch (bulkAction) {
         case "activate":
-          selectedUsers.forEach((userId) => {
-            const userIndex = updatedUsers.findIndex((u) => u.id === userId)
-            if (userIndex !== -1) {
-              updatedUsers[userIndex].status = "active"
-            }
-          })
-          setSuccessMessage(`Successfully activated ${selectedUsers.length} users`)
+          success = await bulkUpdateUsers(selectedUsers, { status: "active" })
+          if (success) {
+            setSuccessMessage(`Successfully activated ${selectedUsers.length} users`)
+          }
           break
         case "deactivate":
-          selectedUsers.forEach((userId) => {
-            const userIndex = updatedUsers.findIndex((u) => u.id === userId)
-            if (userIndex !== -1) {
-              updatedUsers[userIndex].status = "inactive"
-            }
-          })
-          setSuccessMessage(`Successfully deactivated ${selectedUsers.length} users`)
+          success = await bulkUpdateUsers(selectedUsers, { status: "inactive" })
+          if (success) {
+            setSuccessMessage(`Successfully deactivated ${selectedUsers.length} users`)
+          }
           break
         case "delete":
-          // Filter out the selected users
-          const remainingUsers = updatedUsers.filter((user) => !selectedUsers.includes(user.id))
-          setUsers(remainingUsers)
-          setSuccessMessage(`Successfully deleted ${selectedUsers.length} users`)
+          success = await bulkDeleteUsers(selectedUsers)
+          if (success) {
+            setSuccessMessage(`Successfully deleted ${selectedUsers.length} users`)
+          }
           break
         case "email":
           setSuccessMessage(`Email sent to ${selectedUsers.length} users`)
+          success = true
           break
       }
 
-      // Update users if not deleted
-      if (bulkAction !== "delete") {
-        setUsers(updatedUsers)
+      if (success) {
+        // Show success message with confetti
+        setShowConfetti(true)
+        setShowSuccessAnimation(true)
+
+        // Reset selection
+        setSelectedUsers([])
+        setIsSelectAll(false)
+        setBulkActionOpen(false)
+
+        setTimeout(() => {
+          setShowConfetti(false)
+          setShowSuccessAnimation(false)
+        }, 3000)
       }
-
-      // Show success message with confetti
-      setShowConfetti(true)
-      setShowSuccessAnimation(true)
-
-      toast({
-        title: "Bulk action completed",
-        description: `${bulkAction} action applied to ${selectedUsers.length} users.`,
-      })
-
-      // Reset selection
-      setSelectedUsers([])
-      setIsSelectAll(false)
-      setBulkActionOpen(false)
-
-      setTimeout(() => {
-        setShowConfetti(false)
-        setShowSuccessAnimation(false)
-      }, 3000)
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to apply bulk action. Please try again.",
-        variant: "destructive",
-      })
-    } finally {
-      setIsLoading(false)
+      console.error('Bulk action error:', error)
     }
   }
 
@@ -622,192 +417,183 @@ export default function UsersPage() {
   }
 
   // Handle adding a new user
-  const handleAddUser = (values: UserFormValues) => {
-    setIsLoading(true)
-
-    // Generate a unique ID
-    const newId = `new-${Date.now()}`
-
-    // Create new user object
-    const newUser: UserData = {
-      id: newId,
+  const handleAddUser = async (values: UserFormValues) => {
+    // Convert form values to UserData format with proper types
+    const userData: Partial<UserData> = {
       name: values.name,
       email: values.email,
       role: values.role as "student" | "teacher" | "admin",
       status: values.status as "active" | "pending" | "suspended" | "inactive",
       level: values.level as "beginner" | "intermediate" | "advanced",
-      joinDate: new Date().toISOString().split("T")[0],
-      lastActive: new Date().toISOString(),
-      completedChallenges: 0,
-      totalChallenges: 0,
       bio: values.bio,
       location: values.location,
       phone: values.phone,
+      username: values.username,
+      studentId: values.studentId,
+      major: values.major,
+      academicYear: values.academicYear,
+      className: values.className,
     }
 
-    // Simulate API call
-    setTimeout(() => {
-      // Add to the beginning of the array
-      setUsers([newUser, ...users])
-
-      setIsLoading(false)
+    const success = await addDbUser(userData)
+    
+    if (success) {
       setAddUserOpen(false)
       setShowConfetti(true)
-      setLastAddedUser(newUser)
-      setSuccessMessage(`${newUser.name} added successfully`)
+      setSuccessMessage(`${values.name} added successfully`)
       setShowSuccessAnimation(true)
 
       // Reset form
       form.reset()
 
-      toast({
-        title: "User added successfully",
-        description: `${newUser.name} has been added to the system.`,
-      })
-
       setTimeout(() => {
         setShowConfetti(false)
         setShowSuccessAnimation(false)
       }, 3000)
-    }, 1000)
+    }
   }
 
   // Handle user actions
-  const handleUserAction = (action: string, user: UserData) => {
+  const handleUserAction = async (action: string, user: UserData) => {
+    console.log('🔥🔥🔥 FUNCTION CALLED - handleUserAction:', { action, user: user.name, userId: user.id })
+    console.log('🔥 handleUserAction called:', { action, user: user.name, userId: user.id })
     setActionInProgress(user.id)
     closeAllDropdowns()
 
-    // Simulate API call
-    setTimeout(() => {
+    try {
       let successMessage = ""
       let description = ""
-      const updatedUsers = [...users]
-      const userIndex = updatedUsers.findIndex((u) => u.id === user.id)
 
       switch (action) {
         case "view-submissions":
+          console.log('📄 View submissions action triggered for user:', user.name)
           successMessage = "Submissions loaded"
           description = `Viewing submissions for ${user.name}`
+          // TODO: Open submissions modal or navigate to submissions page
           setShowUserSubmissions(true)
+          setActionInProgress(null)
           break
+          
         case "view-progress":
+          console.log('📊 View progress action triggered for user:', user.name)
           successMessage = "Progress data loaded"
           description = `Viewing progress for ${user.name}`
+          // TODO: Open progress modal or navigate to progress page
           setShowUserProgress(true)
+          setActionInProgress(null)
           break
+          
         case "suspend":
-          successMessage = "User suspended"
-          description = `${user.name} has been suspended`
-          if (userIndex !== -1) {
-            updatedUsers[userIndex].status = "suspended"
-            setUsers(updatedUsers)
+          console.log('🚫 Suspend user action triggered for user:', user.name)
+          const suspendSuccess = await updateDbUser(user.id, { status: "suspended" })
+          console.log('🚫 Suspend result:', suspendSuccess)
+          if (suspendSuccess) {
+            successMessage = "User suspended"
+            description = `${user.name} has been suspended`
+            setSuccessMessage(`${user.name} has been suspended`)
+            setShowSuccessAnimation(true)
+            
+            toast({
+              title: successMessage,
+              description: description,
+              variant: "destructive",
+            })
+
+            setTimeout(() => {
+              setShowSuccessAnimation(false)
+            }, 3000)
           }
-          setSuccessMessage(`${user.name} has been suspended`)
-          setShowSuccessAnimation(true)
+          setActionInProgress(null)
           break
+          
         case "activate":
-          successMessage = "User activated"
-          description = `${user.name} has been activated`
-          if (userIndex !== -1) {
-            updatedUsers[userIndex].status = "active"
-            setUsers(updatedUsers)
+          console.log('✅ Activate user action triggered for user:', user.name)
+          const activateSuccess = await updateDbUser(user.id, { status: "active" })
+          console.log('✅ Activate result:', activateSuccess)
+          if (activateSuccess) {
+            successMessage = "User activated"
+            description = `${user.name} has been activated`
+            setSuccessMessage(`${user.name} has been activated`)
+            setShowSuccessAnimation(true)
+            
+            toast({
+              title: successMessage,
+              description: description,
+            })
+
+            setTimeout(() => {
+              setShowSuccessAnimation(false)
+            }, 3000)
           }
-          setSuccessMessage(`${user.name} has been activated`)
-          setShowSuccessAnimation(true)
+          setActionInProgress(null)
           break
+          
         case "delete":
+          console.log('🗑️ Delete user action triggered for user:', user.name)
           setUserToDelete(user)
           setShowDeleteConfirm(true)
           setActionInProgress(null)
+          console.log('🗑️ Delete confirmation dialog opened')
           return
       }
 
+    } catch (error) {
+      console.error('❌ User action error:', { action, error, user: user.name })
       toast({
-        title: successMessage,
-        description: description,
-        variant: action === "delete" || action === "suspend" ? "destructive" : "default",
+        title: "Error",
+        description: `Failed to ${action} user. Please try again.`,
+        variant: "destructive",
       })
-
       setActionInProgress(null)
-
-      setTimeout(() => {
-        setShowSuccessAnimation(false)
-      }, 3000)
-    }, 800)
+    }
   }
 
   // Confirm user deletion
-  const confirmDeleteUser = () => {
+  const confirmDeleteUser = async () => {
     if (!userToDelete) return
-
-    setIsLoading(true)
-
-    // Simulate API call
-    setTimeout(() => {
-      // Remove the user from the array
-      const updatedUsers = users.filter((user) => user.id !== userToDelete.id)
-      setUsers(updatedUsers)
-
+    
+    console.log('🗑️ Confirming delete for user:', userToDelete.name)
+    const success = await deleteDbUser(userToDelete.id)
+    console.log('🗑️ Delete operation result:', success)
+    
+    if (success) {
       setSuccessMessage(`${userToDelete.name} has been deleted`)
       setShowSuccessAnimation(true)
 
-      toast({
-        title: "User deleted",
-        description: `${userToDelete.name} has been deleted from the system.`,
-        variant: "destructive",
-      })
-
       setShowDeleteConfirm(false)
       setUserToDelete(null)
-      setIsLoading(false)
 
       setTimeout(() => {
         setShowSuccessAnimation(false)
       }, 3000)
-    }, 1000)
+    }
   }
 
   // Save user edits
-  const saveUserEdits = () => {
+  const saveUserEdits = async () => {
     if (!editedUser) return
 
-    setIsLoading(true)
-
-    // Simulate API call
-    setTimeout(() => {
-      // Update the user in the array
-      const updatedUsers = [...users]
-      const userIndex = updatedUsers.findIndex((u) => u.id === editedUser.id)
-
-      if (userIndex !== -1) {
-        updatedUsers[userIndex] = editedUser
-        setUsers(updatedUsers)
-        setSelectedUser(editedUser)
-      }
-
-      setIsLoading(false)
+    const success = await updateDbUser(editedUser.id, editedUser)
+    
+    if (success) {
       setEditMode(false)
       setShowConfetti(true)
       setSuccessMessage(`${editedUser.name}'s information updated`)
       setShowSuccessAnimation(true)
-
-      toast({
-        title: "User updated",
-        description: "User information has been updated successfully.",
-      })
+      setSelectedUser(editedUser)
 
       setTimeout(() => {
         setShowConfetti(false)
         setShowSuccessAnimation(false)
       }, 2000)
-    }, 1000)
+    }
   }
 
   // Send email to user
   const handleSendEmail = () => {
     if (!selectedUser) return
 
-    setIsLoading(true)
+    setLocalLoading(true)
 
     // Simulate API call
     setTimeout(() => {
@@ -822,7 +608,7 @@ export default function UsersPage() {
       setShowEmailForm(false)
       setEmailSubject("")
       setEmailBody("")
-      setIsLoading(false)
+      setLocalLoading(false)
 
       setTimeout(() => {
         setShowSuccessAnimation(false)
@@ -834,7 +620,7 @@ export default function UsersPage() {
   const handleSaveNotes = () => {
     if (!selectedUser) return
 
-    setIsLoading(true)
+    setLocalLoading(true)
 
     // Simulate API call
     setTimeout(() => {
@@ -847,7 +633,7 @@ export default function UsersPage() {
       })
 
       setShowUserNotes(false)
-      setIsLoading(false)
+      setLocalLoading(false)
 
       setTimeout(() => {
         setShowSuccessAnimation(false)
@@ -857,17 +643,21 @@ export default function UsersPage() {
 
   // Toggle dropdown
   const toggleDropdown = (dropdownId: string) => {
+    console.log('🔽 Toggle dropdown called:', { dropdownId, currentActive: activeDropdown })
     if (activeDropdown === dropdownId) {
+      console.log('🔽 Closing dropdown:', dropdownId)
       setActiveDropdown(null)
       setShowDropdownBackdrop(false)
     } else {
+      console.log('🔽 Opening dropdown:', dropdownId)
       setActiveDropdown(dropdownId)
-      setShowDropdownBackdrop(true)
+      setShowDropdownBackdrop(false) // Không dùng backdrop nữa
     }
   }
 
   // Close all dropdowns
   const closeAllDropdowns = () => {
+    console.log('🔽 Closing all dropdowns, current active:', activeDropdown)
     setActiveDropdown(null)
     setShowDropdownBackdrop(false)
   }
@@ -1203,11 +993,14 @@ export default function UsersPage() {
       {/* Confetti Effect */}
       {showConfetti && <div className="fixed inset-0 pointer-events-none z-50">{generateConfetti()}</div>}
 
-      {/* Dropdown Backdrop */}
-      {showDropdownBackdrop && (
+      {/* Dropdown Backdrop - DISABLED */}
+      {false && showDropdownBackdrop && (
         <div 
           className="fixed inset-0 z-40 bg-transparent" 
-          onClick={closeAllDropdowns}
+          onClick={() => {
+            console.log('🎯 Backdrop clicked, closing dropdowns')
+            closeAllDropdowns()
+          }}
           aria-hidden="true"
         />
       )}
@@ -1604,7 +1397,7 @@ export default function UsersPage() {
 
             <CardContent className="p-0">
               {viewMode === "table" ? (
-                <div className="rounded-md overflow-hidden">
+                <div className="rounded-md">
                   <Table>
                     <TableHeader className="bg-muted/50 backdrop-blur-sm">
                       <TableRow>
@@ -1813,7 +1606,7 @@ export default function UsersPage() {
                                         animate={{ opacity: 1, y: 0, scale: 1 }}
                                         exit={{ opacity: 0, y: 10, scale: 0.95 }}
                                         transition={{ duration: 0.15 }}
-                                        className="absolute right-0 z-50 mt-1 w-56 rounded-md bg-popover p-2 shadow-lg ring-1 ring-black/5 dark:ring-white/10"
+                                        className="absolute right-0 z-[60] mt-1 w-56 rounded-md bg-popover p-2 shadow-lg ring-1 ring-black/5 dark:ring-white/10"
                                         onClick={(e) => e.stopPropagation()}
                                       >
                                         <div className="text-xs font-medium text-muted-foreground px-2 py-1.5">
@@ -1989,7 +1782,7 @@ export default function UsersPage() {
                             data-user-id={user.id}
                             className={lastAddedUser?.id === user.id ? "ring-2 ring-neo-mint dark:ring-purist-blue" : ""}
                           >
-                            <Card className="overflow-hidden border shadow h-full flex flex-col">
+                            <Card className="border shadow h-full flex flex-col">
                               <div className="p-4 flex-grow">
                                 <div className="flex items-center gap-3 mb-4">
                                   <Avatar className="h-12 w-12 border-2 border-white shadow-sm">
@@ -2096,7 +1889,7 @@ export default function UsersPage() {
                                           animate={{ opacity: 1, y: 0, scale: 1 }}
                                           exit={{ opacity: 0, y: 10, scale: 0.95 }}
                                           transition={{ duration: 0.15 }}
-                                          className="absolute right-0 z-50 mt-1 w-48 rounded-md bg-popover p-2 shadow-lg ring-1 ring-black/5 dark:ring-white/10"
+                                          className="absolute right-0 z-[60] mt-1 w-48 rounded-md bg-popover p-2 shadow-lg ring-1 ring-black/5 dark:ring-white/10"
                                           onClick={(e) => e.stopPropagation()}
                                         >
                                           <Button
@@ -2818,6 +2611,261 @@ export default function UsersPage() {
                   Add User
                 </>
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center text-red-600">
+              <Trash2 className="mr-2 h-5 w-5" />
+              Delete User
+            </DialogTitle>
+            <DialogDescription>
+              This action cannot be undone. This will permanently delete the user account and remove all associated data.
+            </DialogDescription>
+          </DialogHeader>
+          {userToDelete && (
+            <div className="py-4">
+              <div className="flex items-center gap-3 p-4 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                <Avatar className="h-12 w-12">
+                  <AvatarImage src={userToDelete.avatarUrl || "/placeholder.svg?height=48&width=48"} alt={userToDelete.name} />
+                  <AvatarFallback className="bg-red-100 dark:bg-red-800/30 text-red-600 dark:text-red-400">
+                    {getInitials(userToDelete.name)}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <p className="font-medium">{userToDelete.name}</p>
+                  <p className="text-sm text-muted-foreground">{userToDelete.email}</p>
+                </div>
+              </div>
+              <div className="mt-4 text-sm text-muted-foreground">
+                <p>Are you sure you want to delete this user? This will:</p>
+                <ul className="mt-2 ml-4 list-disc space-y-1">
+                  <li>Remove the user account permanently</li>
+                  <li>Delete all user progress and submissions</li>
+                  <li>Remove user from all activities and leaderboards</li>
+                </ul>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDeleteConfirm(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={confirmDeleteUser} disabled={isLoading}>
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete User
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Action Confirmation Dialog */}
+      <Dialog open={bulkActionOpen} onOpenChange={setBulkActionOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center">
+              <Users className="mr-2 h-5 w-5 text-neo-mint dark:text-purist-blue" />
+              Bulk Action Confirmation
+            </DialogTitle>
+            <DialogDescription>
+              You are about to perform a bulk action on {selectedUsers.length} selected users.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <div className="space-y-4">
+              <div className="p-4 bg-muted/30 rounded-lg">
+                <p className="font-medium mb-2">Action Details:</p>
+                <div className="text-sm space-y-1">
+                  <p><strong>Action:</strong> {
+                    bulkAction === "activate" ? "Activate Users" :
+                    bulkAction === "deactivate" ? "Deactivate Users" :
+                    bulkAction === "delete" ? "Delete Users" :
+                    bulkAction === "email" ? "Send Email" : 
+                    "Unknown Action"
+                  }</p>
+                  <p><strong>Selected Users:</strong> {selectedUsers.length}</p>
+                </div>
+              </div>
+
+              {bulkAction === "delete" && (
+                <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+                  <div className="flex items-center gap-2 text-red-600 dark:text-red-400 mb-2">
+                    <AlertCircle className="h-4 w-4" />
+                    <span className="font-medium">Warning: Destructive Action</span>
+                  </div>
+                  <p className="text-sm text-red-600 dark:text-red-400">
+                    This will permanently delete all selected users and their associated data. This action cannot be undone.
+                  </p>
+                </div>
+              )}
+
+              {bulkAction === "email" && (
+                <div className="space-y-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="bulk-email-subject">Email Subject</Label>
+                    <Input
+                      id="bulk-email-subject"
+                      placeholder="Enter email subject..."
+                      value={emailSubject}
+                      onChange={(e) => setEmailSubject(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="bulk-email-body">Email Body</Label>
+                    <Textarea
+                      id="bulk-email-body"
+                      placeholder="Enter email message..."
+                      className="min-h-[100px]"
+                      value={emailBody}
+                      onChange={(e) => setEmailBody(e.target.value)}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBulkActionOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={executeBulkAction} 
+              disabled={isLoading || (bulkAction === "email" && (!emailSubject || !emailBody))}
+              variant={bulkAction === "delete" ? "destructive" : "default"}
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                <>
+                  {bulkAction === "activate" && <CheckCircle className="mr-2 h-4 w-4" />}
+                  {bulkAction === "deactivate" && <XCircle className="mr-2 h-4 w-4" />}
+                  {bulkAction === "delete" && <Trash2 className="mr-2 h-4 w-4" />}
+                  {bulkAction === "email" && <Mail className="mr-2 h-4 w-4" />}
+                  Execute Action
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* User Submissions Dialog */}
+      <Dialog open={showUserSubmissions} onOpenChange={setShowUserSubmissions}>
+        <DialogContent className="max-w-4xl p-0 overflow-hidden">
+          <DialogHeader className="p-6 pb-2">
+            <DialogTitle className="flex items-center text-lg">
+              <FileText className="mr-2 h-5 w-5 text-green-500" />
+              User Submissions
+            </DialogTitle>
+            <DialogDescription>
+              View all submissions from {selectedUser?.name}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="p-6 pt-2">
+            <div className="space-y-4">
+              <div className="text-center py-8 bg-muted/20 rounded-lg">
+                <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-2 opacity-50" />
+                <p className="text-muted-foreground">No submissions found</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  This user hasn't submitted any assignments yet.
+                </p>
+              </div>
+            </div>
+          </div>
+          <DialogFooter className="p-6">
+            <Button variant="outline" onClick={() => setShowUserSubmissions(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* User Progress Dialog */}
+      <Dialog open={showUserProgress} onOpenChange={setShowUserProgress}>
+        <DialogContent className="max-w-4xl p-0 overflow-hidden">
+          <DialogHeader className="p-6 pb-2">
+            <DialogTitle className="flex items-center text-lg">
+              <BarChart3 className="mr-2 h-5 w-5 text-purple-500" />
+              User Progress
+            </DialogTitle>
+            <DialogDescription>
+              Detailed progress report for {selectedUser?.name}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="p-6 pt-2">
+            <div className="space-y-6">
+              {selectedUser && (
+                <>
+                  {/* Progress Overview */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="text-2xl font-bold">{selectedUser.completedChallenges}</div>
+                        <p className="text-sm text-muted-foreground">Completed Challenges</p>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="text-2xl font-bold">{selectedUser.totalChallenges}</div>
+                        <p className="text-sm text-muted-foreground">Total Challenges</p>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="text-2xl font-bold">
+                          {selectedUser.totalChallenges > 0 
+                            ? Math.round((selectedUser.completedChallenges / selectedUser.totalChallenges) * 100)
+                            : 0}%
+                        </div>
+                        <p className="text-sm text-muted-foreground">Completion Rate</p>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Progress Bar */}
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span>Overall Progress</span>
+                      <span>{selectedUser.totalChallenges > 0 
+                        ? Math.round((selectedUser.completedChallenges / selectedUser.totalChallenges) * 100)
+                        : 0}%</span>
+                    </div>
+                    <Progress 
+                      value={selectedUser.totalChallenges > 0 
+                        ? (selectedUser.completedChallenges / selectedUser.totalChallenges) * 100
+                        : 0} 
+                      className="h-3"
+                    />
+                  </div>
+
+                  <div className="text-center py-8 bg-muted/20 rounded-lg">
+                    <BarChart3 className="h-12 w-12 mx-auto text-muted-foreground mb-2 opacity-50" />
+                    <p className="text-muted-foreground">Detailed progress charts coming soon</p>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+          <DialogFooter className="p-6">
+            <Button variant="outline" onClick={() => setShowUserProgress(false)}>
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>

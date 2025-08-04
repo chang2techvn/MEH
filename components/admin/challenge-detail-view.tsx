@@ -47,15 +47,15 @@ export default function ChallengeDetailView({ challenge, onEdit, onBack, onDelet
   }
 
   // Format date
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
+  const formatDate = (date: Date | string) => {
+    const dateObj = typeof date === 'string' ? new Date(date) : date
     return new Intl.DateTimeFormat("en-US", {
       year: "numeric",
       month: "long",
       day: "numeric",
       hour: "numeric",
       minute: "numeric",
-    }).format(date)
+    }).format(dateObj)
   }
 
   const handleSaveNotes = () => {
@@ -138,7 +138,7 @@ export default function ChallengeDetailView({ challenge, onEdit, onBack, onDelet
             <div className="flex flex-wrap items-center gap-4">
               <div className="flex items-center gap-1 bg-muted/50 px-3 py-1 rounded-full">
                 <Clock className="h-4 w-4 text-muted-foreground" />
-                <span>{formatDuration(challenge.duration)}</span>
+                <span>{challenge.duration ? formatDuration(challenge.duration) : "Duration not set"}</span>
               </div>
 
               {Array.isArray(challenge.topics) && challenge.topics.length > 0 && (

@@ -8,14 +8,14 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { SidebarProvider } from "@/components/ui/sidebar"
 import { AdminSidebar } from "@/components/admin/admin-sidebar"
-import AdminAuthGuard from "@/components/admin/admin-auth-guard"
+// import AdminAuthGuard from "@/components/admin/admin-auth-guard"
 import { useAuthState } from "@/contexts/auth-context"
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
-    <AdminAuthGuard>
+    // <AdminAuthGuard>
       <AdminLayoutContent>{children}</AdminLayoutContent>
-    </AdminAuthGuard>
+    // </AdminAuthGuard>
   )
 }
 

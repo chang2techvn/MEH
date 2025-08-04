@@ -126,7 +126,7 @@ export default function AdminDashboardPage() {
         router.push("/admin/users")
         break
       case "viewReports":
-        router.push("/admin/analytics")
+        router.push("/admin")
         break
       case "sendNotification":
         setShowNotificationDialog(true)
@@ -151,7 +151,7 @@ export default function AdminDashboardPage() {
   const handleViewAll = (section: string) => {
     switch (section) {
       case "activity":
-        router.push("/admin/analytics")
+        router.push("/admin")
         break
       case "users":
         router.push("/admin/users")
