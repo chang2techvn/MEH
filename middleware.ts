@@ -16,9 +16,9 @@ export async function middleware(request: NextRequest) {
     session = data.session
     
     // Protected routes that require authentication
+    // Note: /admin is handled by client-side AdminAuthGuard, not middleware
     // Note: /profile is handled by client-side auth like /resources
     const protectedRoutes = [
-      '/admin',
       '/groups/create', 
       '/messages'
     ]
@@ -51,23 +51,8 @@ export async function middleware(request: NextRequest) {
     // On error, let the request through and let client handle auth
   }
   
-  // Admin routes - additional check for admin role
-  if (request.nextUrl.pathname.startsWith('/admin') && session) {
-    try {
-      const { data: user } = await supabase
-        .from('users')
-        .select('role')
-        .eq('id', session.user.id)
-        .single()
-
-      if (!user || user.role !== 'admin') {
-        return NextResponse.redirect(new URL('/', request.url))
-      }
-    } catch (error) {
-      console.error('Error checking admin role:', error)
-      return NextResponse.redirect(new URL('/', request.url))
-    }
-  }
+  // Admin routes are handled by client-side AdminAuthGuard component
+  // No server-side checking needed to avoid conflicts
 
   const response = res
   // Add security headers (CSP disabled temporarily for debugging)

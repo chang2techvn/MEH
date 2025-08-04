@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { motion } from "framer-motion"
-import { BookOpen, Search, Menu } from "lucide-react"
+import { BookOpen, Search, Menu, Settings } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { TooltipProvider } from "@/components/ui/tooltip"
@@ -13,6 +13,7 @@ import UserMenu from "@/components/ui/user-menu"
 import MessageButton from "@/components/messages/message-button"
 import NotificationsDropdown from "@/components/ui/notifications-dropdown"
 import { MobileHeaderButtons } from "@/components/home/mobile-header-buttons"
+import { useAuthState } from "@/contexts/auth-context"
 
 interface MainHeaderProps {
   mobileMenuOpen: boolean
@@ -28,6 +29,7 @@ export default function MainHeader({ mobileMenuOpen, setMobileMenuOpen }: MainHe
   const [headerVisible, setHeaderVisible] = useState(true)
   const [lastScrollY, setLastScrollY] = useState(0)
   const pathname = usePathname()
+  const { user } = useAuthState() // Add auth state to check user role
 
   useEffect(() => {
     // Check if mobile
@@ -207,6 +209,24 @@ export default function MainHeader({ mobileMenuOpen, setMobileMenuOpen }: MainHe
               }`}></span>
               AI Learning Hub
             </Link>
+            
+            {/* Admin Navigation - Only show if user has admin role */}
+            {user?.role === 'admin' && (
+              <Link
+                href="/admin"
+                prefetch={true}
+                className={`text-sm lg:text-base font-medium transition-colors relative group px-2 flex items-center gap-2 ${
+                  pathname.startsWith('/admin') 
+                    ? "text-orange-600 dark:text-orange-400" 
+                    : "text-gray-700 dark:text-gray-300 hover:text-neo-mint dark:hover:text-purist-blue"
+                }`}
+              >
+                <span className={`absolute -bottom-1 left-0 h-0.5 bg-gradient-to-r from-neo-mint to-purist-blue transition-all duration-300 ${
+                  pathname.startsWith('/admin') ? "w-full" : "w-0 group-hover:w-full"
+                }`}></span>
+                Admin
+              </Link>
+            )}
           </nav>
 
           <div className="flex items-center gap-2 md:gap-3 lg:gap-4 xl:gap-6">

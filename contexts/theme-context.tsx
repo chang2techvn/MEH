@@ -14,7 +14,7 @@ export const themeColors = [
   { name: "vibrant-orange", value: "#F06F25", variable: "--vibrant-orange" },
 ]
 
-export type ThemeMode = "light" | "dark"
+export type ThemeMode = "light" | "dark" | "system"
 
 interface ThemeSettings {
   mode: ThemeMode

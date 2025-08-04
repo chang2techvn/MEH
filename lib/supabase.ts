@@ -202,60 +202,6 @@ export const dbHelpers = {
     
     return { data, error }
   },
-  // Message operations
-  async getConversationMessages(conversationId: string) {
-    const { data, error } = await supabase
-      .from('messages')
-      .select(`
-        *,
-        sender:users!sender_id(id, name, avatar),
-        receiver:users!receiver_id(id, name, avatar)
-      `)
-      .or(`sender_id.eq.${conversationId.split('_')[1]},receiver_id.eq.${conversationId.split('_')[2]}`)
-      .order('created_at', { ascending: true })
-    
-    return error ? [] : data
-  },
-  async getUserConversations(userId: string) {
-    // Note: conversation_participants table doesn't exist in current schema
-    // Using messages table to create mock conversations for now
-    const { data, error } = await supabase
-      .from('messages')
-      .select(`
-        *,
-        sender:users!sender_id(id, name, avatar),
-        receiver:users!receiver_id(id, name, avatar)
-      `)
-      .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
-      .order('created_at', { ascending: false })
-    
-    if (error) return []
-    
-    // Group messages by conversation partner to create mock conversations
-    const conversations: any[] = []
-    const seenPartners = new Set()
-    
-    for (const message of data) {
-      const partnerId = message.sender_id === userId ? message.receiver_id : message.sender_id
-      const partner = message.sender_id === userId ? message.receiver : message.sender
-      
-      if (!seenPartners.has(partnerId) && partner && 'name' in partner) {
-        seenPartners.add(partnerId)
-        conversations.push({
-          conversation: {
-            id: `conv_${userId}_${partnerId}`,
-            name: partner.name,
-            type: 'direct',
-            is_group: false,
-            last_message_at: message.created_at,
-            messages: [message]
-          }
-        })
-      }
-    }
-    
-    return conversations
-  },
 
   // Challenge operations
   async getChallenges() {
@@ -293,129 +239,7 @@ export const dbHelpers = {
     
     return error ? [] : data
   },
-  // Resource operations
-  async getResources() {
-    const { data, error } = await supabase
-      .from('resources')
-      .select('*')
-      .order('created_at', { ascending: false })
-    
-    return error ? [] : data
-  },
-  // Admin resource operations
-  async getAdminResources() {
-    const { data, error } = await supabase
-      .from('resources')
-      .select('*')
-      .order('created_at', { ascending: false })
-    
-    return error ? [] : data
-  },
-  async getResourceById(id: string) {
-    const { data, error } = await supabase
-      .from('resources')
-      .select('*')
-      .eq('id', id)
-      .single()
-    
-    return error ? null : data
-  },
-  async createResource(resource: {
-    alt_text?: string
-    challenge_id?: string
-    duration?: number
-    file_size?: number
-    resource_type: string
-    url: string
-  }) {
-    const { data, error } = await supabase
-      .from('resources')
-      .insert({
-        alt_text: resource.alt_text,
-        challenge_id: resource.challenge_id,
-        duration: resource.duration,
-        file_size: resource.file_size,
-        resource_type: resource.resource_type,
-        url: resource.url,
-        created_at: new Date().toISOString()
-      })
-      .select()
-      .single()
-    
-    return { data, error }
-  },
-  async updateResource(id: string, updates: {
-    alt_text?: string
-    challenge_id?: string
-    duration?: number
-    file_size?: number
-    resource_type?: string
-    url?: string
-  }) {
-    const { data, error } = await supabase
-      .from('resources')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single()
-    
-    return { data, error }
-  },
 
-  async deleteResource(id: string) {
-    const { data, error } = await supabase
-      .from('resources')
-      .delete()
-      .eq('id', id)
-    
-    return { success: !error, error }
-  },
-  async bulkUpdateResources(ids: string[], updates: {
-    alt_text?: string
-    resource_type?: string
-  }) {
-    const { data, error } = await supabase
-      .from('resources')
-      .update(updates)
-      .in('id', ids)
-      .select()
-    
-    return { data, error }
-  },
-
-  async bulkDeleteResources(ids: string[]) {
-    const { data, error } = await supabase
-      .from('resources')
-      .delete()
-      .in('id', ids)
-    
-    return { success: !error, error }
-  },
-  async getResourceAnalytics() {
-    const { data, error } = await supabase
-      .from('resources')
-      .select('id, resource_type, created_at')
-    
-    if (error) return null
-
-    const totalResources = data.length
-    
-    const resourcesByType = data.reduce((acc, resource) => {
-      acc[resource.resource_type] = (acc[resource.resource_type] || 0) + 1
-      return acc
-    }, {} as Record<string, number>)
-
-    return {
-      totalResources,
-      totalViews: 0, // Not available in current schema
-      totalDownloads: 0, // Not available in current schema
-      totalLikes: 0, // Not available in current schema
-      resourcesByType: Object.entries(resourcesByType).map(([type, count]) => ({ type, count })),
-      resourcesByCategory: [], // Not available in current schema
-      resourcesByLevel: [], // Not available in current schema
-      topResources: [] // Not available in current schema
-    }
-  },
   // Notification operations
   async getUserNotifications(userId: string) {
     const { data, error } = await supabase
@@ -476,16 +300,14 @@ export const dbHelpers = {
   },
   // Analytics operations
   async getAnalyticsData() {
-    const [users, messages, challenges, submissions] = await Promise.all([
+    const [users, challenges, submissions] = await Promise.all([
       supabase.from('users').select('id, joined_at, last_active, is_active'),
-      supabase.from('messages').select('id, created_at'),
       supabase.from('challenges').select('id, created_at, category'),
       supabase.from('challenge_submissions').select('id, challenge_id, submitted_at, status, score')
     ])
 
     return {
       users: users.data || [],
-      messages: messages.data || [],
       challenges: challenges.data || [],
       submissions: submissions.data || []
     }
@@ -515,147 +337,6 @@ export const dbHelpers = {
       .order('flagged_at', { ascending: false })
     
     return error ? [] : data
-  },
-
-  // AI Generation operations
-  async getAIGenerationTemplates() {
-    const { data, error } = await supabase
-      .from('ai_models')
-      .select('*')
-      .eq('is_active', true)
-      .order('created_at', { ascending: false })
-    
-    return error ? [] : data
-  },
-
-  async createAIGenerationTemplate(template: {
-    name: string
-    description: string
-    prompt: string
-    category: string
-    icon?: string
-    is_active?: boolean
-  }) {
-    const { data, error } = await supabase
-      .from('ai_models')
-      .insert({
-        ...template,
-        model_type: 'template',
-        is_active: template.is_active ?? true,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      })
-      .select()
-      .single()
-    
-    return { data, error }
-  },
-
-  async updateAIGenerationTemplate(id: string, updates: {
-    name?: string
-    description?: string
-    prompt?: string
-    category?: string
-    icon?: string
-    is_active?: boolean
-  }) {
-    const { data, error } = await supabase
-      .from('ai_models')
-      .update({
-        ...updates,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', id)
-      .select()
-      .single()
-    
-    return { data, error }
-  },
-
-  async deleteAIGenerationTemplate(id: string) {
-    const { data, error } = await supabase
-      .from('ai_models')
-      .delete()
-      .eq('id', id)
-    
-    return { success: !error, error }
-  },
-
-  async getAIGenerationHistory(limit: number = 50) {
-    const { data, error } = await supabase
-      .from('evaluation_logs')
-      .select(`
-        *,
-        user:users(name, email)
-      `)
-      .eq('type', 'ai_generation')
-      .order('created_at', { ascending: false })
-      .limit(limit)
-    
-    return error ? [] : data
-  },
-
-  async saveAIGenerationResult(generation: {
-    title: string
-    type: string
-    prompt: string
-    content: string
-    parameters?: any
-    user_id?: string
-    template_id?: string
-  }) {
-    const { data, error } = await supabase
-      .from('evaluation_logs')
-      .insert({
-        type: 'ai_generation',
-        input_data: {
-          title: generation.title,
-          type: generation.type,
-          prompt: generation.prompt,
-          parameters: generation.parameters,
-          template_id: generation.template_id
-        },
-        output_data: {
-          content: generation.content
-        },
-        user_id: generation.user_id,
-        status: 'completed',
-        created_at: new Date().toISOString()
-      })
-      .select()
-      .single()
-    
-    return { data, error }
-  },
-
-  async getAIGenerationStats() {
-    const { data, error } = await supabase
-      .from('evaluation_logs')
-      .select('id, type, status, created_at, input_data')
-      .eq('type', 'ai_generation')
-    
-    if (error) return null
-
-    const totalGenerations = data.length
-    const completedGenerations = data.filter(log => log.status === 'completed').length
-    const recentGenerations = data.filter(log => 
-      new Date(log.created_at) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-    ).length
-
-    // Count generations by type
-    const generationsByType = data.reduce((acc, log) => {
-      const type = log.input_data?.type || 'unknown'
-      acc[type] = (acc[type] || 0) + 1
-      return acc
-    }, {} as Record<string, number>)
-
-    return {
-      totalGenerations,
-      completedGenerations,
-      recentGenerations,
-      successRate: totalGenerations > 0 ? Math.round((completedGenerations / totalGenerations) * 100) : 0,
-      generationsByType: Object.entries(generationsByType).map(([type, count]) => ({ type, count }))
-    }
   },
 
   // AI Safety operations

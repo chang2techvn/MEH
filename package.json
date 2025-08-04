@@ -79,6 +79,7 @@
     "react": "^19",
     "react-day-picker": "latest",
     "react-dom": "^19",
+    "react-helmet-async": "^2.0.5",
     "react-hook-form": "latest",
     "react-image-crop": "^11.0.10",
     "react-infinite-scroll-component": "^6.1.0",

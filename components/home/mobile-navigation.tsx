@@ -4,7 +4,8 @@ import React, { Suspense, lazy } from "react"
 import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
 import { Button } from "@/components/ui/button"
-import { BookOpen, X, Zap, Users, Award } from "lucide-react"
+import { BookOpen, X, Zap, Users, Award, Settings } from "lucide-react"
+import { useAuthState } from "@/contexts/auth-context"
 
 const ThemeToggle = lazy(() => import("@/components/ui/theme-toggle"))
 
@@ -14,6 +15,8 @@ interface MobileNavigationProps {
 }
 
 export function MobileNavigation({ isOpen, onClose }: MobileNavigationProps) {
+  const { user } = useAuthState() // Add auth state to check user role
+  
   const navigationItems = [
     {
       href: "/",
@@ -31,6 +34,15 @@ export function MobileNavigation({ isOpen, onClose }: MobileNavigationProps) {
       icon: Zap
     }
   ]
+
+  // Add Admin navigation item if user is admin
+  if (user?.role === 'admin') {
+    navigationItems.push({
+      href: "/admin",
+      label: "Admin",
+      icon: Settings
+    })
+  }
 
   return (
     <AnimatePresence>

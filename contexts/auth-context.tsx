@@ -63,10 +63,37 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState<boolean>(true)
 
+  // Helper function to persist user to localStorage
+  const persistUser = useCallback((userData: User | null) => {
+    if (typeof window !== 'undefined') {
+      if (userData) {
+        localStorage.setItem('user_data', JSON.stringify(userData))
+      } else {
+        localStorage.removeItem('user_data')
+      }
+    }
+    setUser(userData)
+  }, [])
+
   // Initialize auth state from Supabase
   useEffect(() => {
     const initializeAuth = async () => {
       try {
+        // Try to restore user from localStorage first for faster initial load
+        if (typeof window !== 'undefined') {
+          const savedUser = localStorage.getItem('user_data')
+          if (savedUser) {
+            try {
+              const userData = JSON.parse(savedUser)
+              setUser(userData)
+              console.log('Restored user from localStorage:', userData.email)
+            } catch (error) {
+              console.log('Failed to parse saved user data')
+              localStorage.removeItem('user_data')
+            }
+          }
+        }
+
         // Get current session
         const { data: { session }, error } = await supabase.auth.getSession()
         
@@ -77,23 +104,29 @@ export function AuthProvider({ children }: AuthProviderProps) {
         }
 
         if (session?.user) {
-          // Fetch user data from profiles table first
+          // Fetch user data from profiles table first, but get role from users table
           try {
             const { data: profileData, error: profileError } = await supabase
               .from('profiles')
               .select('*')
               .eq('user_id', session.user.id)
               .single()
+            // Fetch role from users table
+            const { data: userRecord } = await supabase
+              .from('users')
+              .select('role')
+              .eq('id', session.user.id)
+              .single()
 
             if (profileData && !profileError) {
-              // Use profile data from database
+              // Use profile data for display, and userRecord.role for authorization
               const userData: User = {
                 id: session.user.id,
                 email: session.user.email!,
                 name: profileData.full_name || session.user.email?.split('@')[0],
                 avatar: profileData.avatar_url,
                 background_url: profileData.background_url,
-                role: profileData.role || 'student',
+                role: userRecord?.role || profileData.role || 'student',
                 major: profileData.major,
                 academicYear: profileData.academic_year,
                 className: profileData.class_name,
@@ -106,7 +139,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
                 joinedAt: new Date(session.user.created_at),
                 lastActive: new Date(),
               }
-              setUser(userData)
+              persistUser(userData)
             } else {
               // Profile not found, try getUserFromDatabase to let trigger create it
               await getUserFromDatabase(session.user)
@@ -129,24 +162,35 @@ export function AuthProvider({ children }: AuthProviderProps) {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('Auth state change:', event, 'Session exists:', !!session)
+        
+        // Begin loading during auth state change
+        setIsLoading(true)
+        
         if (event === 'SIGNED_IN' && session?.user) {
-          // Fetch user data from profiles table first
+          // Fetch user data from profiles table first, but get role from users table
           try {
             const { data: profileData, error: profileError } = await supabase
               .from('profiles')
               .select('*')
               .eq('user_id', session.user.id)
               .single()
+            // Fetch role from users table for authorization
+            const { data: userRecord } = await supabase
+              .from('users')
+              .select('role')
+              .eq('id', session.user.id)
+              .single()
 
             if (profileData && !profileError) {
-              // Use profile data from database
+              // Use profile data for display and userRecord.role for authorization
               const userData: User = {
                 id: session.user.id,
                 email: session.user.email!,
                 name: profileData.full_name || session.user.email?.split('@')[0],
                 avatar: profileData.avatar_url,
                 background_url: profileData.background_url,
-                role: profileData.role || 'student',
+                role: userRecord?.role || profileData.role || 'student',
                 major: profileData.major,
                 academicYear: profileData.academic_year,
                 className: profileData.class_name,
@@ -159,7 +203,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
                 joinedAt: new Date(session.user.created_at),
                 lastActive: new Date(),
               }
-              setUser(userData)
+              persistUser(userData)
             } else {
               // Profile not found, let getUserFromDatabase handle trigger
               console.log('Profile not found on sign in, waiting for trigger...')
@@ -169,10 +213,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
             console.log('Error fetching profile data on sign in, trying getUserFromDatabase:', error)
             await getUserFromDatabase(session.user)
           }
+        } else if (event === 'TOKEN_REFRESHED' && session?.user) {
+          // For token refresh, just ensure user state is maintained if we have a session
+          // Don't refetch user data to avoid unnecessary loading states
+          console.log('Token refreshed, maintaining current user state')
+          if (!user && session.user) {
+            // Only fetch user data if we don't have user data already
+            await getUserFromDatabase(session.user)
+          }
         } else if (event === 'SIGNED_OUT') {
-          setUser(null)
+          console.log('User signed out, clearing user state')
+          persistUser(null)
         }
         
+        // Finished handling auth change
         setIsLoading(false)
       }
     )
@@ -193,14 +247,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
         .single()
 
       if (profileData && !profileError) {
-        // Use profile data (more complete)
+        // Use profile data for display but role from users table
+        // Fetch role from users table
+        const { data: userRecord } = await supabase
+          .from('users')
+          .select('role')
+          .eq('id', supabaseUser.id)
+          .single()
         const userData: User = {
           id: supabaseUser.id,
           email: supabaseUser.email!,
           name: profileData.full_name || supabaseUser.user_metadata?.full_name || supabaseUser.email?.split('@')[0],
           avatar: profileData.avatar_url || supabaseUser.user_metadata?.avatar_url,
           background_url: profileData.background_url,
-          role: profileData.role || 'student',
+          role: userRecord?.role || profileData.role || 'student',
           major: profileData.major,
           academicYear: profileData.academic_year,
           className: profileData.class_name,
@@ -214,7 +274,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
           lastActive: new Date(),
           preferences: {}
         }
-        setUser(userData)
+        persistUser(userData)
         return userData
       }
 
@@ -226,7 +286,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         .single()
 
       if (userData && !userError) {
-        // Use users table data as fallback
+        // Use users table data (includes correct role)
         const user: User = {
           id: userData.id,
           email: userData.email,
@@ -278,7 +338,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
           lastActive: new Date(),
           preferences: {}
         }
-        setUser(userData)
+        persistUser(userData)
         return userData
       }
       
@@ -308,8 +368,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
         description: `Welcome back!`,
       })
 
-      // Redirect to home page
-      router.push("/")
+      // Check for redirect parameter in URL
+      const urlParams = new URLSearchParams(window.location.search)
+      const redirectTo = urlParams.get('redirect')
+      
+      // Redirect to specified page or home
+      router.push(redirectTo || "/")
     } catch (error: any) {
       console.error("Login error:", error)
       toast({
@@ -319,7 +383,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
       })
       throw error
     } finally {
-      setIsLoading(false)    }
+      setIsLoading(false)
+    }
   }, [router])
 
   // Register function
@@ -377,7 +442,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
       
       // Clear local state
-      setUser(null)
+      persistUser(null)
       
       // Clear any potential cached data
       if (typeof window !== 'undefined') {
@@ -557,7 +622,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   // Update user function
   const updateUser = useCallback((userData: Partial<User>) => {
-    setUser(prev => prev ? { ...prev, ...userData } : null)
+    setUser(prev => {
+      const updatedUser = prev ? { ...prev, ...userData } : null
+      if (updatedUser && typeof window !== 'undefined') {
+        localStorage.setItem('user_data', JSON.stringify(updatedUser))
+      }
+      return updatedUser
+    })
   }, [])
 
   const refreshUser = useCallback(async () => {
