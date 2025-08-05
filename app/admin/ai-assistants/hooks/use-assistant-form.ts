@@ -12,6 +12,13 @@ export function useAssistantForm() {
     capabilities: [],
     category: "education",
     isActive: true,
+    avatar: "",
+    personalityTraits: [],
+    responseThreshold: 0.5,
+    field: "General",
+    role: "Assistant",
+    experience: "Professional",
+    tags: [],
   })
 
   const [formErrors, setFormErrors] = useState<FormErrors>({})
@@ -25,6 +32,13 @@ export function useAssistantForm() {
       capabilities: [],
       category: "education",
       isActive: true,
+      avatar: "",
+      personalityTraits: [],
+      responseThreshold: 0.5,
+      field: "General",
+      role: "Assistant",
+      experience: "Professional",
+      tags: [],
     })
     setFormErrors({})
   }
@@ -63,6 +77,29 @@ export function useAssistantForm() {
     }))
   }
 
+  const handlePersonalityToggle = (trait: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      personalityTraits: prev.personalityTraits.includes(trait)
+        ? prev.personalityTraits.filter((t) => t !== trait)
+        : [...prev.personalityTraits, trait],
+    }))
+  }
+
+  const handleTagAdd = (tag: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      tags: [...prev.tags, tag],
+    }))
+  }
+
+  const handleTagRemove = (tag: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      tags: prev.tags.filter((t) => t !== tag),
+    }))
+  }
+
   return {
     formData,
     formErrors,
@@ -70,6 +107,9 @@ export function useAssistantForm() {
     validateForm,
     updateFormData,
     handleCapabilityToggle,
+    handlePersonalityToggle,
+    handleTagAdd,
+    handleTagRemove,
     setFormData,
   }
 }
