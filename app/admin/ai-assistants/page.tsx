@@ -17,9 +17,20 @@ import { AssistantDeleteDialog } from "./components/assistant-delete-dialog"
 export default function AIAssistantsPage() {
   const { assistants, isLoading, addAssistant, updateAssistant, deleteAssistant, toggleAssistantActive } =
     useAssistants()
+  
   const { filters, paginatedAssistants, totalPages, handleSort, updateFilters } = useAssistantFilters(assistants)
-  const { formData, formErrors, resetForm, validateForm, updateFormData, handleCapabilityToggle, setFormData } =
-    useAssistantForm()
+  const { 
+    formData, 
+    formErrors, 
+    resetForm, 
+    validateForm, 
+    updateFormData, 
+    handleCapabilityToggle, 
+    handlePersonalityToggle,
+    handleTagAdd,
+    handleTagRemove,
+    setFormData 
+  } = useAssistantForm()
 
   // Dialog states
   const [showAddDialog, setShowAddDialog] = useState(false)
@@ -43,6 +54,13 @@ export default function AIAssistantsPage() {
       capabilities: assistant.capabilities,
       category: assistant.category,
       isActive: assistant.isActive,
+      avatar: assistant.avatar,
+      personalityTraits: assistant.personalityTraits,
+      responseThreshold: assistant.responseThreshold,
+      field: assistant.field,
+      role: assistant.role,
+      experience: assistant.experience,
+      tags: assistant.tags,
     })
     setShowEditDialog(true)
   }
@@ -87,7 +105,12 @@ export default function AIAssistantsPage() {
       <div className="flex flex-col space-y-6">
         <AssistantHeader onAddClick={handleAddClick} />
 
-        <AssistantFiltersComponent filters={filters} onFiltersChange={updateFilters} onSort={handleSort} />
+        <AssistantFiltersComponent 
+          filters={filters} 
+          onFiltersChange={updateFilters} 
+          onSort={handleSort}
+          assistants={assistants}
+        />
 
         <AssistantGrid
           assistants={paginatedAssistants}
@@ -120,6 +143,9 @@ export default function AIAssistantsPage() {
         isLoading={isLoading}
         onFormDataChange={updateFormData}
         onCapabilityToggle={handleCapabilityToggle}
+        onPersonalityToggle={handlePersonalityToggle}
+        onTagAdd={handleTagAdd}
+        onTagRemove={handleTagRemove}
         onSubmit={handleAddAssistant}
         submitLabel="Create Assistant"
       />
@@ -134,6 +160,9 @@ export default function AIAssistantsPage() {
         isLoading={isLoading}
         onFormDataChange={updateFormData}
         onCapabilityToggle={handleCapabilityToggle}
+        onPersonalityToggle={handlePersonalityToggle}
+        onTagAdd={handleTagAdd}
+        onTagRemove={handleTagRemove}
         onSubmit={handleEditAssistant}
         submitLabel="Save Changes"
       />

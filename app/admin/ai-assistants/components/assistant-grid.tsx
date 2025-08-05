@@ -1,7 +1,7 @@
 "use client"
 
 import { motion } from "framer-motion"
-import { AssistantCard } from "./assistant-card"
+import { AssistantCard } from "./assistant-card-simple"
 import { SkeletonAssistantCard } from "./skeleton-assistant-card"
 import { EmptyAssistantsState } from "./empty-assistants-state"
 import type { Assistant } from "../types"
