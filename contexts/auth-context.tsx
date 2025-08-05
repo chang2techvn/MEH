@@ -15,6 +15,9 @@ export interface User {
   role?: string
   accountStatus?: 'pending' | 'approved' | 'rejected' | 'suspended'
   isActive?: boolean
+  bio?: string
+  level?: number
+  points?: number
 }
 
 interface AuthContextType {
@@ -24,6 +27,12 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>
   logout: () => Promise<void>
   updateUser: (userData: Partial<User>) => void
+  register: (name: string, email: string, password: string) => Promise<void>
+  loginWithGoogle: () => Promise<void>
+  loginWithFacebook: () => Promise<void>
+  loginWithGitHub: () => Promise<void>
+  resetPassword: (email: string) => Promise<void>
+  refreshUser: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -157,6 +166,137 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     })
   }, [])
 
+  // Register function
+  const register = useCallback(async (name: string, email: string, password: string) => {
+    try {
+      setIsLoading(true)
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            name,
+          }
+        }
+      })
+
+      if (error) throw error
+
+      toast({
+        title: "Registration successful",
+        description: "Please check your email to verify your account.",
+      })
+
+      router.push("/auth/login")
+    } catch (error: any) {
+      console.error('Registration error:', error)
+      toast({
+        title: "Registration failed",
+        description: error.message || "An error occurred during registration",
+        variant: "destructive",
+      })
+      throw error
+    } finally {
+      setIsLoading(false)
+    }
+  }, [router])
+
+  // Social login functions (placeholder implementations)
+  const loginWithGoogle = useCallback(async () => {
+    try {
+      setIsLoading(true)
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/callback`
+        }
+      })
+      if (error) throw error
+    } catch (error: any) {
+      console.error('Google login error:', error)
+      toast({
+        title: "Login failed",
+        description: error.message || "Failed to login with Google",
+        variant: "destructive",
+      })
+      throw error
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
+  const loginWithFacebook = useCallback(async () => {
+    toast({
+      title: "Coming soon",
+      description: "Facebook login is not implemented yet",
+    })
+  }, [])
+
+  const loginWithGitHub = useCallback(async () => {
+    try {
+      setIsLoading(true)
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'github',
+        options: {
+          redirectTo: `${window.location.origin}/callback`
+        }
+      })
+      if (error) throw error
+    } catch (error: any) {
+      console.error('GitHub login error:', error)
+      toast({
+        title: "Login failed",
+        description: error.message || "Failed to login with GitHub",
+        variant: "destructive",
+      })
+      throw error
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
+  // Reset password function
+  const resetPassword = useCallback(async (email: string) => {
+    try {
+      setIsLoading(true)
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth/reset-password`
+      })
+
+      if (error) throw error
+
+      toast({
+        title: "Reset email sent",
+        description: "Please check your email for password reset instructions.",
+      })
+    } catch (error: any) {
+      console.error('Reset password error:', error)
+      toast({
+        title: "Reset failed",
+        description: error.message || "Failed to send reset email",
+        variant: "destructive",
+      })
+      throw error
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
+  // Refresh user function
+  const refreshUser = useCallback(async () => {
+    try {
+      const { data: { user: supabaseUser }, error } = await supabase.auth.getUser()
+      if (error) throw error
+      
+      if (supabaseUser) {
+        const userData = await getUserData(supabaseUser)
+        persistUser(userData)
+      }
+    } catch (error) {
+      console.error('Refresh user error:', error)
+    }
+  }, [getUserData, persistUser])
+
   const value = useMemo(() => ({
     user,
     isLoading,
@@ -164,7 +304,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     login,
     logout,
     updateUser,
-  }), [user, isLoading, login, logout, updateUser])
+    register,
+    loginWithGoogle,
+    loginWithFacebook,
+    loginWithGitHub,
+    resetPassword,
+    refreshUser,
+  }), [user, isLoading, login, logout, updateUser, register, loginWithGoogle, loginWithFacebook, loginWithGitHub, resetPassword, refreshUser])
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

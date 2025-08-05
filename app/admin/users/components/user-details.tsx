@@ -10,28 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
 import { AccountApprovalPanel } from "./account-approval-panel"
-
-interface UserData {
-  id: string
-  name: string
-  email: string
-  avatarUrl?: string
-  role: "student" | "teacher" | "admin"
-  status: "active" | "pending" | "suspended" | "inactive"
-  account_status?: "pending" | "approved" | "rejected" | "suspended"
-  level: "beginner" | "intermediate" | "advanced"
-  joinDate: Date
-  lastActive: Date
-  completedChallenges: number
-  totalChallenges: number
-  bio?: string
-  location?: string
-  phone?: string
-  tags?: string[]
-  approved_by?: string
-  approved_at?: string
-  rejection_reason?: string
-}
+import type { UserData } from "@/hooks/use-users"
 
 interface UserDetailsProps {
   user: UserData
@@ -99,7 +78,7 @@ const LevelBadge = ({ level }: { level: UserData["level"] }) => {
   return <Badge className={badgeColor}>{level}</Badge>
 }
 
-const formatDate = (date: Date) => {
+const formatDate = (date: string | Date) => {
   return new Date(date).toLocaleDateString("en-US", {
     year: "numeric",
     month: "long",
@@ -107,7 +86,7 @@ const formatDate = (date: Date) => {
   })
 }
 
-const getTimeSince = (date: Date) => {
+const getTimeSince = (date: string | Date) => {
   const seconds = Math.floor((new Date().getTime() - new Date(date).getTime()) / 1000)
 
   let interval = seconds / 31536000

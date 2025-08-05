@@ -12,7 +12,6 @@ import { useChatSessions } from '@/hooks/use-chat-sessions';
 import { useAuth } from '@/contexts/auth-context';
 import { useSingleChat } from '@/hooks/use-single-chat';
 import { useChatHandlers } from '@/hooks/use-chat-handlers';
-import { useEnhancedAuth } from '@/hooks/use-enhanced-auth';
 
 // Type definition for reply mode
 interface ReplyMode {
@@ -90,12 +89,7 @@ export const useResourcesPage = () => {
   const { sessions: chatSessions } = useChatSessions();
 
   // Enhanced auth
-  const { authChecked, setAuthChecked } = useEnhancedAuth({
-    mounted,
-    authLoading,
-    isAuthenticated,
-    user
-  });
+  const [authChecked, setAuthChecked] = useState(false);
   
   // Natural conversation - memoized selectedAIs for stability
   const selectedAIsStable = useMemo(() => selectedAIs, [selectedAIs]);

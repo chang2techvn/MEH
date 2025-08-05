@@ -1,18 +1,15 @@
 "use client"
 
 import { useState } from "react"
-import { motion, AnimatePresence } from "framer-motion"
+import { motion } from "framer-motion"
 import { useRouter } from "next/navigation"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { toast } from "@/hooks/use-toast"
-import { Key, Loader2, Save, Cpu, HelpCircle, BarChart } from "lucide-react"
+import { Loader2, Save, HelpCircle } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import type { ApiKey, AIModel } from "./types"
+import type { ApiKey, LegacyApiKey } from "./types"
 import { useAISettings } from "./hooks/use-ai-settings"
 import { ApiKeysTab } from "./components/api-keys-tab"
-import { AIModelsTab } from "./components/ai-models-tab"
-import { UsageAnalyticsTab } from "./components/usage-analytics-tab"
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -39,26 +36,17 @@ const fadeInVariants = {
 }
 
 interface AISettingsPageProps {
-  initialApiKeys?: ApiKey[]
-  initialAiModels?: AIModel[]
+  initialApiKeys?: LegacyApiKey[]
 }
 
-export default function AISettingsPage({ initialApiKeys = [], initialAiModels = [] }: AISettingsPageProps) {
+export default function AISettingsPage({ initialApiKeys = [] }: AISettingsPageProps) {
   const router = useRouter()
-  const [activeTab, setActiveTab] = useState("api-keys")
   const [isLoading, setIsLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
   const [filterProvider, setFilterProvider] = useState<string>("all")
-  const [aiProvider, setAiProvider] = useState<string>("gemini")
-  const [aiModel, setAiModel] = useState<string>("gemini-pro")
-  const [autoEvaluationEnabled, setAutoEvaluationEnabled] = useState(true)
-  const [minimumScoreThreshold, setMinimumScoreThreshold] = useState(60)
-  const [autoPublishThreshold, setAutoPublishThreshold] = useState(75)
-  const [timeRange, setTimeRange] = useState<string>("7d")
 
-  const { apiKeys, aiModels, usageData, setApiKeys, setAiModels, generateUsageData } = useAISettings({
+  const { apiKeys, setApiKeys, addApiKey, updateApiKey, deleteApiKey, refreshApiKeys } = useAISettings({
     initialApiKeys,
-    initialAiModels,
   })
 
   return (
@@ -76,7 +64,7 @@ export default function AISettingsPage({ initialApiKeys = [], initialAiModels = 
               AI Settings
             </span>
           </h1>
-          <p className="text-muted-foreground mt-1">Manage your AI providers, API keys, and model configurations</p>
+          <p className="text-muted-foreground mt-1">Manage your AI provider API keys and configurations</p>
         </div>
         <div className="flex items-center gap-3">
           <TooltipProvider>
@@ -96,106 +84,105 @@ export default function AISettingsPage({ initialApiKeys = [], initialAiModels = 
         </div>
       </motion.div>
 
-      {/* Tabs Navigation */}
+      {/* API Keys Content */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2, duration: 0.5 }}
+        className="space-y-6"
       >
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-6">
-            <TabsTrigger
-              value="api-keys"
-              className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-neo-mint/20 data-[state=active]:to-purist-blue/20"
-            >
-              <Key className="h-4 w-4" />
-              <span>API Keys</span>
-            </TabsTrigger>
-            <TabsTrigger
-              value="models"
-              className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-neo-mint/20 data-[state=active]:to-purist-blue/20"
-            >
-              <Cpu className="h-4 w-4" />
-              <span>AI Models</span>
-            </TabsTrigger>
-            <TabsTrigger
-              value="usage"
-              className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-neo-mint/20 data-[state=active]:to-purist-blue/20"
-            >
-              <BarChart className="h-4 w-4" />
-              <span>Usage Analytics</span>
-            </TabsTrigger>
-          </TabsList>
-
-          <AnimatePresence mode="wait">
-            {activeTab === "api-keys" && (
-              <motion.div
-                key="api-keys"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.3 }}
-              >
-                <TabsContent value="api-keys" className="space-y-6 mt-0">
-                  <ApiKeysTab
-                    apiKeys={apiKeys}
-                    setApiKeys={setApiKeys}
-                    searchQuery={searchQuery}
-                    filterProvider={filterProvider}
-                    setSearchQuery={setSearchQuery}
-                    setFilterProvider={setFilterProvider}
-                    isLoading={isLoading}
-                    setIsLoading={setIsLoading}
-                  />
-                </TabsContent>
-              </motion.div>
-            )}
-
-            {activeTab === "models" && (
-              <motion.div
-                key="models"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.3 }}
-              >
-                <TabsContent value="models" className="space-y-6 mt-0">
-                  <AIModelsTab
-                    aiModels={aiModels}
-                    setAiModels={setAiModels}
-                    searchQuery={searchQuery}
-                    filterProvider={filterProvider}
-                    setSearchQuery={setSearchQuery}
-                    setFilterProvider={setFilterProvider}
-                    isLoading={isLoading}
-                    setIsLoading={setIsLoading}
-                  />
-                </TabsContent>
-              </motion.div>
-            )}
-
-            {activeTab === "usage" && (
-              <motion.div
-                key="usage"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.3 }}
-              >
-                <TabsContent value="usage" className="space-y-6 mt-0">
-                  <UsageAnalyticsTab
-                    usageData={usageData}
-                    generateUsageData={generateUsageData}
-                    isLoading={isLoading}
-                    setIsLoading={setIsLoading}
-                    timeRange={timeRange}
-                    setTimeRange={setTimeRange}
-                  />
-                </TabsContent>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </Tabs>
+        <ApiKeysTab
+          apiKeys={apiKeys}
+          setApiKeys={setApiKeys}
+          searchQuery={searchQuery}
+          filterProvider={filterProvider}
+          setSearchQuery={setSearchQuery}
+          setFilterProvider={setFilterProvider}
+          isLoading={isLoading}
+          setIsLoading={setIsLoading}
+          onAddKey={async (keyData: any) => {
+            try {
+              const success = await addApiKey({
+                service_name: keyData.provider,
+                key_name: keyData.name,
+                encrypted_key: keyData.key,
+                is_active: true,
+                usage_limit: keyData.usageLimit || null,
+                current_usage: 0,
+                expires_at: null,
+              })
+              
+              if (success) {
+                await refreshApiKeys() // Refresh the list
+                return
+              }
+              throw new Error("Failed to add API key")
+            } catch (error) {
+              console.error("Error adding API key:", error)
+              throw error
+            }
+          }}
+          onUpdateKey={async (keyId: string, updates: any) => {
+            try {
+              const supabaseUpdates: any = {}
+              if (updates.name) supabaseUpdates.key_name = updates.name
+              if (updates.key) supabaseUpdates.encrypted_key = updates.key
+              if (updates.usageLimit !== undefined) supabaseUpdates.usage_limit = updates.usageLimit
+              
+              const success = await updateApiKey(keyId, supabaseUpdates)
+              
+              if (success) {
+                await refreshApiKeys() // Refresh the list
+                return
+              }
+              throw new Error("Failed to update API key")
+            } catch (error) {
+              console.error("Error updating API key:", error)
+              throw error
+            }
+          }}
+          onDeleteKey={async (keyId: string) => {
+            try {
+              const success = await deleteApiKey(keyId)
+              
+              if (success) {
+                await refreshApiKeys() // Refresh the list
+                return
+              }
+              throw new Error("Failed to delete API key")
+            } catch (error) {
+              console.error("Error deleting API key:", error)
+              throw error
+            }
+          }}
+          onToggleKeyActive={async (keyId: string, isActive: boolean) => {
+            try {
+              const success = await updateApiKey(keyId, { is_active: isActive })
+              
+              if (success) {
+                await refreshApiKeys() // Refresh the list
+                return
+              }
+              throw new Error("Failed to toggle API key status")
+            } catch (error) {
+              console.error("Error toggling API key status:", error)
+              throw error
+            }
+          }}
+          onTestKey={async (key: any) => {
+            // For now, simulate testing - you can implement real API testing later
+            console.log("Testing key:", key)
+            
+            // Simulate a delay
+            await new Promise(resolve => setTimeout(resolve, 2000))
+            
+            // Return success or failure randomly for demo
+            const success = Math.random() > 0.3
+            if (!success) {
+              throw new Error("API key test failed")
+            }
+          }}
+        />
       </motion.div>
 
       <motion.div variants={fadeInVariants} initial="hidden" animate="visible" className="mt-8 flex justify-end">

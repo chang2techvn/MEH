@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { useRouter } from "next/navigation"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -43,7 +42,6 @@ import {
   Star,
   Trash,
   Zap,
-  BarChart,
   Cpu,
   Database,
   Globe,
@@ -54,272 +52,38 @@ import {
 import { Progress } from "@/components/ui/progress"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
-
-// Define types for our API keys and models
-interface ApiKey {
-  id: string
-  name: string
-  key: string
-  provider: "openai" | "gemini" | "anthropic" | "mistral" | "cohere" | "custom"
-  isActive: boolean
-  isDefault: boolean
-  createdAt: Date
-  lastUsed: Date | null
-  usageCount: number
-  usageLimit: number | null
-  expiresAt: Date | null
-}
-
-interface AIModel {
-  id: string
-  name: string
-  provider: "openai" | "gemini" | "anthropic" | "mistral" | "cohere" | "custom"
-  description: string
-  capabilities: string[]
-  isEnabled: boolean
-  contextLength: number
-  costPer1kTokens: number
-  strengths: string[]
-  apiEndpoint?: string
-}
-
-interface UsageData {
-  date: string
-  requests: number
-  tokens: number
-  cost: number
-}
+import type { LegacyApiKey } from "./types"
+import { useAISettings } from "./hooks/use-ai-settings"
 
 export default function AISettingsPage() {
   const router = useRouter()
-  const [activeTab, setActiveTab] = useState("api-keys")
-  const [isLoading, setIsLoading] = useState(true)
-  const [apiKeys, setApiKeys] = useState<ApiKey[]>([])
-  const [aiModels, setAiModels] = useState<AIModel[]>([])
-  const [usageData, setUsageData] = useState<UsageData[]>([])
   const [showAddKeyDialog, setShowAddKeyDialog] = useState(false)
   const [showEditKeyDialog, setShowEditKeyDialog] = useState(false)
-  const [showAddModelDialog, setShowAddModelDialog] = useState(false)
-  const [showEditModelDialog, setShowEditModelDialog] = useState(false)
   const [showDeleteConfirmDialog, setShowDeleteConfirmDialog] = useState(false)
-  const [showTestResultDialog, setShowTestResultDialog] = useState(false)
-  const [selectedKey, setSelectedKey] = useState<ApiKey | null>(null)
-  const [selectedModel, setSelectedModel] = useState<AIModel | null>(null)
+  const [selectedKey, setSelectedKey] = useState<LegacyApiKey | null>(null)
   const [newKeyName, setNewKeyName] = useState("")
   const [newKeyValue, setNewKeyValue] = useState("")
   const [newKeyProvider, setNewKeyProvider] = useState<
     "openai" | "gemini" | "anthropic" | "mistral" | "cohere" | "custom"
   >("openai")
   const [newKeyUsageLimit, setNewKeyUsageLimit] = useState<string>("")
-  const [newModelName, setNewModelName] = useState("")
-  const [newModelProvider, setNewModelProvider] = useState<
-    "openai" | "gemini" | "anthropic" | "mistral" | "cohere" | "custom"
-  >("openai")
-  const [newModelDescription, setNewModelDescription] = useState("")
-  const [newModelCapabilities, setNewModelCapabilities] = useState<string[]>(["text"])
-  const [newModelContextLength, setNewModelContextLength] = useState("4096")
-  const [newModelCost, setNewModelCost] = useState("0.001")
-  const [newModelEndpoint, setNewModelEndpoint] = useState("")
-  const [newModelStrengths, setNewModelStrengths] = useState<string[]>([])
   const [searchQuery, setSearchQuery] = useState("")
   const [filterProvider, setFilterProvider] = useState<string>("all")
   const [showApiKeys, setShowApiKeys] = useState(false)
-  const [testResult, setTestResult] = useState<{ success: boolean; message: string; response?: string }>({
-    success: false,
-    message: "",
-  })
   const [testingKey, setTestingKey] = useState<string | null>(null)
   const [expandedCard, setExpandedCard] = useState<string | null>(null)
-  const [timeRange, setTimeRange] = useState("7d")
+  const [visibleKeys, setVisibleKeys] = useState<Record<string, boolean>>({})
 
-  // Sample data for API keys
-  const sampleApiKeys: ApiKey[] = [
-    {
-      id: "key1",
-      name: "OpenAI Production",
-      key: "sk-o91H5Xwpe3ndj28Svn3nT3BlbkFJoie9I34k2jd92jd92",
-      provider: "openai",
-      isActive: true,
-      isDefault: true,
-      createdAt: new Date(2023, 5, 15),
-      lastUsed: new Date(2023, 6, 28),
-      usageCount: 1243,
-      usageLimit: 5000,
-      expiresAt: new Date(2024, 5, 15),
-    },
-    {
-      id: "key2",
-      name: "Gemini API Key",
-      key: "AIzaSyBciaGKcsOTGrELi8PgmJtDteZ77hTuTw",
-      provider: "gemini",
-      isActive: true,
-      isDefault: false,
-      createdAt: new Date(2023, 8, 10),
-      lastUsed: new Date(2023, 9, 5),
-      usageCount: 567,
-      usageLimit: 10000,
-      expiresAt: null,
-    },
-    {
-      id: "key3",
-      name: "Anthropic Development",
-      key: "sk-ant-api03-jd92jd92-dev",
-      provider: "anthropic",
-      isActive: false,
-      isDefault: false,
-      createdAt: new Date(2023, 7, 20),
-      lastUsed: null,
-      usageCount: 0,
-      usageLimit: null,
-      expiresAt: null,
-    },
-    {
-      id: "key4",
-      name: "Mistral Testing",
-      key: "mst-jd92jd92-test",
-      provider: "mistral",
-      isActive: true,
-      isDefault: false,
-      createdAt: new Date(2023, 9, 1),
-      lastUsed: new Date(2023, 9, 10),
-      usageCount: 125,
-      usageLimit: 1000,
-      expiresAt: new Date(2024, 3, 1),
-    },
-    {
-      id: "key5",
-      name: "Cohere Sandbox",
-      key: "coh-sandbox-jd92jd92",
-      provider: "cohere",
-      isActive: true,
-      isDefault: false,
-      createdAt: new Date(2023, 10, 5),
-      lastUsed: new Date(2023, 10, 15),
-      usageCount: 78,
-      usageLimit: 2000,
-      expiresAt: null,
-    },
-  ]
-
-  // Sample data for AI models
-  const sampleAiModels: AIModel[] = [
-    {
-      id: "model1",
-      name: "GPT-4o",
-      provider: "openai",
-      description: "OpenAI's most advanced model, optimized for both vision and language tasks.",
-      capabilities: ["text", "image", "code"],
-      isEnabled: true,
-      contextLength: 128000,
-      costPer1kTokens: 0.01,
-      strengths: ["General knowledge", "Creative writing", "Code generation", "Visual understanding"],
-    },
-    {
-      id: "model2",
-      name: "GPT-3.5 Turbo",
-      provider: "openai",
-      description: "A good balance between performance and cost for most language tasks.",
-      capabilities: ["text", "code"],
-      isEnabled: true,
-      contextLength: 16385,
-      costPer1kTokens: 0.0015,
-      strengths: ["Fast responses", "Cost-effective", "General knowledge"],
-    },
-    {
-      id: "model3",
-      name: "Gemini Pro",
-      provider: "gemini",
-      description: "Google's multimodal AI model with strong reasoning capabilities.",
-      capabilities: ["text", "image", "code"],
-      isEnabled: true,
-      contextLength: 32768,
-      costPer1kTokens: 0.0025,
-      strengths: ["Reasoning", "Multimodal understanding", "Up-to-date knowledge"],
-    },
-    {
-      id: "model4",
-      name: "Claude 3 Opus",
-      provider: "anthropic",
-      description: "Anthropic's most capable model with excellent reasoning and safety features.",
-      capabilities: ["text", "image"],
-      isEnabled: false,
-      contextLength: 200000,
-      costPer1kTokens: 0.015,
-      strengths: ["Reasoning", "Safety", "Long context", "Instruction following"],
-    },
-    {
-      id: "model5",
-      name: "Mistral Large",
-      provider: "mistral",
-      description: "Powerful and efficient language model from Mistral AI.",
-      capabilities: ["text", "code"],
-      isEnabled: true,
-      contextLength: 32768,
-      costPer1kTokens: 0.008,
-      strengths: ["Efficiency", "Reasoning", "Instruction following"],
-    },
-    {
-      id: "model6",
-      name: "Cohere Command R",
-      provider: "cohere",
-      description: "Specialized for enterprise use cases with strong retrieval capabilities.",
-      capabilities: ["text"],
-      isEnabled: true,
-      contextLength: 128000,
-      costPer1kTokens: 0.005,
-      strengths: ["Enterprise knowledge", "Retrieval", "Structured data"],
-    },
-  ]
-
-  // Sample usage data
-  const generateUsageData = () => {
-    const data: UsageData[] = []
-    const now = new Date()
-    const days = timeRange === "7d" ? 7 : timeRange === "30d" ? 30 : 90
-
-    for (let i = 0; i < days; i++) {
-      const date = new Date(now)
-      date.setDate(date.getDate() - i)
-      const dateStr = date.toISOString().split("T")[0]
-
-      // Generate random but somewhat realistic data
-      const baseRequests = Math.floor(Math.random() * 100) + 50
-      const dayOfWeek = date.getDay()
-      // Less usage on weekends
-      const multiplier = dayOfWeek === 0 || dayOfWeek === 6 ? 0.6 : 1
-      const requests = Math.floor(baseRequests * multiplier)
-      const tokensPerRequest = Math.floor(Math.random() * 1000) + 500
-      const tokens = requests * tokensPerRequest
-      const cost = tokens * 0.00002
-
-      data.push({
-        date: dateStr,
-        requests,
-        tokens,
-        cost,
-      })
-    }
-
-    // Sort by date ascending
-    return data.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-  }
-
-  // Load data
-  useEffect(() => {
-    const loadData = async () => {
-      setIsLoading(true)
-
-      // Simulate API call delay
-      await new Promise((resolve) => setTimeout(resolve, 1500))
-
-      setApiKeys(sampleApiKeys)
-      setAiModels(sampleAiModels)
-      setUsageData(generateUsageData())
-      setIsLoading(false)
-    }
-
-    loadData()
-  }, [timeRange])
+  // Use the new hook for Supabase integration
+  const { 
+    apiKeys, 
+    setApiKeys, 
+    isLoading, 
+    refreshApiKeys, 
+    addApiKey, 
+    updateApiKey, 
+    deleteApiKey 
+  } = useAISettings({})
 
   // Filter API keys based on search and provider filter
   const filteredApiKeys = apiKeys.filter((key) => {
@@ -330,17 +94,8 @@ export default function AISettingsPage() {
     return matchesSearch && matchesProvider
   })
 
-  // Filter AI models based on search and provider filter
-  const filteredAiModels = aiModels.filter((model) => {
-    const matchesSearch =
-      model.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      model.description.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesProvider = filterProvider === "all" || model.provider === filterProvider
-    return matchesSearch && matchesProvider
-  })
-
   // Handle adding a new API key
-  const handleAddApiKey = () => {
+  const handleAddApiKey = async () => {
     if (!newKeyName || !newKeyValue || !newKeyProvider) {
       toast({
         title: "Missing information",
@@ -350,26 +105,17 @@ export default function AISettingsPage() {
       return
     }
 
-    setIsLoading(true)
+    const success = await addApiKey({
+      service_name: newKeyProvider,
+      key_name: newKeyName,
+      encrypted_key: newKeyValue, // Note: In production, this should be encrypted
+      is_active: true,
+      usage_limit: newKeyUsageLimit ? Number.parseInt(newKeyUsageLimit) : null,
+      current_usage: 0,
+      expires_at: null, // You can add expiry date input later
+    })
 
-    // Simulate API call
-    setTimeout(() => {
-      const newKey: ApiKey = {
-        id: `key${apiKeys.length + 1}`,
-        name: newKeyName,
-        key: newKeyValue,
-        provider: newKeyProvider,
-        isActive: true,
-        isDefault: apiKeys.length === 0, // Make default if it's the first key
-        createdAt: new Date(),
-        lastUsed: null,
-        usageCount: 0,
-        usageLimit: newKeyUsageLimit ? Number.parseInt(newKeyUsageLimit) : null,
-        expiresAt: null,
-      }
-
-      setApiKeys([...apiKeys, newKey])
-      setIsLoading(false)
+    if (success) {
       setShowAddKeyDialog(false)
       setNewKeyName("")
       setNewKeyValue("")
@@ -380,11 +126,17 @@ export default function AISettingsPage() {
         title: "API Key added",
         description: "Your new API key has been added successfully",
       })
-    }, 1000)
+    } else {
+      toast({
+        title: "Error",
+        description: "Failed to add API key. Please try again.",
+        variant: "destructive",
+      })
+    }
   }
 
   // Handle editing an API key
-  const handleEditApiKey = () => {
+  const handleEditApiKey = async () => {
     if (!selectedKey || !newKeyName) {
       toast({
         title: "Missing information",
@@ -394,25 +146,24 @@ export default function AISettingsPage() {
       return
     }
 
-    setIsLoading(true)
+    const updates: any = {
+      key_name: newKeyName,
+      service_name: newKeyProvider,
+    }
 
-    // Simulate API call
-    setTimeout(() => {
-      const updatedKeys = apiKeys.map((key) => {
-        if (key.id === selectedKey.id) {
-          return {
-            ...key,
-            name: newKeyName,
-            key: newKeyValue || key.key,
-            provider: newKeyProvider,
-            usageLimit: newKeyUsageLimit ? Number.parseInt(newKeyUsageLimit) : key.usageLimit,
-          }
-        }
-        return key
-      })
+    // Only update encrypted_key if a new value is provided
+    if (newKeyValue) {
+      updates.encrypted_key = newKeyValue
+    }
 
-      setApiKeys(updatedKeys)
-      setIsLoading(false)
+    // Update usage limit if provided
+    if (newKeyUsageLimit) {
+      updates.usage_limit = Number.parseInt(newKeyUsageLimit)
+    }
+
+    const success = await updateApiKey(selectedKey.id, updates)
+
+    if (success) {
       setShowEditKeyDialog(false)
       setSelectedKey(null)
       setNewKeyName("")
@@ -424,26 +175,22 @@ export default function AISettingsPage() {
         title: "API Key updated",
         description: "Your API key has been updated successfully",
       })
-    }, 1000)
+    } else {
+      toast({
+        title: "Error",
+        description: "Failed to update API key. Please try again.",
+        variant: "destructive",
+      })
+    }
   }
 
   // Handle deleting an API key
-  const handleDeleteApiKey = () => {
+  const handleDeleteApiKey = async () => {
     if (!selectedKey) return
 
-    setIsLoading(true)
+    const success = await deleteApiKey(selectedKey.id)
 
-    // Simulate API call
-    setTimeout(() => {
-      const updatedKeys = apiKeys.filter((key) => key.id !== selectedKey.id)
-
-      // If we deleted the default key, make another one default
-      if (selectedKey.isDefault && updatedKeys.length > 0) {
-        updatedKeys[0].isDefault = true
-      }
-
-      setApiKeys(updatedKeys)
-      setIsLoading(false)
+    if (success) {
       setShowDeleteConfirmDialog(false)
       setSelectedKey(null)
 
@@ -451,263 +198,80 @@ export default function AISettingsPage() {
         title: "API Key deleted",
         description: "The API key has been deleted successfully",
       })
-    }, 1000)
+    } else {
+      toast({
+        title: "Error",
+        description: "Failed to delete API key. Please try again.",
+        variant: "destructive",
+      })
+    }
   }
 
-  // Handle setting a key as default
+  // Handle setting a key as default (local logic only, not in Supabase)
   const handleSetDefaultKey = (keyId: string) => {
-    setIsLoading(true)
+    // Update local state only - this is UI-only logic
+    const updatedKeys = apiKeys.map((key) => ({
+      ...key,
+      isDefault: key.id === keyId,
+    }))
 
-    // Simulate API call
-    setTimeout(() => {
-      const updatedKeys = apiKeys.map((key) => ({
-        ...key,
-        isDefault: key.id === keyId,
-      }))
+    setApiKeys(updatedKeys)
 
-      setApiKeys(updatedKeys)
-      setIsLoading(false)
-
-      toast({
-        title: "Default key updated",
-        description: "The default API key has been updated successfully",
-      })
-    }, 500)
+    toast({
+      title: "Default key updated",
+      description: "The default API key has been updated successfully",
+    })
   }
 
   // Handle toggling a key's active status
-  const handleToggleKeyActive = (keyId: string, newStatus: boolean) => {
-    setIsLoading(true)
+  const handleToggleKeyActive = async (keyId: string, newStatus: boolean) => {
+    const success = await updateApiKey(keyId, { is_active: newStatus })
 
-    // Simulate API call
-    setTimeout(() => {
-      const updatedKeys = apiKeys.map((key) => {
-        if (key.id === keyId) {
-          return {
-            ...key,
-            isActive: newStatus,
-          }
-        }
-        return key
-      })
-
-      setApiKeys(updatedKeys)
-      setIsLoading(false)
-
+    if (success) {
       toast({
         title: newStatus ? "API Key activated" : "API Key deactivated",
         description: `The API key has been ${newStatus ? "activated" : "deactivated"} successfully`,
       })
-    }, 500)
+    } else {
+      toast({
+        title: "Error",
+        description: "Failed to update API key status. Please try again.",
+        variant: "destructive",
+      })
+    }
   }
 
   // Handle adding a new AI model
-  const handleAddAiModel = () => {
-    if (!newModelName || !newModelProvider || !newModelDescription) {
-      toast({
-        title: "Missing information",
-        description: "Please fill in all required fields",
-        variant: "destructive",
-      })
-      return
-    }
-
-    setIsLoading(true)
-
-    // Simulate API call
-    setTimeout(() => {
-      const newModel: AIModel = {
-        id: `model${aiModels.length + 1}`,
-        name: newModelName,
-        provider: newModelProvider,
-        description: newModelDescription,
-        capabilities: newModelCapabilities,
-        isEnabled: true,
-        contextLength: Number.parseInt(newModelContextLength),
-        costPer1kTokens: Number.parseFloat(newModelCost),
-        strengths: newModelStrengths,
-        apiEndpoint: newModelEndpoint || undefined,
-      }
-
-      setAiModels([...aiModels, newModel])
-      setIsLoading(false)
-      setShowAddModelDialog(false)
-      resetModelForm()
-
-      toast({
-        title: "AI Model added",
-        description: "Your new AI model has been added successfully",
-      })
-    }, 1000)
-  }
-
-  // Handle editing an AI model
-  const handleEditAiModel = () => {
-    if (!selectedModel || !newModelName || !newModelDescription) {
-      toast({
-        title: "Missing information",
-        description: "Please fill in all required fields",
-        variant: "destructive",
-      })
-      return
-    }
-
-    setIsLoading(true)
-
-    // Simulate API call
-    setTimeout(() => {
-      const updatedModels = aiModels.map((model) => {
-        if (model.id === selectedModel.id) {
-          return {
-            ...model,
-            name: newModelName,
-            provider: newModelProvider,
-            description: newModelDescription,
-            capabilities: newModelCapabilities,
-            contextLength: Number.parseInt(newModelContextLength),
-            costPer1kTokens: Number.parseFloat(newModelCost),
-            strengths: newModelStrengths,
-            apiEndpoint: newModelEndpoint || model.apiEndpoint,
-          }
-        }
-        return model
-      })
-
-      setAiModels(updatedModels)
-      setIsLoading(false)
-      setShowEditModelDialog(false)
-      setSelectedModel(null)
-      resetModelForm()
-
-      toast({
-        title: "AI Model updated",
-        description: "Your AI model has been updated successfully",
-      })
-    }, 1000)
-  }
-
-  // Handle toggling a model's enabled status
-  const handleToggleModelEnabled = (modelId: string, newStatus: boolean) => {
-    setIsLoading(true)
-
-    // Simulate API call
-    setTimeout(() => {
-      const updatedModels = aiModels.map((model) => {
-        if (model.id === modelId) {
-          return {
-            ...model,
-            isEnabled: newStatus,
-          }
-        }
-        return model
-      })
-
-      setAiModels(updatedModels)
-      setIsLoading(false)
-
-      toast({
-        title: newStatus ? "Model enabled" : "Model disabled",
-        description: `The AI model has been ${newStatus ? "enabled" : "disabled"} successfully`,
-      })
-    }, 500)
-  }
-
-  // Reset model form
-  const resetModelForm = () => {
-    setNewModelName("")
-    setNewModelProvider("openai")
-    setNewModelDescription("")
-    setNewModelCapabilities(["text"])
-    setNewModelContextLength("4096")
-    setNewModelCost("0.001")
-    setNewModelEndpoint("")
-    setNewModelStrengths([])
-  }
-
   // Handle testing an API key
-  const handleTestApiKey = (key: ApiKey) => {
+  const handleTestApiKey = async (key: LegacyApiKey) => {
     setTestingKey(key.id)
 
-    // Simulate API call
-    setTimeout(() => {
-      // Randomly succeed or fail for demo purposes
-      const success = Math.random() > 0.3
+    try {
+      // For now, we'll simulate testing since testApiKey function needs implementation
+      // In real implementation, this would call the API endpoint to test the key
+      const isValid = Math.random() > 0.3 // Simulate random success/failure
 
-      setTestResult({
-        success,
-        message: success
-          ? `API key validated successfully with ${key.provider}`
-          : `Failed to validate API key: ${getRandomErrorMessage(key.provider)}`,
-        response: success ? getRandomSuccessResponse(key.provider) : undefined,
-      })
-
-      setTestingKey(null)
-      setShowTestResultDialog(true)
-
-      if (success) {
-        // Update last used date and usage count
-        const updatedKeys = apiKeys.map((k) => {
-          if (k.id === key.id) {
-            return {
-              ...k,
-              lastUsed: new Date(),
-              usageCount: k.usageCount + 1,
-            }
-          }
-          return k
+      if (isValid) {
+        toast({
+          title: "API Key Test Successful",
+          description: `The ${key.name} API key is working correctly`,
         })
-        setApiKeys(updatedKeys)
+      } else {
+        toast({
+          title: "API Key Test Failed",
+          description: `The ${key.name} API key is not working correctly`,
+          variant: "destructive",
+        })
       }
-    }, 2000)
-  }
-
-  // Get a random error message for demo
-  const getRandomErrorMessage = (provider: string) => {
-    const errors = [
-      `Invalid authentication with ${provider} API`,
-      `Rate limit exceeded for ${provider} API`,
-      `${provider} API key has expired`,
-      `Network error while connecting to ${provider} API`,
-      `${provider} service is currently unavailable`,
-    ]
-    return errors[Math.floor(Math.random() * errors.length)]
-  }
-
-  // Get a random success response for demo
-  const getRandomSuccessResponse = (provider: string) => {
-    if (provider === "openai") {
-      return `{
-  "id": "chatcmpl-123",
-  "object": "chat.completion",
-  "created": ${Date.now()},
-  "model": "gpt-4o",
-  "choices": [{
-    "index": 0,
-    "message": {
-      "role": "assistant",
-      "content": "Hello! I'm an AI assistant powered by OpenAI. Your API key is working correctly."
-    },
-    "finish_reason": "stop"
-  }]
-}`
-    } else if (provider === "gemini") {
-      return `{
-  "candidates": [{
-    "content": {
-      "parts": [{
-        "text": "Hello! I'm Gemini AI. Your API key is valid and working correctly."
-      }]
-    },
-    "finishReason": "STOP"
-  }]
-}`
-    } else {
-      return `{
-  "success": true,
-  "message": "API key validated successfully",
-  "model": "${provider}-latest",
-  "timestamp": "${new Date().toISOString()}"
-}`
+    } catch (error) {
+      console.error("Error testing API key:", error)
+      toast({
+        title: "Test Error",
+        description: "Failed to test the API key. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setTestingKey(null)
     }
   }
 
@@ -768,47 +332,17 @@ export default function AISettingsPage() {
     }
   }
 
-  // Get capability badge
-  const getCapabilityBadge = (capability: string) => {
-    switch (capability) {
-      case "text":
-        return (
-          <Badge
-            variant="outline"
-            className="bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300 border-blue-200 dark:border-blue-800"
-          >
-            <FileText className="h-3 w-3 mr-1" />
-            Text
-          </Badge>
-        )
-      case "image":
-        return (
-          <Badge
-            variant="outline"
-            className="bg-purple-50 text-purple-700 dark:bg-purple-950 dark:text-purple-300 border-purple-200 dark:border-purple-800"
-          >
-            <Eye className="h-3 w-3 mr-1" />
-            Vision
-          </Badge>
-        )
-      case "code":
-        return (
-          <Badge
-            variant="outline"
-            className="bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300 border-amber-200 dark:border-amber-800"
-          >
-            <Code className="h-3 w-3 mr-1" />
-            Code
-          </Badge>
-        )
-      default:
-        return <Badge variant="outline">{capability}</Badge>
-    }
-  }
-
   // Toggle API key visibility
   const toggleApiKeyVisibility = () => {
     setShowApiKeys(!showApiKeys)
+  }
+
+  // Toggle individual key visibility
+  const toggleIndividualKeyVisibility = (keyId: string) => {
+    setVisibleKeys(prev => ({
+      ...prev,
+      [keyId]: !prev[keyId]
+    }))
   }
 
   // Format number with commas
@@ -824,19 +358,6 @@ export default function AISettingsPage() {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     }).format(amount)
-  }
-
-  // Calculate total usage
-  const calculateTotalUsage = () => {
-    const totalRequests = usageData.reduce((sum, day) => sum + day.requests, 0)
-    const totalTokens = usageData.reduce((sum, day) => sum + day.tokens, 0)
-    const totalCost = usageData.reduce((sum, day) => sum + day.cost, 0)
-
-    return {
-      requests: totalRequests,
-      tokens: totalTokens,
-      cost: totalCost,
-    }
   }
 
   // Animation variants
@@ -879,30 +400,9 @@ export default function AISettingsPage() {
               AI Settings
             </span>
           </h1>
-          <p className="text-muted-foreground mt-1">Manage your AI providers, API keys, and model configurations</p>
+          <p className="text-muted-foreground mt-1">Manage your AI provider API keys and configurations</p>
         </div>
         <div className="flex items-center gap-3">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="outline" size="sm" onClick={() => router.push("/admin/ai-documentation")}>
-                  <HelpCircle className="h-4 w-4 mr-2" />
-                  Documentation
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>View documentation on AI integration</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-
-          <Button
-            size="sm"
-            className="bg-gradient-to-r from-neo-mint to-purist-blue hover:from-neo-mint/90 hover:to-purist-blue/90 text-white border-0"
-          >
-            <Shield className="h-4 w-4 mr-2" />
-            AI Safety Settings
-          </Button>
         </div>
       </motion.div>
 
@@ -912,42 +412,14 @@ export default function AISettingsPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2, duration: 0.5 }}
       >
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-6">
-            <TabsTrigger
-              value="api-keys"
-              className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-neo-mint/20 data-[state=active]:to-purist-blue/20"
-            >
-              <Key className="h-4 w-4" />
-              <span>API Keys</span>
-            </TabsTrigger>
-            <TabsTrigger
-              value="models"
-              className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-neo-mint/20 data-[state=active]:to-purist-blue/20"
-            >
-              <Cpu className="h-4 w-4" />
-              <span>AI Models</span>
-            </TabsTrigger>
-            <TabsTrigger
-              value="usage"
-              className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-neo-mint/20 data-[state=active]:to-purist-blue/20"
-            >
-              <BarChart className="h-4 w-4" />
-              <span>Usage Analytics</span>
-            </TabsTrigger>
-          </TabsList>
-
+        <div className="w-full">
           {/* API Keys Tab */}
-          <AnimatePresence mode="wait">
-            {activeTab === "api-keys" && (
-              <motion.div
-                key="api-keys"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.3 }}
-              >
-                <TabsContent value="api-keys" className="space-y-6 mt-0">
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <div className="space-y-6 mt-0">
                   {/* Search and Filter */}
                   <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
                     <div className="relative w-full sm:w-64">
@@ -1107,15 +579,15 @@ export default function AISettingsPage() {
                             <div className="mt-3 flex flex-col sm:flex-row sm:items-center gap-3">
                               <div className="flex-1 flex items-center gap-2 bg-muted/50 rounded-md px-3 py-2">
                                 <div className="font-mono text-sm truncate flex-1">
-                                  {showApiKeys ? key.key : "•".repeat(Math.min(24, key.key.length))}
+                                  {visibleKeys[key.id] ? key.key : "•".repeat(Math.min(24, key.key.length))}
                                 </div>
                                 <Button
                                   variant="ghost"
                                   size="icon"
                                   className="h-8 w-8"
-                                  onClick={toggleApiKeyVisibility}
+                                  onClick={() => toggleIndividualKeyVisibility(key.id)}
                                 >
-                                  {showApiKeys ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                  {visibleKeys[key.id] ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                                 </Button>
                                 <Button
                                   variant="ghost"
@@ -1216,503 +688,9 @@ export default function AISettingsPage() {
                       ))
                     )}
                   </motion.div>
-                </TabsContent>
-              </motion.div>
-            )}
-
-            {/* AI Models Tab */}
-            {activeTab === "models" && (
-              <motion.div
-                key="models"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.3 }}
-              >
-                <TabsContent value="models" className="space-y-6 mt-0">
-                  {/* Search and Filter */}
-                  <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
-                    <div className="relative w-full sm:w-64">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        placeholder="Search AI models..."
-                        className="pl-9"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                      />
-                    </div>
-                    <div className="flex items-center gap-3 w-full sm:w-auto">
-                      <Select value={filterProvider} onValueChange={setFilterProvider}>
-                        <SelectTrigger className="w-full sm:w-[180px]">
-                          <SelectValue placeholder="Filter by provider" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">All Providers</SelectItem>
-                          <SelectItem value="openai">OpenAI</SelectItem>
-                          <SelectItem value="gemini">Gemini</SelectItem>
-                          <SelectItem value="anthropic">Anthropic</SelectItem>
-                          <SelectItem value="mistral">Mistral</SelectItem>
-                          <SelectItem value="cohere">Cohere</SelectItem>
-                          <SelectItem value="custom">Custom</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <Button onClick={() => setShowAddModelDialog(true)}>
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add Model
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* AI Models Grid */}
-                  <motion.div
-                    variants={containerVariants}
-                    initial="hidden"
-                    animate="visible"
-                    className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
-                  >
-                    {isLoading ? (
-                      // Loading skeletons
-                      Array.from({ length: 6 }).map((_, i) => (
-                        <motion.div
-                          key={`skeleton-${i}`}
-                          variants={itemVariants}
-                          className="rounded-lg border p-4 space-y-3"
-                        >
-                          <div className="flex justify-between items-center">
-                            <Skeleton className="h-6 w-40" />
-                            <Skeleton className="h-6 w-16" />
-                          </div>
-                          <Skeleton className="h-4 w-full" />
-                          <Skeleton className="h-4 w-3/4" />
-                          <div className="flex gap-2">
-                            <Skeleton className="h-6 w-16" />
-                            <Skeleton className="h-6 w-16" />
-                          </div>
-                        </motion.div>
-                      ))
-                    ) : filteredAiModels.length === 0 ? (
-                      // Empty state
-                      <motion.div
-                        variants={fadeInVariants}
-                        className="text-center py-12 border rounded-lg col-span-full"
-                      >
-                        <Cpu className="h-12 w-12 mx-auto text-muted-foreground opacity-20" />
-                        <h3 className="mt-4 text-lg font-medium">No AI models found</h3>
-                        <p className="text-muted-foreground mt-2 mb-4">
-                          {searchQuery || filterProvider !== "all"
-                            ? "Try adjusting your search or filters"
-                            : "Add your first AI model to get started"}
-                        </p>
-                        <Button onClick={() => setShowAddModelDialog(true)}>
-                          <Plus className="h-4 w-4 mr-2" />
-                          Add AI Model
-                        </Button>
-                      </motion.div>
-                    ) : (
-                      // AI models grid
-                      filteredAiModels.map((model) => (
-                        <motion.div
-                          key={model.id}
-                          variants={itemVariants}
-                          className={`rounded-lg border ${
-                            model.isEnabled ? "" : "bg-gray-50 dark:bg-gray-900/50 opacity-75"
-                          } hover:shadow-md transition-all duration-300`}
-                        >
-                          <div className="p-4">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                <div
-                                  className={`w-8 h-8 rounded-full flex items-center justify-center ${getProviderColor(
-                                    model.provider,
-                                  )}`}
-                                >
-                                  {getProviderIcon(model.provider)}
-                                </div>
-                                <h3 className="font-medium">{model.name}</h3>
-                              </div>
-                              <Switch
-                                checked={model.isEnabled}
-                                onCheckedChange={(checked) => handleToggleModelEnabled(model.id, checked)}
-                              />
-                            </div>
-
-                            <p className="text-sm text-muted-foreground mt-2 line-clamp-2">{model.description}</p>
-
-                            <div className="flex flex-wrap gap-2 mt-3">
-                              {model.capabilities.map((capability) => (
-                                <div key={capability}>{getCapabilityBadge(capability)}</div>
-                              ))}
-                            </div>
-
-                            <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-muted-foreground">
-                              <div>
-                                <span className="block">Context Length</span>
-                                <span className="font-medium text-foreground">
-                                  {formatNumber(model.contextLength)} tokens
-                                </span>
-                              </div>
-                              <div>
-                                <span className="block">Cost per 1K tokens</span>
-                                <span className="font-medium text-foreground">${model.costPer1kTokens.toFixed(4)}</span>
-                              </div>
-                            </div>
-
-                            <Accordion type="single" collapsible className="mt-3">
-                              <AccordionItem value="strengths" className="border-b-0">
-                                <AccordionTrigger className="py-2 text-sm">Strengths & Capabilities</AccordionTrigger>
-                                <AccordionContent>
-                                  <ul className="text-xs space-y-1 text-muted-foreground">
-                                    {model.strengths.map((strength, i) => (
-                                      <li key={i} className="flex items-start gap-2">
-                                        <Check className="h-3 w-3 mt-0.5 text-green-500" />
-                                        <span>{strength}</span>
-                                      </li>
-                                    ))}
-                                  </ul>
-                                </AccordionContent>
-                              </AccordionItem>
-                            </Accordion>
-
-                            <div className="flex gap-2 mt-4">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="flex-1"
-                                onClick={() => {
-                                  setSelectedModel(model)
-                                  setNewModelName(model.name)
-                                  setNewModelProvider(model.provider)
-                                  setNewModelDescription(model.description)
-                                  setNewModelCapabilities(model.capabilities)
-                                  setNewModelContextLength(model.contextLength.toString())
-                                  setNewModelCost(model.costPer1kTokens.toString())
-                                  setNewModelStrengths(model.strengths)
-                                  setNewModelEndpoint(model.apiEndpoint || "")
-                                  setShowEditModelDialog(true)
-                                }}
-                              >
-                                <Edit className="h-4 w-4 mr-2" />
-                                Edit
-                              </Button>
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      className="flex-1"
-                                      onClick={() => {
-                                        toast({
-                                          title: "Model documentation",
-                                          description: `Viewing documentation for ${model.name}`,
-                                        })
-                                      }}
-                                    >
-                                      <Info className="h-4 w-4 mr-2" />
-                                      Docs
-                                    </Button>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>View model documentation</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                            </div>
-                          </div>
-                        </motion.div>
-                      ))
-                    )}
-                  </motion.div>
-                </TabsContent>
-              </motion.div>
-            )}
-
-            {/* Usage Analytics Tab */}
-            {activeTab === "usage" && (
-              <motion.div
-                key="usage"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.3 }}
-              >
-                <TabsContent value="usage" className="space-y-6 mt-0">
-                  {/* Time Range Selector */}
-                  <div className="flex justify-between items-center">
-                    <h2 className="text-xl font-semibold">Usage Analytics</h2>
-                    <div className="flex items-center gap-2">
-                      <Select value={timeRange} onValueChange={setTimeRange}>
-                        <SelectTrigger className="w-[120px]">
-                          <SelectValue placeholder="Time range" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="7d">Last 7 days</SelectItem>
-                          <SelectItem value="30d">Last 30 days</SelectItem>
-                          <SelectItem value="90d">Last 90 days</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <Button variant="outline" size="sm" onClick={() => setTimeRange(timeRange)}>
-                        <RefreshCw className="h-4 w-4 mr-2" />
-                        Refresh
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* Usage Stats Cards */}
-                  <motion.div
-                    variants={containerVariants}
-                    initial="hidden"
-                    animate="visible"
-                    className="grid grid-cols-1 sm:grid-cols-3 gap-4"
-                  >
-                    {isLoading ? (
-                      // Loading skeletons
-                      Array.from({ length: 3 }).map((_, i) => (
-                        <motion.div
-                          key={`skeleton-${i}`}
-                          variants={itemVariants}
-                          className="rounded-lg border p-4 space-y-3"
-                        >
-                          <Skeleton className="h-6 w-32" />
-                          <Skeleton className="h-8 w-24" />
-                          <Skeleton className="h-4 w-full" />
-                        </motion.div>
-                      ))
-                    ) : (
-                      // Usage stats cards
-                      <>
-                        <motion.div
-                          variants={itemVariants}
-                          className="rounded-lg border p-4 bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-800"
-                        >
-                          <h3 className="text-sm font-medium text-muted-foreground">Total Requests</h3>
-                          <p className="text-2xl font-bold mt-1">{formatNumber(calculateTotalUsage().requests)}</p>
-                          <div className="mt-2">
-                            <Progress value={75} className="h-1.5" />
-                          </div>
-                        </motion.div>
-                        <motion.div
-                          variants={itemVariants}
-                          className="rounded-lg border p-4 bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-800"
-                        >
-                          <h3 className="text-sm font-medium text-muted-foreground">Total Tokens</h3>
-                          <p className="text-2xl font-bold mt-1">{formatNumber(calculateTotalUsage().tokens)}</p>
-                          <div className="mt-2">
-                            <Progress value={60} className="h-1.5" />
-                          </div>
-                        </motion.div>
-                        <motion.div
-                          variants={itemVariants}
-                          className="rounded-lg border p-4 bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-800"
-                        >
-                          <h3 className="text-sm font-medium text-muted-foreground">Total Cost</h3>
-                          <p className="text-2xl font-bold mt-1">{formatCurrency(calculateTotalUsage().cost)}</p>
-                          <div className="mt-2">
-                            <Progress value={40} className="h-1.5" />
-                          </div>
-                        </motion.div>
-                      </>
-                    )}
-                  </motion.div>
-
-                  {/* Usage Chart */}
-                  <motion.div
-                    variants={fadeInVariants}
-                    className="rounded-lg border p-4 bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-800"
-                  >
-                    <h3 className="text-lg font-medium mb-4">Usage Over Time</h3>
-                    {isLoading ? (
-                      <Skeleton className="h-[300px] w-full" />
-                    ) : (
-                      <div className="h-[300px] w-full relative">
-                        {/* Chart visualization */}
-                        <div className="absolute inset-0 flex items-end justify-around px-4 pb-4">
-                          {usageData.map((day, i) => (
-                            <motion.div
-                              key={i}
-                              className="relative group"
-                              initial={{ opacity: 0, height: 0 }}
-                              animate={{ opacity: 1, height: `${(day.requests / 100) * 80}%` }}
-                              transition={{ delay: i * 0.03, duration: 0.5, type: "spring" }}
-                            >
-                              <div className="w-2 sm:w-3 bg-gradient-to-t from-purist-blue to-neo-mint rounded-t-md group-hover:w-3 sm:group-hover:w-4 transition-all duration-200"></div>
-                              <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-foreground text-background text-xs rounded px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-                                {day.date.split("-")[2]}/{day.date.split("-")[1]}: {day.requests} requests
-                              </div>
-                            </motion.div>
-                          ))}
-                        </div>
-                        <div className="absolute bottom-0 left-0 right-0 h-px bg-border"></div>
-                      </div>
-                    )}
-                  </motion.div>
-
-                  {/* Usage by Provider */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <motion.div
-                      variants={fadeInVariants}
-                      className="rounded-lg border p-4 bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-800"
-                    >
-                      <h3 className="text-lg font-medium mb-4">Usage by Provider</h3>
-                      {isLoading ? (
-                        <Skeleton className="h-[200px] w-full" />
-                      ) : (
-                        <div className="h-[200px] w-full relative">
-                          {/* Pie chart visualization */}
-                          <div className="absolute inset-0 flex items-center justify-center">
-                            <div className="relative w-32 h-32">
-                              <motion.div
-                                className="absolute inset-0 rounded-full border-8 border-t-neo-mint border-r-purist-blue border-b-cassis border-l-mellow-yellow"
-                                initial={{ rotate: 0 }}
-                                animate={{ rotate: 360 }}
-                                transition={{ duration: 100, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
-                              ></motion.div>
-                              <div className="absolute inset-2 bg-background rounded-full flex items-center justify-center">
-                                <span className="text-lg font-bold">100%</span>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="absolute bottom-0 left-0 right-0 flex justify-around">
-                            <div className="flex items-center gap-2">
-                              <div className="w-3 h-3 rounded-full bg-neo-mint"></div>
-                              <span className="text-xs">OpenAI (45%)</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <div className="w-3 h-3 rounded-full bg-purist-blue"></div>
-                              <span className="text-xs">Gemini (30%)</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <div className="w-3 h-3 rounded-full bg-cassis"></div>
-                              <span className="text-xs">Others (25%)</span>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </motion.div>
-
-                    <motion.div
-                      variants={fadeInVariants}
-                      className="rounded-lg border p-4 bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-800"
-                    >
-                      <h3 className="text-lg font-medium mb-4">Usage by Model</h3>
-                      {isLoading ? (
-                        <Skeleton className="h-[200px] w-full" />
-                      ) : (
-                        <div className="space-y-4">
-                          <div className="space-y-2">
-                            <div className="flex justify-between text-sm">
-                              <span>GPT-4o</span>
-                              <span>42%</span>
-                            </div>
-                            <Progress value={42} className="h-2" />
-                          </div>
-                          <div className="space-y-2">
-                            <div className="flex justify-between text-sm">
-                              <span>Gemini Pro</span>
-                              <span>28%</span>
-                            </div>
-                            <Progress value={28} className="h-2" />
-                          </div>
-                          <div className="space-y-2">
-                            <div className="flex justify-between text-sm">
-                              <span>GPT-3.5 Turbo</span>
-                              <span>18%</span>
-                            </div>
-                            <Progress value={18} className="h-2" />
-                          </div>
-                          <div className="space-y-2">
-                            <div className="flex justify-between text-sm">
-                              <span>Claude 3</span>
-                              <span>8%</span>
-                            </div>
-                            <Progress value={8} className="h-2" />
-                          </div>
-                          <div className="space-y-2">
-                            <div className="flex justify-between text-sm">
-                              <span>Others</span>
-                              <span>4%</span>
-                            </div>
-                            <Progress value={4} className="h-2" />
-                          </div>
-                        </div>
-                      )}
-                    </motion.div>
-                  </div>
-
-                  {/* Cost Breakdown */}
-                  <motion.div
-                    variants={fadeInVariants}
-                    className="rounded-lg border p-4 bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-800"
-                  >
-                    <h3 className="text-lg font-medium mb-4">Cost Breakdown</h3>
-                    {isLoading ? (
-                      <Skeleton className="h-[200px] w-full" />
-                    ) : (
-                      <div className="overflow-x-auto">
-                        <table className="w-full min-w-[600px]">
-                          <thead>
-                            <tr className="border-b">
-                              <th className="text-left py-2 px-4 text-sm font-medium">Provider</th>
-                              <th className="text-left py-2 px-4 text-sm font-medium">Model</th>
-                              <th className="text-right py-2 px-4 text-sm font-medium">Requests</th>
-                              <th className="text-right py-2 px-4 text-sm font-medium">Tokens</th>
-                              <th className="text-right py-2 px-4 text-sm font-medium">Cost</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            <tr className="border-b">
-                              <td className="py-2 px-4 text-sm">OpenAI</td>
-                              <td className="py-2 px-4 text-sm">GPT-4o</td>
-                              <td className="py-2 px-4 text-sm text-right">1,245</td>
-                              <td className="py-2 px-4 text-sm text-right">2.4M</td>
-                              <td className="py-2 px-4 text-sm text-right font-medium">$24.00</td>
-                            </tr>
-                            <tr className="border-b">
-                              <td className="py-2 px-4 text-sm">OpenAI</td>
-                              <td className="py-2 px-4 text-sm">GPT-3.5 Turbo</td>
-                              <td className="py-2 px-4 text-sm text-right">3,567</td>
-                              <td className="py-2 px-4 text-sm text-right">5.2M</td>
-                              <td className="py-2 px-4 text-sm text-right font-medium">$7.80</td>
-                            </tr>
-                            <tr className="border-b">
-                              <td className="py-2 px-4 text-sm">Google</td>
-                              <td className="py-2 px-4 text-sm">Gemini Pro</td>
-                              <td className="py-2 px-4 text-sm text-right">2,890</td>
-                              <td className="py-2 px-4 text-sm text-right">4.1M</td>
-                              <td className="py-2 px-4 text-sm text-right font-medium">$10.25</td>
-                            </tr>
-                            <tr className="border-b">
-                              <td className="py-2 px-4 text-sm">Anthropic</td>
-                              <td className="py-2 px-4 text-sm">Claude 3</td>
-                              <td className="py-2 px-4 text-sm text-right">845</td>
-                              <td className="py-2 px-4 text-sm text-right">1.8M</td>
-                              <td className="py-2 px-4 text-sm text-right font-medium">$27.00</td>
-                            </tr>
-                            <tr className="border-b">
-                              <td className="py-2 px-4 text-sm">Mistral</td>
-                              <td className="py-2 px-4 text-sm">Mistral Large</td>
-                              <td className="py-2 px-4 text-sm text-right">432</td>
-                              <td className="py-2 px-4 text-sm text-right">0.9M</td>
-                              <td className="py-2 px-4 text-sm text-right font-medium">$7.20</td>
-                            </tr>
-                            <tr>
-                              <td className="py-2 px-4 text-sm font-medium" colSpan={2}>
-                                Total
-                              </td>
-                              <td className="py-2 px-4 text-sm text-right font-medium">8,979</td>
-                              <td className="py-2 px-4 text-sm text-right font-medium">14.4M</td>
-                              <td className="py-2 px-4 text-sm text-right font-bold">$76.25</td>
-                            </tr>
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
-                  </motion.div>
-                </TabsContent>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </Tabs>
+            </div>
+          </motion.div>
+        </div>
       </motion.div>
 
       {/* Add API Key Dialog */}
@@ -1734,19 +712,19 @@ export default function AISettingsPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="key-provider">Provider</Label>
-              <Select value={newKeyProvider} onValueChange={(value: any) => setNewKeyProvider(value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select provider" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="openai">OpenAI</SelectItem>
-                  <SelectItem value="gemini">Gemini (Google)</SelectItem>
-                  <SelectItem value="anthropic">Anthropic</SelectItem>
-                  <SelectItem value="mistral">Mistral AI</SelectItem>
-                  <SelectItem value="cohere">Cohere</SelectItem>
-                  <SelectItem value="custom">Custom Provider</SelectItem>
-                </SelectContent>
-              </Select>
+              <select
+                id="key-provider"
+                value={newKeyProvider}
+                onChange={(e) => setNewKeyProvider(e.target.value as any)}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <option value="openai">OpenAI</option>
+                <option value="gemini">Gemini (Google)</option>
+                <option value="anthropic">Anthropic</option>
+                <option value="mistral">Mistral AI</option>
+                <option value="cohere">Cohere</option>
+                <option value="custom">Custom Provider</option>
+              </select>
             </div>
             <div className="space-y-2">
               <div className="flex justify-between">
@@ -1845,19 +823,19 @@ export default function AISettingsPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit-key-provider">Provider</Label>
-              <Select value={newKeyProvider} onValueChange={(value: any) => setNewKeyProvider(value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select provider" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="openai">OpenAI</SelectItem>
-                  <SelectItem value="gemini">Gemini (Google)</SelectItem>
-                  <SelectItem value="anthropic">Anthropic</SelectItem>
-                  <SelectItem value="mistral">Mistral AI</SelectItem>
-                  <SelectItem value="cohere">Cohere</SelectItem>
-                  <SelectItem value="custom">Custom Provider</SelectItem>
-                </SelectContent>
-              </Select>
+              <select
+                id="edit-key-provider"
+                value={newKeyProvider}
+                onChange={(e) => setNewKeyProvider(e.target.value as any)}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <option value="openai">OpenAI</option>
+                <option value="gemini">Gemini (Google)</option>
+                <option value="anthropic">Anthropic</option>
+                <option value="mistral">Mistral AI</option>
+                <option value="cohere">Cohere</option>
+                <option value="custom">Custom Provider</option>
+              </select>
             </div>
             <div className="space-y-2">
               <div className="flex justify-between">
@@ -1935,420 +913,6 @@ export default function AISettingsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Add AI Model Dialog */}
-      <Dialog open={showAddModelDialog} onOpenChange={setShowAddModelDialog}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>Add New AI Model</DialogTitle>
-            <DialogDescription>Configure a new AI model for your platform</DialogDescription>
-          </DialogHeader>
-          <ScrollArea className="max-h-[60vh]">
-            <div className="space-y-4 py-4 px-1">
-              <div className="space-y-2">
-                <Label htmlFor="model-name">Model Name</Label>
-                <Input
-                  id="model-name"
-                  placeholder="e.g., GPT-4o"
-                  value={newModelName}
-                  onChange={(e) => setNewModelName(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="model-provider">Provider</Label>
-                <Select value={newModelProvider} onValueChange={(value: any) => setNewModelProvider(value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select provider" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="openai">OpenAI</SelectItem>
-                    <SelectItem value="gemini">Gemini (Google)</SelectItem>
-                    <SelectItem value="anthropic">Anthropic</SelectItem>
-                    <SelectItem value="mistral">Mistral AI</SelectItem>
-                    <SelectItem value="cohere">Cohere</SelectItem>
-                    <SelectItem value="custom">Custom Provider</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="model-description">Description</Label>
-                <Textarea
-                  id="model-description"
-                  placeholder="Describe the model's capabilities and use cases"
-                  value={newModelDescription}
-                  onChange={(e) => setNewModelDescription(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Capabilities</Label>
-                <div className="flex flex-wrap gap-2">
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id="capability-text"
-                            checked={newModelCapabilities.includes("text")}
-                            onCheckedChange={(checked) => {
-                              if (checked) {
-                                setNewModelCapabilities([...newModelCapabilities, "text"])
-                              } else {
-                                setNewModelCapabilities(newModelCapabilities.filter((c) => c !== "text"))
-                              }
-                            }}
-                          />
-                          <label
-                            htmlFor="capability-text"
-                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                          >
-                            Text Generation
-                          </label>
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Can generate and process text</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id="capability-image"
-                            checked={newModelCapabilities.includes("image")}
-                            onCheckedChange={(checked) => {
-                              if (checked) {
-                                setNewModelCapabilities([...newModelCapabilities, "image"])
-                              } else {
-                                setNewModelCapabilities(newModelCapabilities.filter((c) => c !== "image"))
-                              }
-                            }}
-                          />
-                          <label
-                            htmlFor="capability-image"
-                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                          >
-                            Vision/Image
-                          </label>
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Can process and understand images</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id="capability-code"
-                            checked={newModelCapabilities.includes("code")}
-                            onCheckedChange={(checked) => {
-                              if (checked) {
-                                setNewModelCapabilities([...newModelCapabilities, "code"])
-                              } else {
-                                setNewModelCapabilities(newModelCapabilities.filter((c) => c !== "code"))
-                              }
-                            }}
-                          />
-                          <label
-                            htmlFor="capability-code"
-                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                          >
-                            Code Generation
-                          </label>
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Specialized in generating and understanding code</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="model-context-length">Context Length (tokens)</Label>
-                  <Input
-                    id="model-context-length"
-                    type="number"
-                    placeholder="e.g., 4096"
-                    value={newModelContextLength}
-                    onChange={(e) => setNewModelContextLength(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="model-cost">Cost per 1K tokens ($)</Label>
-                  <Input
-                    id="model-cost"
-                    type="number"
-                    step="0.0001"
-                    placeholder="e.g., 0.001"
-                    value={newModelCost}
-                    onChange={(e) => setNewModelCost(e.target.value)}
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="model-strengths">Strengths (comma separated)</Label>
-                <Textarea
-                  id="model-strengths"
-                  placeholder="e.g., Creative writing, Code generation, Reasoning"
-                  value={newModelStrengths.join(", ")}
-                  onChange={(e) =>
-                    setNewModelStrengths(
-                      e.target.value
-                        .split(",")
-                        .map((s) => s.trim())
-                        .filter(Boolean),
-                    )
-                  }
-                />
-              </div>
-              {newModelProvider === "custom" && (
-                <div className="space-y-2">
-                  <Label htmlFor="model-endpoint">API Endpoint</Label>
-                  <Input
-                    id="model-endpoint"
-                    placeholder="e.g., https://api.example.com/v1/completions"
-                    value={newModelEndpoint}
-                    onChange={(e) => setNewModelEndpoint(e.target.value)}
-                  />
-                </div>
-              )}
-            </div>
-          </ScrollArea>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAddModelDialog(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleAddAiModel} disabled={isLoading}>
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Adding...
-                </>
-              ) : (
-                <>
-                  <Save className="mr-2 h-4 w-4" />
-                  Save Model
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit AI Model Dialog */}
-      <Dialog open={showEditModelDialog} onOpenChange={setShowEditModelDialog}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>Edit AI Model</DialogTitle>
-            <DialogDescription>Update AI model configuration</DialogDescription>
-          </DialogHeader>
-          <ScrollArea className="max-h-[60vh]">
-            <div className="space-y-4 py-4 px-1">
-              <div className="space-y-2">
-                <Label htmlFor="edit-model-name">Model Name</Label>
-                <Input
-                  id="edit-model-name"
-                  placeholder="e.g., GPT-4o"
-                  value={newModelName}
-                  onChange={(e) => setNewModelName(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-model-provider">Provider</Label>
-                <Select value={newModelProvider} onValueChange={(value: any) => setNewModelProvider(value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select provider" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="openai">OpenAI</SelectItem>
-                    <SelectItem value="gemini">Gemini (Google)</SelectItem>
-                    <SelectItem value="anthropic">Anthropic</SelectItem>
-                    <SelectItem value="mistral">Mistral AI</SelectItem>
-                    <SelectItem value="cohere">Cohere</SelectItem>
-                    <SelectItem value="custom">Custom Provider</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-model-description">Description</Label>
-                <Textarea
-                  id="edit-model-description"
-                  placeholder="Describe the model's capabilities and use cases"
-                  value={newModelDescription}
-                  onChange={(e) => setNewModelDescription(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Capabilities</Label>
-                <div className="flex flex-wrap gap-2">
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id="edit-capability-text"
-                            checked={newModelCapabilities.includes("text")}
-                            onCheckedChange={(checked) => {
-                              if (checked) {
-                                setNewModelCapabilities([...newModelCapabilities, "text"])
-                              } else {
-                                setNewModelCapabilities(newModelCapabilities.filter((c) => c !== "text"))
-                              }
-                            }}
-                          />
-                          <label
-                            htmlFor="edit-capability-text"
-                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                          >
-                            Text Generation
-                          </label>
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Can generate and process text</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id="edit-capability-image"
-                            checked={newModelCapabilities.includes("image")}
-                            onCheckedChange={(checked) => {
-                              if (checked) {
-                                setNewModelCapabilities([...newModelCapabilities, "image"])
-                              } else {
-                                setNewModelCapabilities(newModelCapabilities.filter((c) => c !== "image"))
-                              }
-                            }}
-                          />
-                          <label
-                            htmlFor="edit-capability-image"
-                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                          >
-                            Vision/Image
-                          </label>
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Can process and understand images</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id="edit-capability-code"
-                            checked={newModelCapabilities.includes("code")}
-                            onCheckedChange={(checked) => {
-                              if (checked) {
-                                setNewModelCapabilities([...newModelCapabilities, "code"])
-                              } else {
-                                setNewModelCapabilities(newModelCapabilities.filter((c) => c !== "code"))
-                              }
-                            }}
-                          />
-                          <label
-                            htmlFor="edit-capability-code"
-                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                          >
-                            Code Generation
-                          </label>
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Specialized in generating and understanding code</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="edit-model-context-length">Context Length (tokens)</Label>
-                  <Input
-                    id="edit-model-context-length"
-                    type="number"
-                    placeholder="e.g., 4096"
-                    value={newModelContextLength}
-                    onChange={(e) => setNewModelContextLength(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-model-cost">Cost per 1K tokens ($)</Label>
-                  <Input
-                    id="edit-model-cost"
-                    type="number"
-                    step="0.0001"
-                    placeholder="e.g., 0.001"
-                    value={newModelCost}
-                    onChange={(e) => setNewModelCost(e.target.value)}
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-model-strengths">Strengths (comma separated)</Label>
-                <Textarea
-                  id="edit-model-strengths"
-                  placeholder="e.g., Creative writing, Code generation, Reasoning"
-                  value={newModelStrengths.join(", ")}
-                  onChange={(e) =>
-                    setNewModelStrengths(
-                      e.target.value
-                        .split(",")
-                        .map((s) => s.trim())
-                        .filter(Boolean),
-                    )
-                  }
-                />
-              </div>
-              {newModelProvider === "custom" && (
-                <div className="space-y-2">
-                  <Label htmlFor="edit-model-endpoint">API Endpoint</Label>
-                  <Input
-                    id="edit-model-endpoint"
-                    placeholder="e.g., https://api.example.com/v1/completions"
-                    value={newModelEndpoint}
-                    onChange={(e) => setNewModelEndpoint(e.target.value)}
-                  />
-                </div>
-              )}
-            </div>
-          </ScrollArea>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowEditModelDialog(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleEditAiModel} disabled={isLoading}>
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Updating...
-                </>
-              ) : (
-                <>
-                  <Save className="mr-2 h-4 w-4" />
-                  Update Model
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
       {/* Delete Confirmation Dialog */}
       <Dialog open={showDeleteConfirmDialog} onOpenChange={setShowDeleteConfirmDialog}>
         <DialogContent className="sm:max-w-[425px]">
@@ -2390,39 +954,6 @@ export default function AISettingsPage() {
                 </>
               )}
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Test Result Dialog */}
-      <Dialog open={showTestResultDialog} onOpenChange={setShowTestResultDialog}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              {testResult.success ? (
-                <>
-                  <Check className="h-5 w-5 text-green-500" />
-                  <span>API Key Test Successful</span>
-                </>
-              ) : (
-                <>
-                  <AlertCircle className="h-5 w-5 text-red-500" />
-                  <span>API Key Test Failed</span>
-                </>
-              )}
-            </DialogTitle>
-            <DialogDescription>{testResult.message}</DialogDescription>
-          </DialogHeader>
-          {testResult.response && (
-            <div className="py-4">
-              <Label>API Response</Label>
-              <div className="mt-2 p-3 bg-muted rounded-md font-mono text-xs overflow-x-auto">
-                <pre>{testResult.response}</pre>
-              </div>
-            </div>
-          )}
-          <DialogFooter>
-            <Button onClick={() => setShowTestResultDialog(false)}>Close</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

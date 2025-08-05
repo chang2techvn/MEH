@@ -1,5 +1,19 @@
-// Define types for our API keys and models
+// Define types for our API keys to match Supabase schema
 export interface ApiKey {
+  id: string // UUID from Supabase
+  service_name: "openai" | "gemini" | "anthropic" | "mistral" | "cohere" | "custom"
+  key_name: string
+  encrypted_key: string
+  is_active: boolean
+  usage_limit: number | null
+  current_usage: number
+  expires_at: string | null // ISO string from Supabase
+  created_at: string // ISO string from Supabase
+  updated_at: string // ISO string from Supabase
+}
+
+// Legacy interface for backward compatibility (maps Supabase data to old format)
+export interface LegacyApiKey {
   id: string
   name: string
   key: string
@@ -11,24 +25,4 @@ export interface ApiKey {
   usageCount: number
   usageLimit: number | null
   expiresAt: Date | null
-}
-
-export interface AIModel {
-  id: string
-  name: string
-  provider: "openai" | "gemini" | "anthropic" | "mistral" | "cohere" | "custom"
-  description: string
-  capabilities: string[]
-  isEnabled: boolean
-  contextLength: number
-  costPer1kTokens: number
-  strengths: string[]
-  apiEndpoint?: string
-}
-
-export interface UsageData {
-  date: string
-  requests: number
-  tokens: number
-  cost: number
 }
