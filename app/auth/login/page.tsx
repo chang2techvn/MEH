@@ -2,9 +2,9 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { motion } from "framer-motion"
 import { BookOpen, Mail, Lock, Eye, EyeOff, ArrowRight, Github, ChromeIcon as Google, Facebook } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -17,6 +17,7 @@ import { useAuthActions, useAuthState } from "@/contexts/auth-context"
 
 export default function LoginPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { login, loginWithGoogle, loginWithFacebook, loginWithGitHub } = useAuthActions()
   const { isLoading } = useAuthState()
   const [showPassword, setShowPassword] = useState(false)
@@ -25,6 +26,31 @@ export default function LoginPage() {
     password: "",
     rememberMe: false,
   })
+
+  // Check for account status messages
+  useEffect(() => {
+    const message = searchParams.get('message')
+    
+    if (message === 'account_pending') {
+      toast({
+        title: "Account Pending Approval",
+        description: "Your account is waiting for admin approval. Please contact support if you have questions.",
+        variant: "destructive"
+      })
+    } else if (message === 'account_rejected') {
+      toast({
+        title: "Account Rejected", 
+        description: "Your account has been rejected. Please contact support for more information.",
+        variant: "destructive"
+      })
+    } else if (message === 'account_suspended') {
+      toast({
+        title: "Account Suspended",
+        description: "Your account has been suspended. Please contact support for more information.",
+        variant: "destructive"
+      })
+    }
+  }, [searchParams])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target

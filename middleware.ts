@@ -1,61 +1,121 @@
-import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs'
+import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 
 export async function middleware(request: NextRequest) {
-  const res = NextResponse.next()
-  
-  // Create a Supabase client configured to use cookies
-  const supabase = createMiddlewareClient({ req: request, res })
+  let response = NextResponse.next({
+    request: {
+      headers: request.headers,
+    },
+  })
 
-  let session = null
-  
-  try {
-    // Refresh session if expired - required for Server Components
-    const { data, error } = await supabase.auth.getSession()
-    session = data.session
-    
-    // Protected routes that require authentication
-    // Note: /admin is handled by client-side AdminAuthGuard, not middleware
-    // Note: /profile is handled by client-side auth like /resources
-    const protectedRoutes = [
-      '/groups/create', 
-      '/messages'
-    ]
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return request.cookies.get(name)?.value
+        },
+        set(name: string, value: string, options: CookieOptions) {
+          response.cookies.set({
+            name,
+            value,
+            ...options,
+          })
+        },
+        remove(name: string, options: CookieOptions) {
+          response.cookies.set({
+            name,
+            value: '',
+            ...options,
+          })
+        },
+      },
+    }
+  )
 
-    // Check if the current path is protected
-    const isProtectedRoute = protectedRoutes.some(route => 
-      request.nextUrl.pathname.startsWith(route)
-    )
+  // Skip middleware checks for auth routes to avoid infinite loops
+  if (request.nextUrl.pathname.startsWith('/auth/')) {
+    return response
+  }
 
-    // For protected routes, be more lenient with session checking
-    if (isProtectedRoute) {
-      // Check if we have any auth-related cookies at all
-      const authCookies = request.cookies.getAll().filter(cookie => 
-        cookie.name.includes('auth') || 
-        cookie.name.includes('supabase') ||
-        cookie.name.startsWith('sb-')
-      )
+  // Protected routes that require authentication
+  const protectedRoutes = [
+    '/admin',
+    '/groups/create', 
+    '/messages',
+    '/challenges',
+    '/community',
+    '/resources'
+  ]
+
+  // Check if the current path is protected
+  const isProtectedRoute = protectedRoutes.some(route => 
+    request.nextUrl.pathname.startsWith(route)
+  )
+
+  if (isProtectedRoute) {
+    try {
+      // Get authenticated user from supabase auth
+      const { data: { user }, error } = await supabase.auth.getUser()
       
-      // Only redirect if there's no session AND no auth cookies
-      if (!session && authCookies.length === 0) {
+      // If no authenticated user or auth error, redirect to login
+      if (!user || error) {
         const redirectUrl = new URL('/auth/login', request.url)
         redirectUrl.searchParams.set('redirect', request.nextUrl.pathname)
         return NextResponse.redirect(redirectUrl)
       }
-      
 
+      // For admin routes, check user permissions
+      if (request.nextUrl.pathname.startsWith('/admin')) {
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .select('role, account_status, is_active')
+          .eq('id', user.id)
+          .single()
+
+        if (userError || !userData) {
+          const redirectUrl = new URL('/auth/login', request.url)
+          redirectUrl.searchParams.set('redirect', request.nextUrl.pathname)
+          return NextResponse.redirect(redirectUrl)
+        }
+
+        // Check admin role
+        if (userData.role !== 'admin') {
+          return NextResponse.redirect(new URL('/', request.url))
+        }
+
+        // Check account status
+        if (userData.account_status !== 'approved' || !userData.is_active) {
+          const redirectUrl = new URL('/auth/login', request.url)
+          redirectUrl.searchParams.set('message', 'account_not_approved')
+          return NextResponse.redirect(redirectUrl)
+        }
+      } else {
+        // For other protected routes, just check if user exists in database
+        const { data: userExists } = await supabase
+          .from('users')
+          .select('id, account_status')
+          .eq('id', user.id)
+          .single()
+
+        if (!userExists || userExists.account_status !== 'approved') {
+          const redirectUrl = new URL('/auth/login', request.url)
+          redirectUrl.searchParams.set('message', 'account_not_approved')
+          return NextResponse.redirect(redirectUrl)
+        }
+      }
+    } catch (error) {
+      console.error('Middleware error:', error)
+      // On error, redirect to login for protected routes
+      const redirectUrl = new URL('/auth/login', request.url)
+      redirectUrl.searchParams.set('redirect', request.nextUrl.pathname)
+      return NextResponse.redirect(redirectUrl)
     }
-  } catch (error) {
-    console.error('🚨 Middleware error:', error)
-    // On error, let the request through and let client handle auth
   }
-  
-  // Admin routes are handled by client-side AdminAuthGuard component
-  // No server-side checking needed to avoid conflicts
 
-  const response = res
-  // Add security headers (CSP disabled temporarily for debugging)
+  // Add security headers
   const securityHeaders = {
     "X-DNS-Prefetch-Control": "on",
     "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
@@ -64,9 +124,6 @@ export async function middleware(request: NextRequest) {
     "X-Content-Type-Options": "nosniff",
     "Referrer-Policy": "strict-origin-when-cross-origin",
     "Permissions-Policy": "camera=(), microphone=(), geolocation=(), interest-cohort=()",
-    // CSP disabled temporarily for debugging
-    // "Content-Security-Policy":
-    //    "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://analytics.englishmastery.com https://www.youtube.com https://s.ytimg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' http://localhost:3000 https://yvsjynosfwyhvisqhasp.supabase.co wss://yvsjynosfwyhvisqhasp.supabase.co; frame-src 'self' https://www.youtube.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'; upgrade-insecure-requests;",
   }
 
   // Set security headers
@@ -102,23 +159,6 @@ export async function middleware(request: NextRequest) {
   } else {
     // Default caching for other routes - 5 minutes with stale-while-revalidate
     response.headers.set("Cache-Control", "public, max-age=300, stale-while-revalidate=60")
-  }
-
-  // Add compression
-  response.headers.set("Accept-Encoding", "gzip, deflate, br")
-
-  // Add early hints for critical resources
-  if (url === "/" || url === "") {
-    response.headers.set(
-      "Link",
-      [
-        "</fonts/outfit-var.woff2>; rel=preload; as=font; type=font/woff2; crossorigin=anonymous",
-        "</images/hero-bg.webp>; rel=preload; as=image",
-        "</_next/static/css/app.css>; rel=preload; as=style",
-        "<https://fonts.googleapis.com>; rel=preconnect",
-        "<https://fonts.gstatic.com>; rel=preconnect; crossorigin=anonymous",
-      ].join(", "),
-    )
   }
 
   return response

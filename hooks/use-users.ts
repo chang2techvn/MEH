@@ -11,6 +11,7 @@ export interface UserData {
   email: string
   role: "student" | "teacher" | "admin"
   status: "active" | "pending" | "suspended" | "inactive"
+  account_status?: "pending" | "approved" | "rejected" | "suspended"
   level: "beginner" | "intermediate" | "advanced"
   joinDate: string
   lastActive: string
@@ -45,6 +46,10 @@ export interface UserData {
   experiencePoints?: number
   streakDays?: number
   points?: number
+  // Approval fields
+  approved_by?: string
+  approved_at?: string
+  rejection_reason?: string
 }
 
 export function useUsers() {
@@ -58,12 +63,34 @@ export function useUsers() {
   const convertToUserData = useCallback((dbUser: UserWithProfile): UserData => {
     const profile = dbUser.profiles
 
-    // Determine status based on is_active and other factors
+    // Determine status based on account_status and is_active
     let status: UserData['status'] = 'active'
-    if (!dbUser.is_active) {
-      status = 'inactive'
-    } else if (!dbUser.last_active) {
-      status = 'pending'
+    
+    // Check account_status first (new approval system)
+    if ((dbUser as any).account_status) {
+      switch ((dbUser as any).account_status) {
+        case 'pending':
+          status = 'pending'
+          break
+        case 'approved':
+          status = dbUser.is_active ? 'active' : 'inactive'
+          break
+        case 'rejected':
+          status = 'inactive'
+          break
+        case 'suspended':
+          status = 'suspended'
+          break
+        default:
+          status = 'active'
+      }
+    } else {
+      // Fallback to old logic for backward compatibility
+      if (!dbUser.is_active) {
+        status = 'inactive'
+      } else if (!dbUser.last_active) {
+        status = 'pending'
+      }
     }
 
     // Map proficiency level to our level system
@@ -88,6 +115,7 @@ export function useUsers() {
       email: dbUser.email,
       role: (dbUser.role || profile?.role || 'student') as UserData['role'],
       status,
+      account_status: (dbUser as any).account_status as UserData['account_status'] || 'approved',
       level,
       joinDate: dbUser.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
       lastActive: dbUser.last_active || dbUser.last_login || dbUser.created_at || new Date().toISOString(),
@@ -104,6 +132,9 @@ export function useUsers() {
       experiencePoints: dbUser.experience_points || profile?.experience_points || 0,
       streakDays: dbUser.streak_days || profile?.streak_days || 0,
       points: dbUser.points || 0,
+      approved_by: (dbUser as any).approved_by || undefined,
+      approved_at: (dbUser as any).approved_at || undefined,
+      rejection_reason: (dbUser as any).rejection_reason || undefined,
       tags: [], // Will be implemented later
       achievements: [], // Will be implemented later
       recentActivity: [] // Will be implemented later
@@ -305,7 +336,138 @@ export function useUsers() {
     }
   }, [supabase, fetchUsers, toast])
 
-  // Delete user
+  // Add account approval functions
+  const approveAccount = async (userId: string): Promise<boolean> => {
+    try {
+      const response = await fetch('/api/admin/approve-user', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId
+        }),
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to approve account')
+      }
+
+      // Refresh data
+      await fetchUsers()
+
+      toast({
+        title: "Account approved",
+        description: result.message,
+      })
+
+      return true
+    } catch (error) {
+      console.error('Error approving account:', error)
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to approve account",
+        variant: "destructive",
+      })
+      return false
+    }
+  }
+
+  const rejectAccount = async (userId: string, reason?: string): Promise<boolean> => {
+    try {
+      const response = await fetch('/api/admin/reject-user', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId,
+          reason
+        }),
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to reject account')
+      }
+
+      // Refresh data
+      await fetchUsers()
+
+      toast({
+        title: "Account rejected",
+        description: result.message,
+        variant: "destructive",
+      })
+
+      return true
+    } catch (error) {
+      console.error('Error rejecting account:', error)
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to reject account",
+        variant: "destructive",
+      })
+      return false
+    }
+  }
+
+  const suspendAccount = async (userId: string, reason?: string): Promise<boolean> => {
+    try {
+      // Update account status to suspended
+      const { error } = await supabase
+        .from('users')
+        .update({ 
+          account_status: 'suspended',
+          is_active: false,
+          rejection_reason: reason 
+        })
+        .eq('id', userId)
+
+      if (error) throw error
+
+      // Refresh data
+      await fetchUsers()
+
+      toast({
+        title: "Account suspended",
+        description: "User account has been suspended",
+        variant: "destructive",
+      })
+
+      return true
+    } catch (error) {
+      console.error('Error suspending account:', error)
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to suspend account",
+        variant: "destructive",
+      })
+      return false
+    }
+  }
+
+  const getPendingApprovals = async (): Promise<{ count: number; users: any[] }> => {
+    try {
+      const response = await fetch('/api/admin/pending-approvals')
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to get pending approvals')
+      }
+
+      return {
+        count: result.pendingCount || 0,
+        users: result.pendingUsers || []
+      }
+    } catch (error) {
+      console.error('Error getting pending approvals:', error)
+      return { count: 0, users: [] }
+    }
+  }
   const deleteUser = useCallback(async (userId: string) => {
     try {
       console.log('🗑️ Starting delete operation for userId:', userId)
@@ -499,6 +661,10 @@ export function useUsers() {
     deleteUser,
     bulkUpdateUsers,
     bulkDeleteUsers,
+    approveAccount,
+    rejectAccount,
+    suspendAccount,
+    getPendingApprovals,
     refetch: fetchUsers
   }
 }

@@ -8,6 +8,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { useUsers, type UserData } from "@/hooks/use-users"
 import { exportToExcel, type ExportableUser } from "@/lib/export-utils"
 import { AdminHeader } from "@/components/admin/admin-header"
+import { AccountApprovalPanel } from "./components/account-approval-panel"
 import { useToast } from "@/components/ui/use-toast"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -92,18 +93,20 @@ type UserFormValues = z.infer<typeof userFormSchema>
 
 export default function UsersPage() {
   // Use Supabase data from the hook
-  const { 
-    users: dbUsers, 
-    loading: dbLoading, 
+  const {
+    users: dbUsers,
+    loading: dbLoading,
     error: dbError,
     addUser: addDbUser,
     updateUser: updateDbUser,
     deleteUser: deleteDbUser,
     bulkUpdateUsers,
-    bulkDeleteUsers
-  } = useUsers()
-
-  // Toast hook
+    bulkDeleteUsers,
+    approveAccount,
+    rejectAccount,
+    suspendAccount,
+    getPendingApprovals
+  } = useUsers()  // Toast hook
   const { toast } = useToast()
 
   // State management
@@ -175,6 +178,7 @@ export default function UsersPage() {
   const [showUserProgress8, setShowUserProgress8] = useState(false)
   const [showUserProgress9, setShowUserProgress9] = useState(false)
   const [showUserProgress10, setShowUserProgress10] = useState(false)
+  const [pendingApprovalsCount, setPendingApprovalsCount] = useState(0)
 
   const itemsPerPage = 10
   const pageHeaderRef = useRef<HTMLDivElement>(null)
@@ -188,6 +192,19 @@ export default function UsersPage() {
   const users = dbUsers
   const isLoading = dbLoading
   const [localLoading, setLocalLoading] = useState(false)
+
+  // Load pending approvals count
+  useEffect(() => {
+    const loadPendingCount = async () => {
+      try {
+        const result = await getPendingApprovals()
+        setPendingApprovalsCount(result.count)
+      } catch (error) {
+        console.error('Failed to load pending approvals count:', error)
+      }
+    }
+    loadPendingCount()
+  }, [getPendingApprovals, users]) // Refresh when users change
 
   // Initialize form for adding new users
   const form = useForm<UserFormValues>({
@@ -250,12 +267,12 @@ export default function UsersPage() {
     const matchesStatus = selectedStatus === null || user.status === selectedStatus
     const matchesLevel = selectedLevel === null || user.level === selectedLevel
 
-    // Filter by tab
+    // Filter by tab - updated to use account_status for better approval system
     const matchesTab =
       activeTab === "all" ||
-      (activeTab === "active" && user.status === "active") ||
-      (activeTab === "pending" && user.status === "pending") ||
-      (activeTab === "inactive" && (user.status === "inactive" || user.status === "suspended"))
+      (activeTab === "active" && (user.account_status === "approved" && user.status === "active")) ||
+      (activeTab === "pending" && (user.account_status === "pending" || user.status === "pending")) ||
+      (activeTab === "inactive" && (user.status === "inactive" || user.status === "suspended" || user.account_status === "rejected" || user.account_status === "suspended"))
 
     return matchesSearch && matchesRole && matchesStatus && matchesLevel && matchesTab
   })
@@ -1196,6 +1213,11 @@ export default function UsersPage() {
               >
                 <Clock className="h-4 w-4 mr-2 hidden sm:inline-block" />
                 Pending
+                {pendingApprovalsCount > 0 && (
+                  <Badge variant="secondary" className="ml-2 bg-yellow-100 text-yellow-800 text-xs">
+                    {pendingApprovalsCount}
+                  </Badge>
+                )}
               </TabsTrigger>
               <TabsTrigger
                 value="inactive"
@@ -2084,13 +2106,20 @@ export default function UsersPage() {
 
               <div className="p-6 pt-2">
                 <Tabs defaultValue="overview" value={activeDetailTab} onValueChange={setActiveDetailTab}>
-                  <TabsList className="grid w-full grid-cols-4 mb-6">
+                  <TabsList className="grid w-full grid-cols-5 mb-6">
                     <TabsTrigger
                       value="overview"
                       className="data-[state=active]:bg-neo-mint dark:data-[state=active]:bg-purist-blue data-[state=active]:text-white"
                     >
                       <User className="h-4 w-4 mr-2" />
                       Overview
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="approval"
+                      className="data-[state=active]:bg-neo-mint dark:data-[state=active]:bg-purist-blue data-[state=active]:text-white"
+                    >
+                      <Shield className="h-4 w-4 mr-2" />
+                      Approval
                     </TabsTrigger>
                     <TabsTrigger
                       value="activity"
@@ -2392,6 +2421,16 @@ export default function UsersPage() {
                         </div>
                       </div>
                     </div>
+                  </TabsContent>
+
+                  <TabsContent value="approval" className="mt-0">
+                    <AccountApprovalPanel
+                      user={selectedUser}
+                      onApprove={approveAccount}
+                      onReject={rejectAccount}
+                      onSuspend={suspendAccount}
+                      isLoading={isLoading}
+                    />
                   </TabsContent>
 
                   <TabsContent value="activity" className="mt-0">

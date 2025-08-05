@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from './supabase/client'
 
 // Simplified Database type for Supabase client
 export type Database = {
@@ -13,32 +13,8 @@ export type Database = {
   }
 }
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-
-// Client for browser/user interactions
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: true
-  },
-  realtime: {
-    params: {
-      eventsPerSecond: 10
-    },
-    headers: {
-      'X-Client-Info': 'supabase-js-web'
-    },
-    heartbeatIntervalMs: 30000,
-    reconnectAfterMs: (attempts: number) => Math.min(1000 * Math.pow(2, attempts), 30000)
-  },
-  global: {
-    headers: {
-      'X-Client-Info': 'english-learning-platform'
-    }
-  }
-})
+// Client for browser/user interactions - uses SSR pattern
+export const supabase = createClient()
 
 // Cache for user data
 let userCache: any = null

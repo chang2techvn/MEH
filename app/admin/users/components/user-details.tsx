@@ -5,10 +5,11 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Calendar, MessageSquare, User, BarChart3, MapPin, Phone, Settings, Tag } from "lucide-react"
+import { Calendar, MessageSquare, User, BarChart3, MapPin, Phone, Settings, Tag, Shield } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
+import { AccountApprovalPanel } from "./account-approval-panel"
 
 interface UserData {
   id: string
@@ -17,6 +18,7 @@ interface UserData {
   avatarUrl?: string
   role: "student" | "teacher" | "admin"
   status: "active" | "pending" | "suspended" | "inactive"
+  account_status?: "pending" | "approved" | "rejected" | "suspended"
   level: "beginner" | "intermediate" | "advanced"
   joinDate: Date
   lastActive: Date
@@ -26,6 +28,9 @@ interface UserData {
   location?: string
   phone?: string
   tags?: string[]
+  approved_by?: string
+  approved_at?: string
+  rejection_reason?: string
 }
 
 interface UserDetailsProps {
@@ -46,6 +51,10 @@ interface UserDetailsProps {
   setEmailSubject: (subject: string) => void
   emailBody: string
   setEmailBody: (body: string) => void
+  // Approval functions
+  onApprove?: (userId: string) => Promise<boolean>
+  onReject?: (userId: string, reason?: string) => Promise<boolean>
+  onSuspend?: (userId: string, reason?: string) => Promise<boolean>
 }
 
 const getInitials = (name: string) => {
@@ -143,16 +152,23 @@ export const UserDetails = ({
   setEmailSubject,
   emailBody,
   setEmailBody,
+  onApprove,
+  onReject,
+  onSuspend,
 }: UserDetailsProps) => {
 
   const selectedUser = user;
 
   return (
     <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab} className="w-full">
-      <TabsList className="grid w-full grid-cols-4 mb-6">
+      <TabsList className="grid w-full grid-cols-5 mb-6">
         <TabsTrigger value="overview">
           <User className="h-4 w-4 mr-2" />
           Overview
+        </TabsTrigger>
+        <TabsTrigger value="approval">
+          <Shield className="h-4 w-4 mr-2" />
+          Approval
         </TabsTrigger>
         <TabsTrigger value="activity">
           <Calendar className="h-4 w-4 mr-2" />
@@ -427,6 +443,26 @@ export const UserDetails = ({
           </div>
         </div>
         </TabsContent>
+
+      <TabsContent value="approval" className="mt-0">
+        {onApprove && onReject && onSuspend ? (
+          <AccountApprovalPanel
+            user={user}
+            onApprove={onApprove}
+            onReject={onReject}
+            onSuspend={onSuspend}
+            isLoading={isLoading}
+          />
+        ) : (
+          <Card>
+            <CardContent className="pt-6">
+              <p className="text-muted-foreground text-center">
+                Approval functions are not available
+              </p>
+            </CardContent>
+          </Card>
+        )}
+      </TabsContent>
       </Tabs>
   )
 }
