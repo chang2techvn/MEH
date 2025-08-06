@@ -8,9 +8,10 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Loader2, Link, Check, AlertTriangle, Video, Clock, Tag } from "lucide-react"
+import { Loader2, Link, Check, AlertTriangle, Video, Clock, Tag, Play } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 import { extractVideoFromUrl, setAdminSelectedVideo, type VideoData } from "@/app/actions/youtube-video"
+import YoutubeVideoPlayer from "@/components/youtube-video-player"
 
 // Animation variants
 const slideUp = {
@@ -200,27 +201,25 @@ export function ManualVideoOverride({ onVideoSet }: ManualVideoOverrideProps) {
                   )}
                 </div>
 
-                {/* Video Thumbnail */}
-                {previewVideo.thumbnailUrl && (
-                  <div className="relative rounded-lg overflow-hidden bg-muted">
-                    <img
-                      src={previewVideo.thumbnailUrl}
-                      alt={previewVideo.title}
-                      className="w-full h-32 object-cover"
-                    />
-                    <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                      <a
-                        href={previewVideo.videoUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="bg-white/90 text-black px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1 hover:bg-white transition-colors"
-                      >
-                        <Video className="h-3 w-3" />
-                        View Video
-                      </a>
-                    </div>
+                {/* YouTube Video Player */}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Play className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-medium">Preview Player</span>
                   </div>
-                )}
+                  <div className="relative rounded-lg overflow-hidden bg-muted">
+                    <YoutubeVideoPlayer
+                      videoUrl={previewVideo.videoUrl}
+                      title={previewVideo.title}
+                      className="aspect-video w-full"
+                      controls={true}
+                      autoplay={false}
+                    />
+                  </div>
+                  <div className="text-xs text-muted-foreground text-center">
+                    🎬 Preview the video before setting as daily video
+                  </div>
+                </div>
 
                 {/* Video Details */}
                 <div className="flex flex-wrap gap-2">

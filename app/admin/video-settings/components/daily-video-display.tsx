@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
-import { Calendar, Clock, Video, RefreshCw, Eye, FileText, Tag, AlertCircle } from "lucide-react"
+import { Calendar, Clock, Video, RefreshCw, Eye, FileText, Tag, AlertCircle, Play } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -11,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { toast } from "@/hooks/use-toast"
 import { getTodayVideo, type VideoData } from "@/app/actions/youtube-video"
 import { triggerDailyVideoAutomation } from "@/app/actions/daily-video-admin"
+import YoutubeVideoPlayer from "@/components/youtube-video-player"
 
 // Animation variants
 const slideUp = {
@@ -27,6 +28,7 @@ export function DailyVideoDisplay({ onVideoUpdate }: DailyVideoDisplayProps) {
   const [loading, setLoading] = useState(true)
   const [regenerating, setRegenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showFullTranscript, setShowFullTranscript] = useState(false)
 
   // Format time helper
   const formatTime = (seconds: number) => {
@@ -203,27 +205,33 @@ export function DailyVideoDisplay({ onVideoUpdate }: DailyVideoDisplayProps) {
                 )}
               </div>
 
-              {/* Video Thumbnail */}
-              {videoData.thumbnailUrl && (
-                <div className="relative rounded-lg overflow-hidden bg-muted">
-                  <img
-                    src={videoData.thumbnailUrl}
-                    alt={videoData.title}
-                    className="w-full h-32 object-cover"
-                  />
-                  <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                    <a
-                      href={videoData.videoUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="bg-white/90 text-black px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1 hover:bg-white transition-colors"
-                    >
-                      <Eye className="h-3 w-3" />
-                      View Video
-                    </a>
-                  </div>
+              {/* YouTube Video Player */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 mb-2">
+                  <Play className="h-4 w-4 text-primary" />
+                  <span className="text-sm font-medium">Video Player</span>
                 </div>
-              )}
+                <div className="relative rounded-lg overflow-hidden bg-muted">
+                  <YoutubeVideoPlayer
+                    videoUrl={videoData.videoUrl}
+                    title={videoData.title}
+                    className="aspect-video w-full"
+                    controls={true}
+                    autoplay={false}
+                  />
+                </div>
+                <div className="text-xs text-muted-foreground text-center">
+                  ✨ You can watch the video directly here or{' '}
+                  <a
+                    href={videoData.videoUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary hover:underline font-medium"
+                  >
+                    open in YouTube
+                  </a>
+                </div>
+              </div>
 
               {/* Video Details */}
               <div className="flex flex-wrap gap-2">
@@ -249,20 +257,36 @@ export function DailyVideoDisplay({ onVideoUpdate }: DailyVideoDisplayProps) {
                 )}
               </div>
 
-              {/* Transcript Preview */}
+              {/* Transcript Preview/Full */}
               {videoData.transcript && (
                 <div className="bg-muted/50 rounded-lg p-3">
                   <h4 className="text-sm font-medium mb-2 flex items-center gap-1">
                     <FileText className="h-4 w-4" />
-                    Transcript Preview
+                    Transcript {showFullTranscript ? 'Full' : 'Preview'}
                   </h4>
-                  <p className="text-sm text-muted-foreground line-clamp-3">
-                    {videoData.transcript.substring(0, 200)}
-                    {videoData.transcript.length > 200 && '...'}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {videoData.transcript.length} characters total
-                  </p>
+                  <div className="text-sm text-muted-foreground">
+                    {showFullTranscript ? (
+                      <div className="whitespace-pre-wrap">{videoData.transcript}</div>
+                    ) : (
+                      <p className="line-clamp-3">
+                        {videoData.transcript.substring(0, 200)}
+                        {videoData.transcript.length > 200 && '...'}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex items-center justify-between mt-2">
+                    <p className="text-xs text-muted-foreground">
+                      {videoData.transcript.length} characters total
+                    </p>
+                    {videoData.transcript.length > 200 && (
+                      <button
+                        onClick={() => setShowFullTranscript(!showFullTranscript)}
+                        className="text-blue-600 hover:text-blue-800 text-xs font-medium hover:underline"
+                      >
+                        {showFullTranscript ? 'Show Less' : 'View Detail'}
+                      </button>
+                    )}
+                  </div>
                 </div>
               )}
 

@@ -1,5 +1,7 @@
 "use client"
 
+/* eslint-disable bem/classname */
+
 import { TabsContent } from "@/components/ui/tabs"
 
 import { TabsTrigger } from "@/components/ui/tabs"
@@ -18,20 +20,18 @@ import { Tooltip } from "@/components/ui/tooltip"
 
 import { TooltipProvider } from "@/components/ui/tooltip"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { useTheme } from "next-themes"
 import { useSearchParams, useRouter } from "next/navigation"
-import { Loader2, Save, RefreshCw, Video, Settings, CheckCircle, Clock } from "lucide-react"
+import { Loader2, Save, RefreshCw, Video, Settings, CheckCircle, Clock, Tag } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 import { getVideoSettings, updateVideoSettings, resetVideoSettings } from "@/app/actions/admin-settings"
 import type { VideoSettings } from "@/app/actions/admin-settings"
 import { useMobile } from "@/hooks/use-mobile"
-import { GeneralSettingsTab } from "./components/general-settings-tab"
-import { WatchTimeTab } from "./components/watch-time-tab"
-import { ContentTab } from "./components/content-tab"
 import { DailyVideoTab } from "./components/daily-video-tab"
 import { AutomationSettingsTab } from "./components/automation-settings-tab"
+import { TopicsManagementTab } from "./components/topics-management-tab"
 
 // Animation variants
 const fadeIn = {
@@ -80,6 +80,26 @@ export default function VideoSettingsPage() {
   const [resetting, setResetting] = useState(false)
   const [activeTab, setActiveTab] = useState(tabParam || "daily-video")
   const [showSuccessAnimation, setShowSuccessAnimation] = useState(false)
+
+  // Handle success animation with auto-dismiss
+  const showSuccessWithAutoDismiss = useCallback(() => {
+    setShowSuccessAnimation(true)
+    
+    // Auto-dismiss after 2 seconds
+    const timeoutId = setTimeout(() => {
+      setShowSuccessAnimation(false)
+    }, 2000)
+
+    // Cleanup function to prevent memory leaks
+    return () => clearTimeout(timeoutId)
+  }, [])
+
+  // Clear animation on unmount
+  useEffect(() => {
+    return () => {
+      setShowSuccessAnimation(false)
+    }
+  }, [])
 
   // Format seconds to minutes and seconds
   const formatTime = (seconds: number) => {
@@ -148,9 +168,8 @@ export default function VideoSettingsPage() {
       // Save settings
       await updateVideoSettings(settings)
 
-      // Show success animation
-      setShowSuccessAnimation(true)
-      setTimeout(() => setShowSuccessAnimation(false), 2000)
+      // Show success animation with auto-dismiss
+      showSuccessWithAutoDismiss()
 
       toast({
         title: "Settings saved",
@@ -308,7 +327,7 @@ export default function VideoSettingsPage() {
         {/* Tabs */}
         <motion.div variants={fadeIn}>
           <Tabs value={activeTab} onValueChange={handleTabChange}>
-            <TabsList className="grid w-full grid-cols-5 mb-8">
+            <TabsList className="grid w-full grid-cols-3 mb-8">
               <TabsTrigger
                 value="daily-video"
                 className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-neo-mint/10 data-[state=active]:to-purist-blue/10"
@@ -340,80 +359,35 @@ export default function VideoSettingsPage() {
                 </span>
               </TabsTrigger>
               <TabsTrigger
-                value="general"
+                value="topics"
                 className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-neo-mint/10 data-[state=active]:to-purist-blue/10"
               >
-                <Settings className="h-4 w-4" />
+                <Tag className="h-4 w-4" />
                 <span
                   className={
-                    activeTab === "general"
+                    activeTab === "topics"
                       ? "bg-clip-text text-transparent bg-gradient-to-r from-neo-mint to-purist-blue font-medium"
                       : ""
                   }
                 >
-                  General
-                </span>
-              </TabsTrigger>
-              <TabsTrigger
-                value="watch-time"
-                className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-neo-mint/10 data-[state=active]:to-purist-blue/10"
-              >
-                <Clock className="h-4 w-4" />
-                <span
-                  className={
-                    activeTab === "watch-time"
-                      ? "bg-clip-text text-transparent bg-gradient-to-r from-neo-mint to-purist-blue font-medium"
-                      : ""
-                  }
-                >
-                  Watch Time
-                </span>
-              </TabsTrigger>
-              <TabsTrigger
-                value="content"
-                className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-neo-mint/10 data-[state=active]:to-purist-blue/10"
-              >
-                <Video className="h-4 w-4" />
-                <span
-                  className={
-                    activeTab === "content"
-                      ? "bg-clip-text text-transparent bg-gradient-to-r from-neo-mint to-purist-blue font-medium"
-                      : ""
-                  }
-                >
-                  Content
+                  Topics Management
                 </span>
               </TabsTrigger>
             </TabsList>
 
             {/* Daily Video Tab */}
             <TabsContent value="daily-video" className="space-y-6">
-              <DailyVideoTab onUpdate={() => setShowSuccessAnimation(true)} />
+              <DailyVideoTab onUpdate={showSuccessWithAutoDismiss} />
             </TabsContent>
 
             {/* Automation Settings Tab */}
             <TabsContent value="automation" className="space-y-6">
-              <AutomationSettingsTab onUpdate={() => setShowSuccessAnimation(true)} />
+              <AutomationSettingsTab onUpdate={showSuccessWithAutoDismiss} />
             </TabsContent>
 
-            {/* General Settings Tab */}
-            <TabsContent value="general" className="space-y-6">
-              <GeneralSettingsTab 
-                minDuration={0}
-                maxDuration={3600}
-                autoPublish={false}
-                onUpdate={() => {}}
-              />
-            </TabsContent>
-
-            {/* Watch Time Tab */}
-            <TabsContent value="watch-time" className="space-y-6">
-              <WatchTimeTab />
-            </TabsContent>
-
-            {/* Content Tab */}
-            <TabsContent value="content" className="space-y-6">
-              <ContentTab />
+            {/* Topics Management Tab */}
+            <TabsContent value="topics" className="space-y-6">
+              <TopicsManagementTab onUpdate={showSuccessWithAutoDismiss} />
             </TabsContent>
           </Tabs>
         </motion.div>
