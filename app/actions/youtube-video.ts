@@ -133,17 +133,27 @@ export async function createChallenge(
       return data
       
     } else if (challengeType === 'daily') {
-      // Check if daily challenge already exists for today
-      const { data: existing } = await supabase
+      // Check if daily challenge already exists for today - MORE THOROUGH CHECK
+      const { data: existing, error: checkError } = await supabase
         .from('challenges')
         .select('*')
         .eq('challenge_type', 'daily')
         .eq('date', today)
+        .eq('is_active', true)
         .single()
         
+      if (checkError && checkError.code !== 'PGRST116') {
+        // PGRST116 is "not found" error, which is expected when no challenge exists
+        console.error("❌ Error checking existing daily challenge:", checkError)
+        throw checkError
+      }
+        
       if (existing) {
+        console.log(`✅ Daily challenge already exists for ${today}: ${existing.title}`)
         return existing
       }
+      
+      console.log(`🔄 Creating new daily challenge for ${today}`)
       
       // Create new daily challenge
       const videoData = await fetchRandomYoutubeVideo(
@@ -170,24 +180,55 @@ export async function createChallenge(
         date: today
       }
       
+      // Use insert instead of upsert to properly handle the unique constraint
       const { data, error } = await supabase
         .from('challenges')
         .insert(challengeData)
         .select()
         .single()
         
-      if (error) throw error
+      if (error) {
+        // If duplicate key error, fetch the existing record instead of failing
+        if (error.code === '23505') {
+          console.log("⚠️ Daily challenge was created by another process, fetching existing...")
+          const { data: existingAfterError, error: fetchError } = await supabase
+            .from('challenges')
+            .select('*')
+            .eq('challenge_type', 'daily')
+            .eq('date', today)
+            .eq('is_active', true)
+            .single()
+          
+          if (existingAfterError && !fetchError) {
+            console.log(`✅ Retrieved existing daily challenge: ${existingAfterError.title}`)
+            return existingAfterError
+          } else {
+            console.error("❌ Error fetching existing challenge after duplicate:", fetchError)
+            throw fetchError || error
+          }
+        }
+        
+        console.error("❌ Error saving video to Supabase:", error)
+        throw error
+      }
+      
+      console.log(`✅ Successfully created daily challenge for ${today}: ${data.title}`)
       return data
       
     } else if (challengeType === 'practice') {
       const challenges: ChallengeData[] = []
       
       // Check how many practice challenges exist for today (should be 3: beginner, intermediate, advanced)
-      const { data: existing } = await supabase
+      const { data: existing, error: checkError } = await supabase
         .from('challenges')
         .select('*')
         .eq('challenge_type', 'practice')
         .eq('date', today)
+        
+      if (checkError) {
+        console.error("❌ Error checking existing practice challenges:", checkError)
+        throw checkError
+      }
         
       const existingCount = existing?.length || 0
       const difficultyLevels = ['beginner', 'intermediate', 'advanced'] as const
@@ -758,16 +799,20 @@ export async function getTodayVideo(): Promise<VideoData> {
   const today = getTodayDate()
   
   try {    
+    console.log(`🔍 Checking for existing daily challenge on ${today}...`)
     
-    // 1. Check Supabase for today's video first
+    // 1. Check Supabase for today's video first - MORE THOROUGH CHECK
     const { data, error } = await supabaseServer
       .from('challenges')
       .select('*')
       .eq('date', today)
       .eq('challenge_type', 'daily')
+      .eq('is_active', true)
       .single()
       
-    if (data && !error) {      
+    if (data && !error) {
+      console.log(`✅ Found existing daily challenge for ${today}: ${data.title}`)
+      
       // Log transcript information
       if (data.transcript && data.transcript.length > 100) {
         console.log(`📝 Transcript available: ${data.transcript.length} characters`)
@@ -789,81 +834,80 @@ export async function getTodayVideo(): Promise<VideoData> {
       }
     }
     
-    console.log("⚠️ No video found in Supabase for today, fetching new...")
-      // 2. Keep trying to get videos with valid transcripts until we succeed
-    let attempts = 0
-    const maxAttempts = 10 // Increase max attempts to be more thorough
-    
-    while (attempts < maxAttempts) {
-      attempts++
-      console.log(`🔄 Attempt ${attempts}/${maxAttempts}: Fetching video...`)
-      
-      try {
-        const videoData = await fetchRandomYoutubeVideo()
-        console.log(`🎬 Video fetched: ${videoData.id}`)
-        
-        // Check if the fetched video already has a valid transcript
-        if (videoData.transcript && videoData.transcript.length >= 100) {
-          console.log(`✅ Found video with valid transcript: ${videoData.transcript.length} characters`)
-          
-          // Save successful video with transcript to unified challenges table and retrieve DB record
-          const { data: saved, error: insertError } = await supabaseServer
-            .from('challenges')
-            .upsert({
-              title: videoData.title,
-              description: videoData.description,
-              video_url: videoData.videoUrl,
-              thumbnail_url: videoData.thumbnailUrl,
-              embed_url: videoData.embedUrl,
-              duration: videoData.duration,
-              topics: videoData.topics,
-              transcript: videoData.transcript,
-              challenge_type: 'daily',
-              difficulty: 'intermediate',
-              user_id: null,
-              batch_id: `daily_${today}_batch`,
-              is_active: true,
-              featured: false,
-              date: today,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            })
-            .select()
-            .single()
-          
-          if (!insertError && saved) {
-            console.log("✅ New video with transcript saved to Supabase:", saved.id)
-            return {
-              id: saved.id,
-              title: saved.title,
-              description: saved.description || "Educational video",
-              thumbnailUrl: saved.thumbnail_url || `https://img.youtube.com/vi/${saved.video_url?.split('v=')[1] || saved.id}/hqdefault.jpg`,
-              videoUrl: saved.video_url,
-              embedUrl: saved.embed_url || `https://www.youtube.com/embed/${saved.video_url?.split('v=')[1] || saved.id}`,
-              duration: saved.duration || 300,
-              transcript: saved.transcript || "",
-              topics: saved.topics || []
-            }
-          } else {
-            console.error("❌ Error saving video to Supabase:", insertError)
-            // Continue trying with other videos
-          }
-        } else {
-          console.log(`⚠️ No valid transcript for video ${videoData.id} (${videoData.transcript?.length || 0} chars), trying next video...`)
-        }
-      } catch (error) {
-        console.error(`❌ Error with attempt ${attempts}:`, error)
-        // Continue to next attempt
-      }
+    // Check if error is something other than "not found"
+    if (error && error.code !== 'PGRST116') {
+      console.error("❌ Database error while checking for existing challenge:", error)
+      throw error
     }
     
-    // If we've exhausted all attempts, throw an error instead of using fallback
-    console.error(`❌ Could not find video with valid transcript after ${maxAttempts} attempts`)
-    throw new Error(`Failed to extract transcript from any video after ${maxAttempts} attempts. Please try again later.`)
+    console.log(`📅 No daily challenge found for ${today}, creating new one...`)
+    
+    // 2. Use the createChallenge function instead of manual logic
+    console.log("� Creating new daily challenge using createChallenge function...")
+    const newChallenge = await createChallenge('daily', {
+      difficulty: 'intermediate',
+      minDuration: 180,
+      maxDuration: 1800,
+      preferredTopics: []
+    })
+    
+    // Convert ChallengeData to VideoData format
+    if (newChallenge && !Array.isArray(newChallenge)) {
+      console.log(`✅ Successfully created new daily challenge: ${newChallenge.title}`)
+      
+      return {
+        id: newChallenge.id || 'unknown',
+        title: newChallenge.title,
+        description: newChallenge.description || "Educational video",
+        thumbnailUrl: newChallenge.thumbnail_url || `https://img.youtube.com/vi/${newChallenge.video_url?.split('v=')[1] || newChallenge.id}/hqdefault.jpg`,
+        videoUrl: newChallenge.video_url,
+        embedUrl: newChallenge.embed_url || `https://www.youtube.com/embed/${newChallenge.video_url?.split('v=')[1] || newChallenge.id}`,
+        duration: newChallenge.duration || 300,
+        transcript: newChallenge.transcript || "",
+        topics: newChallenge.topics || []
+      }
+    } else {
+      console.error("❌ createChallenge returned unexpected result:", newChallenge)
+      throw new Error("Failed to create daily challenge")
+    }
     
   } catch (error) {
     console.error("❌ Error in getTodayVideo:", error)
-    throw error // Re-throw the error instead of using fallback
+    
+    // If it's a duplicate key error, try to fetch the existing challenge again
+    if (error && typeof error === 'object' && 'code' in error && error.code === '23505') {
+      console.log("🔄 Duplicate key error detected, fetching existing challenge...")
+      
+      try {
+        const { data: existingChallenge } = await supabaseServer
+          .from('challenges')
+          .select('*')
+          .eq('date', today)
+          .eq('challenge_type', 'daily')
+          .eq('is_active', true)
+          .single()
+          
+        if (existingChallenge) {
+          console.log(`✅ Retrieved existing daily challenge after duplicate error: ${existingChallenge.title}`)
+          
+          return {
+            id: existingChallenge.id,
+            title: existingChallenge.title,
+            description: existingChallenge.description || "Educational video",
+            thumbnailUrl: existingChallenge.thumbnail_url || `https://img.youtube.com/vi/${existingChallenge.video_url?.split('v=')[1] || existingChallenge.id}/hqdefault.jpg`,
+            videoUrl: existingChallenge.video_url,
+            embedUrl: existingChallenge.embed_url || `https://www.youtube.com/embed/${existingChallenge.video_url?.split('v=')[1] || existingChallenge.id}`,
+            duration: existingChallenge.duration || 300,
+            transcript: existingChallenge.transcript || "",
+            topics: existingChallenge.topics || []
+          }
+        }
+      } catch (fetchError) {
+        console.error("❌ Error fetching existing challenge after duplicate error:", fetchError)
+      }
+    }
+    
+    throw error // Re-throw the original error
   }
 }
 

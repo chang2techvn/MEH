@@ -814,11 +814,11 @@ export const dbHelpers = {
     return { data: data || [], error }
   },
 
-  async getOnlineUsers(limit: number = 10) {
+  async getOnlineUsers(limit: number = 10, excludeUserId?: string) {
     const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString()
     
-    // First try to get truly online users
-    let { data, error } = await supabase
+    // Build base query
+    let query = supabase
       .from('profiles')
       .select(`
         id,
@@ -832,17 +832,23 @@ export const dbHelpers = {
         users!inner(
           id,
           email,
-          last_active,
+          last_login,
           created_at
         )
       `)
-      .gte('users.last_active', thirtyMinutesAgo)
-      .order('users.last_active', { ascending: false })
-      .limit(limit)
+      .gte('users.last_login', thirtyMinutesAgo)
+      .order('users.last_login', { ascending: false })
+    
+    // Exclude current user if provided
+    if (excludeUserId) {
+      query = query.neq('user_id', excludeUserId)
+    }
+    
+    let { data, error } = await query.limit(limit)
     
     // If no online users found, get recent profiles as fallback
     if (!data || data.length === 0) {
-      const { data: fallbackData, error: fallbackError } = await supabase
+      let fallbackQuery = supabase
         .from('profiles')
         .select(`
           id,
@@ -856,12 +862,18 @@ export const dbHelpers = {
           users!inner(
             id,
             email,
-            last_active,
+            last_login,
             created_at
           )
         `)
         .order('created_at', { ascending: false })
-        .limit(limit)
+      
+      // Exclude current user from fallback too
+      if (excludeUserId) {
+        fallbackQuery = fallbackQuery.neq('user_id', excludeUserId)
+      }
+      
+      const { data: fallbackData, error: fallbackError } = await fallbackQuery.limit(limit)
       
       data = fallbackData
       error = fallbackError

@@ -19,6 +19,7 @@ import { ContactSkeleton } from "./contact-skeleton"
 import { EventCard } from "./event-card"
 import { EventSkeleton } from "./event-skeleton"
 import { EventsModal } from "./events-modal"
+import { MessagesModal } from "@/components/messages/messages-modal"
 import type { Contact, Event } from "./types"
 
 interface RightSidebarProps {
@@ -38,6 +39,13 @@ export function RightSidebar({
 }: RightSidebarProps) {
   const [showEventsModal, setShowEventsModal] = useState(false)
   const [highlightEventId, setHighlightEventId] = useState<string | undefined>(undefined)
+  const [showMessagesModal, setShowMessagesModal] = useState(false)
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
+
+  const handleMessageClick = (userId: string, userName: string) => {
+    setSelectedUserId(userId)
+    setShowMessagesModal(true)
+  }
 
   const handleEventClick = (eventId: number) => {
     setHighlightEventId(eventId.toString())
@@ -107,10 +115,8 @@ export function RightSidebar({
                   : contacts.map((contact) => (
                       <ContactItem
                         key={contact.id}
-                        name={contact.name}
-                        image={contact.image}
-                        online={contact.online}
-                        lastActive={contact.lastActive}
+                        contact={contact}
+                        onMessageClick={handleMessageClick}
                       />
                     ))}
               </div>
@@ -160,6 +166,11 @@ export function RightSidebar({
         isOpen={showEventsModal} 
         onClose={() => setShowEventsModal(false)}
         highlightEventId={highlightEventId}
+      />
+      
+      <MessagesModal
+        isOpen={showMessagesModal}
+        onClose={() => setShowMessagesModal(false)}
       />
     </aside>
   )

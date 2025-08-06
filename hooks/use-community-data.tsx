@@ -2,10 +2,13 @@
 
 import { useState, useEffect } from "react"
 import { dbHelpers, supabase } from "@/lib/supabase"
+import { useAuth } from "@/contexts/auth-context"
 import type { Post, Contact, Event } from "@/components/community"
 import { formatTimeAgo, extractYouTubeId, isToday, isTomorrow } from "@/components/community"
 
 export function useCommunityData() {
+  const { user } = useAuth()
+  
   // Data state
   const [loading, setLoading] = useState(true)
   const [initialLoad, setInitialLoad] = useState(true)
@@ -111,11 +114,8 @@ export function useCommunityData() {
         setFeedPosts(transformedPosts as Post[])
       }
 
-      // Load other community data
+      // Load other community data (but skip contacts - will load separately when user is ready)
       await Promise.allSettled([
-        loadContacts().catch(error => {
-          console.warn("⚠️ Failed to load contacts, continuing without them:", error.message)
-        }),
         loadEvents().catch(error => {
           console.warn("⚠️ Failed to load events, continuing without them:", error.message)
         })
@@ -133,9 +133,10 @@ export function useCommunityData() {
   const loadContacts = async () => {
     try {
       console.log("🔄 Loading contacts data...")
+      console.log("🔍 Current user ID:", user?.id)
       
-      // Load online users from database using the same approach as backup file
-      const { data: onlineUsersData, error: onlineUsersError } = await dbHelpers.getOnlineUsers(10)
+      // Load online users from database, excluding current user
+      const { data: onlineUsersData, error: onlineUsersError } = await dbHelpers.getOnlineUsers(10, user?.id)
       
       if (onlineUsersError) {
         console.error("❌ Error loading online users:", onlineUsersError)
@@ -143,22 +144,24 @@ export function useCommunityData() {
       }
       
       if (!onlineUsersData || onlineUsersData.length === 0) {
-        console.log("ℹ️ No online users found")
+        console.log("ℹ️ No online users found (excluding current user)")
         setContacts([])
         return
       }
 
-      console.log(`✅ Loaded ${onlineUsersData.length} online users`)
+      console.log(`✅ Loaded ${onlineUsersData.length} online users (current user already excluded by database)`)
       
+      // No need to filter here since database already excluded current user
       // Transform online users data to contacts format
       const transformedContacts = onlineUsersData.map((profile: any, index: number) => ({
         id: profile.user_id || profile.id || `contact-${index}`,
         name: profile.full_name || profile.username || 'Unknown User',
         image: profile.avatar_url || "/placeholder.svg?height=40&width=40",
-        online: profile.users?.last_active && new Date(profile.users.last_active) > new Date(Date.now() - 30 * 60 * 1000), // Active in last 30 minutes
-        lastActive: profile.users?.last_active && new Date(profile.users.last_active) <= new Date(Date.now() - 30 * 60 * 1000) ? formatTimeAgo(profile.users.last_active) : undefined
+        online: profile.users?.last_login && new Date(profile.users.last_login) > new Date(Date.now() - 30 * 60 * 1000), // Active in last 30 minutes
+        lastActive: profile.users?.last_login && new Date(profile.users.last_login) <= new Date(Date.now() - 30 * 60 * 1000) ? formatTimeAgo(profile.users.last_login) : undefined
       }))
       
+      console.log(`✅ Transformed ${transformedContacts.length} contacts for display`)
       setContacts(transformedContacts as unknown as Contact[])
     } catch (error) {
       console.error("❌ Error loading contacts:", error)
@@ -224,6 +227,20 @@ export function useCommunityData() {
       console.error("❌ Failed to load community data:", error)
     })
   }, [])
+
+  // Load contacts when user is authenticated (separate from initial data load)
+  useEffect(() => {
+    if (user?.id) {
+      console.log("🔄 User authenticated, loading contacts (excluding current user)...")
+      loadContacts().catch(error => {
+        console.warn("⚠️ Failed to load contacts after user authentication:", error.message)
+      })
+    } else {
+      // Clear contacts if no user
+      console.log("🔄 No user authenticated, clearing contacts...")
+      setContacts([])
+    }
+  }, [user?.id])
 
   return {
     // State
