@@ -3,13 +3,12 @@
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
-import type { VideoSettingsState } from "../types"
 
 interface GeneralSettingsTabProps {
   minDuration: number
   maxDuration: number
   autoPublish: boolean
-  onUpdate: (updates: Partial<VideoSettingsState>) => void
+  onUpdate: (updates: any) => void
 }
 
 export function GeneralSettingsTab({ minDuration, maxDuration, autoPublish, onUpdate }: GeneralSettingsTabProps) {

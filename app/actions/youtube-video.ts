@@ -201,49 +201,103 @@ export async function createChallenge(
         return existing || []
       }
       
-      // Create missing practice challenges (one for each missing difficulty)
+      // Create missing practice challenges SEQUENTIALLY (one by one)
       for (const difficulty of missingDifficulties) {
-        try {
-          const videoData = await fetchRandomYoutubeVideo(
-            options.minDuration || 120,
-            options.maxDuration || 480,
-            options.preferredTopics || []
-          )
+        console.log(`🎯 Creating ${difficulty} practice challenge...`)
+        let attempts = 0
+        const maxAttempts = 5
+        let success = false
+        
+        // Set transcript duration based on difficulty level
+        let transcriptDuration: number
+        if (difficulty === 'beginner') {
+          transcriptDuration = 120 // 2 minutes for beginners
+        } else if (difficulty === 'intermediate') {
+          transcriptDuration = 180 // 3 minutes for intermediate
+        } else if (difficulty === 'advanced') {
+          transcriptDuration = 300 // 5 minutes for advanced
+        } else {
+          transcriptDuration = 180 // Default to intermediate
+        }
+        
+        while (!success && attempts < maxAttempts) {
+          attempts++
+          console.log(`📋 Attempt ${attempts}/${maxAttempts} for ${difficulty} challenge (need ${transcriptDuration}s transcript)`)
           
-          const challengeData: ChallengeData = {
-            title: videoData.title,
-            description: videoData.description,
-            video_url: videoData.videoUrl,
-            thumbnail_url: videoData.thumbnailUrl,
-            embed_url: videoData.embedUrl,
-            duration: videoData.duration,
-            topics: videoData.topics || [],
-            transcript: videoData.transcript,
-            challenge_type: 'practice',
-            difficulty: difficulty,
-            user_id: null,
-            batch_id: `practice_${today}_batch`,
-            is_active: true,
-            featured: false,
-            date: today
-          }
-          
-          const { data, error } = await supabase
-            .from('challenges')
-            .insert(challengeData)
-            .select()
-            .single()
+          try {
+            // Set global difficulty for transcript extraction
+            (globalThis as any).currentChallengeDifficulty = difficulty
             
-          if (error) throw error
-          challenges.push(data)
-                    
-          // Add delay between requests to avoid rate limiting
-          if (missingDifficulties.indexOf(difficulty) < missingDifficulties.length - 1) {
-            await new Promise(resolve => setTimeout(resolve, 2000))
+            // Fetch video with 30-minute limit for ALL difficulties (for Gemini compatibility)
+            const videoData = await fetchRandomYoutubeVideo(
+              options.minDuration || 120,
+              1800, // FIXED: Always 30 minutes max for fetch (not dependent on difficulty)
+              options.preferredTopics || []
+            )
+            
+            // Clean up global variable
+            delete (globalThis as any).currentChallengeDifficulty
+            
+            // SUCCESS CHECK: If we got a valid transcript, save it immediately!
+            if (videoData.transcript && videoData.transcript.length >= 100) {
+              console.log(`✅ Found suitable video: ${videoData.title} (transcript: ${videoData.transcript.length} chars)`)
+            } else {
+              console.log(`⚠️ Invalid transcript (${videoData.transcript?.length || 0} chars), skipping...`)
+              continue
+            }
+            
+            // Use transcript duration for challenge duration (not full video duration)
+            const challengeData: ChallengeData = {
+              title: videoData.title,
+              description: videoData.description,
+              video_url: videoData.videoUrl,
+              thumbnail_url: videoData.thumbnailUrl,
+              embed_url: videoData.embedUrl,
+              duration: transcriptDuration, // Use transcript duration for challenge
+              topics: videoData.topics || [],
+              transcript: videoData.transcript,
+              challenge_type: 'practice',
+              difficulty: difficulty,
+              user_id: null,
+              batch_id: `practice_${today}_batch`,
+              is_active: true,
+              featured: false,
+              date: today
+            }
+            
+            // Save to Supabase immediately after successful transcript extraction
+            const { data, error } = await supabase
+              .from('challenges')
+              .insert(challengeData)
+              .select()
+              .single()
+              
+            if (error) {
+              console.error(`❌ Database save failed for ${difficulty}:`, error)
+              throw error
+            }
+            
+            console.log(`💾 Successfully saved ${difficulty} challenge to database (transcript: ${transcriptDuration}s)`)
+            challenges.push(data)
+            success = true
+            
+            // Add delay between successful saves
+            if (missingDifficulties.indexOf(difficulty) < missingDifficulties.length - 1) {
+              console.log(`⏳ Waiting 3 seconds before next challenge...`)
+              await new Promise(resolve => setTimeout(resolve, 3000))
+            }
+            
+          } catch (error) {
+            console.error(`❌ Attempt ${attempts} failed for ${difficulty} challenge:`, error)
+            if (attempts < maxAttempts) {
+              console.log(`🔄 Retrying in 2 seconds...`)
+              await new Promise(resolve => setTimeout(resolve, 2000))
+            }
           }
-        } catch (error) {
-          console.error(`Error creating ${difficulty} practice challenge:`, error)
-          // Continue with next difficulty
+        }
+        
+        if (!success) {
+          console.error(`💥 Failed to create ${difficulty} challenge after ${maxAttempts} attempts`)
         }
       }
       
@@ -326,6 +380,11 @@ export async function fetchRandomYoutubeVideo(
   maxDuration = 2700,
   preferredTopics: string[] = [],
 ): Promise<VideoData> {
+  // ENFORCE 30-minute limit for Gemini compatibility
+  const safeMaxDuration = Math.min(maxDuration, 1800) // 30 minutes max
+  
+  console.log(`🔍 Searching for video: ${minDuration}s - ${safeMaxDuration}s duration`)
+  
   // Check if we already have a video for today
   const today = getTodayDate()
   // if (cachedVideo && lastFetchDate === today) {
@@ -333,7 +392,12 @@ export async function fetchRandomYoutubeVideo(
   // }
 
   try {
-    const videoData = await attemptYouTubeScraping(minDuration, maxDuration, preferredTopics)
+    const videoData = await attemptYouTubeScraping(minDuration, safeMaxDuration, preferredTopics)
+
+    // Final safety check
+    if (videoData.duration > 1800) {
+      throw new Error(`Video duration ${videoData.duration}s exceeds 30-minute limit`)
+    }
 
     // Cache the video for today
     // cachedVideo = videoData
@@ -432,10 +496,13 @@ async function attemptYouTubeScraping(
       try {
         const videoDetails = await getVideoDetails(videoId, minDuration, maxDuration)
 
-        // Check if the video meets our duration requirements
-        if (videoDetails.duration >= minDuration && videoDetails.duration <= maxDuration) {
+        // SUCCESS CHECK: If we got a valid transcript, that's what matters!
+        if (videoDetails.transcript && videoDetails.transcript.length >= 100) {
+          console.log(`✅ Found video with valid transcript ${videoId}: ${videoDetails.transcript.length} chars (video: ${videoDetails.duration}s)`)
           return videoDetails
-        } 
+        } else {
+          console.log(`⏭️ Skipping video ${videoId}: invalid transcript (${videoDetails.transcript?.length || 0} chars)`)
+        }
       } catch (error) {
         console.error(`Error getting details for video ${videoId}:`, error)
         // Continue to the next video
@@ -575,14 +642,27 @@ async function getVideoDetails(videoId: string, minDuration: number, maxDuration
       
       // Adjust transcript duration based on difficulty level
       if (difficulty === 'beginner') {
-        maxWatchTimeSeconds = Math.min(duration, 120) // 2 minutes for beginners
+        maxWatchTimeSeconds = 120 // 2 minutes for beginners
       } else if (difficulty === 'intermediate') {
-        maxWatchTimeSeconds = Math.min(duration, 180) // 3 minutes for intermediate
+        maxWatchTimeSeconds = 180 // 3 minutes for intermediate
       } else if (difficulty === 'advanced') {
-        maxWatchTimeSeconds = Math.min(duration, 300) // 5 minutes for advanced
+        maxWatchTimeSeconds = 300 // 5 minutes for advanced
       } else {
         // Fallback to intermediate
-        maxWatchTimeSeconds = Math.min(duration, 180)
+        maxWatchTimeSeconds = 180
+      }
+    } else if ((globalThis as any).currentChallengeDifficulty) {
+      // For practice challenges, use difficulty from global context
+      const difficulty = (globalThis as any).currentChallengeDifficulty
+      
+      if (difficulty === 'beginner') {
+        maxWatchTimeSeconds = 120 // 2 minutes for beginners
+      } else if (difficulty === 'intermediate') {
+        maxWatchTimeSeconds = 180 // 3 minutes for intermediate
+      } else if (difficulty === 'advanced') {
+        maxWatchTimeSeconds = 300 // 5 minutes for advanced
+      } else {
+        maxWatchTimeSeconds = 180 // Default
       }
     } 
     const transcriptResult = await extractYouTubeTranscriptForDuration(videoId, duration, maxWatchTimeSeconds)

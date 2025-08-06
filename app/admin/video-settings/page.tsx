@@ -30,6 +30,8 @@ import { useMobile } from "@/hooks/use-mobile"
 import { GeneralSettingsTab } from "./components/general-settings-tab"
 import { WatchTimeTab } from "./components/watch-time-tab"
 import { ContentTab } from "./components/content-tab"
+import { DailyVideoTab } from "./components/daily-video-tab"
+import { AutomationSettingsTab } from "./components/automation-settings-tab"
 
 // Animation variants
 const fadeIn = {
@@ -76,7 +78,7 @@ export default function VideoSettingsPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [resetting, setResetting] = useState(false)
-  const [activeTab, setActiveTab] = useState(tabParam || "general")
+  const [activeTab, setActiveTab] = useState(tabParam || "daily-video")
   const [showSuccessAnimation, setShowSuccessAnimation] = useState(false)
 
   // Format seconds to minutes and seconds
@@ -306,7 +308,37 @@ export default function VideoSettingsPage() {
         {/* Tabs */}
         <motion.div variants={fadeIn}>
           <Tabs value={activeTab} onValueChange={handleTabChange}>
-            <TabsList className="grid w-full grid-cols-3 mb-8">
+            <TabsList className="grid w-full grid-cols-5 mb-8">
+              <TabsTrigger
+                value="daily-video"
+                className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-neo-mint/10 data-[state=active]:to-purist-blue/10"
+              >
+                <Video className="h-4 w-4" />
+                <span
+                  className={
+                    activeTab === "daily-video"
+                      ? "bg-clip-text text-transparent bg-gradient-to-r from-neo-mint to-purist-blue font-medium"
+                      : ""
+                  }
+                >
+                  Daily Video
+                </span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="automation"
+                className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-neo-mint/10 data-[state=active]:to-purist-blue/10"
+              >
+                <Settings className="h-4 w-4" />
+                <span
+                  className={
+                    activeTab === "automation"
+                      ? "bg-clip-text text-transparent bg-gradient-to-r from-neo-mint to-purist-blue font-medium"
+                      : ""
+                  }
+                >
+                  Automation
+                </span>
+              </TabsTrigger>
               <TabsTrigger
                 value="general"
                 className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-neo-mint/10 data-[state=active]:to-purist-blue/10"
@@ -353,6 +385,16 @@ export default function VideoSettingsPage() {
                 </span>
               </TabsTrigger>
             </TabsList>
+
+            {/* Daily Video Tab */}
+            <TabsContent value="daily-video" className="space-y-6">
+              <DailyVideoTab onUpdate={() => setShowSuccessAnimation(true)} />
+            </TabsContent>
+
+            {/* Automation Settings Tab */}
+            <TabsContent value="automation" className="space-y-6">
+              <AutomationSettingsTab onUpdate={() => setShowSuccessAnimation(true)} />
+            </TabsContent>
 
             {/* General Settings Tab */}
             <TabsContent value="general" className="space-y-6">

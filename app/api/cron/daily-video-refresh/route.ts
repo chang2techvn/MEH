@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createChallenge } from '@/app/actions/youtube-video'
 import { recoverInactiveApiKeys } from '@/app/actions/api-key-recovery'
+import { 
+  notifyVideoGenerationSuccess, 
+  notifyVideoGenerationFailure, 
+  notifyAutomationHealthCheck 
+} from '@/app/actions/daily-video-admin'
 
 export async function POST(request: NextRequest) {
   try {
@@ -39,12 +44,26 @@ export async function POST(request: NextRequest) {
           challenge_type: 'daily'
         }
         console.log(`✅ Daily challenge generated: ${dailyResult.title}`)
+        
+        // Notify success
+        await notifyVideoGenerationSuccess({
+          title: dailyResult.title,
+          duration: dailyResult.duration || 0,
+          challenge_type: 'daily',
+          difficulty: dailyResult.difficulty
+        })
       } else {
         console.log('✅ Daily challenge already exists for today')
       }
     } catch (dailyError) {
       console.error('❌ Daily challenge generation failed:', dailyError)
       logData.errors.push(`Daily: ${dailyError}`)
+      
+      // Notify failure
+      await notifyVideoGenerationFailure(
+        'daily',
+        dailyError instanceof Error ? dailyError.message : String(dailyError)
+      )
     }
 
     // 2. Generate practice challenges (3 per day: 1 beginner + 1 intermediate + 1 advanced)
