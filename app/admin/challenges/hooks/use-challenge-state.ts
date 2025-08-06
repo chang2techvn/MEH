@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { toast } from "@/hooks/use-toast"
-import { fetchAllChallenges, type Challenge } from "@/app/actions/challenge-videos"
+import { fetchAllChallenges, fetchPracticeChallenges, type Challenge } from "@/app/actions/challenge-videos"
 import { STORAGE_KEY } from "../constants"
 import type { ChallengeFilters } from "../types"
 
@@ -32,6 +32,8 @@ export function useChallengeState() {
       }
 
       const allChallenges = await fetchAllChallenges()
+      const practiceChallenges = await fetchPracticeChallenges()
+      
       const userChallengesJson = localStorage.getItem("userChallenges")
       let userChallenges: Challenge[] = []
 
@@ -42,6 +44,7 @@ export function useChallengeState() {
       const combinedChallenges = [
         ...(Array.isArray(userChallenges) ? userChallenges : []),
         ...(Array.isArray(allChallenges) ? allChallenges : []),
+        ...(Array.isArray(practiceChallenges) ? practiceChallenges : []),
       ]
 
       localStorage.setItem(STORAGE_KEY, JSON.stringify(combinedChallenges))
@@ -100,6 +103,9 @@ export function useChallengeState() {
   const filterChallenges = useCallback(
     (filters: ChallengeFilters) => {
       let filtered = Array.isArray(challenges) ? [...challenges] : []
+
+      // Always filter to only show practice challenges
+      filtered = filtered.filter((challenge) => challenge.challenge_type === 'practice')
 
       if (filters.activeTab !== "all") {
         filtered = filtered.filter((challenge) => challenge.difficulty === filters.activeTab)

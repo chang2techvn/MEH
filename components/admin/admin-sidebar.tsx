@@ -23,6 +23,7 @@ import {
   Zap,
   Key,
   Cpu,
+  ShieldCheck,
 } from "lucide-react"
 
 export function AdminSidebar() {
@@ -133,9 +134,7 @@ export function AdminSidebar() {
           >
             <div className="flex h-16 items-center border-b px-6">
               <Link href="/admin" className="flex items-center gap-2">
-                <div className="h-8 w-8 rounded-full bg-gradient-to-br from-neo-mint to-purist-blue flex items-center justify-center text-white font-bold">
-                  A
-                </div>
+                <ShieldCheck className="relative h-6 w-6 text-neo-mint dark:text-purist-blue" />
                 <span className="text-xl font-bold">Admin</span>
               </Link>
               <Button variant="ghost" size="icon" onClick={toggle} className="absolute right-4 top-3.5 lg:hidden">

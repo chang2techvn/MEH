@@ -143,7 +143,13 @@ export default function ChallengeTable({
                         <span className="text-muted-foreground text-xs">No topics</span>
                       )}
                     </TableCell>
-                    <TableCell>{formatDate(challenge.createdAt.toISOString())}</TableCell>
+                    <TableCell>
+                      {formatDate(
+                        challenge.createdAt instanceof Date 
+                          ? challenge.createdAt.toISOString() 
+                          : challenge.createdAt || challenge.created_at || new Date().toISOString()
+                      )}
+                    </TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
