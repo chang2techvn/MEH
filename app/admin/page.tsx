@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { motion, AnimatePresence } from "framer-motion"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -42,17 +41,44 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Loader2 } from "lucide-react"
+import { 
+  getDashboardStats, 
+  getRecentActivities, 
+  getNewUsers, 
+  getPopularResources,
+  type DashboardStats,
+  type RecentActivity,
+  type NewUser,
+  type PopularResource
+} from "@/app/actions/admin-dashboard"
+
+// Helper function to format duration in seconds to MM:SS format
+const formatDuration = (seconds: number | null | undefined): string => {
+  if (!seconds) return "0:00"
+  const minutes = Math.floor(seconds / 60)
+  const remainingSeconds = seconds % 60
+  return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`
+}
 
 export default function AdminDashboardPage() {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState("overview")
   const [isLoading, setIsLoading] = useState(false)
-  const [progressValues, setProgressValues] = useState({
-    dailyActive: 0,
-    weeklyCompletion: 0,
-    monthlyGrowth: 0,
-    engagementRate: 0,
+  
+  // Real data states
+  const [dashboardStats, setDashboardStats] = useState<DashboardStats>({
+    totalUsers: 0,
+    totalChallenges: 0,
+    totalSubmissions: 0,
+    dailyActiveUsers: 0,
+    weeklyCompletionRate: 0,
+    monthlyGrowthRate: 0,
+    engagementRate: 0
   })
+  const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([])
+  const [newUsers, setNewUsers] = useState<NewUser[]>([])
+  const [popularResources, setPopularResources] = useState<PopularResource[]>([])
+  
   const [showNotification, setShowNotification] = useState(false)
   const [showEventDialog, setShowEventDialog] = useState(false)
   const [showResourceDialog, setShowResourceDialog] = useState(false)
@@ -75,45 +101,44 @@ export default function AdminDashboardPage() {
   const [notificationMessage, setNotificationMessage] = useState("")
   const [notificationType, setNotificationType] = useState("all")
 
-  // Simulate loading data
+  // Load real data
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setProgressValues({
-        dailyActive: 68,
-        weeklyCompletion: 72,
-        monthlyGrowth: 84,
-        engagementRate: 76,
-      })
-    }, 500)
-
-    return () => clearTimeout(timer)
+    loadDashboardData()
   }, [])
 
-  const refreshData = () => {
+  const loadDashboardData = async () => {
     setIsLoading(true)
+    try {
+      const [stats, activities, users, resources] = await Promise.all([
+        getDashboardStats(),
+        getRecentActivities(),
+        getNewUsers(),
+        getPopularResources()
+      ])
 
-    // Reset progress values to create animation effect
-    setProgressValues({
-      dailyActive: 0,
-      weeklyCompletion: 0,
-      monthlyGrowth: 0,
-      engagementRate: 0,
-    })
-
-    // Simulate API call
-    setTimeout(() => {
-      setProgressValues({
-        dailyActive: 68,
-        weeklyCompletion: 72,
-        monthlyGrowth: 84,
-        engagementRate: 76,
-      })
-      setIsLoading(false)
+      setDashboardStats(stats)
+      setRecentActivities(activities)
+      setNewUsers(users)
+      setPopularResources(resources)
+    } catch (error) {
+      console.error('Error loading dashboard data:', error)
       toast({
-        title: "Dashboard refreshed",
-        description: "Latest data has been loaded successfully",
+        title: "Error",
+        description: "Failed to load dashboard data",
+        variant: "destructive",
       })
-    }, 1500)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const refreshData = async () => {
+    setIsLoading(true)
+    await loadDashboardData()
+    toast({
+      title: "Dashboard refreshed",
+      description: "Latest data has been loaded successfully",
+    })
   }
 
   // Handle quick actions
@@ -303,35 +328,10 @@ export default function AdminDashboardPage() {
     }, 1000)
   }
 
-  // Animation variants
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1,
-      },
-    },
-  }
-
-  const itemVariants = {
-    hidden: { y: 20, opacity: 0 },
-    visible: {
-      y: 0,
-      opacity: 1,
-      transition: { type: "spring", stiffness: 100 },
-    },
-  }
-
   return (
     <div className="space-y-8">
       {/* Header Section */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="flex flex-col md:flex-row md:items-center justify-between gap-4"
-      >
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight gradient-text">Admin Dashboard</h1>
           <p className="text-muted-foreground mt-1">Welcome back! Here's what's happening with your platform today.</p>
@@ -350,122 +350,113 @@ export default function AdminDashboardPage() {
             Quick Actions
           </Button>
         </div>
-      </motion.div>
+      </div>
 
       {/* Stats Overview */}
-      <motion.div
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
-      >
-        <motion.div variants={itemVariants}>
-          <Card className="overflow-hidden border-none shadow-neo neo-card hover:shadow-glow-sm transition-all duration-300">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-neo-mint/10 rounded-full -mr-12 -mt-12 blur-2xl"></div>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium flex items-center">
-                <Users className="h-4 w-4 mr-2 text-purist-blue" />
-                Total Users
-              </CardTitle>
-            </CardHeader>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="overflow-hidden border-none shadow-neo neo-card hover:shadow-glow-sm transition-all duration-300">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-neo-mint/10 rounded-full -mr-12 -mt-12 blur-2xl"></div>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center">
+              <Users className="h-4 w-4 mr-2 text-purist-blue" />
+              Total Users
+            </CardTitle>
+          </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between">
-                <div className="text-3xl font-bold">1,248</div>
+                <div className="text-3xl font-bold">{dashboardStats.totalUsers}</div>
                 <div className="flex items-center text-green-500 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded-full text-xs">
                   <ArrowUpRight className="h-3 w-3 mr-1" />
-                  <span className="font-medium">+12%</span>
+                  <span className="font-medium">+{dashboardStats.monthlyGrowthRate}%</span>
                 </div>
               </div>
               <p className="text-xs text-muted-foreground mt-2">Compared to previous month</p>
               <div className="mt-3">
-                <Progress value={progressValues.monthlyGrowth} className="h-1.5" />
+                <Progress value={Math.min(dashboardStats.monthlyGrowthRate, 100)} className="h-1.5" />
               </div>
             </CardContent>
           </Card>
-        </motion.div>
 
-        <motion.div variants={itemVariants}>
-          <Card className="overflow-hidden border-none shadow-neo neo-card hover:shadow-glow-sm transition-all duration-300">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-purist-blue/10 rounded-full -mr-12 -mt-12 blur-2xl"></div>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium flex items-center">
-                <Activity className="h-4 w-4 mr-2 text-neo-mint" />
-                Active Learners
-              </CardTitle>
-            </CardHeader>
+        <Card className="overflow-hidden border-none shadow-neo neo-card hover:shadow-glow-sm transition-all duration-300">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-purist-blue/10 rounded-full -mr-12 -mt-12 blur-2xl"></div>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center">
+              <Activity className="h-4 w-4 mr-2 text-neo-mint" />
+              Active Learners
+            </CardTitle>
+          </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between">
-                <div className="text-3xl font-bold">842</div>
+                <div className="text-3xl font-bold">{dashboardStats.dailyActiveUsers}</div>
                 <div className="flex items-center text-green-500 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded-full text-xs">
                   <ArrowUpRight className="h-3 w-3 mr-1" />
-                  <span className="font-medium">+18%</span>
+                  <span className="font-medium">+{Math.round((dashboardStats.dailyActiveUsers / dashboardStats.totalUsers) * 100)}%</span>
                 </div>
               </div>
               <p className="text-xs text-muted-foreground mt-2">Daily active users</p>
               <div className="mt-3">
-                <Progress value={progressValues.dailyActive} className="h-1.5" />
+                <Progress value={Math.min((dashboardStats.dailyActiveUsers / dashboardStats.totalUsers) * 100, 100)} className="h-1.5" />
               </div>
             </CardContent>
           </Card>
-        </motion.div>
 
-        <motion.div variants={itemVariants}>
-          <Card className="overflow-hidden border-none shadow-neo neo-card hover:shadow-glow-sm transition-all duration-300">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-cantaloupe/10 rounded-full -mr-12 -mt-12 blur-2xl"></div>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium flex items-center">
-                <BookOpen className="h-4 w-4 mr-2 text-cassis" />
-                Challenge Completion
-              </CardTitle>
-            </CardHeader>
+        <Card className="overflow-hidden border-none shadow-neo neo-card hover:shadow-glow-sm transition-all duration-300">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-cantaloupe/10 rounded-full -mr-12 -mt-12 blur-2xl"></div>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center">
+              <BookOpen className="h-4 w-4 mr-2 text-cassis" />
+              Challenge Completion
+            </CardTitle>
+          </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between">
-                <div className="text-3xl font-bold">72%</div>
+                <div className="text-3xl font-bold">{dashboardStats.weeklyCompletionRate}%</div>
                 <div className="flex items-center text-green-500 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded-full text-xs">
                   <ArrowUpRight className="h-3 w-3 mr-1" />
-                  <span className="font-medium">+4%</span>
+                  <span className="font-medium">+{dashboardStats.weeklyCompletionRate > 50 ? Math.round(dashboardStats.weeklyCompletionRate - 50) : 0}%</span>
                 </div>
               </div>
               <p className="text-xs text-muted-foreground mt-2">Weekly completion rate</p>
               <div className="mt-3">
-                <Progress value={progressValues.weeklyCompletion} className="h-1.5" />
+                <Progress value={dashboardStats.weeklyCompletionRate} className="h-1.5" />
               </div>
             </CardContent>
           </Card>
-        </motion.div>
 
-        <motion.div variants={itemVariants}>
-          <Card className="overflow-hidden border-none shadow-neo neo-card hover:shadow-glow-sm transition-all duration-300">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-mellow-yellow/10 rounded-full -mr-12 -mt-12 blur-2xl"></div>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium flex items-center">
-                <TrendingUp className="h-4 w-4 mr-2 text-purist-blue" />
-                Engagement Rate
-              </CardTitle>
-            </CardHeader>
+        <Card className="overflow-hidden border-none shadow-neo neo-card hover:shadow-glow-sm transition-all duration-300">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-mellow-yellow/10 rounded-full -mr-12 -mt-12 blur-2xl"></div>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center">
+              <TrendingUp className="h-4 w-4 mr-2 text-purist-blue" />
+              Engagement Rate
+            </CardTitle>
+          </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between">
-                <div className="text-3xl font-bold">76%</div>
-                <div className="flex items-center text-red-500 bg-red-50 dark:bg-red-900/20 px-2 py-1 rounded-full text-xs">
-                  <ArrowDownRight className="h-3 w-3 mr-1" />
-                  <span className="font-medium">-2%</span>
+                <div className="text-3xl font-bold">{dashboardStats.engagementRate}%</div>
+                <div className={`flex items-center px-2 py-1 rounded-full text-xs ${
+                  dashboardStats.engagementRate > 50 
+                    ? 'text-green-500 bg-green-50 dark:bg-green-900/20' 
+                    : 'text-red-500 bg-red-50 dark:bg-red-900/20'
+                }`}>
+                  {dashboardStats.engagementRate > 50 ? (
+                    <ArrowUpRight className="h-3 w-3 mr-1" />
+                  ) : (
+                    <ArrowDownRight className="h-3 w-3 mr-1" />
+                  )}
+                  <span className="font-medium">{dashboardStats.engagementRate > 50 ? '+' : '-'}{Math.abs(dashboardStats.engagementRate - 50)}%</span>
                 </div>
               </div>
-              <p className="text-xs text-muted-foreground mt-2">Average time spent: 18.5 min</p>
+              <p className="text-xs text-muted-foreground mt-2">Weekly engagement rate</p>
               <div className="mt-3">
-                <Progress value={progressValues.engagementRate} className="h-1.5" />
+                <Progress value={dashboardStats.engagementRate} className="h-1.5" />
               </div>
             </CardContent>
           </Card>
-        </motion.div>
-      </motion.div>
+      </div>
 
       {/* Main Content Tabs */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4, duration: 0.5 }}
-      >
+      <div>
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-4 mb-6">
             <TabsTrigger
@@ -501,16 +492,9 @@ export default function AdminDashboardPage() {
             </TabsTrigger>
           </TabsList>
 
-          <AnimatePresence mode="wait">
-            {activeTab === "overview" && (
-              <motion.div
-                key="overview"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.3 }}
-              >
-                <TabsContent value="overview" className="space-y-6 mt-0">
+          {activeTab === "overview" && (
+            <div>
+              <TabsContent value="overview" className="space-y-6 mt-0">
                   {/* Activity and Recent Users */}
                   <div className="grid gap-6 md:grid-cols-7">
                     <Card className="md:col-span-4 border-none shadow-neo">
@@ -526,20 +510,13 @@ export default function AdminDashboardPage() {
                       </CardHeader>
                       <CardContent>
                         <div className="h-[240px] w-full rounded-md bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center relative overflow-hidden">
-                          {/* Simulated chart with animated bars */}
+                          {/* Simulated chart with static bars */}
                           <div className="absolute inset-0 flex items-end justify-around px-4 pb-4">
                             {[40, 65, 35, 85, 55, 45, 70, 60, 75, 50, 90, 65].map((height, i) => (
-                              <motion.div
+                              <div
                                 key={i}
                                 className="w-4 bg-gradient-to-t from-purist-blue to-neo-mint rounded-t-md"
-                                initial={{ height: 0 }}
-                                animate={{ height: `${height}%` }}
-                                transition={{
-                                  delay: i * 0.05,
-                                  duration: 0.7,
-                                  type: "spring",
-                                  stiffness: 50,
-                                }}
+                                style={{ height: `${height}%` }}
                               />
                             ))}
                           </div>
@@ -567,11 +544,8 @@ export default function AdminDashboardPage() {
                       <CardContent>
                         <div className="space-y-4">
                           {recentActivities.slice(0, 4).map((activity, i) => (
-                            <motion.div
+                            <div
                               key={i}
-                              initial={{ opacity: 0, x: -10 }}
-                              animate={{ opacity: 1, x: 0 }}
-                              transition={{ delay: i * 0.1 }}
                               className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/40 transition-colors cursor-pointer"
                               onClick={() => {
                                 toast({
@@ -591,7 +565,7 @@ export default function AdminDashboardPage() {
                                 <p className="text-xs text-muted-foreground">{activity.action}</p>
                               </div>
                               <div className="text-xs text-muted-foreground whitespace-nowrap">{activity.time}</div>
-                            </motion.div>
+                            </div>
                           ))}
                         </div>
                       </CardContent>
@@ -600,57 +574,111 @@ export default function AdminDashboardPage() {
 
                   {/* Popular Content and Quick Actions */}
                   <div className="grid gap-6 md:grid-cols-3">
-                    <Card className="border-none shadow-neo">
-                      <CardHeader className="pb-2">
+                    <Card className="border-none shadow-neo h-full flex flex-col">
+                      <CardHeader className="pb-2 flex-shrink-0">
                         <div className="flex items-center justify-between">
-                          <CardTitle className="text-lg font-semibold">Popular Resources</CardTitle>
+                          <CardTitle className="text-lg font-semibold">Popular Challenges</CardTitle>
                           <Button
                             variant="ghost"
                             size="sm"
                             className="h-8 gap-1"
-                            onClick={() => handleViewAll("resources")}
+                            onClick={() => router.push("/admin/challenges")}
                           >
                             View all
                             <ChevronRight className="h-4 w-4" />
                           </Button>
                         </div>
-                        <CardDescription>Most accessed learning materials</CardDescription>
+                        <CardDescription>Most attempted learning challenges</CardDescription>
                       </CardHeader>
-                      <CardContent>
-                        <div className="space-y-4">
-                          {popularResources.map((resource, i) => (
-                            <motion.div
-                              key={i}
-                              initial={{ opacity: 0, y: 10 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              transition={{ delay: i * 0.1 }}
-                              className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/40 transition-colors cursor-pointer"
-                              onClick={() => {
-                                toast({
-                                  title: "Resource details",
-                                  description: `Viewing details for ${resource.title}`,
-                                })
-                              }}
-                            >
-                              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-neo-mint/20 to-purist-blue/20 flex items-center justify-center">
-                                {resource.icon}
-                              </div>
-                              <div className="flex-1 space-y-1">
-                                <p className="text-sm font-medium leading-none">{resource.title}</p>
-                                <div className="flex items-center gap-2">
-                                  <p className="text-xs text-muted-foreground">{resource.views} views</p>
-                                  <div className="h-1 w-1 rounded-full bg-muted-foreground"></div>
-                                  <p className="text-xs text-muted-foreground">{resource.type}</p>
+                      <CardContent className="p-0 flex-1">
+                        <div className="h-80 overflow-y-auto scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
+                          <div className="space-y-2 p-4">
+                            {popularResources.map((resource, i) => (
+                              <div
+                                key={i}
+                                className="group flex items-center gap-3 p-2 rounded-lg hover:bg-muted/40 transition-colors cursor-pointer border border-border/40 hover:border-border"
+                                onClick={() => {
+                                  toast({
+                                    title: "Challenge details",
+                                    description: `Viewing details for ${resource.title}`,
+                                  })
+                                }}
+                              >
+                                {/* Compact thumbnail */}
+                                <div className="relative w-16 h-10 rounded bg-muted flex-shrink-0 overflow-hidden">
+                                  {resource.thumbnailUrl ? (
+                                    <img
+                                      src={resource.thumbnailUrl}
+                                      alt={resource.title}
+                                      className="w-full h-full object-cover"
+                                    />
+                                  ) : (
+                                    <div className="w-full h-full bg-gradient-to-br from-neo-mint/20 to-purist-blue/20 flex items-center justify-center">
+                                      {/* Type icons as fallback */}
+                                      {resource.type === 'Reading Exercise' && <BookOpen className="h-3 w-3 text-purist-blue" />}
+                                      {resource.type === 'Writing Practice' && <Zap className="h-3 w-3 text-neo-mint" />}
+                                      {resource.type === 'Speaking Challenge' && <MessageSquare className="h-3 w-3 text-cassis" />}
+                                      {resource.type === 'Listening Test' && <Activity className="h-3 w-3 text-mellow-yellow" />}
+                                      {resource.type === 'Practice Challenge' && <Award className="h-3 w-3 text-purist-blue" />}
+                                      {resource.type === 'Grammar Practice' && <BookOpen className="h-3 w-3 text-cassis" />}
+                                      {resource.type === 'Interactive' && <Video className="h-3 w-3 text-neo-mint" />}
+                                    </div>
+                                  )}
+                                  
+                                  {/* Duration badge */}
+                                  <div className="absolute bottom-0 right-0 bg-black/80 text-white text-[9px] px-1 py-0.5 rounded-tl font-medium leading-none">
+                                    {formatDuration(resource.duration)}
+                                  </div>
+                                  
+                                  {/* Gradient overlay for better text visibility */}
+                                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none"></div>
                                 </div>
+                                
+                                {/* Compact content */}
+                                <div className="flex-1 min-w-0 space-y-0.5">
+                                  <h4 className="text-xs font-medium leading-tight text-foreground line-clamp-1">
+                                    {resource.title}
+                                  </h4>
+                                  <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                                    <Badge variant="outline" className="text-[9px] px-1 py-0 h-3 bg-gradient-to-r from-neo-mint/10 to-purist-blue/10 font-medium">
+                                      {resource.difficulty || 'Intermediate'}
+                                    </Badge>
+                                    <div className="h-0.5 w-0.5 rounded-full bg-muted-foreground"></div>
+                                    <span className="text-[10px]">{resource.type}</span>
+                                  </div>
+                                </div>
+                                
+                                {/* Compact stats */}
+                                <div className="flex flex-col items-end gap-0.5 text-[9px] text-muted-foreground">
+                                  <div className="flex items-center gap-1">
+                                    <Users className="h-2.5 w-2.5" />
+                                    <span>{resource.views}</span>
+                                  </div>
+                                  <span>Aug 6, 2025</span>
+                                </div>
+                                
+                                {/* Action button */}
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 h-6 w-6 p-0"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    // Navigate to challenge details
+                                    router.push(`/admin/challenges/${resource.id}`)
+                                  }}
+                                >
+                                  <ChevronRight className="h-3 w-3" />
+                                </Button>
                               </div>
-                            </motion.div>
-                          ))}
+                            ))}
+                          </div>
                         </div>
                       </CardContent>
                     </Card>
 
-                    <Card className="border-none shadow-neo">
-                      <CardHeader className="pb-2">
+                    <Card className="border-none shadow-neo h-full flex flex-col">
+                      <CardHeader className="pb-2 flex-shrink-0">
                         <div className="flex items-center justify-between">
                           <CardTitle className="text-lg font-semibold">New Users</CardTitle>
                           <Button
@@ -665,14 +693,12 @@ export default function AdminDashboardPage() {
                         </div>
                         <CardDescription>Recently registered learners</CardDescription>
                       </CardHeader>
-                      <CardContent>
-                        <div className="space-y-4">
-                          {newUsers.map((user, i) => (
-                            <motion.div
+                      <CardContent className="flex-1">
+                        <div className="h-80 overflow-y-auto scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
+                          <div className="space-y-4">
+                            {newUsers.map((user, i) => (
+                            <div
                               key={i}
-                              initial={{ opacity: 0, y: 10 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              transition={{ delay: i * 0.1 }}
                               className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/40 transition-colors cursor-pointer"
                               onClick={() => {
                                 toast({
@@ -696,27 +722,24 @@ export default function AdminDashboardPage() {
                                   <p className="text-xs text-muted-foreground">{user.joinedAgo}</p>
                                 </div>
                               </div>
-                            </motion.div>
+                            </div>
                           ))}
+                          </div>
                         </div>
                       </CardContent>
                     </Card>
 
-                    <Card className="border-none shadow-neo">
-                      <CardHeader className="pb-2">
+                    <Card className="border-none shadow-neo h-full flex flex-col">
+                      <CardHeader className="pb-2 flex-shrink-0">
                         <CardTitle className="text-lg font-semibold">Quick Actions</CardTitle>
                         <CardDescription>Common administrative tasks</CardDescription>
                       </CardHeader>
-                      <CardContent>
-                        <div className="grid grid-cols-2 gap-3">
-                          {quickActions.map((action, i) => (
-                            <motion.button
+                      <CardContent className="flex-1">
+                        <div className="h-80 overflow-y-auto scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
+                          <div className="grid grid-cols-2 gap-3 p-1">
+                            {quickActions.map((action, i) => (
+                            <button
                               key={i}
-                              initial={{ opacity: 0, scale: 0.9 }}
-                              animate={{ opacity: 1, scale: 1 }}
-                              transition={{ delay: i * 0.1 }}
-                              whileHover={{ scale: 1.03 }}
-                              whileTap={{ scale: 0.97 }}
                               className="p-3 rounded-xl bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 shadow-neo hover:shadow-glow-sm transition-all duration-300 flex flex-col items-center justify-center gap-2 text-center"
                               onClick={() => handleQuickAction(action.id)}
                             >
@@ -724,8 +747,9 @@ export default function AdminDashboardPage() {
                                 {action.icon}
                               </div>
                               <span className="text-xs font-medium">{action.label}</span>
-                            </motion.button>
+                            </button>
                           ))}
+                          </div>
                         </div>
                       </CardContent>
                     </Card>
@@ -751,11 +775,8 @@ export default function AdminDashboardPage() {
                     <CardContent>
                       <div className="grid gap-4 md:grid-cols-3">
                         {upcomingEvents.map((event, i) => (
-                          <motion.div
+                          <div
                             key={i}
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: i * 0.1 }}
                             className="p-3 rounded-xl bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer"
                             onClick={() => {
                               toast({
@@ -782,23 +803,17 @@ export default function AdminDashboardPage() {
                                 </div>
                               </div>
                             </div>
-                          </motion.div>
+                          </div>
                         ))}
                       </div>
                     </CardContent>
                   </Card>
                 </TabsContent>
-              </motion.div>
+              </div>
             )}
 
             {activeTab === "users" && (
-              <motion.div
-                key="users"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.3 }}
-              >
+              <div>
                 <TabsContent value="users" className="space-y-6 mt-0">
                   <Card className="border-none shadow-neo">
                     <CardHeader>
@@ -813,17 +828,11 @@ export default function AdminDashboardPage() {
                     </CardContent>
                   </Card>
                 </TabsContent>
-              </motion.div>
+              </div>
             )}
 
             {activeTab === "content" && (
-              <motion.div
-                key="content"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.3 }}
-              >
+              <div>
                 <TabsContent value="content" className="space-y-6 mt-0">
                   <Card className="border-none shadow-neo">
                     <CardHeader>
@@ -838,17 +847,11 @@ export default function AdminDashboardPage() {
                     </CardContent>
                   </Card>
                 </TabsContent>
-              </motion.div>
+              </div>
             )}
 
             {activeTab === "learning" && (
-              <motion.div
-                key="learning"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.3 }}
-              >
+              <div>
                 <TabsContent value="learning" className="space-y-6 mt-0">
                   <Card className="border-none shadow-neo">
                     <CardHeader>
@@ -863,11 +866,10 @@ export default function AdminDashboardPage() {
                     </CardContent>
                   </Card>
                 </TabsContent>
-              </motion.div>
+              </div>
             )}
-          </AnimatePresence>
         </Tabs>
-      </motion.div>
+      </div>
 
       {/* Add Event Dialog */}
       <Dialog open={showEventDialog} onOpenChange={setShowEventDialog}>
@@ -1169,84 +1171,6 @@ export default function AdminDashboardPage() {
   )
 }
 
-// Sample data for recent activities
-const recentActivities = [
-  {
-    userName: "Sarah Johnson",
-    userAvatar: "/placeholder.svg?height=36&width=36",
-    action: "Completed challenge: Advanced Grammar Quiz",
-    time: "10 minutes ago",
-  },
-  {
-    userName: "Michael Chen",
-    userAvatar: "/placeholder.svg?height=36&width=36",
-    action: "Submitted a new speaking practice recording",
-    time: "25 minutes ago",
-  },
-  {
-    userName: "Emma Wilson",
-    userAvatar: "/placeholder.svg?height=36&width=36",
-    action: "Joined the platform",
-    time: "1 hour ago",
-  },
-  {
-    userName: "David Kim",
-    userAvatar: "/placeholder.svg?height=36&width=36",
-    action: "Earned badge: Conversation Master",
-    time: "2 hours ago",
-  },
-  {
-    userName: "Sophia Martinez",
-    userAvatar: "/placeholder.svg?height=36&width=36",
-    action: "Posted in community forum: 'Tips for IELTS Speaking'",
-    time: "3 hours ago",
-  },
-]
-
-// Sample data for popular resources
-const popularResources = [
-  {
-    title: "Advanced Grammar Guide",
-    views: 1245,
-    type: "PDF Guide",
-    icon: <BookOpen className="h-5 w-5 text-purist-blue" />,
-  },
-  {
-    title: "Business English: Negotiations",
-    views: 876,
-    type: "Video Course",
-    icon: <Video className="h-5 w-5 text-neo-mint" />,
-  },
-  {
-    title: "IELTS Speaking Strategies",
-    views: 654,
-    type: "Interactive",
-    icon: <MessageSquare className="h-5 w-5 text-cassis" />,
-  },
-]
-
-// Sample data for new users
-const newUsers = [
-  {
-    name: "Alex Johnson",
-    level: "Beginner",
-    joinedAgo: "2 hours ago",
-    avatar: "/placeholder.svg?height=40&width=40",
-  },
-  {
-    name: "Maria Garcia",
-    level: "Intermediate",
-    joinedAgo: "5 hours ago",
-    avatar: "/placeholder.svg?height=40&width=40",
-  },
-  {
-    name: "Wei Zhang",
-    level: "Advanced",
-    joinedAgo: "1 day ago",
-    avatar: "/placeholder.svg?height=40&width=40",
-  },
-]
-
 // Sample data for quick actions
 const quickActions = [
   {
@@ -1281,7 +1205,7 @@ const quickActions = [
   },
 ]
 
-// Sample data for upcoming events
+// Sample data for upcoming events (keeping this as it's calendar-related, not user data)
 const upcomingEvents = [
   {
     title: "Weekly Team Meeting",
