@@ -61,8 +61,8 @@ interface EventDetail {
   is_online: boolean
   max_attendees?: number
   current_attendees: number
-  event_type: 'workshop' | 'webinar' | 'study_group' | 'competition' | 'social' | 'other'
-  difficulty_level: 'beginner' | 'intermediate' | 'advanced' | 'all'
+  event_type?: 'workshop' | 'webinar' | 'study_group' | 'competition' | 'social' | 'other'
+  difficulty_level?: 'beginner' | 'intermediate' | 'advanced' | 'all'
   tags?: string[]
   is_public: boolean
   is_active: boolean
@@ -143,7 +143,7 @@ export function EventsModal({ isOpen, onClose, highlightEventId }: EventsModalPr
           event.tags?.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
         )
         
-        const matchesType = filterType === "all" || event.event_type === filterType
+        const matchesType = filterType === "all" || (event.event_type && event.event_type === filterType)
         
         return matchesSearch && matchesType
       })
@@ -287,19 +287,19 @@ export function EventsModal({ isOpen, onClose, highlightEventId }: EventsModalPr
       >
         <div className="flex items-start justify-between mb-2 sm:mb-3">
           <div className="flex items-start gap-2 sm:gap-3 flex-1 min-w-0">
-            <div className={`p-1.5 sm:p-2 rounded-lg ${eventTypeColors[event.event_type]} flex-shrink-0`}>
-              <EventTypeIcon type={event.event_type} />
+            <div className={`p-1.5 sm:p-2 rounded-lg ${event.event_type ? eventTypeColors[event.event_type] : 'bg-gray-100 text-gray-700'} flex-shrink-0`}>
+              <EventTypeIcon type={event.event_type || 'workshop'} />
             </div>
             <div className="flex-1 min-w-0">
               <h3 className="font-semibold text-sm sm:text-base group-hover:text-neo-mint dark:group-hover:text-purist-blue transition-colors line-clamp-2">
                 {event.title}
               </h3>
               <div className="flex items-center gap-1 sm:gap-2 mt-1 flex-wrap">
-                <Badge variant="outline" className={`text-xs h-5 px-1.5 ${eventTypeColors[event.event_type]}`}>
-                  {event.event_type.replace('_', ' ')}
+                <Badge variant="outline" className={`text-xs h-5 px-1.5 ${event.event_type ? eventTypeColors[event.event_type] : 'bg-gray-100 text-gray-700'}`}>
+                  {event.event_type ? event.event_type.replace('_', ' ') : 'Unknown'}
                 </Badge>
-                {event.difficulty_level !== 'all' && (
-                  <Badge variant="outline" className={`text-xs h-5 px-1.5 ${difficultyColors[event.difficulty_level]}`}>
+                {event.difficulty_level && event.difficulty_level !== 'all' && (
+                  <Badge variant="outline" className={`text-xs h-5 px-1.5 ${event.difficulty_level ? difficultyColors[event.difficulty_level] : 'bg-gray-100 text-gray-700'}`}>
                     {event.difficulty_level}
                   </Badge>
                 )}
@@ -469,8 +469,8 @@ export function EventsModal({ isOpen, onClose, highlightEventId }: EventsModalPr
                         <div className="flex-1 min-w-0">
                           {/* Title with Icon */}
                           <div className="flex items-start gap-2 sm:gap-3 mb-2">
-                            <div className={`p-2 sm:p-3 rounded-lg ${eventTypeColors[selectedEvent.event_type]} flex-shrink-0`}>
-                              <EventTypeIcon type={selectedEvent.event_type} />
+                            <div className={`p-2 sm:p-3 rounded-lg ${selectedEvent.event_type ? eventTypeColors[selectedEvent.event_type] : 'bg-gray-100 text-gray-700'} flex-shrink-0`}>
+                              <EventTypeIcon type={selectedEvent.event_type || 'workshop'} />
                             </div>
                             <div className="min-w-0 flex-1">
                               <h2 className="text-lg sm:text-xl md:text-2xl font-bold leading-tight">{selectedEvent.title}</h2>
@@ -478,11 +478,11 @@ export function EventsModal({ isOpen, onClose, highlightEventId }: EventsModalPr
                           </div>
                           {/* Badges */}
                           <div className="flex flex-wrap items-center gap-1 sm:gap-2 ml-10 sm:ml-12">
-                            <Badge className={`text-xs ${eventTypeColors[selectedEvent.event_type]}`}>
-                              {selectedEvent.event_type.replace('_', ' ')}
+                            <Badge className={`text-xs ${selectedEvent.event_type ? eventTypeColors[selectedEvent.event_type] : 'bg-gray-100 text-gray-700'}`}>
+                              {selectedEvent.event_type ? selectedEvent.event_type.replace('_', ' ') : 'Unknown'}
                             </Badge>
-                            {selectedEvent.difficulty_level !== 'all' && (
-                              <Badge variant="outline" className={`text-xs ${difficultyColors[selectedEvent.difficulty_level]}`}>
+                            {selectedEvent.difficulty_level && selectedEvent.difficulty_level !== 'all' && (
+                              <Badge variant="outline" className={`text-xs ${selectedEvent.difficulty_level ? difficultyColors[selectedEvent.difficulty_level] : 'bg-gray-100 text-gray-700'}`}>
                                 {selectedEvent.difficulty_level}
                               </Badge>
                             )}
@@ -592,11 +592,11 @@ export function EventsModal({ isOpen, onClose, highlightEventId }: EventsModalPr
                         <div className="space-y-1 sm:space-y-2 text-xs sm:text-sm">
                           <div>
                             <span className="text-muted-foreground">Type:</span>{" "}
-                            {selectedEvent.event_type.replace('_', ' ')}
+                            {selectedEvent.event_type ? selectedEvent.event_type.replace('_', ' ') : 'Unknown'}
                           </div>
                           <div>
                             <span className="text-muted-foreground">Level:</span>{" "}
-                            {selectedEvent.difficulty_level}
+                            {selectedEvent.difficulty_level || 'All levels'}
                           </div>
                           <div>
                             <span className="text-muted-foreground">Visibility:</span>{" "}

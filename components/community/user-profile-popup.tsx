@@ -20,6 +20,11 @@ import {
 import { supabase } from "@/lib/supabase"
 import { formatTimeAgo } from "./utils"
 
+// Simple cache for user profile data
+const profileCache = new Map<string, UserProfileData>()
+const cacheExpiry = new Map<string, number>()
+const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
+
 interface UserProfileData {
   id: string
   full_name: string
@@ -61,10 +66,49 @@ export function UserProfilePopup({
 }: UserProfilePopupProps) {
   const router = useRouter()
   const [userData, setUserData] = useState<UserProfileData | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false) // Changed to false for immediate display
+  const [detailsLoaded, setDetailsLoaded] = useState(false)
+
+  // Create initial data from props for immediate display
+  const initialData: UserProfileData = {
+    id: userId,
+    full_name: userName,
+    username: userName,
+    avatar_url: userImage,
+    proficiency_level: 'beginner', // Default values
+    bio: '',
+    native_language: '',
+    target_language: 'English',
+    streak_days: 0,
+    experience_points: 0,
+    level: 1,
+    joined_date: new Date().toISOString(),
+    last_active: new Date().toISOString(),
+    achievements_count: 0,
+    challenges_completed: 0,
+    total_posts: 0,
+    total_likes: 0,
+  }
 
   useEffect(() => {
     if (isOpen && userId) {
+      // Check cache first
+      const cached = profileCache.get(userId)
+      const cacheTime = cacheExpiry.get(userId)
+      const now = Date.now()
+      
+      if (cached && cacheTime && now - cacheTime < CACHE_DURATION) {
+        // Use cached data
+        setUserData(cached)
+        setDetailsLoaded(true)
+        return
+      }
+      
+      // Set initial data immediately for fast display
+      setUserData(initialData)
+      setDetailsLoaded(false)
+      
+      // Load detailed data in background
       loadUserProfile()
     }
   }, [isOpen, userId])
@@ -97,34 +141,37 @@ export function UserProfilePopup({
 
       if (profileError) {
         console.error("Error loading profile:", profileError)
+        setLoading(false)
+        setDetailsLoaded(true)
         return
       }
 
-      // Get user creation date
-      const { data: user, error: userError } = await supabase
-        .from('users')
-        .select('created_at, last_login')
-        .eq('id', userId)
-        .single()
+      // Get user creation date and other data in parallel
+      const [userResult, achievementsResult, challengesResult] = await Promise.all([
+        supabase
+          .from('users')
+          .select('created_at, last_login')
+          .eq('id', userId)
+          .single(),
+        
+        supabase
+          .from('user_achievements')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', userId),
+          
+        supabase
+          .from('challenge_submissions')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', userId)
+          .eq('is_correct', true)
+      ])
 
-      if (userError) {
-        console.error("Error loading user data:", userError)
-      }
+      const { data: user } = userResult
+      const { count: achievementsCount } = achievementsResult
+      const { count: challengesCompleted } = challengesResult
 
-      // Get achievements count
-      const { count: achievementsCount } = await supabase
-        .from('user_achievements')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', userId)
-
-      // Get challenges completed count
-      const { count: challengesCompleted } = await supabase
-        .from('challenge_submissions')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', userId)
-        .eq('is_correct', true)
-
-      setUserData({
+      // Update with detailed data
+      const detailedData = {
         id: userId,
         full_name: profile.full_name || userName,
         username: profile.username || userName,
@@ -142,11 +189,18 @@ export function UserProfilePopup({
         challenges_completed: profile.completed_challenges || 0,
         total_posts: profile.total_posts || 0,
         total_likes: profile.total_likes || 0,
-      })
+      }
+
+      setUserData(detailedData)
+      
+      // Cache the data
+      profileCache.set(userId, detailedData)
+      cacheExpiry.set(userId, Date.now())
     } catch (error) {
       console.error("Error loading user profile:", error)
     } finally {
       setLoading(false)
+      setDetailsLoaded(true)
     }
   }
 
@@ -218,22 +272,8 @@ export function UserProfilePopup({
           </Button>
         </div>
 
-        {loading ? (
-          <div className="space-y-4">
-            <div className="flex items-center space-x-3">
-              <Skeleton className="h-16 w-16 rounded-full" />
-              <div className="space-y-2">
-                <Skeleton className="h-4 w-32" />
-                <Skeleton className="h-3 w-24" />
-              </div>
-            </div>
-            <Skeleton className="h-20 w-full" />
-            <div className="space-y-2">
-              <Skeleton className="h-8 w-full" />
-              <Skeleton className="h-8 w-full" />
-            </div>
-          </div>
-        ) : userData ? (
+        {/* Always show user data immediately, load details in background */}
+        {userData ? (
           <div className="space-y-4">
             {/* User Avatar and Basic Info */}
             <div className="flex items-center space-x-3">
@@ -267,14 +307,14 @@ export function UserProfilePopup({
                 <div className="flex items-center gap-2 mt-1">
                   <Calendar className="h-3 w-3 text-gray-400" />
                   <span className="text-xs text-gray-500">
-                    Joined {formatTimeAgo(userData.joined_date)}
+                    {detailsLoaded ? `Joined ${formatTimeAgo(userData.joined_date)}` : 'Loading...'}
                   </span>
                 </div>
               </div>
             </div>
 
             {/* Bio */}
-            {userData.bio && (
+            {userData.bio && detailsLoaded && (
               <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
                 <p className="text-sm text-gray-700 dark:text-gray-300 line-clamp-3">
                   {userData.bio}
@@ -303,31 +343,47 @@ export function UserProfilePopup({
               <div className="space-y-1">
                 <div className="flex items-center justify-center">
                   <Trophy className="h-4 w-4 text-yellow-500 mr-1" />
-                  <span className="text-sm font-semibold">{userData.achievements_count}</span>
+                  <span className="text-sm font-semibold">
+                    {detailsLoaded ? userData.achievements_count : '...'}
+                  </span>
                 </div>
                 <span className="text-xs text-gray-500">Achievements</span>
               </div>
               <div className="space-y-1">
                 <div className="flex items-center justify-center">
                   <Target className="h-4 w-4 text-green-500 mr-1" />
-                  <span className="text-sm font-semibold">{userData.challenges_completed}</span>
+                  <span className="text-sm font-semibold">
+                    {detailsLoaded ? userData.challenges_completed : '...'}
+                  </span>
                 </div>
                 <span className="text-xs text-gray-500">Completed</span>
               </div>
               <div className="space-y-1">
                 <div className="flex items-center justify-center">
                   <Clock className="h-4 w-4 text-blue-500 mr-1" />
-                  <span className="text-sm font-semibold">{userData.streak_days}</span>
+                  <span className="text-sm font-semibold">
+                    {detailsLoaded ? userData.streak_days : '...'}
+                  </span>
                 </div>
                 <span className="text-xs text-gray-500">Day Streak</span>
               </div>
             </div>
 
             {/* Language Info */}
-            {userData.native_language && (
+            {userData.native_language && detailsLoaded && (
               <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                 <span className="font-medium">Learning:</span>
                 <span>{userData.native_language} → {userData.target_language}</span>
+              </div>
+            )}
+
+            {/* Loading indicator for background data */}
+            {!detailsLoaded && (
+              <div className="flex items-center justify-center py-2">
+                <div className="flex items-center gap-2 text-xs text-gray-500">
+                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-500"></div>
+                  Loading details...
+                </div>
               </div>
             )}
 
