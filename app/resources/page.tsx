@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -21,6 +21,7 @@ import { ChatHeader } from '@/components/ai-hub/chat/chat-header';
 import { SidebarManager } from '@/components/ai-hub/sidebar/sidebar-manager';
 import { ChatMessageArea } from '@/components/ai-hub/chat/chat-message-area';
 import { MobileChatInput } from '@/components/ai-hub/chat/mobile-chat-input';
+import { ChatTriggerButton } from '@/components/ai-hub/chat/chat-trigger-button';
 import { TypingIndicator } from '@/components/ai-hub/chat/typing-indicator';
 import { ChatInput } from '@/components/ai-hub/chat/ChatInput';
 import { supabase } from '@/lib/supabase';
@@ -28,6 +29,9 @@ import { singleChatService } from '@/lib/single-chat-service';
 import { useResourcesPage } from '@/hooks/use-resources-page';
 
 export default function ResourcesPage() {
+  // Create ref for mobile chat input
+  const mobileInputRef = useRef<HTMLInputElement>(null);
+  
   // Use the comprehensive resources page hook
   const {
     router,
@@ -305,6 +309,7 @@ export default function ResourcesPage() {
         
         {/* Mobile Chat Input - positioned above bottom navigation */}
         <MobileChatInput
+          ref={mobileInputRef}
           inputMessage={inputMessage}
           onInputChange={setInputMessage}
           onSendMessage={(content) => {
@@ -320,6 +325,16 @@ export default function ResourcesPage() {
                  "Type your message...")
           }
           replyMode={replyMode}
+        />
+
+        {/* Chat Trigger Button - floating button to open input */}
+        <ChatTriggerButton
+          onTriggerChat={() => {
+            // Focus the mobile chat input using ref
+            if (mobileInputRef.current) {
+              mobileInputRef.current.focus();
+            }
+          }}
         />
         
         {/* Desktop Chat Input */}

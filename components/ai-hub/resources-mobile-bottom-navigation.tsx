@@ -35,6 +35,7 @@ import { useRouter } from "next/navigation"
 import { AICharacter } from "@/types/ai-hub.types"
 import { LearningGoal, useLearningGoals, useVocabulary } from "@/hooks/use-learning-goals"
 import { useTheme } from "@/contexts/theme-context"
+import { useKeyboardHeight } from "@/hooks/use-keyboard-height"
 
 interface ResourcesMobileBottomNavigationProps {
   isVisible?: boolean
@@ -74,6 +75,19 @@ export function ResourcesMobileBottomNavigation({
   const { goals, loading: goalsLoading, createGoal, updateGoalProgress, refetch: refetchGoals } = useLearningGoals()
   const { vocabulary, loading: vocabularyLoading, refreshVocabulary } = useVocabulary()
   const router = useRouter()
+  
+  // Add keyboard detection to hide navigation when keyboard is open
+  const keyboard = useKeyboardHeight()
+  const isKeyboardOpen = keyboard.height > 0
+
+  // Debug keyboard state - only log on changes
+  useEffect(() => {
+    if (isKeyboardOpen) {
+      console.log('📱 Keyboard opened - Hiding bottom navigation');
+    } else if (isVisible) {
+      console.log('📱 Keyboard closed - Showing bottom navigation');
+    }
+  }, [isKeyboardOpen, isVisible]);
   
   const handleMessageClick = () => {
     if (!isAuthenticated) return
@@ -170,10 +184,21 @@ export function ResourcesMobileBottomNavigation({
     <>
       <motion.div
         initial={{ y: 100, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
+        animate={{ 
+          y: (isKeyboardOpen || !isVisible) ? 120 : 0, 
+          opacity: (isKeyboardOpen || !isVisible) ? 0 : 1 
+        }}
         exit={{ y: 100, opacity: 0 }}
-        transition={{ duration: 0.3, ease: "easeOut" }}
+        transition={{ 
+          duration: 0.25, 
+          ease: [0.25, 0.46, 0.45, 0.94], // Custom cubic-bezier for smoothness
+          type: "tween"
+        }}
         className="fixed bottom-0 left-0 right-0 z-40 md:hidden"
+        style={{
+          pointerEvents: (isKeyboardOpen || !isVisible) ? 'none' : 'auto',
+          willChange: 'transform, opacity' // Optimize for animations
+        }}
       >
         <div className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl border-t border-white/20 dark:border-gray-800/20 shadow-lg">
           <div className="px-4 py-1">

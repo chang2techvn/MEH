@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
@@ -21,18 +21,33 @@ interface MobileChatInputProps {
     isActive: boolean;
     aiName: string;
   } | null;
+  /** Ref to expose input element */
+  ref?: React.RefObject<HTMLInputElement>;
 }
 
-export const MobileChatInput: React.FC<MobileChatInputProps> = ({
+export const MobileChatInput = React.forwardRef<HTMLInputElement, MobileChatInputProps>(({
   inputMessage,
   onInputChange,
   onSendMessage,
   disabled,
   placeholder,
   replyMode
-}) => {
+}, forwardedRef) => {
   const inputRef = useRef<HTMLInputElement>(null);
   const keyboard = useKeyboardHeight();
+  const [isInputFocused, setIsInputFocused] = useState(false);
+
+  // Merge refs
+  const mergedRef = forwardedRef || inputRef;
+
+  // Debug keyboard state - only log on changes
+  useEffect(() => {
+    if (keyboard.isVisible) {
+      console.log('🎹 Keyboard opened - Input position:', getBottomPosition());
+    } else {
+      console.log('🎹 Keyboard closed - Input position:', getBottomPosition());
+    }
+  }, [keyboard.isVisible]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -51,44 +66,61 @@ export const MobileChatInput: React.FC<MobileChatInputProps> = ({
 
   // Handle input focus - scroll into view when keyboard appears
   const handleFocus = () => {
-    // Small delay to ensure keyboard animation starts
-    setTimeout(() => {
-      if (inputRef.current) {
-        inputRef.current.scrollIntoView({
+    setIsInputFocused(true);
+    // Use requestAnimationFrame for smoother animation
+    requestAnimationFrame(() => {
+      const currentRef = (mergedRef as React.RefObject<HTMLInputElement>)?.current;
+      if (currentRef) {
+        currentRef.scrollIntoView({
           behavior: 'smooth',
           block: 'center',
         });
       }
-    }, 300); // Increased delay for better timing with keyboard animation
+    });
   };
 
-  // Calculate dynamic bottom position
+  // Handle input blur
+  const handleBlur = () => {
+    setIsInputFocused(false);
+  };
+
+  // Calculate dynamic bottom position and visibility
   const getBottomPosition = () => {
-    if (!keyboard.isVisible) {
-      return 80; // Default 80px from bottom
+    if (!keyboard.isVisible && !isInputFocused) {
+      return 85; // Default 85px from bottom (above navigation)
     }
     
-    // When keyboard is visible, add padding above keyboard
-    const minPadding = 20;
-    const dynamicPadding = Math.min(50, keyboard.height * 0.15); // Max 50px padding
-    return Math.max(minPadding, dynamicPadding);
+    // When keyboard is visible or input is focused, position just above the keyboard
+    return 25; // Fixed 25px above keyboard when visible
+  };
+
+  // Determine if input should be visible
+  const shouldShowInput = () => {
+    // Always show on desktop (lg:hidden handles this)
+    // On mobile: show when keyboard is visible OR input is focused
+    return keyboard.isVisible || isInputFocused;
   };
 
   return (
     <div 
-      className="lg:hidden fixed left-0 right-0 z-40 mx-4 transition-all duration-300 ease-out"
+      className="lg:hidden fixed left-0 right-0 z-50 mx-4"
       style={{
         bottom: `${getBottomPosition()}px`,
-        transform: keyboard.isVisible ? 'translateY(0)' : 'translateY(0)',
+        transition: 'all 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94)', // Smooth transition
+        willChange: 'transform, bottom', // Optimize for animations
+        opacity: shouldShowInput() ? 1 : 0,
+        transform: shouldShowInput() ? 'translateY(0)' : 'translateY(10px)',
+        pointerEvents: shouldShowInput() ? 'auto' : 'none',
       }}
     >
       <div className="relative">
         <Input
-          ref={inputRef}
+          ref={mergedRef}
           value={inputMessage}
           onChange={(e: React.ChangeEvent<HTMLInputElement>) => onInputChange(e.target.value)}
           onKeyDown={handleKeyDown}
           onFocus={handleFocus}
+          onBlur={handleBlur}
           placeholder={
             replyMode?.isActive 
               ? `Reply to ${replyMode.aiName}...` 
@@ -152,4 +184,6 @@ export const MobileChatInput: React.FC<MobileChatInputProps> = ({
       </div>
     </div>
   );
-};
+});
+
+MobileChatInput.displayName = 'MobileChatInput';
