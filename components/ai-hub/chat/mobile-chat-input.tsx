@@ -1,8 +1,9 @@
 "use client"
 
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
 
 interface MobileChatInputProps {
   /** Input message value */
@@ -30,6 +31,9 @@ export const MobileChatInput: React.FC<MobileChatInputProps> = ({
   placeholder,
   replyMode
 }) => {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const keyboard = useKeyboardHeight();
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -45,13 +49,46 @@ export const MobileChatInput: React.FC<MobileChatInputProps> = ({
     }
   };
 
+  // Handle input focus - scroll into view when keyboard appears
+  const handleFocus = () => {
+    // Small delay to ensure keyboard animation starts
+    setTimeout(() => {
+      if (inputRef.current) {
+        inputRef.current.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+        });
+      }
+    }, 300); // Increased delay for better timing with keyboard animation
+  };
+
+  // Calculate dynamic bottom position
+  const getBottomPosition = () => {
+    if (!keyboard.isVisible) {
+      return 80; // Default 80px from bottom
+    }
+    
+    // When keyboard is visible, add padding above keyboard
+    const minPadding = 20;
+    const dynamicPadding = Math.min(50, keyboard.height * 0.15); // Max 50px padding
+    return Math.max(minPadding, dynamicPadding);
+  };
+
   return (
-    <div className="lg:hidden fixed bottom-20 left-0 right-0 z-40 mx-4">
+    <div 
+      className="lg:hidden fixed left-0 right-0 z-40 mx-4 transition-all duration-300 ease-out"
+      style={{
+        bottom: `${getBottomPosition()}px`,
+        transform: keyboard.isVisible ? 'translateY(0)' : 'translateY(0)',
+      }}
+    >
       <div className="relative">
         <Input
+          ref={inputRef}
           value={inputMessage}
           onChange={(e: React.ChangeEvent<HTMLInputElement>) => onInputChange(e.target.value)}
           onKeyDown={handleKeyDown}
+          onFocus={handleFocus}
           placeholder={
             replyMode?.isActive 
               ? `Reply to ${replyMode.aiName}...` 

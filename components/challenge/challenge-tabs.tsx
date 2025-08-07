@@ -103,7 +103,10 @@ export default function ChallengeTabs({
       // Load practice challenges and user challenges in parallel
       const [practiceData, userData] = await Promise.all([
         getChallenges('practice', { limit: 15 }), // Get latest 15 practice videos
-        getChallenges('user_generated', { limit: 50 })
+        getChallenges('user_generated', { 
+          limit: 50,
+          userId: user?.id // Only get challenges created by current user
+        })
       ])
 
       // Convert to Challenge format if needed
@@ -185,8 +188,17 @@ export default function ChallengeTabs({
       const savedChallenges = localStorage.getItem("userChallenges")
       let localUserChallenges: Challenge[] = []
 
-      if (savedChallenges) {
-        localUserChallenges = JSON.parse(savedChallenges)
+      if (savedChallenges && user?.id) {
+        try {
+          const allLocalChallenges = JSON.parse(savedChallenges)
+          // Filter local challenges to only include ones created by current user
+          localUserChallenges = allLocalChallenges.filter((challenge: Challenge) => 
+            challenge.user_id === user.id
+          )
+        } catch (error) {
+          console.error("Error parsing saved challenges:", error)
+          localUserChallenges = []
+        }
       }
 
       // Combine all challenges
@@ -209,7 +221,7 @@ export default function ChallengeTabs({
       })
       setLoading(false)
     }
-  }, [])
+  }, [user?.id]) // Add user?.id as dependency
 
   useEffect(() => {
     loadChallenges()
@@ -274,12 +286,20 @@ export default function ChallengeTabs({
 
   // Handle challenge creation - optimized
   const handleChallengeCreated = useCallback((newChallenge: Challenge) => {
+    // Ensure the new challenge has the current user's ID
+    const challengeWithUserId = {
+      ...newChallenge,
+      user_id: user?.id || newChallenge.user_id
+    }
+    
     // Thêm thử thách mới vào danh sách user challenges
-    const updatedUserChallenges = [newChallenge, ...userChallenges]
-    const updatedAllChallenges = [newChallenge, ...challenges]
+    const updatedUserChallenges = [challengeWithUserId, ...userChallenges]
+    const updatedAllChallenges = [challengeWithUserId, ...challenges]
     
     setUserChallenges(updatedUserChallenges)
-    setChallenges(updatedAllChallenges)    // Debounced localStorage save to avoid blocking UI
+    setChallenges(updatedAllChallenges)    
+    
+    // Debounced localStorage save to avoid blocking UI
     saveToLocalStorage('userChallenges', updatedUserChallenges)
 
     // Hiển thị thông báo thành công
@@ -290,7 +310,7 @@ export default function ChallengeTabs({
     
     // Switch to user challenges tab to show the new challenge
     handleTabChange("user")
-  }, [userChallenges, challenges, saveToLocalStorage, handleTabChange])
+  }, [userChallenges, challenges, saveToLocalStorage, handleTabChange, user?.id])
 
   // Handle when user starts a challenge
   const handleStartChallenge = useCallback((id: string) => {
@@ -336,12 +356,14 @@ export default function ChallengeTabs({
     setChallenges(prev => prev.filter(c => c.id !== deletedId))
     setUserChallenges(prev => prev.filter(c => c.id !== deletedId))
     
-    // Also remove from localStorage
+    // Also remove from localStorage (only if it belongs to current user)
     try {
       const savedChallenges = localStorage.getItem("userChallenges")
-      if (savedChallenges) {
+      if (savedChallenges && user?.id) {
         const parsedChallenges = JSON.parse(savedChallenges)
-        const updatedChallenges = parsedChallenges.filter((c: Challenge) => c.id !== deletedId)
+        const updatedChallenges = parsedChallenges.filter((c: Challenge) => 
+          c.id !== deletedId && c.user_id === user.id // Only keep challenges that don't match deletedId and belong to current user
+        )
         localStorage.setItem("userChallenges", JSON.stringify(updatedChallenges))
       }
     } catch (error) {
@@ -352,7 +374,7 @@ export default function ChallengeTabs({
       title: "Challenge deleted",
       description: "Your challenge has been successfully removed.",
     })
-  }, [])
+  }, [user?.id])
 
   return (
     <>      
@@ -374,30 +396,41 @@ export default function ChallengeTabs({
         <TabsContent value="user" className="challenge-tab-content mt-6">
           <div className="mb-4 transition-opacity duration-200" style={{ opacity: isPending ? 0.7 : 1 }}>
             <h3 className="text-lg font-semibold text-foreground">Your Created Challenges</h3>
-            <p className="text-sm text-muted-foreground">Challenges you've created • {filteredChallenges.length} available</p>
+            <p className="text-sm text-muted-foreground">
+              {!user ? 'Please log in to see your challenges' : `Challenges you've created • ${filteredChallenges.length} available`}
+            </p>
           </div>
           
-          <div 
-            key={gridKey}
-            className="challenge-filter-transition transition-all duration-300 ease-in-out"
-            style={{ 
-              opacity: isPending ? 0.8 : 1,
-              transform: isPending ? 'translateY(4px)' : 'translateY(0px)'
-            }}
-          >
-            <OptimizedChallengeGrid
-              challenges={filteredChallenges}
-              onStartChallenge={handleStartChallenge}
-              loading={loading}
-              emptyMessage="You haven't created any challenges yet"
-              emptyAction={() => setCreateModalOpen(true)}
-              emptyActionLabel="Create Your First Challenge"
-              useVirtualScroll={filteredChallenges.length > 20}
-              showDeleteButton={true}
-              userId={user?.id}
-              onChallengeDeleted={handleChallengeDeleted}
-            />
-          </div>
+          {!user ? (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground mb-4">You need to be logged in to view your challenges.</p>
+              <Button onClick={() => window.location.href = '/auth'}>
+                Sign In
+              </Button>
+            </div>
+          ) : (
+            <div 
+              key={gridKey}
+              className="challenge-filter-transition transition-all duration-300 ease-in-out"
+              style={{ 
+                opacity: isPending ? 0.8 : 1,
+                transform: isPending ? 'translateY(4px)' : 'translateY(0px)'
+              }}
+            >
+              <OptimizedChallengeGrid
+                challenges={filteredChallenges}
+                onStartChallenge={handleStartChallenge}
+                loading={loading}
+                emptyMessage="You haven't created any challenges yet"
+                emptyAction={() => setCreateModalOpen(true)}
+                emptyActionLabel="Create Your First Challenge"
+                useVirtualScroll={filteredChallenges.length > 20}
+                showDeleteButton={true}
+                userId={user?.id}
+                onChallengeDeleted={handleChallengeDeleted}
+              />
+            </div>
+          )}
         </TabsContent>          
         <TabsContent value="all" className="challenge-tab-content mt-6">
           <div className="mb-4 transition-opacity duration-200" style={{ opacity: isPending ? 0.7 : 1 }}>

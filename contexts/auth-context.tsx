@@ -4,6 +4,7 @@ import { createContext, useContext, useState, useEffect, useMemo, useCallback, t
 import { useRouter } from "next/navigation"
 import { toast } from "@/hooks/use-toast"
 import { supabase } from "@/lib/supabase"
+import { clearBrowserAuthCache, isJWTError, createCleanSupabaseSession } from "@/lib/auth-utils"
 import type { User as SupabaseUser } from "@supabase/supabase-js"
 
 // Simplified User type for UI
@@ -54,6 +55,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(userData)
   }, [])
 
+  // Clear all auth data helper
+  const clearAllAuthData = useCallback(async () => {
+    try {
+      // Use the utility function for comprehensive cleanup
+      await createCleanSupabaseSession(supabase)
+      
+      // Clear state
+      setUser(null)
+    } catch (error) {
+      console.error('Error clearing auth data:', error)
+      // Fallback manual cleanup
+      clearBrowserAuthCache()
+      setUser(null)
+    }
+  }, [])
+
   // Get user data from database
   const getUserData = async (supabaseUser: SupabaseUser) => {
     try {
@@ -91,7 +108,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Get current session from cookies
         const { data: { session }, error } = await supabase.auth.getSession()
         
-        if (session?.user) {
+        if (error) {
+          // If there's an error (like expired JWT), clear auth data
+          if (isJWTError(error)) {
+            console.warn('JWT token expired or invalid, clearing auth data')
+            await clearAllAuthData()
+          } else {
+            console.error('Session error:', error)
+          }
+        } else if (session?.user) {
           await getUserData(session.user)
         }
       } catch (error) {
@@ -113,7 +138,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     })
 
     return () => subscription.unsubscribe()
-  }, [])
+  }, [clearAllAuthData, getUserData, persistUser])
 
   // Login function
   const login = useCallback(async (email: string, password: string) => {
@@ -121,6 +146,51 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) throw error
+
+      // Check user account status
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('account_status, is_active')
+        .eq('id', data.user.id)
+        .single()
+
+      if (userError) {
+        console.error('Error checking user status:', userError)
+      } else if (userData) {
+        if (userData.account_status === 'pending') {
+          await supabase.auth.signOut()
+          toast({
+            title: "Account pending approval",
+            description: "Your account is waiting for admin approval. Please wait.",
+            variant: "destructive",
+          })
+          throw new Error('Account pending approval')
+        } else if (userData.account_status === 'rejected') {
+          await supabase.auth.signOut()
+          toast({
+            title: "Account rejected",
+            description: "Your account has been rejected. Please contact support.",
+            variant: "destructive",
+          })
+          throw new Error('Account rejected')
+        } else if (userData.account_status === 'suspended') {
+          await supabase.auth.signOut()
+          toast({
+            title: "Account suspended",
+            description: "Your account has been suspended. Please contact support.",
+            variant: "destructive",
+          })
+          throw new Error('Account suspended')
+        } else if (!userData.is_active) {
+          await supabase.auth.signOut()
+          toast({
+            title: "Account inactive",
+            description: "Your account is inactive. Please contact support.",
+            variant: "destructive",
+          })
+          throw new Error('Account inactive')
+        }
+      }
 
       // Force refresh session to ensure cookies are set
       await supabase.auth.refreshSession()
@@ -132,11 +202,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       router.push(redirectTo || "/")
     } catch (error: any) {
       console.error('❌ Login error:', error)
-      toast({
-        title: "Login failed",
-        description: error.message,
-        variant: "destructive",
-      })
+      
+      // Don't show the generic error message for our custom account status errors
+      if (!error.message?.includes('Account')) {
+        toast({
+          title: "Login failed",
+          description: error.message,
+          variant: "destructive",
+        })
+      }
       throw error
     } finally {
       setIsLoading(false)
@@ -146,8 +220,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Logout function
   const logout = useCallback(async () => {
     try {
-      await supabase.auth.signOut({ scope: 'global' })
-      persistUser(null)
+      await clearAllAuthData()
       toast({ title: "Logged out", description: "You have been logged out." })
       router.push("/")
     } catch (error) {
@@ -170,6 +243,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const register = useCallback(async (name: string, email: string, password: string) => {
     try {
       setIsLoading(true)
+      
+      // Clear any existing session first to avoid JWT conflicts
+      await clearAllAuthData()
+      
+      // Wait a bit for cleanup to complete
+      await new Promise(resolve => setTimeout(resolve, 500))
+      
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -184,22 +264,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       toast({
         title: "Registration successful",
-        description: "Please check your email to verify your account.",
+        description: "Your account has been created and is pending approval. You can now log in.",
       })
 
-      router.push("/auth/login")
+      // Wait a bit before redirecting to ensure toast is visible
+      setTimeout(() => {
+        router.push("/auth/login")
+      }, 1500)
     } catch (error: any) {
       console.error('Registration error:', error)
-      toast({
-        title: "Registration failed",
-        description: error.message || "An error occurred during registration",
-        variant: "destructive",
-      })
+      
+      // Handle specific JWT errors
+      if (isJWTError(error)) {
+        await clearAllAuthData()
+        toast({
+          title: "Session expired",
+          description: "Please try registering again",
+          variant: "destructive",
+        })
+      } else {
+        toast({
+          title: "Registration failed",
+          description: error.message || "An error occurred during registration",
+          variant: "destructive",
+        })
+      }
       throw error
     } finally {
       setIsLoading(false)
     }
-  }, [router])
+  }, [router, clearAllAuthData])
 
   // Social login functions (placeholder implementations)
   const loginWithGoogle = useCallback(async () => {

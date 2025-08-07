@@ -1,6 +1,6 @@
 "use client"
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Tooltip,
@@ -9,7 +9,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { OptimizedAvatarEnhanced } from '@/components/optimized/optimized-avatar-enhanced';
-import { AISelectionSheet } from '@/components/ai-hub/chat/ai-selection-sheet';
+import { CreateCharacterModal } from '@/app/admin/ai-assistants/components/create-character-modal';
 import { AICharacter } from '@/types/ai-hub.types';
 
 interface ChatHeaderProps {
@@ -68,6 +68,12 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
   aiAssistants,
   onToggleAI
 }) => {
+  const [showCreateCharacterModal, setShowCreateCharacterModal] = useState(false);
+
+  const handleCreateCharacterSuccess = () => {
+    // Refresh the page or update the AI list
+    window.location.reload();
+  };
   return (
     <div className={`${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border-b px-2 sm:px-4 py-2 sm:py-4 h-12 sm:h-16 flex items-center justify-between`}>
       <div className="flex items-center">
@@ -147,7 +153,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
               {currentChat && (
                 <div className="flex items-center gap-1">
                   <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-                  <span className="text-xs text-green-600 dark:text-green-400">Lịch sử</span>
+                  <span className="text-xs text-green-600 dark:text-green-400">History</span>
                 </div>
               )}
             </div>
@@ -164,12 +170,12 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
           variant="outline" 
           size="sm"
           onClick={onNewChat}
-          className={`touch-target !rounded-button whitespace-nowrap cursor-pointer ${isDarkMode ? 'bg-gray-700 border-gray-600 hover:bg-gray-600 hover:scale-100 hover:translate-y-0 hover:shadow-none' : 'hover:bg-gray-50 hover:scale-100 hover:translate-y-0 hover:shadow-none'} transition-colors duration-200 text-xs sm:text-sm h-8 sm:h-9 px-2 sm:px-3 flex items-center`}
-          title={currentChat ? "Tạo cuộc trò chuyện mới" : "Bắt đầu cuộc trò chuyện mới"}
+          className="bg-gradient-to-r from-neo-mint to-purist-blue hover:from-neo-mint/80 hover:to-purist-blue/80 text-white rounded-full h-8 sm:h-9 px-2 sm:px-3 text-xs sm:text-sm font-medium transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center touch-target whitespace-nowrap cursor-pointer"
+          title={currentChat ? "Create New Chat" : "Start New Chat"}
         >
           <i className="fas fa-plus mr-0 sm:mr-1 text-xs sm:text-sm"></i>
           <span className="hidden sm:inline">
-            {currentChat ? "Chat mới" : "Tạo mới"}
+            {currentChat ? "New Chat" : "New Chat"}
           </span>
         </Button>
         
@@ -182,12 +188,12 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
                   variant="outline"
                   size="sm"
                   onClick={onToggleAutoInteraction}
-                  className={`touch-target !rounded-button whitespace-nowrap cursor-pointer transition-colors duration-200 text-xs sm:text-sm h-8 sm:h-9 px-2 sm:px-3 ${
+                  className={`touch-target rounded-full whitespace-nowrap cursor-pointer transition-colors duration-200 text-xs sm:text-sm h-8 sm:h-9 px-2 sm:px-3 ${
                     autoInteractionActive
                       ? (isDarkMode ? 'bg-green-700 border-green-600 hover:bg-green-600' : 'bg-green-100 border-green-300 hover:bg-green-200')
                       : (isDarkMode ? 'bg-gray-700 border-gray-600 hover:bg-gray-600' : 'hover:bg-gray-50')
                   }`}
-                  title={autoInteractionActive ? "Tắt tương tác tự động" : "Bật tương tác tự động"}
+                  title={autoInteractionActive ? "Turn Off Auto Interaction" : "Turn On Auto Interaction"}
                 >
                   <i className={`fas ${autoInteractionActive ? 'fa-robot' : 'fa-pause'} mr-1 text-xs sm:text-sm`}></i>
                   <span className="hidden md:inline">
@@ -201,8 +207,8 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
               <TooltipContent>
                 <p>
                   {autoInteractionActive 
-                    ? `Tự động tương tác đang BẬT (${currentTimeoutSeconds} giây)`
-                    : "Bật tương tác tự động giữa AI và câu hỏi cho bạn"
+                    ? `Auto interaction is ON (${currentTimeoutSeconds} seconds)`
+                    : "Enable automatic interaction between AI and questions for you"
                   }
                 </p>
               </TooltipContent>
@@ -210,34 +216,35 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
           </TooltipProvider>
         )}
         
-        {/* Add AI Button - Always visible */}
-        <AISelectionSheet
-          isDarkMode={isDarkMode}
-          aiAssistants={aiAssistants}
-          selectedAIs={selectedAIs}
-          onToggleAI={onToggleAI}
+        {/* Add AI Button - Create New Character */}
+        <Button 
+          variant="outline" 
+          size="sm"
+          onClick={() => setShowCreateCharacterModal(true)}
+          className="bg-gradient-to-r from-neo-mint to-purist-blue hover:from-neo-mint/80 hover:to-purist-blue/80 text-white rounded-full h-8 sm:h-9 px-2 sm:px-3 text-xs sm:text-sm font-medium transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center touch-target whitespace-nowrap cursor-pointer"
+          title="Create New AI Character"
         >
-          <Button 
-            variant="outline" 
-            size="sm"
-            className={`touch-target !rounded-button whitespace-nowrap cursor-pointer ${isDarkMode ? 'bg-gray-700 border-gray-600 hover:bg-gray-600 hover:scale-100 hover:translate-y-0 hover:shadow-none' : 'hover:bg-gray-50 hover:scale-100 hover:translate-y-0 hover:shadow-none'} transition-colors duration-200 text-xs sm:text-sm h-8 sm:h-9 px-2 sm:px-3`}
-            title="Thêm AI vào cuộc trò chuyện"
-          >
-            <i className="fas fa-user-plus mr-0 sm:mr-1 text-xs sm:text-sm"></i>
-            <span className="hidden sm:inline">Thêm AI</span>
-          </Button>
-        </AISelectionSheet>
+          <i className="fas fa-user-plus mr-0 sm:mr-1 text-xs sm:text-sm"></i>
+          <span className="hidden sm:inline">New AI</span>
+        </Button>
         
         {/* More options button */}
         <Button 
           variant="ghost" 
           size="icon" 
-          className="touch-target !rounded-button whitespace-nowrap cursor-pointer h-8 w-8 sm:h-9 sm:w-9"
-          title="Tùy chọn khác"
+          className="touch-target rounded-full whitespace-nowrap cursor-pointer h-8 w-8 sm:h-9 sm:w-9"
+          title="More Options"
         >
           <i className="fas fa-ellipsis-v text-sm"></i>
         </Button>
       </div>
+
+      {/* Create Character Modal */}
+      <CreateCharacterModal
+        open={showCreateCharacterModal}
+        onOpenChange={setShowCreateCharacterModal}
+        onSuccess={handleCreateCharacterSuccess}
+      />
     </div>
   );
 };

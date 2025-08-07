@@ -13,6 +13,7 @@ import { AssistantPagination } from "./components/assistant-pagination"
 import { AssistantFormDialog } from "./components/assistant-form-dialog"
 import { AssistantViewDialog } from "./components/assistant-view-dialog"
 import { AssistantDeleteDialog } from "./components/assistant-delete-dialog"
+import { CreateCharacterModal } from "./components/create-character-modal"
 
 export default function AIAssistantsPage() {
   const { assistants, isLoading, addAssistant, updateAssistant, deleteAssistant, toggleAssistantActive } =
@@ -33,15 +34,14 @@ export default function AIAssistantsPage() {
   } = useAssistantForm()
 
   // Dialog states
-  const [showAddDialog, setShowAddDialog] = useState(false)
+  const [showCreateCharacterDialog, setShowCreateCharacterDialog] = useState(false)
   const [showEditDialog, setShowEditDialog] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [showViewDialog, setShowViewDialog] = useState(false)
   const [selectedAssistant, setSelectedAssistant] = useState<Assistant | null>(null)
 
   const handleAddClick = () => {
-    resetForm()
-    setShowAddDialog(true)
+    setShowCreateCharacterDialog(true)
   }
 
   const handleEditClick = (assistant: Assistant) => {
@@ -78,7 +78,7 @@ export default function AIAssistantsPage() {
   const handleAddAssistant = async () => {
     if (!validateForm()) return
     await addAssistant(formData)
-    setShowAddDialog(false)
+    setShowEditDialog(false)
     resetForm()
   }
 
@@ -133,21 +133,13 @@ export default function AIAssistantsPage() {
       </div>
 
       {/* Dialogs */}
-      <AssistantFormDialog
-        open={showAddDialog}
-        onOpenChange={setShowAddDialog}
-        title="Create New Assistant"
-        description="Configure your new AI assistant for language learning."
-        formData={formData}
-        formErrors={formErrors}
-        isLoading={isLoading}
-        onFormDataChange={updateFormData}
-        onCapabilityToggle={handleCapabilityToggle}
-        onPersonalityToggle={handlePersonalityToggle}
-        onTagAdd={handleTagAdd}
-        onTagRemove={handleTagRemove}
-        onSubmit={handleAddAssistant}
-        submitLabel="Create Assistant"
+      <CreateCharacterModal
+        open={showCreateCharacterDialog}
+        onOpenChange={setShowCreateCharacterDialog}
+        onSuccess={() => {
+          // Refresh assistants list or add new assistant to state
+          window.location.reload()
+        }}
       />
 
       <AssistantFormDialog

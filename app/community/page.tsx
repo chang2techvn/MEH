@@ -11,6 +11,7 @@ import { CommunityMobileBottomNavigation } from "@/components/community/communit
 import { Button } from "@/components/ui/button"
 import { RefreshCw } from "lucide-react"
 import FeedPost from "@/components/feed/feed-post"
+import { PostWithVisibility } from "@/components/feed/post-with-visibility"
 import FeedFilter from "@/components/feed/feed-filter"
 import FeedEmptyState from "@/components/feed/feed-empty-state"
 import SEOMeta from "@/components/optimized/seo-meta"
@@ -20,6 +21,8 @@ import { useAuth } from "@/contexts/auth-context"
 import { useStoryControls } from "@/hooks/use-story-controls"
 import { usePostManagement } from "@/hooks/use-post-management"
 import { useCommunityData } from "@/hooks/use-community-data"
+import { useInfiniteScroll } from "@/hooks/use-infinite-scroll"
+import { usePostPreloadTrigger } from "@/hooks/use-post-visibility"
 import { StoryViewer } from "@/components/community/story-viewer"
 import type { Story } from "@/hooks/use-stories"
 
@@ -67,6 +70,17 @@ export default function CommunityPage() {
   // Use custom hooks
   const communityData = useCommunityData()
   const postManagement = usePostManagement()
+  
+  // Post preload trigger for smart loading
+  const { createVisibilityHandler } = usePostPreloadTrigger(communityData.checkAndPreloadPosts)
+  
+  // Infinite scroll for loading more posts (backup method)
+  const { ref: infiniteScrollRef, inView } = useInfiniteScroll({
+    loadMore: () => communityData.loadMorePosts(false), // User-triggered load
+    hasMore: communityData.hasMorePosts,
+    loading: communityData.loadingMore
+  })
+  
   const storyControls = useStoryControls({
     stories,
     user,
@@ -76,6 +90,14 @@ export default function CommunityPage() {
     viewStory,
     addStoryReply,
   })
+
+  // Trigger load more when infinite scroll element comes into view (backup method)
+  useEffect(() => {
+    if (inView && communityData.hasMorePosts && !communityData.loadingMore && communityData.backgroundLoadCompleted) {
+      console.log("🔄 Backup infinite scroll triggered")
+      communityData.loadMorePosts(false) // User-triggered load
+    }
+  }, [inView, communityData.hasMorePosts, communityData.loadingMore, communityData.backgroundLoadCompleted, communityData.loadMorePosts])
 
   // Extract highlight parameter from URL on mount
   useEffect(() => {
@@ -286,51 +308,47 @@ export default function CommunityPage() {
                       .fill(0)
                       .map((_, i) => <PostSkeleton key={i} />)
                   ) : communityData.feedPosts.length > 0 ? (
-                    communityData.feedPosts.map((post) => (
-                      <div key={post.id} id={`post-${post.id}`}>
-                        <FeedPost
-                          id={String(post.id)}
-                          username={post.username}
-                          userImage={post.userImage}
-                          timeAgo={post.timeAgo}
-                          content={post.content}
-                          mediaType={post.mediaType}
-                          mediaUrl={post.mediaUrl}
-                          mediaUrls={post.mediaUrls}
-                          youtubeVideoId={post.youtubeVideoId}
-                          textContent={post.textContent}
-                          likes={post.likes}
-                          comments={post.comments}
-                          submission={post.submission}
-                          videoEvaluation={post.videoEvaluation}
-                          isNew={post.isNew}
-                          title={post.title}
+                    <>
+                      {communityData.feedPosts.map((post, index) => (
+                        <PostWithVisibility
+                          key={post.id}
+                          post={post}
+                          postIndex={index}
+                          totalPosts={communityData.feedPosts.length}
+                          onPostVisible={createVisibilityHandler}
                         />
-                      </div>
-                    ))
+                      ))}
+                      
+                      {/* Infinite Scroll Trigger (Backup Method) */}
+                      {communityData.hasMorePosts && (
+                        <div ref={infiniteScrollRef} className="flex justify-center py-4">
+                          {communityData.loadingMore ? (
+                            <div className="flex items-center gap-2 text-sm text-gray-500">
+                              <RefreshCw className="h-4 w-4 animate-spin" />
+                              Loading more posts...
+                            </div>
+                          ) : (
+                            <div className="text-sm text-gray-400">
+                              Scroll to load more posts
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      
+                      {/* End of Posts Message */}
+                      {!communityData.hasMorePosts && communityData.feedPosts.length > 5 && (
+                        <div className="flex justify-center py-6">
+                          <div className="text-sm text-gray-500 bg-gray-50 dark:bg-gray-800 px-4 py-2 rounded-full">
+                            🎉 You've reached the end! No more posts to load.
+                          </div>
+                        </div>
+                      )}
+                    </>
                   ) : (
                     <FeedEmptyState
-                      onRefresh={() => communityData.loadData()}
+                      onRefresh={() => communityData.loadInitialPosts()}
                       filterActive={postManagement.activeFilters.length > 0}
                     />
-                  )}
-
-                  {communityData.feedPosts.length > 0 && (
-                    <div className="flex justify-center py-4">
-                      <Button
-                        variant="outline"
-                        className="gap-2"
-                        onClick={() => {
-                          toast({
-                            title: "Loading more posts",
-                            description: "Fetching additional content for your feed",
-                          })
-                        }}
-                      >
-                        <RefreshCw className="h-4 w-4 mr-1" />
-                        Load More
-                      </Button>
-                    </div>
                   )}
                 </div>
               </div>
