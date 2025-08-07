@@ -20,7 +20,7 @@ export function MobileNavigation({ isOpen, onClose }: MobileNavigationProps) {
   const navigationItems = [
     {
       href: "/",
-      label: "Home",
+      label: "Challenge",
       icon: BookOpen
     },
     {
