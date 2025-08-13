@@ -20,7 +20,7 @@ import { Loader2, AlertCircle } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { toast } from "@/hooks/use-toast"
 import {type Challenge } from '@/lib/utils/challenge-constants'
-import {supabase} from "@/lib/supabase"
+import { useAuth } from "@/contexts/auth-context"
 
 
 interface CreateChallengeModalProps {
@@ -35,27 +35,11 @@ export default function CreateChallengeModal({ open, onOpenChange, onChallengeCr
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [progressStep, setProgressStep] = useState<string>('')
-  const [cachedUser, setCachedUser] = useState<any>(null)
-  const [userLoading, setUserLoading] = useState(false)
+  
+  // Use AuthContext instead of direct Supabase calls
+  const { user, isLoading: userLoading, isAuthenticated } = useAuth()
 
-  // Load user authentication immediately when component mounts
-  useEffect(() => {
-    if (!cachedUser) {
-      setUserLoading(true)
-      
-      supabase.auth.getUser().then(({ data: { user } }) => {
-        if (user) {
-          setCachedUser(user)
-        }
-        setUserLoading(false)
-      }).catch((err) => {
-        console.error("❌ Error loading user:", err)
-        setUserLoading(false)
-      })
-    }
-  }, [cachedUser])
-
-  // Clear form state when modal closes, but keep user cached
+  // Clear form state when modal closes
   useEffect(() => {
     if (!open) {
       setError(null)
@@ -64,20 +48,6 @@ export default function CreateChallengeModal({ open, onOpenChange, onChallengeCr
       setDifficulty("intermediate")
     }
   }, [open])
-
-  // Listen for auth state changes to update cached user
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_OUT' || !session?.user) {
-        setCachedUser(null)
-      } else if (event === 'SIGNED_IN' && session?.user) {
-        setCachedUser(session.user)
-        setUserLoading(false)
-      }
-    })
-
-    return () => subscription.unsubscribe()
-  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -96,21 +66,21 @@ export default function CreateChallengeModal({ open, onOpenChange, onChallengeCr
       setError(null)
       
       // Check if user is authenticated
-      if (!cachedUser) {
+      if (!user || !isAuthenticated) {
         console.error("❌ No authenticated user available")
         setError("Please log in to create challenges")
         setLoading(false)
         return
       }
       
-      console.log("✅ Using cached user:", cachedUser.id)
+      console.log("✅ Using user from AuthContext:", user.id)
       setProgressStep("Video processing may take some time. You can do other things and we'll notify you when it's completed")
       console.log("🚀 Creating user-generated challenge...")
 
       // Create user-generated challenge using the new API
       const challengeResult = await createChallenge('user_generated', {
         videoUrl: youtubeUrl,
-        userId: cachedUser.id,
+        userId: user.id,
         difficulty: difficulty as 'beginner' | 'intermediate' | 'advanced'
       })
 
@@ -227,7 +197,7 @@ export default function CreateChallengeModal({ open, onOpenChange, onChallengeCr
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4 py-3 sm:py-4">
-          {!cachedUser && !userLoading && (
+          {!user && !userLoading && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription className="text-sm">
@@ -268,7 +238,7 @@ export default function CreateChallengeModal({ open, onOpenChange, onChallengeCr
               placeholder="https://www.youtube.com/watch?v=... or https://youtu.be/..."
               value={youtubeUrl}
               onChange={(e) => setYoutubeUrl(e.target.value)}
-              disabled={loading || userLoading || !cachedUser}
+              disabled={loading || userLoading || !user}
               className="text-sm sm:text-base"
             />
             <p className="text-xs text-muted-foreground">
@@ -278,7 +248,7 @@ export default function CreateChallengeModal({ open, onOpenChange, onChallengeCr
 
           <div className="space-y-1 sm:space-y-2">
             <Label htmlFor="difficulty" className="text-sm sm:text-base">Difficulty Level</Label>
-            <Select value={difficulty} onValueChange={setDifficulty} disabled={loading || userLoading || !cachedUser}>
+            <Select value={difficulty} onValueChange={setDifficulty} disabled={loading || userLoading || !user}>
               <SelectTrigger id="difficulty" className="text-sm sm:text-base">
                 <SelectValue placeholder="Select difficulty" />
               </SelectTrigger>
@@ -303,7 +273,7 @@ export default function CreateChallengeModal({ open, onOpenChange, onChallengeCr
             </Button>
             <Button
               type="submit"
-              disabled={loading || userLoading || !cachedUser}
+              disabled={loading || userLoading || !user}
               className="bg-gradient-to-r from-neo-mint to-purist-blue text-white text-sm sm:text-base px-4 sm:px-6 py-2 sm:py-2"
             >
               {userLoading ? (
