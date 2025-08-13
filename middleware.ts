@@ -67,43 +67,31 @@ export async function middleware(request: NextRequest) {
         return NextResponse.redirect(redirectUrl)
       }
 
-      // For admin routes, check user permissions
+      // Get user data from database for all protected routes
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('role, account_status, is_active')
+        .eq('id', user.id)
+        .single()
+
+      if (userError || !userData) {
+        const redirectUrl = new URL('/auth/login', request.url)
+        redirectUrl.searchParams.set('redirect', request.nextUrl.pathname)
+        return NextResponse.redirect(redirectUrl)
+      }
+
+      // Check account status for all protected routes
+      if (userData.account_status !== 'approved' || !userData.is_active) {
+        const redirectUrl = new URL('/auth/login', request.url)
+        redirectUrl.searchParams.set('message', 'account_not_approved')
+        return NextResponse.redirect(redirectUrl)
+      }
+
+      // Additional check for admin routes only
       if (request.nextUrl.pathname.startsWith('/admin')) {
-        const { data: userData, error: userError } = await supabase
-          .from('users')
-          .select('role, account_status, is_active')
-          .eq('id', user.id)
-          .single()
-
-        if (userError || !userData) {
-          const redirectUrl = new URL('/auth/login', request.url)
-          redirectUrl.searchParams.set('redirect', request.nextUrl.pathname)
-          return NextResponse.redirect(redirectUrl)
-        }
-
         // Check admin role
         if (userData.role !== 'admin') {
           return NextResponse.redirect(new URL('/', request.url))
-        }
-
-        // Check account status
-        if (userData.account_status !== 'approved' || !userData.is_active) {
-          const redirectUrl = new URL('/auth/login', request.url)
-          redirectUrl.searchParams.set('message', 'account_not_approved')
-          return NextResponse.redirect(redirectUrl)
-        }
-      } else {
-        // For other protected routes, just check if user exists in database
-        const { data: userExists } = await supabase
-          .from('users')
-          .select('id, account_status')
-          .eq('id', user.id)
-          .single()
-
-        if (!userExists || userExists.account_status !== 'approved') {
-          const redirectUrl = new URL('/auth/login', request.url)
-          redirectUrl.searchParams.set('message', 'account_not_approved')
-          return NextResponse.redirect(redirectUrl)
         }
       }
     } catch (error) {
