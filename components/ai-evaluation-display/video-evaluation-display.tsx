@@ -55,6 +55,17 @@ export default function EnhancedVideoEvaluationDisplay({
   const [expanded, setExpanded] = useState(showFullDetails)
   const [activeTab, setActiveTab] = useState("overview")
 
+  // Utility function to clean markdown formatting
+  const cleanMarkdown = (text: string) => {
+    if (!text) return text
+    return text
+      .replace(/\*\*(.*?)\*\*/g, '$1')  // Remove **bold** formatting
+      .replace(/\*(.*?)\*/g, '$1')      // Remove *italic* formatting
+      .replace(/_(.*?)_/g, '$1')        // Remove _italic_ formatting
+      .replace(/`(.*?)`/g, '$1')        // Remove `code` formatting
+      .trim()
+  }
+
   // Use AI's direct scores for the 6 key English criteria
   const speakingCriteria = [
     {
@@ -294,7 +305,7 @@ export default function EnhancedVideoEvaluationDisplay({
                         <div className="flex-shrink-0 w-3.5 h-3.5 sm:w-6 sm:h-6 bg-blue-100 dark:bg-blue-800 rounded-full flex items-center justify-center mt-0.5">
                           <span className="text-blue-600 dark:text-blue-400 text-xs sm:text-sm font-medium">{idx + 1}</span>
                         </div>
-                        <p className="text-xs sm:text-sm text-blue-800 dark:text-blue-200 leading-relaxed">{point}</p>
+                        <p className="text-xs sm:text-sm text-blue-800 dark:text-blue-200 leading-relaxed">{cleanMarkdown(point)}</p>
                       </div>
                     ))}
                   </div>
@@ -316,7 +327,7 @@ export default function EnhancedVideoEvaluationDisplay({
                     </div>
                   </div>
                   <p className="text-xs sm:text-sm text-blue-800 dark:text-blue-200 leading-relaxed">
-                    {evaluation.overallFeedback || 
+                    {cleanMarkdown(evaluation.overallFeedback) || 
                      `Your English communication shows ${getPerformanceLevel(overallScore).toLowerCase()} proficiency. You're making good progress in your English learning journey!`}
                   </p>
                 </div>
@@ -340,7 +351,7 @@ export default function EnhancedVideoEvaluationDisplay({
                         <div className="flex-shrink-0 w-3.5 h-3.5 sm:w-6 sm:h-6 bg-green-100 dark:bg-green-800 rounded-full flex items-center justify-center mt-0.5">
                           <span className="text-green-600 dark:text-green-400 text-xs sm:text-sm font-medium">{idx + 1}</span>
                         </div>
-                        <p className="text-xs sm:text-sm text-green-800 dark:text-green-200 leading-relaxed">{strength}</p>
+                        <p className="text-xs sm:text-sm text-green-800 dark:text-green-200 leading-relaxed">{cleanMarkdown(strength)}</p>
                       </div>
                     ))
                   ) : (
@@ -366,7 +377,7 @@ export default function EnhancedVideoEvaluationDisplay({
                         <div className="flex-shrink-0 w-3.5 h-3.5 sm:w-6 sm:h-6 bg-red-100 dark:bg-red-800 rounded-full flex items-center justify-center mt-0.5">
                           <span className="text-red-600 dark:text-red-400 text-xs sm:text-sm font-medium">{idx + 1}</span>
                         </div>
-                        <p className="text-xs sm:text-sm text-red-800 dark:text-red-200 leading-relaxed">{weakness}</p>
+                        <p className="text-xs sm:text-sm text-red-800 dark:text-red-200 leading-relaxed">{cleanMarkdown(weakness)}</p>
                       </div>
                     ))
                   ) : (
@@ -396,38 +407,8 @@ export default function EnhancedVideoEvaluationDisplay({
                         <div className="flex-shrink-0 w-3.5 h-3.5 sm:w-6 sm:h-6 bg-purple-100 dark:bg-purple-800 rounded-full flex items-center justify-center mt-0.5">
                           <span className="text-purple-600 dark:text-purple-400 text-xs sm:text-sm font-medium">{idx + 1}</span>
                         </div>
-                                                <p className="text-xs sm:text-sm text-purple-800 dark:text-purple-200 leading-relaxed">{step}</p>
+                                                <p className="text-xs sm:text-sm text-purple-800 dark:text-purple-200 leading-relaxed">{cleanMarkdown(step)}</p>
                       </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Speaking Criteria Improvements */}
-              {speakingCriteria.length > 0 && (
-                <div className="space-y-1.5 sm:space-y-3">
-                  <h4 className="font-medium text-gray-900 dark:text-gray-100 flex items-center gap-1 sm:gap-2 text-xs sm:text-base">
-                    <Target className="h-2.5 w-2.5 sm:h-4 sm:w-4 text-orange-600" />
-                    Your Priority Areas
-                  </h4>
-                  <div className="grid gap-1 sm:gap-3">
-                    {speakingCriteria
-                      .filter(criteria => criteria.score < 7) // Only show areas needing improvement
-                      .map((criteria, idx) => (
-                        <div key={idx} className="p-1 sm:p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg border-l-4 border-orange-400">
-                          <div className="flex items-center gap-1 sm:gap-3 mb-1 sm:mb-2">
-                            <div className={`p-0.5 sm:p-1.5 rounded-md ${criteria.color} text-white`}>
-                              {criteria.icon}
-                            </div>
-                            <span className="font-medium text-xs sm:text-sm text-orange-900 dark:text-orange-100">{criteria.title}</span>
-                            <Badge variant="outline" className="bg-orange-100 dark:bg-orange-800 text-orange-700 dark:text-orange-300 text-xs px-1 py-0.5 sm:px-2 sm:py-0.5 border-orange-300">
-                              {criteria.score}/100
-                            </Badge>
-                          </div>
-                          <p className="text-xs sm:text-sm text-orange-800 dark:text-orange-200 leading-relaxed">
-                            {criteria.improvement}
-                          </p>
-                        </div>
                     ))}
                   </div>
                 </div>

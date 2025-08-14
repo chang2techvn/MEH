@@ -3,6 +3,19 @@
  */
 
 /**
+ * Clean markdown formatting from text
+ */
+function cleanMarkdown(text: string): string {
+  if (!text) return text
+  return text
+    .replace(/\*\*(.*?)\*\*/g, '$1')  // Remove **bold** formatting
+    .replace(/\*(.*?)\*/g, '$1')      // Remove *italic* formatting
+    .replace(/_(.*?)_/g, '$1')        // Remove _italic_ formatting
+    .replace(/`(.*?)`/g, '$1')        // Remove `code` formatting
+    .trim()
+}
+
+/**
  * Extract numerical score from text - improved to handle various formats
  */
 export function extractScore(text: string, keyword: string): number | null {
@@ -47,13 +60,13 @@ export function extractFeedback(text: string): string {
   // Look for detailed feedback section first
   const detailedFeedbackMatch = text.match(/\*\*DETAILED FEEDBACK:\*\*([\s\S]*?)(?:\*\*|$)/i)
   if (detailedFeedbackMatch && detailedFeedbackMatch[1]) {
-    return detailedFeedbackMatch[1].trim()
+    return cleanMarkdown(detailedFeedbackMatch[1].trim())
   }
   
   // Look for video analysis section
   const videoAnalysisMatch = text.match(/\*\*VIDEO ANALYSIS:\*\*([\s\S]*?)(?:\*\*|$)/i)
   if (videoAnalysisMatch && videoAnalysisMatch[1]) {
-    return videoAnalysisMatch[1].trim()
+    return cleanMarkdown(videoAnalysisMatch[1].trim())
   }
   
   // Fallback: extract meaningful content lines
@@ -71,7 +84,7 @@ export function extractFeedback(text: string): string {
     .join(' ')
     .trim()
   
-  return lines || text.substring(0, 300)
+  return cleanMarkdown(lines) || cleanMarkdown(text.substring(0, 300))
 }
 
 /**
@@ -103,7 +116,7 @@ export function extractBulletPoints(text: string, keyword: string): string[] {
       if (trimmed.match(/^[-•*]\s+/) || trimmed.match(/^\d+\.\s+/)) {
         const cleanLine = trimmed.replace(/^[-•*\d+\.\s]*/, '').trim()
         if (cleanLine.length > 3) {
-          results.push(cleanLine)
+          results.push(cleanMarkdown(cleanLine))
         }
       }
     }
@@ -117,7 +130,7 @@ export function extractBulletPoints(text: string, keyword: string): string[] {
           new RegExp(keyword, 'i').test(trimmed)) {
         const cleanLine = trimmed.replace(/^[-•*\d+\.\s]*/, '').trim()
         if (cleanLine.length > 5) {
-          results.push(cleanLine)
+          results.push(cleanMarkdown(cleanLine))
         }
       }
     }
@@ -135,7 +148,7 @@ export function extractCategoryFeedback(text: string, category: string): string 
   const match = text.match(pattern)
   
   if (match && match[1]) {
-    return match[1].trim()
+    return cleanMarkdown(match[1].trim())
   }
   
   return extractFeedback(text) // Fallback to general feedback
