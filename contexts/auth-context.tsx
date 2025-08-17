@@ -13,6 +13,7 @@ export interface User {
   email: string
   name?: string
   avatar?: string
+  background_url?: string
   role?: string
   accountStatus?: 'pending' | 'approved' | 'rejected' | 'suspended'
   isActive?: boolean
@@ -75,7 +76,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const getUserData = async (supabaseUser: SupabaseUser) => {
     try {
       const [profileData, userRecord] = await Promise.all([
-        supabase.from('profiles').select('full_name, avatar_url, role').eq('user_id', supabaseUser.id).single(),
+        supabase.from('profiles').select('full_name, avatar_url, background_url, role').eq('user_id', supabaseUser.id).single(),
         supabase.from('users').select('role, account_status, is_active').eq('id', supabaseUser.id).single()
       ])
 
@@ -88,6 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           email: supabaseUser.email!,
           name: profile?.full_name || supabaseUser.email?.split('@')[0],
           avatar: profile?.avatar_url,
+          background_url: profile?.background_url,
           role: userInfo?.role || profile?.role || 'student',
           accountStatus: userInfo?.account_status || 'approved',
           isActive: userInfo?.is_active !== false
