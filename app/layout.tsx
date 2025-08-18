@@ -13,6 +13,7 @@ import { ChallengeProvider } from "@/contexts/challenge-context"
 import Script from "next/script"
 import ServiceWorkerRegistration from "@/components/service-worker-registration"
 import { ScrollToTopButton } from "@/components/ui/scroll-to-top-button"
+import ServiceInitializer from "@/components/service-initializer"
 
 
 // Tối ưu font loading - Inter font for modern UI
@@ -126,6 +127,7 @@ export default function RootLayout({
           <ThemeProvider>
             <ChallengeProvider>
               <ChatProvider>
+                <ServiceInitializer />
                 <div className="flex min-h-screen flex-col">
                   {children}
                   <ChatWindowsManager />

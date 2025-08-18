@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { motion } from "framer-motion"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { Assistant } from "./types"
 import { useAssistants } from "./hooks/use-assistants"
 import { useAssistantFilters } from "./hooks/use-assistant-filters"
@@ -14,6 +15,7 @@ import { AssistantFormDialog } from "./components/assistant-form-dialog"
 import { AssistantViewDialog } from "./components/assistant-view-dialog"
 import { AssistantDeleteDialog } from "./components/assistant-delete-dialog"
 import { CreateCharacterModal } from "./components/create-character-modal"
+import { HaniConfigManager } from "./components/hani-config-manager"
 
 export default function AIAssistantsPage() {
   const { assistants, isLoading, addAssistant, updateAssistant, deleteAssistant, toggleAssistantActive } =
@@ -102,35 +104,46 @@ export default function AIAssistantsPage() {
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
     >
-      <div className="flex flex-col space-y-6">
-        <AssistantHeader onAddClick={handleAddClick} />
+      <Tabs defaultValue="assistants" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="assistants">AI Assistants</TabsTrigger>
+          <TabsTrigger value="default-config">Default AI Config</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="assistants" className="space-y-6">
+          <AssistantHeader onAddClick={handleAddClick} />
 
-        <AssistantFiltersComponent 
-          filters={filters} 
-          onFiltersChange={updateFilters} 
-          onSort={handleSort}
-          assistants={assistants}
-        />
+          <AssistantFiltersComponent 
+            filters={filters} 
+            onFiltersChange={updateFilters} 
+            onSort={handleSort}
+            assistants={assistants}
+          />
 
-        <AssistantGrid
-          assistants={paginatedAssistants}
-          isLoading={isLoading}
-          onToggleActive={toggleAssistantActive}
-          onView={handleViewClick}
-          onEdit={handleEditClick}
-          onDelete={handleDeleteClick}
-          onAddClick={handleAddClick}
-          searchQuery={filters.searchQuery}
-        />
+          <AssistantGrid
+            assistants={paginatedAssistants}
+            isLoading={isLoading}
+            onToggleActive={toggleAssistantActive}
+            onView={handleViewClick}
+            onEdit={handleEditClick}
+            onDelete={handleDeleteClick}
+            onAddClick={handleAddClick}
+            searchQuery={filters.searchQuery}
+          />
 
-        <AssistantPagination
-          currentPage={filters.currentPage}
-          totalPages={totalPages}
-          itemsPerPage={filters.itemsPerPage}
-          onPageChange={(page) => updateFilters({ currentPage: page })}
-          onItemsPerPageChange={(itemsPerPage) => updateFilters({ itemsPerPage, currentPage: 1 })}
-        />
-      </div>
+          <AssistantPagination
+            currentPage={filters.currentPage}
+            totalPages={totalPages}
+            itemsPerPage={filters.itemsPerPage}
+            onPageChange={(page) => updateFilters({ currentPage: page })}
+            onItemsPerPageChange={(itemsPerPage) => updateFilters({ itemsPerPage, currentPage: 1 })}
+          />
+        </TabsContent>
+        
+        <TabsContent value="default-config" className="space-y-6">
+          <HaniConfigManager />
+        </TabsContent>
+      </Tabs>
 
       {/* Dialogs */}
       <CreateCharacterModal

@@ -5,6 +5,8 @@
  */
 
 import { generateUUID } from '@/lib/uuid-utils';
+import { systemConfigService } from './system-config'
+import type { DefaultAssistantConfig } from '@/types/system-config.types'
 
 export interface SingleChatMessage {
   id: string;
@@ -15,12 +17,71 @@ export interface SingleChatMessage {
 
 export class SingleChatService {
   private static instance: SingleChatService;
+  private defaultAssistantConfig: DefaultAssistantConfig | null = null;
+  private configCacheExpiry: number = 0;
+  private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
   
   public static getInstance(): SingleChatService {
     if (!SingleChatService.instance) {
       SingleChatService.instance = new SingleChatService();
+      // Initialize config when creating instance
+      SingleChatService.instance.initializeConfig().catch(console.error);
     }
     return SingleChatService.instance;
+  }
+
+  /**
+   * Get cached default assistant config or fetch from database
+   */
+  private async getDefaultAssistantConfig(): Promise<DefaultAssistantConfig> {
+    // Check cache first
+    if (this.defaultAssistantConfig && Date.now() < this.configCacheExpiry) {
+      return this.defaultAssistantConfig;
+    }
+
+    try {
+      // Fetch from database
+      const config = await systemConfigService.getDefaultAssistant();
+      
+      // Cache the result
+      this.defaultAssistantConfig = config;
+      this.configCacheExpiry = Date.now() + this.CACHE_DURATION;
+      
+      return config;
+    } catch (error) {
+      console.error('Error fetching default assistant config:', error);
+      
+      // Return fallback config
+      const fallbackConfig: DefaultAssistantConfig = {
+        id: 'hani-default',
+        name: 'Hani',
+        avatar: 'https://yvsjynosfwyhvisqhasp.supabase.co/storage/v1/object/public/posts/images/825ef58d-31bc-4ad9-9c99-ed7fb15cf8a1.jfif',
+        role: 'Assistant',
+        field: 'Assistant',
+        prompt: 'You are Hani, a friendly AI assistant specialized in English learning. You help students improve their English skills through conversation, grammar correction, vocabulary building, and providing helpful explanations. Always be encouraging, patient, and provide clear examples.',
+        model: 'gemini-2.5-flash'
+      };
+      
+      this.defaultAssistantConfig = fallbackConfig;
+      this.configCacheExpiry = Date.now() + this.CACHE_DURATION;
+      
+      return fallbackConfig;
+    }
+  }
+
+  /**
+   * Clear the config cache (useful when config is updated)
+   */
+  public clearConfigCache(): void {
+    this.defaultAssistantConfig = null;
+    this.configCacheExpiry = 0;
+  }
+
+  /**
+   * Initialize the assistant config (can be called publicly)
+   */
+  public async initializeConfig(): Promise<void> {
+    await this.getDefaultAssistantConfig();
   }
 
   /**
@@ -28,7 +89,11 @@ export class SingleChatService {
    */
   async sendMessage(message: string): Promise<{ content: string; highlights?: string[]; vocabulary?: any[] }> {
     try {
-      const systemPrompt = `You are Hani, an AI smartest learning assistant.
+      // Get dynamic assistant config
+      const assistantConfig = await this.getDefaultAssistantConfig();
+      
+      const systemPrompt = `${assistantConfig.prompt}
+
 IMPORTANT RESPONSE FORMAT:
 Your response must ALWAYS have exactly 2 parts:
 
@@ -83,7 +148,7 @@ When explaining English words or concepts:
 - Include 2-3 practical examples in a table or list format
 - Use simple, easy-to-understand language
 
-Remember: You are Hani, always respond with both Main Answer and English Learning Tips sections. The content never over 100 words.
+Remember: You are ${assistantConfig.name}, always respond with both Main Answer and English Learning Tips sections. The content never over 100 words.
 
 Make your response visually appealing, educational, and perfectly formatted with proper markdown syntax.`;
 
@@ -149,33 +214,105 @@ Make your response visually appealing, educational, and perfectly formatted with
   }
 
   /**
-   * Get the default avatar/logo for single chat mode
+   * Synchronous getters for immediate use (uses cached config)
    */
   getAssistantAvatar(): string {
-    return 'https://yvsjynosfwyhvisqhasp.supabase.co/storage/v1/object/public/posts/images/825ef58d-31bc-4ad9-9c99-ed7fb15cf8a1.jfif';
+    return this.defaultAssistantConfig?.avatar || 'https://yvsjynosfwyhvisqhasp.supabase.co/storage/v1/object/public/posts/images/825ef58d-31bc-4ad9-9c99-ed7fb15cf8a1.jfif';
   }
 
-  /**
-   * Get the assistant name for single chat mode
-   */
   getAssistantName(): string {
-    return 'Hani';
+    return this.defaultAssistantConfig?.name || 'Hani';
   }
 
-  /**
-   * Get the AI character object for single chat mode
-   */
   getAssistantCharacter() {
+    const config = this.defaultAssistantConfig;
+    if (config) {
+      return {
+        id: config.id,
+        name: config.name,
+        role: config.role,
+        field: config.field,
+        description: `Your personal English learning assistant ${config.name}`,
+        avatar: config.avatar,
+        online: true,
+        animation: ''
+      };
+    }
+
+    // Fallback
     return {
-      id: 'Hani-assistant-single',
+      id: 'hani-default',
       name: 'Hani',
-      role: 'English Tutor',
+      role: 'Assistant',
       field: 'Assistant',
       description: 'Your personal English learning assistant Hani',
       avatar: 'https://yvsjynosfwyhvisqhasp.supabase.co/storage/v1/object/public/posts/images/825ef58d-31bc-4ad9-9c99-ed7fb15cf8a1.jfif',
       online: true,
       animation: ''
     };
+  }
+
+  /**
+   * Async getters for when you need fresh data from database
+   */
+  async getAssistantAvatarAsync(): Promise<string> {
+    try {
+      const config = await this.getDefaultAssistantConfig();
+      return config.avatar;
+    } catch (error) {
+      console.error('Error getting assistant avatar:', error);
+      return 'https://yvsjynosfwyhvisqhasp.supabase.co/storage/v1/object/public/posts/images/825ef58d-31bc-4ad9-9c99-ed7fb15cf8a1.jfif';
+    }
+  }
+
+  async getAssistantNameAsync(): Promise<string> {
+    try {
+      const config = await this.getDefaultAssistantConfig();
+      return config.name;
+    } catch (error) {
+      console.error('Error getting assistant name:', error);
+      return 'Hani';
+    }
+  }
+
+  async getAssistantCharacterAsync() {
+    try {
+      const config = await this.getDefaultAssistantConfig();
+      return {
+        id: config.id,
+        name: config.name,
+        role: config.role,
+        field: config.field,
+        description: `Your personal English learning assistant ${config.name}`,
+        avatar: config.avatar,
+        online: true,
+        animation: ''
+      };
+    } catch (error) {
+      console.error('Error getting assistant character:', error);
+      return {
+        id: 'hani-default',
+        name: 'Hani',
+        role: 'Assistant',
+        field: 'Assistant',
+        description: 'Your personal English learning assistant Hani',
+        avatar: 'https://yvsjynosfwyhvisqhasp.supabase.co/storage/v1/object/public/posts/images/825ef58d-31bc-4ad9-9c99-ed7fb15cf8a1.jfif',
+        online: true,
+        animation: ''
+      };
+    }
+  }
+
+  /**
+   * Initialize the service by loading config from database
+   */
+  async initialize(): Promise<void> {
+    try {
+      await this.getDefaultAssistantConfig();
+      console.log('Single chat service initialized with config from database');
+    } catch (error) {
+      console.error('Error initializing single chat service:', error);
+    }
   }
 
   /**

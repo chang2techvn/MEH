@@ -7,12 +7,15 @@ import { AIChatBox } from "@/components/ai-helper/ai-chat-box"
 import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
+import { singleChatService } from "@/lib/single-chat-service"
 
 export function AIChatButton() {
   const [isOpen, setIsOpen] = useState(false)
   const [isMinimized, setIsMinimized] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [assistantAvatar, setAssistantAvatar] = useState<string>("")
+  const [assistantName, setAssistantName] = useState<string>("Assistant")
   const buttonRef = useRef<HTMLButtonElement>(null)
   const [buttonPosition, setButtonPosition] = useState({ x: 0, y: 0 })
   const pathname = usePathname()
@@ -23,8 +26,9 @@ export function AIChatButton() {
   const [isTyping, setIsTyping] = useState(false)
   const [currentMessageIndex, setCurrentMessageIndex] = useState(0)
   
+  // Dynamic messages - will be updated when assistant name is loaded
   const messages = [
-    "Hi there! I'm Hani",
+    `Hi there! I'm ${assistantName}`,
     "✏️ Use new words in a sentence — 💡 helps you remember them!",
     "📺 Watch cartoons in English — 💡 makes learning fun!",
     "🏷️ Label things in your room — 💡 builds daily vocab!",
@@ -67,6 +71,28 @@ export function AIChatButton() {
     setMounted(true)
     window.addEventListener("resize", checkMobile)
     return () => window.removeEventListener("resize", checkMobile)
+  }, [])
+
+  // Load assistant configuration
+  useEffect(() => {
+    const loadAssistantData = async () => {
+      try {
+        // Initialize the service if needed
+        await singleChatService.initializeConfig()
+        
+        // Get dynamic avatar and name
+        const avatar = singleChatService.getAssistantAvatar()
+        const name = singleChatService.getAssistantName()
+        
+        setAssistantAvatar(avatar)
+        setAssistantName(name)
+      } catch (error) {
+        console.error('Error loading assistant data:', error)
+        // Keep default values if loading fails
+      }
+    }
+
+    loadAssistantData()
   }, [])
 
   // Show first message immediately, then schedule random messages
@@ -215,8 +241,8 @@ export function AIChatButton() {
         className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 h-12 w-12 sm:h-14 sm:w-14 rounded-full shadow-lg border-0 z-40 transition-transform overflow-hidden p-0"
       >
         <Image
-          src="https://yvsjynosfwyhvisqhasp.supabase.co/storage/v1/object/public/posts/images/825ef58d-31bc-4ad9-9c99-ed7fb15cf8a1.jfif"
-          alt="AI Assistant"
+          src={assistantAvatar || "https://yvsjynosfwyhvisqhasp.supabase.co/storage/v1/object/public/posts/images/825ef58d-31bc-4ad9-9c99-ed7fb15cf8a1.jfif"}
+          alt={`${assistantName} AI Assistant`}
           width={120}
           height={120}
           className="h-full w-full rounded-full object-cover"

@@ -12,6 +12,7 @@ import { useChatSessions } from '@/hooks/use-chat-sessions';
 import { useAuth } from '@/contexts/auth-context';
 import { useSingleChat } from '@/hooks/use-single-chat';
 import { useChatHandlers } from '@/hooks/use-chat-handlers';
+import { singleChatService } from '@/lib/single-chat-service';
 
 // Type definition for reply mode
 interface ReplyMode {
@@ -178,7 +179,8 @@ export const useResourcesPage = () => {
       return currentChat.title;
     }
     if (selectedAIs.length === 0) {
-      return "Hani Assistant - Single Chat";
+      const assistantName = singleChatService.getAssistantName();
+      return `${assistantName} Assistant - Single Chat`;
     }
     return `Conversation with ${selectedAIs.length} people`;
   };
@@ -190,7 +192,8 @@ export const useResourcesPage = () => {
       return participantNames.join(', ');
     }
     if (selectedAIs.length === 0) {
-      return "Don't choose anybody, enter something to start a single chat with Hani";
+      const assistantName = singleChatService.getAssistantName();
+      return `Don't choose anybody, enter something to start a single chat with ${assistantName}`;
     }
     return selectedAIs.map(aiId => getAIById(aiId)?.name).join(', ');
   };

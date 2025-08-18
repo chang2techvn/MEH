@@ -29,6 +29,7 @@ import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import { Badge } from "@/components/ui/badge"
 import { OptimizedMessageAvatar } from "@/components/optimized/optimized-message-avatar"
+import { singleChatService } from "@/lib/single-chat-service"
 
 interface AIChatBoxProps {
   onClose: () => void
@@ -38,15 +39,8 @@ interface AIChatBoxProps {
 }
 
 export function AIChatBox({ onClose, onMinimize, buttonPosition, initialPosition }: AIChatBoxProps) {
-  // Default AI for chat helper
-  const helperAI = {
-    id: 'helper',
-    name: 'Hani',
-    role: 'Assistant',
-    field: 'Assistant',
-    avatar: 'https://yvsjynosfwyhvisqhasp.supabase.co/storage/v1/object/public/posts/images/825ef58d-31bc-4ad9-9c99-ed7fb15cf8a1.jfif',
-    online: true
-  }
+  // Get dynamic AI config from service
+  const helperAI = singleChatService.getAssistantCharacter()
 
   // Calculate position based on button position
   const calculateInitialPosition = () => {
@@ -433,7 +427,7 @@ export function AIChatBox({ onClose, onMinimize, buttonPosition, initialPosition
             <Sparkles className="h-5 w-5 text-yellow-300 absolute top-0 left-0 opacity-70" />
             <Bot className="h-5 w-5 text-white relative z-10" />
           </motion.div>
-          <h3 className="font-medium">Hani Assistant</h3>
+          <h3 className="font-medium">{helperAI.name} Assistant</h3>
         </div>
         <div className="flex items-center gap-1">
           <Button
@@ -499,8 +493,8 @@ export function AIChatBox({ onClose, onMinimize, buttonPosition, initialPosition
                   >
                     <div className="relative w-16 h-16 rounded-full overflow-hidden">
                       <Image
-                        src="https://yvsjynosfwyhvisqhasp.supabase.co/storage/v1/object/public/posts/images/825ef58d-31bc-4ad9-9c99-ed7fb15cf8a1.jfif"
-                        alt="AI Assistant"
+                        src={helperAI.avatar}
+                        alt={`${helperAI.name} Assistant`}
                         width={64}
                         height={64}
                         className="w-full h-full object-cover"
@@ -516,7 +510,7 @@ export function AIChatBox({ onClose, onMinimize, buttonPosition, initialPosition
                       </motion.div>
                     </div>
                   </motion.div>
-                  <h3 className="text-lg font-medium mb-2">Welcome to Hani Assistant</h3>
+                  <h3 className="text-lg font-medium mb-2">Welcome to {helperAI.name} Assistant</h3>
                   <p className="text-muted-foreground mb-4">
                     I'm your AI language assistant powered by Gemini. How can I help with your English learning today?
                   </p>

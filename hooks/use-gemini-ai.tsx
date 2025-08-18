@@ -6,7 +6,9 @@ import { useState, useCallback, useEffect } from "react"
 
 type MessageType = "text" | "thinking" | "error"
 
-export type Message = {
+import { singleChatService } from '@/lib/single-chat-service';
+
+export interface Message {
   id: string
   role: "user" | "assistant"
   content: string
@@ -59,8 +61,9 @@ export function useGeminiAI() {
       setIsTyping(true)
 
       try {
-        // Get system prompt based on conversation history
-        const systemPrompt = `You are Hani learning assistant. Help the user with their English learning needs.
+        // Get dynamic assistant name 
+        const assistantName = singleChatService.getAssistantName();
+        const systemPrompt = `You are ${assistantName} learning assistant. Help the user with their English learning needs.
         Be concise, helpful, and provide examples when appropriate. Format your responses with markdown for better readability.
         Current conversation history: ${JSON.stringify(messages.map((m) => ({ role: m.role, content: m.content })))}`
 

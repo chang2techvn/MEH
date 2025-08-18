@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { AICharacter } from '@/types/ai-hub.types';
 import { useMobile } from '@/hooks/use-mobile';
+import { singleChatService } from '@/lib/single-chat-service';
 
 interface WelcomeScreenProps {
   selectedAIs: string[];
@@ -36,6 +37,28 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
   // Get featured AI characters (first 6 for display)
   const featuredAIs = aiCharacters.slice(0, 6);
   const isMobile = useMobile();
+  
+  // Dynamic assistant data
+  const [assistantAvatar, setAssistantAvatar] = useState<string>("")
+  const [assistantName, setAssistantName] = useState<string>("AI Assistant")
+  
+  // Load assistant configuration
+  useEffect(() => {
+    const loadAssistantData = async () => {
+      try {
+        await singleChatService.initializeConfig()
+        const avatar = singleChatService.getAssistantAvatar()
+        const name = singleChatService.getAssistantName()
+        
+        setAssistantAvatar(avatar)
+        setAssistantName(name)
+      } catch (error) {
+        console.error('Error loading assistant data:', error)
+      }
+    }
+
+    loadAssistantData()
+  }, [])
   
   // Optimize animations for mobile performance
   const getOptimizedAnimationProps = () => {
@@ -107,8 +130,8 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
             >
               <div className="relative w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-full overflow-hidden">
                 <Image
-                  src="https://yvsjynosfwyhvisqhasp.supabase.co/storage/v1/object/public/posts/images/825ef58d-31bc-4ad9-9c99-ed7fb15cf8a1.jfif"
-                  alt="AI Hub Avatar"
+                  src={assistantAvatar || "https://yvsjynosfwyhvisqhasp.supabase.co/storage/v1/object/public/posts/images/825ef58d-31bc-4ad9-9c99-ed7fb15cf8a1.jfif"}
+                  alt={`${assistantName} AI Avatar`}
                   width={80}
                   height={80}
                   className="w-full h-full object-cover"
@@ -146,7 +169,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
               transition={{ delay: 0.3 }}
               className={`text-xs sm:text-sm md:text-base lg:text-lg ${darkMode ? 'text-gray-300' : 'text-gray-600'} max-w-2xl mx-auto leading-relaxed px-1 sm:px-2`}
             >
-              Chat with Hani from gemini or chat with AI celebrities and famous personalities. You can chat now or select characters below to start your conversation.
+              Chat with {assistantName} from gemini or chat with AI celebrities and famous personalities. You can chat now or select characters below to start your conversation.
             </motion.p>
           </div>
 

@@ -36,11 +36,7 @@ export const MobileChatInput: React.FC<MobileChatInputProps> = ({
 
   // Debug keyboard state - only log on changes
   useEffect(() => {
-    if (keyboard.isVisible) {
-      console.log('🎹 Keyboard opened - Input position:', getBottomPosition());
-    } else {
-      console.log('🎹 Keyboard closed - Input position:', getBottomPosition());
-    }
+
   }, [keyboard.isVisible]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {

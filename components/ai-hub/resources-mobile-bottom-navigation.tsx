@@ -82,11 +82,6 @@ export function ResourcesMobileBottomNavigation({
 
   // Debug keyboard state - only log on changes
   useEffect(() => {
-    if (isKeyboardOpen) {
-      console.log('📱 Keyboard opened - Hiding bottom navigation');
-    } else if (isVisible) {
-      console.log('📱 Keyboard closed - Showing bottom navigation');
-    }
   }, [isKeyboardOpen, isVisible]);
   
   const handleMessageClick = () => {
@@ -112,14 +107,11 @@ export function ResourcesMobileBottomNavigation({
   
   const handleSaveGoal = async (newGoalData: any) => {
     try {
-      console.log('Starting to create goal with data:', newGoalData)
       const result = await createGoal(newGoalData)
       if (result) {
-        console.log('Goal created successfully:', result)
         setGoalCreateModalOpen(false)
         // Force refresh goals list to ensure UI updates
         await refetchGoals()
-        console.log('Goals list refreshed after creation')
       } else {
         console.error('Failed to create goal - no result returned')
       }

@@ -85,11 +85,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   };
 
   const availableFields = getAvailableFields();
-  
-  // Debug: log available fields and filtering
-  console.log('🎯 Available fields:', availableFields);
-  console.log('🎯 Active filter:', activeFilter);
-  console.log('🎯 AI characters count:', aiCharacters.length);
+
 
   // Create field mapping for filtering
   const fieldMapping: { [key: string]: string } = {
@@ -121,9 +117,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const getAIById = (id: string) => {
     return aiCharacters.find(ai => ai.id === id);
   };
-
-  // Debug: log filtered AIs
-  console.log('🎯 Filtered AIs:', filteredAIs.length, 'for filter:', activeFilter);
 
   return (
     <div className="relative h-full">

@@ -96,7 +96,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
                     </div>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>{singleChatService.getAssistantName()} - Hani Assistant</p>
+                    <p>{singleChatService.getAssistantName()}</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
