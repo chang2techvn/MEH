@@ -81,7 +81,9 @@ export class SingleChatService {
    * Initialize the assistant config (can be called publicly)
    */
   public async initializeConfig(): Promise<void> {
+    console.log('⚙️ SingleChatService: Initializing config...')
     await this.getDefaultAssistantConfig();
+    console.log('⚙️ SingleChatService: Config initialized:', this.defaultAssistantConfig)
   }
 
   /**
@@ -170,11 +172,7 @@ Make your response visually appealing, educational, and perfectly formatted with
       const data = await response.json();
       let content = data.response || "I'm sorry, I couldn't generate a response. Please try again.";
       
-      // Debug log to check if content is being truncated
-      console.log('🔍 Single chat API response length:', content.length);
-      console.log('🔍 Single chat API response preview:', content.substring(0, 200) + '...');
-      console.log('🔍 Single chat API response ending:', content.substring(content.length - 100));
-      
+
       // Return raw markdown content for ReactMarkdown to process
       
       // Extract highlights (words wrapped in ** for bold)
@@ -217,7 +215,11 @@ Make your response visually appealing, educational, and perfectly formatted with
    * Synchronous getters for immediate use (uses cached config)
    */
   getAssistantAvatar(): string {
-    return this.defaultAssistantConfig?.avatar || 'https://yvsjynosfwyhvisqhasp.supabase.co/storage/v1/object/public/posts/images/825ef58d-31bc-4ad9-9c99-ed7fb15cf8a1.jfif';
+    const avatar = this.defaultAssistantConfig?.avatar || 'https://yvsjynosfwyhvisqhasp.supabase.co/storage/v1/object/public/posts/images/825ef58d-31bc-4ad9-9c99-ed7fb15cf8a1.jfif';
+    console.log('🖼️ SingleChatService: getAssistantAvatar() called')
+    console.log('🖼️ SingleChatService: defaultAssistantConfig:', this.defaultAssistantConfig)
+    console.log('🖼️ SingleChatService: returning avatar:', avatar)
+    return avatar;
   }
 
   getAssistantName(): string {

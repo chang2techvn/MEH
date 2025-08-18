@@ -76,10 +76,14 @@ class SystemConfigService {
    * Get default assistant configuration
    */
   async getDefaultAssistant(): Promise<DefaultAssistantConfig> {
+    console.log('🔍 SystemConfigService: Getting default assistant config...')
     const config = await this.getConfig<DefaultAssistantConfig>('default_assistant')
+    
+    console.log('📄 SystemConfigService: Config from database:', config)
     
     // Fallback to hardcoded values if config not found
     if (!config) {
+      console.log('⚠️ SystemConfigService: No config found, using fallback')
       return {
         id: 'hani-default',
         name: 'Hani',
@@ -91,6 +95,7 @@ class SystemConfigService {
       }
     }
 
+    console.log('✅ SystemConfigService: Using database config')
     return config
   }
 
@@ -101,18 +106,7 @@ class SystemConfigService {
     return this.updateConfig('default_assistant', config)
   }
 
-  /**
-   * Clear cache for a specific key or all keys
-   */
-  clearCache(key?: SystemConfigKey): void {
-    if (key) {
-      this.cache.delete(key)
-      this.cacheExpiry.delete(key)
-    } else {
-      this.cache.clear()
-      this.cacheExpiry.clear()
-    }
-  }
+
 
   /**
    * Get value from cache if not expired
@@ -133,6 +127,24 @@ class SystemConfigService {
   private setCache(key: string, value: any): void {
     this.cache.set(key, value)
     this.cacheExpiry.set(key, Date.now() + this.CACHE_DURATION)
+  }
+
+  /**
+   * Clear all cache (useful for debugging)
+   */
+  clearCache(): void {
+    console.log('🗑️ SystemConfigService: Clearing cache...')
+    this.cache.clear()
+    this.cacheExpiry.clear()
+  }
+
+  /**
+   * Clear specific cache key
+   */
+  clearCacheKey(key: string): void {
+    console.log(`🗑️ SystemConfigService: Clearing cache for key: ${key}`)
+    this.cache.delete(key)
+    this.cacheExpiry.delete(key)
   }
 }
 

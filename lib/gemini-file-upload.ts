@@ -110,7 +110,8 @@ export async function uploadVideoToGemini(
       // Convert Buffer to File-like object if needed
       let fileData: File
       if (videoFile instanceof Buffer) {
-        const blob = new Blob([videoFile], { type: mimeType })
+        const uint8Array = new Uint8Array(videoFile)
+        const blob = new Blob([uint8Array], { type: mimeType })
         fileData = new File([blob], displayName, { type: mimeType })
       } else {
         fileData = new File([videoFile as Blob], displayName, { type: mimeType })
@@ -256,7 +257,8 @@ export async function uploadVideoToGeminiWithKey(
   // Convert Buffer to File-like object if needed
   let fileData: File
   if (videoFile instanceof Buffer) {
-    const blob = new Blob([videoFile], { type: mimeType })
+    const uint8Array = new Uint8Array(videoFile)
+    const blob = new Blob([uint8Array], { type: mimeType })
     fileData = new File([blob], displayName, { type: mimeType })
   } else {
     fileData = new File([videoFile as Blob], displayName, { type: mimeType })
