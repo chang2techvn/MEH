@@ -117,10 +117,8 @@ export const GoalModal: React.FC<GoalModalProps> = ({ isOpen, onClose, darkMode,
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    console.log('Form submitted with data:', formData);
     
     if (!validateForm()) {
-      console.log('Validation failed with errors:', errors);
       return;
     }
 
@@ -136,9 +134,7 @@ export const GoalModal: React.FC<GoalModalProps> = ({ isOpen, onClose, darkMode,
         priority: formData.priority
       };
 
-      console.log('Creating goal:', newGoal);
       await onSave?.(newGoal);
-      console.log('Goal created successfully');
       onClose();
     } catch (error) {
       console.error('Error creating goal:', error);

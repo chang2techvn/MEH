@@ -425,9 +425,6 @@ async function updateCommentLikesCount(commentId: string) {
       .eq('id', commentId)
     
     if (updateError) throw updateError
-    
-    // Only log significant changes if needed
-    // console.log(`✅ Updated comment likes_count to ${count}`)
   } catch (error) {
     console.error('❌ Error updating comment likes count:', error)
   }
@@ -488,8 +485,6 @@ async function updatePostLikesCount(postId: string) {
     
     if (updateError) throw updateError
     
-    // Only log when necessary for debugging
-    // console.log(`✅ Updated post likes_count to ${count}`)
   } catch (error) {
     console.error('❌ Error updating post likes count:', error)
   }
@@ -510,9 +505,7 @@ async function updatePostCommentsCount(postId: string) {
       .eq('id', postId)
     
     if (updateError) throw updateError
-    
-    // Only log when necessary for debugging
-    // console.log(`✅ Updated post comments_count to ${count}`)
+
   } catch (error) {
     console.error('❌ Error updating post comments count:', error)
   }

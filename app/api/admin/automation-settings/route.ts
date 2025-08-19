@@ -70,19 +70,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // For now, just return success since we don't have automation table in types
-    // In a real implementation, this would save to daily_video_settings table
-    console.log('Automation settings would be saved:', {
-      auto_fetch_enabled,
-      schedule_time,
-      timezone,
-      min_watch_time,
-      max_watch_time,
-      preferred_topics,
-      topic_rotation_days,
-      require_transcript
-    })
-
     return NextResponse.json({
       success: true,
       message: 'Automation settings updated successfully'

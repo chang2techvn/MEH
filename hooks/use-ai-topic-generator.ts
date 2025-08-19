@@ -274,7 +274,6 @@ export function useAITopicGenerator() {
 
 // Fallback parser for when AI response is not proper JSON
 function parseAIResponseFallback(response: string): AITopicSuggestion {
-  console.log('Attempting fallback parsing for response:', response.substring(0, 500) + '...')
   
   const topics: AIGeneratedTopic[] = []
   

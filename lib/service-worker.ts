@@ -20,7 +20,6 @@ function registerValidSW(swUrl: string, config?: SWConfig) {
   navigator.serviceWorker
     .register(swUrl)
     .then((registration) => {
-      console.log('SW registered: ', registration);
       
       registration.onupdatefound = () => {
         const installingWorker = registration.installing;
@@ -30,25 +29,13 @@ function registerValidSW(swUrl: string, config?: SWConfig) {
         installingWorker.onstatechange = () => {
           if (installingWorker.state === 'installed') {
             if (navigator.serviceWorker.controller) {
-              // At this point, the updated precached content has been fetched,
-              // but the previous service worker will still serve the older
-              // content until all client tabs are closed.
-              console.log(
-                'New content is available and will be used when all ' +
-                'tabs for this page are closed.'
-              );
               
               // Execute callback
               if (config && config.onUpdate) {
                 config.onUpdate(registration);
               }
             } else {
-              // At this point, everything has been precached.
-              // It's the perfect time to display a
-              // "Content is cached for offline use." message.
-              console.log('Content is cached for offline use.');
-              
-              // Execute callback
+
               if (config && config.onSuccess) {
                 config.onSuccess(registration);
               }
@@ -88,9 +75,7 @@ function checkValidServiceWorker(swUrl: string, config?: SWConfig) {
         registerValidSW(swUrl, config);
       }
     })
-    .catch(() => {
-      console.log('No internet connection found. App is running in offline mode.');
-    });
+
 }
 
 export function registerSW(config?: SWConfig) {
@@ -117,10 +102,7 @@ export function registerSW(config?: SWConfig) {
         // Add some additional logging to localhost, pointing developers to the
         // service worker/PWA documentation.
         navigator.serviceWorker.ready.then(() => {
-          console.log(
-            'This web app is being served cache-first by a service ' +
-            'worker. To learn more, visit https://bit.ly/CRA-PWA'
-          );
+
         });
       } else {
         // Is not localhost. Just register service worker
@@ -159,12 +141,8 @@ export function usePWAInstall() {
 
   const showInstallPrompt = async () => {
     if (deferredPrompt) {
-      // Show the prompt
       deferredPrompt.prompt();
-      // Wait for the user to respond to the prompt
       const { outcome } = await deferredPrompt.userChoice;
-      console.log(`User response to the install prompt: ${outcome}`);
-      // We no longer need the prompt. Clear it up.
       deferredPrompt = null;
     }
   };

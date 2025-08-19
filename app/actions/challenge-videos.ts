@@ -81,7 +81,6 @@ export const fetchPracticeChallenges = async (): Promise<Challenge[]> => {
       updated_at: challenge.updated_at
     }))
     
-    console.log('Practice challenges loaded:', challenges)
     return challenges
   } catch (error) {
     console.error('Error fetching practice challenges:', error)

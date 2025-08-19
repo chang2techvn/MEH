@@ -341,7 +341,6 @@ export default function FeedPost({
                 showReactions={state?.showReactions || false}
                 username={username}
                 onLike={() => {
-                  console.log('❤️ Like button clicked from FeedPost, handleLike:', typeof handleLike)
                   if (handleLike) {
                     handleLike()
                   } else {
@@ -349,11 +348,9 @@ export default function FeedPost({
                   }
                 }}
                 onComment={() => {
-                  console.log('📝 Comment button clicked from FeedPost')
                   updateState?.({ showComments: !(state?.showComments) })
                 }}
                 onShare={() => {
-                  console.log('📤 Share button clicked from FeedPost, handleShare:', typeof handleShare)
                   if (handleShare) {
                     handleShare()
                   } else {
@@ -361,11 +358,9 @@ export default function FeedPost({
                   }
                 }}
                 onSavedChange={(saved) => {
-                  console.log('💾 Save button clicked:', saved)
                   updateState?.({ saved })
                 }}
                 onReaction={(reaction) => {
-                  console.log('😊 Reaction clicked:', reaction, 'handleReaction:', typeof handleReaction)
                   if (handleReaction) {
                     handleReaction(reaction)
                   } else {

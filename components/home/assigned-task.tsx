@@ -36,16 +36,13 @@ export default function AssignedTask({
 
   // Helper function to extract YouTube video ID from URL
   const extractVideoId = (url: string): string | null => {
-    console.log("🎥 [AssignedTask] Original videoUrl:", url)
     
     if (!url) {
-      console.log("❌ [AssignedTask] No URL provided")
       return null
     }
     
     // If it's already just a video ID, return it
     if (url.length === 11 && !/[\/\?\&]/.test(url)) {
-      console.log("✅ [AssignedTask] Already a video ID:", url)
       return url
     }
     
@@ -53,13 +50,11 @@ export default function AssignedTask({
     const match = url.match(regex)
     const videoId = match ? match[1] : null
     
-    console.log("🔍 [AssignedTask] Extracted videoId:", videoId)
     return videoId
   }
 
   // Handle submission completion
   const handleSubmissionComplete = (submissionId: string) => {
-    console.log("Submission completed:", submissionId)
     setSubmissionComplete(true)
   }
 

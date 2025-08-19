@@ -94,7 +94,6 @@ export default function CommunityPage() {
   // Trigger load more when infinite scroll element comes into view (backup method)
   useEffect(() => {
     if (inView && communityData.hasMorePosts && !communityData.loadingMore && communityData.backgroundLoadCompleted) {
-      console.log("🔄 Backup infinite scroll triggered")
       communityData.loadMorePosts(false) // User-triggered load
     }
   }, [inView, communityData.hasMorePosts, communityData.loadingMore, communityData.backgroundLoadCompleted, communityData.loadMorePosts])

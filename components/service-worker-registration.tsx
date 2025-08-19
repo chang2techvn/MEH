@@ -14,11 +14,8 @@ export default function ServiceWorkerRegistration() {
     ) {
       registerSW({
         onSuccess: (registration) => {
-          console.log('SW registered successfully:', registration)
         },
         onUpdate: (registration) => {
-          console.log('SW updated:', registration)
-          // You could show a "New version available" toast here
         },
         onError: (error) => {
           console.error('SW registration failed:', error)

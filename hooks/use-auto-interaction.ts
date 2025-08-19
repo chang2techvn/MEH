@@ -59,13 +59,7 @@ export function useAutoInteraction(
       setIsOnResourcesRoute(isResources);
       
       if (!isResources && state.isActive) {
-        // Disable auto-interaction when leaving resources route
-        console.log('🚫 Auto-interaction disabled - Left resources route');
-        setState(prev => ({ 
-          ...prev, 
-          isActive: false,
-          pendingTimeoutId: prev.pendingTimeoutId ? (clearTimeout(prev.pendingTimeoutId), null) : null
-        }));
+
       }
     };
 
@@ -86,20 +80,14 @@ export function useAutoInteraction(
 
   // Schedule next auto-interaction
   const scheduleAutoInteraction = useCallback(() => {
-    console.log('📍 scheduleAutoInteraction called with state:', {
-      isActive: stateRef.current.isActive,
-      isOnResourcesRoute,
-      sessionId: !!sessionId
-    });
+
 
     if (!stateRef.current.isActive || !isOnResourcesRoute || !sessionId) {
-      console.log('❌ scheduleAutoInteraction aborted - conditions not met');
       return;
     }
 
     // Clear any existing timeout
     if (stateRef.current.pendingTimeoutId) {
-      console.log('🗑️ Clearing existing timeout');
       clearTimeout(stateRef.current.pendingTimeoutId);
     }
 
@@ -107,21 +95,17 @@ export function useAutoInteraction(
     const randomDelay = generateRandomDelay();
     const totalDelay = baseDelay + randomDelay;
 
-    console.log(`⏰ Scheduling auto-interaction in ${(totalDelay / 1000).toFixed(1)} seconds (base: ${stateRef.current.currentTimeoutSeconds}s + random: ${(randomDelay/1000).toFixed(1)}s)`);
 
     const timeoutId = setTimeout(async () => {
-      console.log('🔔 Auto-interaction timeout triggered!');
       
       // Double-check conditions before executing, including user activity
       if (!stateRef.current.isActive || !isOnResourcesRoute || !sessionId || isUserActive) {
-        console.log('❌ Auto-interaction cancelled - conditions not met or user is active');
         return;
       }
 
       try {
         // Randomly choose interaction type
         const interactionType = Math.random() < 0.6 ? 'ai_to_ai' : 'ai_to_user';
-        console.log(`🤖 Triggering auto-interaction: ${interactionType}`);
 
         await onAutoInteraction(interactionType);
 
@@ -132,7 +116,6 @@ export function useAutoInteraction(
         }));
 
         // Schedule next interaction after a small delay to avoid conflicts
-        console.log('🔄 Scheduling next auto-interaction...');
         setTimeout(scheduleAutoInteraction, 1000);
 
       } catch (error) {
@@ -144,24 +127,15 @@ export function useAutoInteraction(
       }
     }, totalDelay);
 
-    console.log(`✅ Timeout scheduled with ID: ${timeoutId}`);
     setState(prev => ({ ...prev, pendingTimeoutId: timeoutId }));
   }, [sessionId, isOnResourcesRoute, generateRandomDelay, onAutoInteraction]);
 
   // Record user activity and reset timeout if needed
   const recordUserActivity = useCallback(() => {
-    console.log('👤 User activity recorded');
     const now = new Date();
     
     setState(prev => {
       const shouldResetTimeout = prev.currentTimeoutSeconds > fullConfig.baseTimeoutSeconds;
-      
-      console.log('📊 recordUserActivity state update:', {
-        shouldResetTimeout,
-        currentTimeout: prev.currentTimeoutSeconds,
-        baseTimeout: fullConfig.baseTimeoutSeconds,
-        userHasStartedChat: true
-      });
       
       return {
         ...prev,
@@ -173,12 +147,10 @@ export function useAutoInteraction(
 
     // Reschedule next auto-interaction
     if (state.isActive) {
-      console.log('🔄 Rescheduling auto-interaction due to user activity');
       setTimeout(() => scheduleAutoInteraction(), 100);
     }
 
     if (state.currentTimeoutSeconds > fullConfig.baseTimeoutSeconds) {
-      console.log(`🔄 User responded! Timeout reset to ${fullConfig.baseTimeoutSeconds} seconds`);
     }
   }, [fullConfig.baseTimeoutSeconds, state.isActive, state.currentTimeoutSeconds, scheduleAutoInteraction]);
 
@@ -189,9 +161,7 @@ export function useAutoInteraction(
         prev.currentTimeoutSeconds + fullConfig.timeoutIncrementSeconds,
         fullConfig.maxTimeoutSeconds
       );
-      
-      console.log(`⏰ No user response - Increasing timeout to ${newTimeout} seconds`);
-      
+            
       return {
         ...prev,
         currentTimeoutSeconds: newTimeout
@@ -202,21 +172,14 @@ export function useAutoInteraction(
   // Start auto-interaction system
   const startAutoInteraction = useCallback(() => {
     if (!sessionId || !selectedAIIds.length || !isOnResourcesRoute) {
-      console.log('❌ Cannot start auto-interaction: Missing requirements', {
-        sessionId: !!sessionId,
-        selectedAIIds: selectedAIIds.length,
-        isOnResourcesRoute
-      });
+
       return;
     }
 
     if (!state.userHasStartedChat) {
-      console.log('❌ Cannot start auto-interaction: User hasn\'t started chatting');
       return;
     }
-
-    console.log('✅ Starting auto-interaction system');
-    
+ 
     setState(prev => ({
       ...prev,
       isEnabled: true,
@@ -232,7 +195,6 @@ export function useAutoInteraction(
 
   // Stop auto-interaction system
   const stopAutoInteraction = useCallback(() => {
-    console.log('🛑 Stopping auto-interaction system');
     
     setState(prev => {
       if (prev.pendingTimeoutId) {
@@ -258,7 +220,6 @@ export function useAutoInteraction(
 
   // Reset auto-interaction state
   const resetAutoInteraction = useCallback(() => {
-    console.log('🔄 Resetting auto-interaction state');
     
     setState(prev => {
       if (prev.pendingTimeoutId) {

@@ -222,15 +222,12 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
   const handleVideoFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
-      console.log('🎥 Daily Challenge: Video file selected:', file.name, file.size, 'bytes')
       
       // Delete old video from storage if exists
       if (videoFilePath) {
-        console.log('🗑️ Daily Challenge: Deleting old video:', videoFilePath)
         try {
           const deleteSuccess = await deleteVideoFromStorage(videoFilePath)
           if (deleteSuccess) {
-            console.log('✅ Daily Challenge: Old video deleted successfully')
           } else {
             console.warn('⚠️ Daily Challenge: Failed to delete old video, continuing with upload')
           }
@@ -254,7 +251,6 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
       setIsUploadingVideo(true)
       setUploadProgress(0)
       setError(null)
-      console.log('🚀 Daily Challenge: Starting video upload to storage...')
       
       try {
         const uploadResult = await uploadVideoToStorage(
@@ -268,8 +264,6 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
         if (uploadResult.success && uploadResult.publicUrl && uploadResult.filePath) {
           setVideoStorageUrl(uploadResult.publicUrl)
           setVideoFilePath(uploadResult.filePath) // Store file path for future deletion
-          console.log('✅ Daily Challenge: Video uploaded to storage:', uploadResult.publicUrl)
-          console.log('📁 Daily Challenge: Video file path stored:', uploadResult.filePath)
         } else {
           console.error('❌ Daily Challenge: Upload failed:', uploadResult.error)
           throw new Error(uploadResult.error || 'Upload failed')
@@ -347,10 +341,7 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
           setError(null)
           
           try {
-            console.log("🤖 Daily Challenge: Starting AI evaluation...")
-            console.log("📹 Daily Challenge: Video URL for AI:", videoStorageUrl)
-            console.log("📝 Daily Challenge: Content for AI:", richTextContent.substring(0, 100) + "...")
-            
+
             const { evaluateSubmissionForPublish } = await import("@/lib/gemini-video-evaluation")
             
             // Use the transcript already saved in the database (limited by admin watch time)
@@ -359,7 +350,6 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
             // Create challenge context including original video info
             const challengeContext = `Daily English Challenge - Original Video: "${videoData.title}" | Topic: ${videoData.topics?.join(', ') || 'General English Learning'} | User is responding to and creating content based on this original video.`
             
-            console.log("🔄 Daily Challenge: Calling evaluateSubmissionForPublish...")
             
             // Evaluate with original video transcript as context and user's content as caption
             // Use the Supabase Storage URL for AI evaluation
@@ -370,9 +360,7 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
               challengeContext
             )
             
-            console.log("✅ Daily Challenge: AI evaluation completed:", evaluation)
             setVideoEvaluation(evaluation)
-            console.log("✅ Video evaluation completed before step 4")
           } catch (error) {
             console.error("❌ Daily Challenge: Error during AI evaluation:", error)
             setError(`AI evaluation failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
@@ -499,11 +487,6 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
       return
     }
 
-    console.log('🚀 Daily Challenge: handlePublish called')
-    console.log('📊 Daily Challenge: videoData:', !!videoData)
-    console.log('📊 Daily Challenge: richTextContent:', !!richTextContent)
-    console.log('📊 Daily Challenge: videoStorageUrl:', videoStorageUrl)
-
     if (!videoData || !richTextContent || !videoStorageUrl) {
       console.error('❌ Daily Challenge: Missing required content:', {
         videoData: !!videoData,
@@ -523,10 +506,8 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
     try {
       setSubmitting(true)
 
-      console.log("Publishing post using stored AI evaluation:", videoEvaluation)      
       
       // Create community post using stored evaluation and authenticated user
-      console.log('💾 Daily Challenge: Creating community post with video URL:', videoStorageUrl)
       const createdPost = await createCommunityPost(
         user.id, // Use authenticated user ID
         user.name || username,
@@ -538,8 +519,6 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
         challengeMode === 'practice' ? 'practice' : 'daily' // Mark challenge type based on mode
       )
 
-      console.log("✅ Daily Challenge: Post saved to Supabase:", createdPost.id)
-      console.log("✅ Daily Challenge: Post media_url:", createdPost.media_url)
 
       // Use the real post ID from Supabase response
       const postId = createdPost.id
@@ -576,7 +555,7 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
         // Trigger refresh of progress data
         const refreshEvent = new CustomEvent("refreshProgress")
         window.dispatchEvent(refreshEvent)
-      }console.log("✅ Post published successfully to community feed")
+      }
 
       // Set published state
       setIsPublished(true)
@@ -591,7 +570,6 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
 
   // Trigger file input click
   const triggerFileInput = () => {
-    console.log('🎬 Daily Challenge: triggerFileInput called')
     fileInputRef.current?.click()
   }
 

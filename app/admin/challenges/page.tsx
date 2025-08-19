@@ -197,7 +197,6 @@ export default function AdminChallengesPage() {
         onOpenChange={setCreateModalOpen} 
         onChallengeCreated={(challenge: Challenge) => {
           // Add the new challenge to the list
-          console.log('Challenge created:', challenge)
         }} 
       />
 

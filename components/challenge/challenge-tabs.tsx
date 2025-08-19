@@ -242,11 +242,9 @@ export default function ChallengeTabs({
           filter: 'challenge_type=in.(practice,user_generated)' // Only listen to relevant challenge types
         },
         (payload) => {
-          console.log('📡 Realtime challenge update:', payload)
           
           if (payload.eventType === 'INSERT') {
             const newChallenge = payload.new
-            console.log('➕ New challenge created:', newChallenge)
             
             // Convert to Challenge format and add to state
             const challengeToAdd: Challenge = {
@@ -277,7 +275,6 @@ export default function ChallengeTabs({
                 const exists = prev.some(c => c.databaseId === challengeToAdd.databaseId)
                 if (exists) return prev
                 
-                console.log('✅ Adding new challenge to UI:', challengeToAdd.title)
                 return [challengeToAdd, ...prev]
               })
               
@@ -298,7 +295,6 @@ export default function ChallengeTabs({
             }
           } else if (payload.eventType === 'UPDATE') {
             const updatedChallenge = payload.new
-            console.log('🔄 Challenge updated:', updatedChallenge)
             
             // Update in challenges list
             setChallenges(prev => prev.map(challenge => 
@@ -328,7 +324,6 @@ export default function ChallengeTabs({
             }
           } else if (payload.eventType === 'DELETE') {
             const deletedChallengeId = payload.old.id
-            console.log('🗑️ Challenge deleted:', deletedChallengeId)
             
             // Remove from challenges list
             setChallenges(prev => prev.filter(challenge => challenge.databaseId !== deletedChallengeId))
@@ -347,7 +342,6 @@ export default function ChallengeTabs({
 
     // Cleanup subscription on unmount
     return () => {
-      console.log('🔌 Unsubscribing from challenges realtime')
       supabase.removeChannel(subscription)
     }
   }, [user?.id]) // Re-setup subscription when user changes

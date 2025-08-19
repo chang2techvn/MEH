@@ -26,7 +26,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log('👤 Account approval API:', { userId, action, reason })
 
     // Basic security: Only allow from admin routes
     const referer = request.headers.get('referer')
@@ -138,7 +137,6 @@ export async function POST(request: NextRequest) {
         )
     }
 
-    console.log('👤 Account approval result:', { action, message, result })
 
     return NextResponse.json({
       success: true,

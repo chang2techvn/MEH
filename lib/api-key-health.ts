@@ -31,7 +31,6 @@ export async function checkKeyHealth(keyId: string, serviceName: string = 'gemin
   const startTime = Date.now()
   
   try {
-    console.log(`🔍 Checking health for API key: ${keyId}`)
     
     // Get the key from database
     const { data: key, error } = await supabase
@@ -95,7 +94,6 @@ export async function checkKeyHealth(keyId: string, serviceName: string = 'gemin
     }
     
     const duration = Date.now() - startTime
-    console.log(`✅ Health check completed for ${key.key_name} in ${duration}ms - Healthy: ${health.isHealthy}`)
     
     return health
     
@@ -137,13 +135,10 @@ async function performGeminiHealthCheck(apiKey: string): Promise<boolean> {
     if (response.status === 200) {
       return true
     } else if (response.status === 403) {
-      console.log('❌ API key is invalid or expired')
       return false
     } else if (response.status === 429) {
-      console.log('⚠️ API key quota exceeded')
       return false
     } else if (response.status >= 500) {
-      console.log('⚠️ Server error, but key might be valid')
       return false
     }
     
@@ -151,9 +146,7 @@ async function performGeminiHealthCheck(apiKey: string): Promise<boolean> {
     
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {
-      console.log('❌ Health check timeout')
     } else {
-      console.log('❌ Health check network error:', error)
     }
     return false
   }
@@ -166,7 +159,6 @@ async function performGeminiHealthCheck(apiKey: string): Promise<boolean> {
  */
 export async function checkAllKeysHealth(serviceName: string = 'gemini'): Promise<ApiKeyHealth[]> {
   try {
-    console.log(`🔍 Checking health for all ${serviceName} API keys`)
     
     // Get all keys for the service
     const { data: keys, error } = await supabase
@@ -185,7 +177,6 @@ export async function checkAllKeysHealth(serviceName: string = 'gemini'): Promis
     const healthResults = await Promise.all(healthChecks)
     
     const healthyCount = healthResults.filter(h => h.isHealthy).length
-    console.log(`✅ Health check complete: ${healthyCount}/${keys.length} keys healthy`)
     
     return healthResults
     
@@ -202,7 +193,6 @@ export async function checkAllKeysHealth(serviceName: string = 'gemini'): Promis
  */
 export async function getApiKeyMetrics(serviceName: string = 'gemini'): Promise<ApiKeyMetrics> {
   try {
-    console.log(`📊 Getting metrics for ${serviceName} API keys`)
     
     // Get all keys with their usage
     const { data: keys, error } = await supabase
@@ -248,7 +238,6 @@ export async function getApiKeyMetrics(serviceName: string = 'gemini'): Promise<
       healthyKeys
     }
     
-    console.log(`✅ Metrics calculated:`, metrics)
     return metrics
     
   } catch (error) {
@@ -272,13 +261,11 @@ export async function getApiKeyMetrics(serviceName: string = 'gemini'): Promise<
  */
 export async function monitorAndRecover(serviceName: string = 'gemini'): Promise<void> {
   try {
-    console.log(`🔄 Starting monitoring and recovery for ${serviceName}`)
     
     const healthResults = await checkAllKeysHealth(serviceName)
     const unhealthyKeys = healthResults.filter(h => !h.isHealthy && h.isActive)
     
     if (unhealthyKeys.length > 0) {
-      console.log(`⚠️ Found ${unhealthyKeys.length} unhealthy keys, attempting recovery`)
       
       for (const unhealthyKey of unhealthyKeys) {
         try {
@@ -286,7 +273,6 @@ export async function monitorAndRecover(serviceName: string = 'gemini'): Promise
           await markKeyAsInactive(unhealthyKey.keyId, unhealthyKey.lastError || 'Health check failed')
           
           // Log the recovery action
-          console.log(`🔄 Marked unhealthy key as inactive: ${unhealthyKey.keyName}`)
           
         } catch (error) {
           console.error(`❌ Failed to recover key ${unhealthyKey.keyName}:`, error)
@@ -296,9 +282,7 @@ export async function monitorAndRecover(serviceName: string = 'gemini'): Promise
     
     // Check if we have enough healthy keys
     const healthyKeys = healthResults.filter(h => h.isHealthy).length
-    if (healthyKeys < 2) {
-      console.log(`⚠️ Low healthy key count: ${healthyKeys}. Consider manual intervention.`)
-    }
+
     
   } catch (error) {
     console.error('❌ Error during monitoring and recovery:', error)
@@ -312,7 +296,6 @@ export async function monitorAndRecover(serviceName: string = 'gemini'): Promise
  */
 export async function performSystemHealthCheck(serviceName: string = 'gemini'): Promise<{healthy: boolean, details: any}> {
   try {
-    console.log(`🏥 Performing comprehensive system health check for ${serviceName}`)
     
     const metrics = await getApiKeyMetrics(serviceName)
     const healthResults = await checkAllKeysHealth(serviceName)
@@ -340,7 +323,6 @@ export async function performSystemHealthCheck(serviceName: string = 'gemini'): 
       systemHealth.details.recommendations.push('Usage approaching limits, consider adding more keys')
     }
     
-    console.log(`✅ System health check complete - Healthy: ${systemHealth.healthy}`)
     return systemHealth
     
   } catch (error) {

@@ -20,8 +20,6 @@ async function getGeminiApiKey(): Promise<{ apiKey: string; keyId: string }> {
     const keyData = await getActiveApiKey('gemini');
     currentApiKey = keyData.decrypted_key;
     currentKeyId = keyData.id;
-
-    console.log(`🔑 Using API key: ${keyData.key_name} (Usage: ${keyData.current_usage}/${keyData.usage_limit})`);
     
     return { apiKey: currentApiKey, keyId: currentKeyId };
   } catch (error) {
@@ -33,7 +31,6 @@ async function getGeminiApiKey(): Promise<{ apiKey: string; keyId: string }> {
 // Hàm xoay API key khi gặp lỗi
 async function rotateApiKey(reason: string): Promise<{ apiKey: string; keyId: string }> {
   try {
-    console.log(`🔄 Rotating API key due to: ${reason}`);
     
     const rotationResult = await rotateToNextKey('gemini', currentKeyId || undefined, reason);
     
@@ -45,8 +42,6 @@ async function rotateApiKey(reason: string): Promise<{ apiKey: string; keyId: st
     const keyData = await getActiveApiKey('gemini');
     currentApiKey = keyData.decrypted_key;
     currentKeyId = keyData.id;
-
-    console.log(`✅ Successfully rotated to new API key: ${keyData.key_name}`);
     
     return { apiKey: currentApiKey, keyId: currentKeyId };
   } catch (error) {
@@ -80,7 +75,6 @@ interface AIPersonality {
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('📥 Received natural-group-chat request');
     
     // Parse request body with error handling
     let requestData;
@@ -103,14 +97,6 @@ export async function POST(request: NextRequest) {
       replyToAI 
     }: NaturalConversationRequest = requestData;
 
-    console.log('📋 Request data:', { 
-      messageLength: message?.length, 
-      sessionId, 
-      selectedAIsCount: selectedAIs?.length, 
-      conversationMode,
-      replyToMessageId,
-      replyToAI 
-    });
 
     if (!message || !sessionId || !selectedAIs || selectedAIs.length === 0) {
       console.error('❌ Missing required fields:', { message: !!message, sessionId: !!sessionId, selectedAIs: selectedAIs?.length });
@@ -442,7 +428,6 @@ async function generateNaturalAIResponse(
     )) {
       try {
         await rotateApiKey(`API error for ${ai.name}: ${error.message}`);
-        console.log(`🔄 Rotated API key after error for ${ai.name}`);
       } catch (rotateError) {
         console.error('❌ Failed to rotate API key:', rotateError);
       }
@@ -494,7 +479,6 @@ Respond now as ${targetAI.name}:`;
     )) {
       try {
         await rotateApiKey(`API error for AI-to-AI ${targetAI.name}: ${error.message}`);
-        console.log(`🔄 Rotated API key after AI-to-AI error for ${targetAI.name}`);
       } catch (rotateError) {
         console.error('❌ Failed to rotate API key:', rotateError);
       }

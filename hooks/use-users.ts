@@ -248,7 +248,6 @@ export function useUsers() {
   // Update user
   const updateUser = useCallback(async (userId: string, updates: Partial<UserData>) => {
     try {
-      console.log('✏️ Starting update operation for userId:', userId, 'with updates:', updates)
       setLoading(true)
 
       // Update users table
@@ -267,7 +266,6 @@ export function useUsers() {
 
       if (Object.keys(userUpdates).length > 0) {
         userUpdates.updated_at = new Date().toISOString()
-        console.log('✏️ Updating users table with:', userUpdates)
         
         const { error: userError } = await supabase
           .from('users')
@@ -298,7 +296,6 @@ export function useUsers() {
 
       if (Object.keys(profileUpdates).length > 0) {
         profileUpdates.updated_at = new Date().toISOString()
-        console.log('✏️ Updating profiles table with:', profileUpdates)
         
         const { error: profileError } = await supabase
           .from('profiles')
@@ -311,7 +308,6 @@ export function useUsers() {
         }
       }
 
-      console.log('✏️ Update successful, refreshing users list')
       // Refresh the users list
       await fetchUsers()
 
@@ -320,7 +316,6 @@ export function useUsers() {
         description: 'User information has been updated.'
       })
 
-      console.log('✏️ Update operation completed successfully')
       return true
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to update user'
@@ -470,10 +465,7 @@ export function useUsers() {
   }
   const deleteUser = useCallback(async (userId: string) => {
     try {
-      console.log('🗑️ Starting delete operation for userId:', userId)
       setLoading(true)
-
-      console.log('🗑️ Calling admin API to delete user completely...')
       
       // Call our API route to delete user from all systems
       const response = await fetch('/api/admin/delete-user', {
@@ -485,7 +477,6 @@ export function useUsers() {
       })
 
       const result = await response.json()
-      console.log('🗑️ API delete result:', result)
 
       if (!response.ok) {
         throw new Error(result.error || `API error: ${response.status}`)
@@ -495,7 +486,6 @@ export function useUsers() {
         throw new Error(result.error || 'Delete operation failed')
       }
 
-      console.log('🗑️ Delete successful, refreshing users list')
       // Refresh the users list
       await fetchUsers()
 
@@ -504,7 +494,6 @@ export function useUsers() {
         description: result.message || 'User has been completely removed from all systems.'
       })
 
-      console.log('🗑️ Delete operation completed successfully')
       return true
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to delete user'

@@ -340,11 +340,9 @@ export const useVocabulary = () => {
           filter: `user_id=eq.${user.id}`
         },
         (payload) => {
-          console.log('Real-time vocabulary update:', payload);
           
           if (payload.eventType === 'INSERT') {
             const newEntry = payload.new as VocabularyEntry;
-            console.log('Adding new vocabulary entry:', newEntry.term);
             
             // Add to vocabulary list
             setVocabulary(prev => {
@@ -364,7 +362,6 @@ export const useVocabulary = () => {
             
           } else if (payload.eventType === 'DELETE') {
             const deletedId = payload.old.id;
-            console.log('Deleting vocabulary entry:', deletedId);
             
             // Remove from vocabulary list
             setVocabulary(prev => prev.filter(vocab => vocab.id !== deletedId));
@@ -374,7 +371,6 @@ export const useVocabulary = () => {
             
           } else if (payload.eventType === 'UPDATE') {
             const updatedEntry = payload.new as VocabularyEntry;
-            console.log('Updating vocabulary entry:', updatedEntry.term);
             
             // Update in vocabulary list
             setVocabulary(prev => 

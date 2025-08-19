@@ -103,7 +103,6 @@ export function StoryPreview({ story, className, isCardPreview = false }: StoryP
                 console.error('Video load error:', e)
               }}
               onLoadedData={() => {
-                console.log('Video loaded successfully:', story.storyImage)
               }}
             />
           ) : (
@@ -117,7 +116,6 @@ export function StoryPreview({ story, className, isCardPreview = false }: StoryP
                 console.error('Image load error:', e)
               }}
               onLoad={() => {
-                console.log('Image loaded successfully:', story.storyImage)
               }}
             />
           )}

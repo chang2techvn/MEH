@@ -58,7 +58,6 @@ export function LeaderboardModal({ isOpen, onClose }: LeaderboardModalProps) {
         }
 
         const transformedData: LeaderboardUser[] = (rawData || []).map((user: any, index: number) => {
-          console.log('🔍 Processing user:', user)
           
           // Handle different possible profile structures
           let profile = null
@@ -71,7 +70,6 @@ export function LeaderboardModal({ isOpen, onClose }: LeaderboardModalProps) {
           const fullName = profile?.full_name || 'Unknown User'
           const avatarUrl = profile?.avatar_url
           
-          console.log('🔍 Extracted profile data:', { fullName, avatarUrl, profile })
 
           return {
             id: user.id,

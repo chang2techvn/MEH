@@ -38,7 +38,6 @@ export function useFeedData() {
 
     setLoading(true)    
     try {
-      console.log('📊 Fetching posts from Supabase...', { page, isInitialLoad })
       
       // Load posts from Supabase with pagination
       const { data: postsData, error } = await supabase
@@ -48,7 +47,6 @@ export function useFeedData() {
         .order('created_at', { ascending: false })
         .range(page * 10, (page + 1) * 10 - 1) // 10 posts per page
 
-      console.log('📊 Supabase query result:', { postsData, error, page })
 
       if (error) {
         console.error('❌ Error loading posts:', error)
@@ -60,10 +58,9 @@ export function useFeedData() {
         return
       }
 
-      console.log('✅ Posts loaded successfully:', postsData?.length || 0)
 
       // Transform posts to match UI format
-      const transformedPosts = postsData?.map(post => {        console.log('📝 Transforming post:', post)
+      const transformedPosts = postsData?.map(post => {        
         
         // Parse AI evaluation if exists
         let aiEvaluation = null;
@@ -100,8 +97,6 @@ export function useFeedData() {
           } : undefined
         }
       }) || []
-
-      console.log('🔄 Transformed posts:', transformedPosts)
 
       if (isInitialLoad) {
         setPosts(transformedPosts) // Replace posts for initial load
@@ -153,7 +148,6 @@ export function useFeedData() {
   // Listen for new post events
   useEffect(() => {
     const handleNewPost = (event: CustomEvent) => {
-      console.log('🆕 New post event received:', event.detail)
       const newPost = event.detail
       
       // Add the new post to the beginning of the posts array
@@ -180,7 +174,6 @@ export function useFeedData() {
   // Load initial posts when hook is first used
   useEffect(() => {
     if (posts.length === 0 && !loading) {
-      console.log('🏠 Loading initial posts for homepage...')
       loadMorePosts(true) // Pass true for initial load
     }
   }, [posts.length, loading]) // Remove loadMorePosts from dependencies

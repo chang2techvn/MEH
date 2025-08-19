@@ -30,7 +30,6 @@ export const clearBrowserAuthCache = () => {
       }
     })
 
-    console.log('✅ Browser auth cache cleared')
   } catch (error) {
     console.error('❌ Error clearing browser auth cache:', error)
   }
@@ -69,7 +68,6 @@ export const createCleanSupabaseSession = async (supabaseClient: any) => {
     // Wait for cleanup
     await new Promise(resolve => setTimeout(resolve, 1000))
     
-    console.log('✅ Clean Supabase session created')
     return true
   } catch (error) {
     console.error('❌ Error creating clean session:', error)

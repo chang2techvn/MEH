@@ -484,7 +484,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         checkCleanup()
       })
 
-      console.log('🔔 Setting up realtime subscriptions for user:', currentUser.id)
 
       // Set up global subscription for conversation participants updates
       const globalChannel = supabase

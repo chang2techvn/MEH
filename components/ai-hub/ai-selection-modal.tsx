@@ -139,11 +139,9 @@ export function AISelectionModal({
   })
 
   const handleSelectAI = (ai: AICharacter) => {
-    console.log('handleSelectAI called:', ai.id, 'current selection:', selectedAIs)
     
     // Check if we're trying to select and already at max limit (10)
     if (!selectedAIs.includes(ai.id) && selectedAIs.length >= 10) {
-      console.log('Maximum of 10 AIs can be selected')
       return
     }
     

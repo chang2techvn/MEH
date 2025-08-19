@@ -38,21 +38,12 @@ function MessageDropdownContent() {
     // Debug logging removed for production
   }, [loading, currentUser?.id, conversations?.length, authContext?.isAuthenticated])
 
-  // Remove direct console.log outside useEffect to prevent infinite logs
-
   // Enhanced user loading with search and pagination
   const loadAvailableUsers = useCallback(async (searchTerm: string = '', page: number = 0) => {
     if (!currentUser || loadingUsers) return
     
     try {
-      if (process.env.NODE_ENV === 'development') {
-        console.log('🔍 loadAvailableUsers called:', { 
-          searchTerm, 
-          page, 
-          currentUser: currentUser?.id,
-          currentUserName: currentUser?.name
-        })
-      }
+ 
       setLoadingUsers(true)
       setError(null)
       
@@ -76,9 +67,6 @@ function MessageDropdownContent() {
         })
       })
       
-      if (process.env.NODE_ENV === 'development') {
-        console.log('🔍 Existing conversation user IDs to exclude:', Array.from(existingUserIds))
-      }
       
       // Build query to get users with their profiles (optional)
       let query = supabase
@@ -111,40 +99,22 @@ function MessageDropdownContent() {
       
       if (existingUserIds.size > 0 && shouldExcludeExistingUsers) {
         const existingUserIdsList = Array.from(existingUserIds)
-        if (process.env.NODE_ENV === 'development') {
-          console.log('🔍 Excluding existing conversation users:', existingUserIdsList)
-        }
+
         // Use individual .neq() for each ID since .not('in') has syntax issues
         existingUserIdsList.forEach(userId => {
           query = query.neq('id', userId)
         })
-      } else if (process.env.NODE_ENV === 'development') {
-        console.log('🔍 Not excluding users - showing all available users for testing')
       }
       
       const { data: users, error } = await query
       
       if (process.env.NODE_ENV === 'development') {
-        console.log('📊 loadAvailableUsers result:', { 
-          usersFound: users?.length || 0, 
-          error: error?.message,
-          searchTerm,
-          page,
-          totalUsersInDB: 'checking...'
-        })
         
-        // Also check total users in database for debugging
         const { count } = await supabase
           .from('users')
           .select('*', { count: 'exact', head: true })
           .neq('id', currentUser.id)
           .eq('is_active', true)
-        
-        console.log('📊 Database stats:', {
-          totalActiveUsers: count,
-          existingConversationUsers: existingUserIds.size,
-          availableForNewChat: (count || 0) - existingUserIds.size
-        })
       }
       
       if (error) {
@@ -158,12 +128,6 @@ function MessageDropdownContent() {
         .filter(user => {
           const shouldInclude = user?.id && user.id !== currentUser.id
           if (!shouldInclude) {
-            console.log('🚫 Filtering out user:', { 
-              userId: user?.id, 
-              currentUserId: currentUser.id, 
-              userEmail: user?.email,
-              reason: !user?.id ? 'No user ID' : 'Same as current user'
-            })
           }
           return shouldInclude
         })
@@ -201,10 +165,7 @@ function MessageDropdownContent() {
       setHasMoreUsers(newUsers.length === pageSize)
       
       if (process.env.NODE_ENV === 'development') {
-        console.log('✅ loadAvailableUsers completed:', {
-          newUsersCount: newUsers.length,
-          totalAvailableUsers: page === 0 ? newUsers.length : availableUsers.length + newUsers.length
-        })
+
       }
       
     } catch (error) {
@@ -240,12 +201,6 @@ function MessageDropdownContent() {
       
       // Debug: Check auth status before creating conversation
       const { data: { user: authUser }, error: authError } = await supabase.auth.getUser()
-      console.log('🔍 Auth check before creating conversation:', {
-        authUser: authUser?.email || 'No auth user',
-        authError: authError?.message || 'No auth error',
-        currentUser: currentUser?.name || currentUser?.id || 'No current user',
-        userId: authUser?.id || 'No user ID'
-      })
       
       if (!authUser) {
         throw new Error('User not authenticated. Please log in again.')
@@ -271,14 +226,7 @@ function MessageDropdownContent() {
       // Create new conversation with proper field mapping
       const conversationTitle = `Chat with ${otherUser.name}`
       const now = new Date().toISOString()
-      
-      console.log('🔧 Creating conversation with data:', {
-        title: conversationTitle,
-        status: 'active',
-        created_at: now,
-        updated_at: now,
-        last_message_at: now
-      })
+
       
       const { data: conversation, error: convError } = await supabase
         .from('conversations')
@@ -307,7 +255,6 @@ function MessageDropdownContent() {
         throw new Error('Conversation created but no data returned')
       }
       
-      console.log('✅ Conversation created successfully:', conversation.id)
       
       // Add participants with correct role value
       const participants = [
@@ -327,7 +274,6 @@ function MessageDropdownContent() {
         }
       ]
       
-      console.log('🔧 Adding participants:', participants)
       
       const { error: participantsError } = await supabase
         .from('conversation_participants')
@@ -347,7 +293,6 @@ function MessageDropdownContent() {
         throw new Error(`Failed to add participants: ${participantsError.message || 'Unknown database error'}`)
       }
       
-      console.log('✅ Participants added successfully')
       
       // Reload conversations to update UI
       if (loadConversations) {

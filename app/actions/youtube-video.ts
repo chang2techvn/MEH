@@ -149,11 +149,9 @@ export async function createChallenge(
       }
         
       if (existing) {
-        console.log(`✅ Daily challenge already exists for ${today}: ${existing.title}`)
         return existing
       }
       
-      console.log(`🔄 Creating new daily challenge for ${today}`)
       
       // Create new daily challenge
       const videoData = await fetchRandomYoutubeVideo(
@@ -190,7 +188,6 @@ export async function createChallenge(
       if (error) {
         // If duplicate key error, fetch the existing record instead of failing
         if (error.code === '23505') {
-          console.log("⚠️ Daily challenge was created by another process, fetching existing...")
           const { data: existingAfterError, error: fetchError } = await supabase
             .from('challenges')
             .select('*')
@@ -200,7 +197,6 @@ export async function createChallenge(
             .single()
           
           if (existingAfterError && !fetchError) {
-            console.log(`✅ Retrieved existing daily challenge: ${existingAfterError.title}`)
             return existingAfterError
           } else {
             console.error("❌ Error fetching existing challenge after duplicate:", fetchError)
@@ -212,7 +208,6 @@ export async function createChallenge(
         throw error
       }
       
-      console.log(`✅ Successfully created daily challenge for ${today}: ${data.title}`)
       return data
       
     } else if (challengeType === 'practice') {
@@ -244,7 +239,6 @@ export async function createChallenge(
       
       // Create missing practice challenges SEQUENTIALLY (one by one)
       for (const difficulty of missingDifficulties) {
-        console.log(`🎯 Creating ${difficulty} practice challenge...`)
         let attempts = 0
         const maxAttempts = 5
         let success = false
@@ -263,7 +257,6 @@ export async function createChallenge(
         
         while (!success && attempts < maxAttempts) {
           attempts++
-          console.log(`📋 Attempt ${attempts}/${maxAttempts} for ${difficulty} challenge (need ${transcriptDuration}s transcript)`)
           
           try {
             // Set global difficulty for transcript extraction
@@ -281,9 +274,7 @@ export async function createChallenge(
             
             // SUCCESS CHECK: If we got a valid transcript, save it immediately!
             if (videoData.transcript && videoData.transcript.length >= 100) {
-              console.log(`✅ Found suitable video: ${videoData.title} (transcript: ${videoData.transcript.length} chars)`)
             } else {
-              console.log(`⚠️ Invalid transcript (${videoData.transcript?.length || 0} chars), skipping...`)
               continue
             }
             
@@ -318,20 +309,17 @@ export async function createChallenge(
               throw error
             }
             
-            console.log(`💾 Successfully saved ${difficulty} challenge to database (transcript: ${transcriptDuration}s)`)
             challenges.push(data)
             success = true
             
             // Add delay between successful saves
             if (missingDifficulties.indexOf(difficulty) < missingDifficulties.length - 1) {
-              console.log(`⏳ Waiting 3 seconds before next challenge...`)
               await new Promise(resolve => setTimeout(resolve, 3000))
             }
             
           } catch (error) {
             console.error(`❌ Attempt ${attempts} failed for ${difficulty} challenge:`, error)
             if (attempts < maxAttempts) {
-              console.log(`🔄 Retrying in 2 seconds...`)
               await new Promise(resolve => setTimeout(resolve, 2000))
             }
           }
@@ -424,7 +412,6 @@ export async function fetchRandomYoutubeVideo(
   // ENFORCE 30-minute limit for Gemini compatibility
   const safeMaxDuration = Math.min(maxDuration, 1800) // 30 minutes max
   
-  console.log(`🔍 Searching for video: ${minDuration}s - ${safeMaxDuration}s duration`)
   
   // Check if we already have a video for today
   const today = getTodayDate()
@@ -539,10 +526,8 @@ async function attemptYouTubeScraping(
 
         // SUCCESS CHECK: If we got a valid transcript, that's what matters!
         if (videoDetails.transcript && videoDetails.transcript.length >= 100) {
-          console.log(`✅ Found video with valid transcript ${videoId}: ${videoDetails.transcript.length} chars (video: ${videoDetails.duration}s)`)
           return videoDetails
         } else {
-          console.log(`⏭️ Skipping video ${videoId}: invalid transcript (${videoDetails.transcript?.length || 0} chars)`)
         }
       } catch (error) {
         console.error(`Error getting details for video ${videoId}:`, error)
@@ -785,21 +770,11 @@ function extractTopics(title: string, description: string): string[] {
   return matchedTopics
 }
 
-// Thêm biến để lưu trữ video được chọn bởi admin
-// let adminSelectedVideo: VideoData | null = null
-
-// Thêm hàm để đặt video được chọn bởi admin
-// export async function setAdminSelectedVideo(videoData: VideoData | null): Promise<void> {
-//   adminSelectedVideo = videoData
-//   console.log("Admin selected video set:", adminSelectedVideo?.id)
-// }
-
 // New Supabase-only implementation for getTodayVideo
 export async function getTodayVideo(): Promise<VideoData> {
   const today = getTodayDate()
   
   try {    
-    console.log(`🔍 Checking for existing daily challenge on ${today}...`)
     
     // 1. Check Supabase for today's video first - MORE THOROUGH CHECK
     const { data, error } = await supabaseServer
@@ -811,16 +786,7 @@ export async function getTodayVideo(): Promise<VideoData> {
       .single()
       
     if (data && !error) {
-      console.log(`✅ Found existing daily challenge for ${today}: ${data.title}`)
-      
-      // Log transcript information
-      if (data.transcript && data.transcript.length > 100) {
-        console.log(`📝 Transcript available: ${data.transcript.length} characters`)
-        console.log(`📄 Transcript preview: ${data.transcript.substring(0, 200)}...`)
-      } else {
-        console.log("⚠️ No transcript in database for this video")
-      }
-      
+ 
       return {
         id: data.id, // Use database UUID for challenge lookup
         title: data.title,
@@ -840,10 +806,7 @@ export async function getTodayVideo(): Promise<VideoData> {
       throw error
     }
     
-    console.log(`📅 No daily challenge found for ${today}, creating new one...`)
     
-    // 2. Use the createChallenge function instead of manual logic
-    console.log("� Creating new daily challenge using createChallenge function...")
     const newChallenge = await createChallenge('daily', {
       difficulty: 'intermediate',
       minDuration: 180,
@@ -853,7 +816,6 @@ export async function getTodayVideo(): Promise<VideoData> {
     
     // Convert ChallengeData to VideoData format
     if (newChallenge && !Array.isArray(newChallenge)) {
-      console.log(`✅ Successfully created new daily challenge: ${newChallenge.title}`)
       
       return {
         id: newChallenge.id || 'unknown',
@@ -876,7 +838,6 @@ export async function getTodayVideo(): Promise<VideoData> {
     
     // If it's a duplicate key error, try to fetch the existing challenge again
     if (error && typeof error === 'object' && 'code' in error && error.code === '23505') {
-      console.log("🔄 Duplicate key error detected, fetching existing challenge...")
       
       try {
         const { data: existingChallenge } = await supabaseServer
@@ -888,7 +849,6 @@ export async function getTodayVideo(): Promise<VideoData> {
           .single()
           
         if (existingChallenge) {
-          console.log(`✅ Retrieved existing daily challenge after duplicate error: ${existingChallenge.title}`)
           
           return {
             id: existingChallenge.id,
@@ -945,7 +905,6 @@ export async function setAdminSelectedVideo(videoData: VideoData | null): Promis
         throw error
       }
       
-      console.log("✅ Admin selected video saved to Supabase:", videoData.id)
     } catch (error) {
       console.error("❌ Failed to save admin video:", error)
       throw error
@@ -964,7 +923,6 @@ export async function setAdminSelectedVideo(videoData: VideoData | null): Promis
         throw error
       }
       
-      console.log("✅ Admin video cleared from Supabase")
     } catch (error) {
       console.error("❌ Failed to clear admin video:", error)
       throw error
@@ -992,14 +950,11 @@ export async function shouldRefreshVideo(): Promise<boolean> {
 
 // Add a function to manually reset the cached video (for testing)
 export async function resetCachedVideo(): Promise<void> {
-  console.log("Note: No cache to reset - using Supabase only")
 }
 
 // Thêm hàm để trích xuất video từ URL YouTube
 export async function extractVideoFromUrl(url: string): Promise<VideoData | null> {
   try {
-    console.log("🎯 === EXTRACT VIDEO FROM URL ===")
-    console.log("📹 Input URL:", url)
     
     // Trích xuất video ID từ URL
     const videoId = extractYoutubeId(url)
@@ -1009,18 +964,10 @@ export async function extractVideoFromUrl(url: string): Promise<VideoData | null
       throw new Error("Invalid YouTube URL")
     }
 
-    console.log("✅ Extracted video ID:", videoId)
 
     // Lấy thông tin video với transcript
-    console.log("🔍 Getting video details with transcript...")
     const videoDetails = await getVideoDetails(videoId, 0, 9999, true) // true = isUserGenerated
-    
-    console.log("✅ Video details extracted:")
-    console.log("- Title:", videoDetails.title)
-    console.log("- Duration:", videoDetails.duration, "seconds")
-    console.log("- Transcript length:", videoDetails.transcript?.length || 0, "characters")
-    console.log("- Topics:", videoDetails.topics?.join(", ") || "None")
-    
+
     return videoDetails
   } catch (error) {
     console.error("❌ Error extracting video from URL:", error)
@@ -1030,7 +977,6 @@ export async function extractVideoFromUrl(url: string): Promise<VideoData | null
 
 // Hàm trích xuất YouTube ID từ URL với hỗ trợ nhiều định dạng
 function extractYoutubeId(url: string): string | null {
-  console.log("🔍 Extracting YouTube ID from URL:", url)
   
   // Normalize URL
   const normalizedUrl = url.trim()
@@ -1043,7 +989,6 @@ function extractYoutubeId(url: string): string | null {
         // Extract video ID before any query parameters
         const videoId = parts.split(/[?&#]/)[0]
         if (videoId && videoId.length === 11) {
-          console.log("✅ Extracted video ID from youtu.be:", videoId)
           return videoId
         }
       }
@@ -1054,7 +999,6 @@ function extractYoutubeId(url: string): string | null {
       const urlObj = new URL(normalizedUrl)
       const videoId = urlObj.searchParams.get('v')
       if (videoId && videoId.length === 11) {
-        console.log("✅ Extracted video ID from youtube.com:", videoId)
         return videoId
       }
     }
@@ -1065,7 +1009,6 @@ function extractYoutubeId(url: string): string | null {
       if (parts) {
         const videoId = parts.split(/[?&#]/)[0]
         if (videoId && videoId.length === 11) {
-          console.log("✅ Extracted video ID from embed:", videoId)
           return videoId
         }
       }
@@ -1076,7 +1019,6 @@ function extractYoutubeId(url: string): string | null {
     const match = normalizedUrl.match(regExp)
     
     if (match && match[2] && match[2].length === 11) {
-      console.log("✅ Extracted video ID from regex fallback:", match[2])
       return match[2]
     }
     

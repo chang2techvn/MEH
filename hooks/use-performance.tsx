@@ -55,11 +55,9 @@ export function usePerformanceMonitor(name: string) {
     }
 
     const startTime = performance.now()
-    console.log(`[Performance] ${name} component mounted`)
 
     return () => {
       const endTime = performance.now()
-      console.log(`[Performance] ${name} component unmounted after ${endTime - startTime}ms`)
     }
   }, [name])
 }
@@ -177,7 +175,6 @@ export function useRenderPerformance(componentName: string) {
       renderTimes.current = renderTimes.current.slice(-10)
     }
 
-    console.log(`[Render] ${componentName} rendered ${renderCount.current} times`)
   })
 
   return {

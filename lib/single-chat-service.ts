@@ -81,9 +81,7 @@ export class SingleChatService {
    * Initialize the assistant config (can be called publicly)
    */
   public async initializeConfig(): Promise<void> {
-    console.log('⚙️ SingleChatService: Initializing config...')
     await this.getDefaultAssistantConfig();
-    console.log('⚙️ SingleChatService: Config initialized:', this.defaultAssistantConfig)
   }
 
   /**
@@ -216,9 +214,7 @@ Make your response visually appealing, educational, and perfectly formatted with
    */
   getAssistantAvatar(): string {
     const avatar = this.defaultAssistantConfig?.avatar || 'https://yvsjynosfwyhvisqhasp.supabase.co/storage/v1/object/public/posts/images/825ef58d-31bc-4ad9-9c99-ed7fb15cf8a1.jfif';
-    console.log('🖼️ SingleChatService: getAssistantAvatar() called')
-    console.log('🖼️ SingleChatService: defaultAssistantConfig:', this.defaultAssistantConfig)
-    console.log('🖼️ SingleChatService: returning avatar:', avatar)
+
     return avatar;
   }
 
@@ -311,7 +307,6 @@ Make your response visually appealing, educational, and perfectly formatted with
   async initialize(): Promise<void> {
     try {
       await this.getDefaultAssistantConfig();
-      console.log('Single chat service initialized with config from database');
     } catch (error) {
       console.error('Error initializing single chat service:', error);
     }

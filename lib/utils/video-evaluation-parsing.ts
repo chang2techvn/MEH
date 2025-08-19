@@ -19,7 +19,6 @@ function cleanMarkdown(text: string): string {
  * Extract numerical score from text - improved to handle various formats
  */
 export function extractScore(text: string, keyword: string): number | null {
-  console.log(`🔍 Searching for ${keyword} score in text...`)
   
   // Try multiple patterns to find scores, ordered by specificity
   const patterns = [
@@ -43,13 +42,11 @@ export function extractScore(text: string, keyword: string): number | null {
     if (match && match[1]) {
       const score = parseInt(match[1])
       if (score >= 0 && score <= 100) {
-        console.log(`✅ Extracted ${keyword} score: ${score} (pattern ${i + 1})`)
         return score
       }
     }
   }
   
-  console.log(`⚠️ Could not extract ${keyword} score from response`)
   return null
 }
 
@@ -136,7 +133,6 @@ export function extractBulletPoints(text: string, keyword: string): string[] {
     }
   }
   
-  console.log(`✅ Extracted ${results.length} ${keyword} items:`, results.slice(0, 3))
   return results.slice(0, 8) // Limit to 8 items for display
 }
 

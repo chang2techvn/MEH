@@ -44,7 +44,6 @@ export async function uploadVideoToStorage(
   onProgress?: (progress: VideoUploadProgress) => void
 ): Promise<VideoUploadResult> {
   try {
-    console.log('🔄 Starting video upload process...')
     
     // Validate file
     const validation = validateVideoFile(file)
@@ -55,28 +54,17 @@ export async function uploadVideoToStorage(
         error: validation.error
       }
     }
-    console.log('✅ File validation passed')
 
     // Try direct API upload first
-    console.log('🚀 Trying direct API upload...')
     const directResult = await uploadVideoDirectAPI(file, userId, onProgress)
     
     if (directResult.success) {
-      console.log('✅ Direct API upload successful')
       return directResult
-    } else {
-      console.log('⚠️ Direct API upload failed, trying Supabase client...')
-    }
+    } 
 
     // Fallback to Supabase client method
     const fileExtension = file.name.split('.').pop()
     const fileName = `${userId}/${uuidv4()}.${fileExtension}`
-
-    console.log(`📹 Uploading via Supabase client: ${fileName}`)
-    console.log(`📊 File size: ${(file.size / 1024 / 1024).toFixed(2)}MB`)
-
-    // Upload file to Supabase Storage with shorter timeout
-    console.log('⬆️ Starting Supabase client upload...')
     
     const uploadPromise = supabase.storage
       .from(VIDEO_BUCKET)
@@ -99,10 +87,7 @@ export async function uploadVideoToStorage(
         error: `Both upload methods failed. Last error: ${error.message}`
       }
     }
-    console.log('✅ File uploaded to storage via Supabase client:', data)
 
-    // Get public URL
-    console.log('🔗 Generating public URL...')
     const { data: publicUrlData } = supabase.storage
       .from(VIDEO_BUCKET)
       .getPublicUrl(fileName)
@@ -115,7 +100,6 @@ export async function uploadVideoToStorage(
       }
     }
 
-    console.log('✅ Video uploaded successfully:', publicUrlData.publicUrl)
 
     return {
       success: true,
@@ -147,7 +131,6 @@ export async function deleteVideoFromStorage(filePath: string): Promise<boolean>
       return false
     }
 
-    console.log('✅ Video deleted successfully:', filePath)
     return true
 
   } catch (error) {
@@ -228,7 +211,6 @@ async function ensureVideoBucketExists(): Promise<void> {
     const bucketExists = buckets?.some(bucket => bucket.name === VIDEO_BUCKET)
 
     if (!bucketExists) {
-      console.log('📦 Creating video bucket...')
       
       // Create bucket with public access
       const { error: createError } = await supabase.storage.createBucket(VIDEO_BUCKET, {
@@ -239,9 +221,7 @@ async function ensureVideoBucketExists(): Promise<void> {
 
       if (createError) {
         console.error('❌ Error creating bucket:', createError)
-      } else {
-        console.log('✅ Video bucket created successfully')
-      }
+      } 
     }
 
   } catch (error) {
@@ -339,7 +319,6 @@ export async function compressVideo(file: File, quality: number = 0.7): Promise<
  */
 export async function testStorageConnection(): Promise<{ success: boolean; message: string }> {
   try {
-    console.log('🔍 Testing Supabase Storage connection...')
     
     // Test with direct fetch first
     try {
@@ -351,7 +330,6 @@ export async function testStorageConnection(): Promise<{ success: boolean; messa
       
       if (response.ok) {
         const buckets = await response.json()
-        console.log('✅ Direct API call successful. Buckets:', buckets)
         
         const videoBucket = buckets.find((bucket: any) => bucket.name === 'videos')
         if (videoBucket) {
@@ -384,7 +362,6 @@ export async function testStorageConnection(): Promise<{ success: boolean; messa
       }
     }
     
-    console.log('✅ Supabase client successful. Buckets:', data?.map((b: any) => b.name))
     
     const videoBucket = data?.find((bucket: any) => bucket.name === 'videos')
     if (videoBucket) {
@@ -417,7 +394,6 @@ export async function uploadVideoDirectAPI(
   onProgress?: (progress: VideoUploadProgress) => void
 ): Promise<VideoUploadResult> {
   try {
-    console.log('🔄 Starting direct API upload...')
     
     // Validate file
     const validation = validateVideoFile(file)
@@ -429,8 +405,6 @@ export async function uploadVideoDirectAPI(
     const fileExtension = file.name.split('.').pop()
     const fileName = `${userId}/${uuidv4()}.${fileExtension}`
     
-    console.log(`📹 Uploading via API: ${fileName}`)
-
     // Create FormData
     const formData = new FormData()
     formData.append('file', file)
@@ -455,7 +429,6 @@ export async function uploadVideoDirectAPI(
           // Use cloud URL from environment variables
           const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://127.0.0.1:54321'
           const publicUrl = `${supabaseUrl}/storage/v1/object/public/videos/${fileName}`
-          console.log('✅ Direct API upload successful:', publicUrl)
           resolve({
             success: true,
             publicUrl,

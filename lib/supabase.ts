@@ -36,15 +36,8 @@ export const dbHelpers = {
     
     try {
       const { data: { user }, error: authError } = await supabase.auth.getUser()
-      // Only log when getting fresh data or on errors
-      if (authError) {
-        console.log('🔐 Auth error:', authError)
-      }
-      
-      if (!user) {
-        console.log('⚠️ No authenticated user, trying to get first user from database as fallback')
-        
-        // Fallback: get first user from database for development - with profile
+
+      if (!user) {   
         const { data: firstUser, error: userError } = await supabase
           .from('users')
           .select('*')
@@ -52,7 +45,6 @@ export const dbHelpers = {
           .single()
         
         if (userError || !firstUser) {
-          console.log('❌ No users found in database:', userError)
           return null
         }
         
@@ -67,11 +59,7 @@ export const dbHelpers = {
           name: firstProfile?.full_name || firstProfile?.username || firstUser.email,
           avatar: firstProfile?.avatar_url || firstUser.avatar
         }
-        
-        // Reduced logging - only when needed for debugging
-        // console.log('✅ Using fallback user:', enrichedUser.name, enrichedUser.email)
-        
-        // Cache the result
+
         userCache = enrichedUser
         userCacheTimestamp = Date.now()
         
@@ -92,8 +80,7 @@ export const dbHelpers = {
         .single()
       
       if (error) {
-        console.log('❌ Error fetching user data:', error)
-        // Try alternative approach - get user and profile separately
+
         const { data: userData } = await supabase
           .from('users')
           .select('*')
@@ -113,8 +100,6 @@ export const dbHelpers = {
             avatar: profileData?.avatar_url || userData.avatar
           }
           
-          // Reduced logging for performance
-          // console.log('✅ Found authenticated user (alternative method):', enrichedUser.name, enrichedUser.email)
           return enrichedUser
         }
         
@@ -127,11 +112,7 @@ export const dbHelpers = {
         name: profile?.full_name || profile?.username || data.email,
         avatar: profile?.avatar_url || data.avatar
       }
-      
-      // Only log significant events - cache updated
-      // console.log('✅ Found authenticated user:', enrichedUser.name, enrichedUser.email)
-      
-      // Cache the result
+
       userCache = enrichedUser
       userCacheTimestamp = Date.now()
       
@@ -772,7 +753,6 @@ export const dbHelpers = {
       .order('created_at', { ascending: false })
       .limit(limit)
     
-    console.log('🔍 Stories query result:', { data, error })
     
     // If stories found, get profile info for each author
     if (data && data.length > 0) {
@@ -789,7 +769,6 @@ export const dbHelpers = {
           `)
           .in('user_id', userIds)
         
-        console.log('🔍 Profiles data:', profilesData)
         
         // Merge profile data with stories
         const enrichedData = data.map(story => {
@@ -805,7 +784,6 @@ export const dbHelpers = {
           }
         })
         
-        console.log('🔍 Enriched stories data:', enrichedData)
         return { data: enrichedData, error }
       }
     }
@@ -920,7 +898,6 @@ export const dbHelpers = {
         return { data: [], error: usersError }
       }
 
-      console.log('🔍 Users data:', usersData)
 
       // Step 2: Get profiles for these users
       const userIds = usersData?.map(user => user.id) || []
@@ -933,7 +910,6 @@ export const dbHelpers = {
         console.error('Error fetching profiles data:', profilesError)
       }
 
-      console.log('🔍 Profiles data:', profilesData)
 
       // Step 3: Get challenge completion counts and Daily posts for each user
       const { data: challengeData, error: challengeError } = await supabase
@@ -995,7 +971,6 @@ export const dbHelpers = {
           streak_days: streak // Use calculated daily streak
         }
         
-        console.log('🔍 Enhanced user:', result)
         return result
       }) || []
 
@@ -1015,7 +990,6 @@ export const dbHelpers = {
     media_urls?: string[]
     tags?: string[]
   }) {
-    console.log('📤 dbHelpers.createPost called with data:', postData)
     
     try {
       // Get user profile info first
@@ -1024,10 +998,7 @@ export const dbHelpers = {
         .select('full_name, avatar_url')
         .eq('user_id', postData.user_id)
         .single()
-      
-      if (profileError) {
-        console.log('⚠️ Could not get user profile:', profileError)
-      }
+
       
       const insertData = {
         title: postData.title,
@@ -1047,16 +1018,12 @@ export const dbHelpers = {
         updated_at: new Date().toISOString()
       }
       
-      console.log('📤 Inserting data:', insertData)
-      
       const { data, error } = await supabase
         .from('posts')
         .insert([insertData])
         .select()
         .single()
-      
-      console.log('📤 Insert result - data:', data)
-      console.log('📤 Insert result - error:', error)
+
       
       return { data, error }
     } catch (err) {

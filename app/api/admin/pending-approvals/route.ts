@@ -15,7 +15,6 @@ const supabaseAdmin = createClient(
 
 export async function GET(request: NextRequest) {
   try {
-    console.log('📊 Admin API: Getting pending approvals count')
 
     // Get pending approvals count
     const { data, error } = await supabaseAdmin.rpc('get_pending_approvals_count')
@@ -48,8 +47,6 @@ export async function GET(request: NextRequest) {
     if (pendingError) {
       console.error('📊 Admin API: Error getting pending users:', pendingError)
     }
-
-    console.log('📊 Admin API: Pending approvals count:', data)
 
     return NextResponse.json({
       success: true,

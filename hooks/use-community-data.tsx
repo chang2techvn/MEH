@@ -27,7 +27,6 @@ export function useCommunityData() {
   // Load initial posts (fast load for immediate UI)
   const loadInitialPosts = async () => {
     try {
-      console.log("� Loading initial posts (fast load)...")
       
       const postsResult = await supabase
         .from('posts')
@@ -42,7 +41,6 @@ export function useCommunityData() {
       }
       
       if (postsResult.data && postsResult.data.length > 0) {
-        console.log(`⚡ Fast loaded ${postsResult.data.length} initial posts`)
         
         const transformedPosts = await transformPosts(postsResult.data)
         setFeedPosts(transformedPosts as Post[])
@@ -67,7 +65,6 @@ export function useCommunityData() {
     try {
       setLoadingMore(true)
       const loadType = isBackgroundLoad ? "background" : "user-triggered"
-      console.log(`🔄 Loading more posts (${loadType}, page ${currentPage + 1})...`)
       
       const offset = currentPage * POSTS_PER_PAGE + (currentPage === 0 ? INITIAL_POSTS_COUNT : 0)
       
@@ -84,7 +81,6 @@ export function useCommunityData() {
       }
       
       if (postsResult.data && postsResult.data.length > 0) {
-        console.log(`📄 Loaded ${postsResult.data.length} more posts (${loadType})`)
         
         const transformedPosts = await transformPosts(postsResult.data)
         setFeedPosts(prev => [...prev, ...(transformedPosts as Post[])])
@@ -98,11 +94,9 @@ export function useCommunityData() {
         // Check if we have more posts
         if (postsResult.data.length < POSTS_PER_PAGE) {
           setHasMorePosts(false)
-          console.log("✅ No more posts to load")
         }
       } else {
         setHasMorePosts(false)
-        console.log("✅ No more posts to load")
       }
     } catch (error) {
       console.error("❌ Error loading more posts:", error)
@@ -118,7 +112,6 @@ export function useCommunityData() {
     
     // Only preload if we have more posts available, aren't already loading, and background load is completed
     if (currentPostIndex >= preloadThreshold && hasMorePosts && !loadingMore && backgroundLoadCompleted) {
-      console.log(`🎯 User reached post ${currentPostIndex + 1}/${totalPosts} (${Math.round(((currentPostIndex + 1) / totalPosts) * 100)}%) - preloading more posts...`)
       loadMorePosts(false) // User-triggered load
     }
   }
@@ -206,11 +199,9 @@ export function useCommunityData() {
   // Load remaining data in background (non-blocking)
   const loadBackgroundData = async () => {
     try {
-      console.log("🔄 Loading background data...")
       
       // Immediately load more posts in background after initial load (without delay)
       if (hasMorePosts && !backgroundLoadCompleted) {
-        console.log("🚀 Starting immediate background post loading...")
         await loadMorePosts(true) // Background load with flag
       }
       
@@ -229,8 +220,6 @@ export function useCommunityData() {
   }
   const loadContacts = async () => {
     try {
-      console.log("🔄 Loading contacts data...")
-      console.log("🔍 Current user ID:", user?.id)
       
       // Load online users from database, excluding current user
       const { data: onlineUsersData, error: onlineUsersError } = await dbHelpers.getOnlineUsers(10, user?.id)
@@ -241,12 +230,10 @@ export function useCommunityData() {
       }
       
       if (!onlineUsersData || onlineUsersData.length === 0) {
-        console.log("ℹ️ No online users found (excluding current user)")
         setContacts([])
         return
       }
 
-      console.log(`✅ Loaded ${onlineUsersData.length} online users (current user already excluded by database)`)
       
       // No need to filter here since database already excluded current user
       // Transform online users data to contacts format
@@ -258,7 +245,6 @@ export function useCommunityData() {
         lastActive: profile.users?.last_login && new Date(profile.users.last_login) <= new Date(Date.now() - 30 * 60 * 1000) ? formatTimeAgo(profile.users.last_login) : undefined
       }))
       
-      console.log(`✅ Transformed ${transformedContacts.length} contacts for display`)
       setContacts(transformedContacts as unknown as Contact[])
     } catch (error) {
       console.error("❌ Error loading contacts:", error)
@@ -271,7 +257,6 @@ export function useCommunityData() {
   // Load events data
   const loadEvents = async () => {
     try {
-      console.log("🔄 Loading events data...")
       
       // Load events from database using the same approach as backup file
       const { data: eventsData, error: eventsError } = await dbHelpers.getEvents()
@@ -282,12 +267,9 @@ export function useCommunityData() {
       }
       
       if (!eventsData || eventsData.length === 0) {
-        console.log("ℹ️ No events found")
         setEvents([])
         return
       }
-
-      console.log(`✅ Loaded ${eventsData.length} events`)
       
       // Transform events data using the same approach as backup file
       const transformedEvents = eventsData.map((event: any, index: number) => ({
@@ -316,7 +298,6 @@ export function useCommunityData() {
   useEffect(() => {
     // Load initial posts immediately (non-blocking UI)
     loadInitialPosts().then(() => {
-      console.log("⚡ Initial posts loaded, starting background data load")
       // Load remaining data in background
       loadBackgroundData()
     }).catch(error => {
@@ -328,13 +309,10 @@ export function useCommunityData() {
   // Load contacts when user is authenticated (separate from initial data load)
   useEffect(() => {
     if (user?.id) {
-      console.log("🔄 User authenticated, loading contacts (excluding current user)...")
       loadContacts().catch(error => {
         console.warn("⚠️ Failed to load contacts after user authentication:", error.message)
       })
     } else {
-      // Clear contacts if no user
-      console.log("🔄 No user authenticated, clearing contacts...")
       setContacts([])
     }
   }, [user?.id])

@@ -520,10 +520,8 @@ export function ResourcesMobileBottomNavigation({
         onClose={() => setNewVocabularyModalOpen(false)}
         darkMode={darkMode}
         onSuccess={async () => {
-          console.log('New vocabulary created successfully')
           // Refresh vocabulary data
           await refreshVocabulary()
-          console.log('Vocabulary data refreshed')
           setNewVocabularyModalOpen(false)
         }}
       />

@@ -167,19 +167,13 @@ export function useMemoryMonitor(componentName: string) {
     const logMemory = () => {
       if ('memory' in performance) {
         const memory = (performance as any).memory
-        console.log(`[${componentName}] Memory:`, {
-          used: `${Math.round(memory.usedJSHeapSize / 1048576)}MB`,
-          total: `${Math.round(memory.totalJSHeapSize / 1048576)}MB`,
-          limit: `${Math.round(memory.jsHeapSizeLimit / 1048576)}MB`,
-        })
+
       }
     }
 
-    console.log(`[${componentName}] Component mounted`)
     logMemory()
 
     return () => {
-      console.log(`[${componentName}] Component unmounted`)
       logMemory()
     }
   }, [componentName])

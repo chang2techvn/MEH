@@ -11,9 +11,6 @@ export interface ExportableUser {
 }
 
 export const exportToExcel = async (users: ExportableUser[], filename: string = 'users.xlsx'): Promise<void> => {
-  // This would implement actual Excel export functionality
-  // For now, just log the action
-  console.log(`Exporting ${users.length} users to ${filename}`)
   
   // Convert to CSV as a simple alternative
   const csvContent = convertToCSV(users)

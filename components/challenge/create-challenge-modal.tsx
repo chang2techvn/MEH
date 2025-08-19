@@ -51,10 +51,7 @@ export default function CreateChallengeModal({ open, onOpenChange, onChallengeCr
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
-    console.log("🎯 === CREATE CHALLENGE SUBMIT ===")
-    console.log("📹 YouTube URL:", youtubeUrl)
-    console.log("🎚️ Difficulty:", difficulty)
+
 
     if (!youtubeUrl.trim()) {
       setError("Please enter a YouTube URL")
@@ -73,9 +70,7 @@ export default function CreateChallengeModal({ open, onOpenChange, onChallengeCr
         return
       }
       
-      console.log("✅ Using user from AuthContext:", user.id)
       setProgressStep("Video processing may take some time. You can do other things and we'll notify you when it's completed")
-      console.log("🚀 Creating user-generated challenge...")
 
       // Create user-generated challenge using the new API
       const challengeResult = await createChallenge('user_generated', {
@@ -85,7 +80,6 @@ export default function CreateChallengeModal({ open, onOpenChange, onChallengeCr
       })
 
       setProgressStep('Finalizing challenge...')
-      console.log("✅ Challenge created successfully:", challengeResult)
 
       // Handle single challenge result (user_generated always returns single challenge)
       const challenge = Array.isArray(challengeResult) ? challengeResult[0] : challengeResult
@@ -112,7 +106,6 @@ export default function CreateChallengeModal({ open, onOpenChange, onChallengeCr
         transcript: challenge.transcript || ''
       }
 
-      console.log("🎨 UI Challenge object:", uiChallenge)
 
       // Reset form
       setYoutubeUrl("")
@@ -130,7 +123,6 @@ export default function CreateChallengeModal({ open, onOpenChange, onChallengeCr
         description: "Your challenge has been created successfully",
       })
       
-      console.log("🎉 Challenge creation process completed")
     } catch (err) {
       console.error("❌ Error creating challenge:", err)
       

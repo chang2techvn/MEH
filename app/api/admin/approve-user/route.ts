@@ -26,12 +26,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log('✅ Admin API: Starting user approval for:', userId)
 
     // Basic security: Only allow from admin routes
     const referer = request.headers.get('referer')
     if (!referer || !referer.includes('/admin/')) {
-      console.log('✅ Admin API: Request not from admin route, blocking')
       return NextResponse.json(
         { error: 'Access denied' },
         { status: 403 }
@@ -53,7 +51,6 @@ export async function POST(request: NextRequest) {
           .single()
 
         if (userRecord?.role !== 'admin') {
-          console.log('✅ Admin API: User is not admin. Role:', userRecord?.role)
           return NextResponse.json(
             { error: 'Admin access required', role: userRecord?.role },
             { status: 403 }
@@ -61,14 +58,10 @@ export async function POST(request: NextRequest) {
         }
         
         currentAdminId = user.id
-        console.log('✅ Admin API: Admin verification passed')
       } else {
-        console.log('✅ Admin API: No user found, using service role')
-        // For development/testing: use service role privileges
-        // In production, you should enforce authentication
+
       }
     } catch (authError) {
-      console.log('✅ Admin API: Auth check failed, using service role:', authError)
       // For development/testing: continue with service role
     }
 
@@ -88,8 +81,6 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       )
     }
-
-    console.log('✅ Admin API: User approved successfully')
 
     return NextResponse.json({
       success: true,

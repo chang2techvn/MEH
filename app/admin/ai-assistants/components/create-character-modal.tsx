@@ -439,10 +439,7 @@ Remember: You ARE this character. Think, speak, and react as they would in every
   }
 
   const createAssistant = async () => {
-    console.log('createAssistant called')
-    console.log('assistantData:', assistantData)
-    console.log('editablePrompt length:', editablePrompt.length)
-    
+
     if (!assistantData.name || !editablePrompt) {
       toast({
         title: "Missing data",
@@ -454,7 +451,6 @@ Remember: You ARE this character. Think, speak, and react as they would in every
 
     try {
       setCreating(true)
-      console.log('Getting user...')
       
       const { data: { user }, error: userError } = await supabase.auth.getUser()
       if (userError) {
@@ -463,9 +459,6 @@ Remember: You ARE this character. Think, speak, and react as they would in every
       }
       if (!user) throw new Error('User not authenticated')
       
-      console.log('User authenticated:', user.id)
-      console.log('Inserting assistant data...')
-
       const insertData = {
         name: assistantData.name,
         description: assistantData.description || characterData.description,
@@ -484,7 +477,6 @@ Remember: You ARE this character. Think, speak, and react as they would in every
         tags: assistantData.tags || []
       }
       
-      console.log('Insert data:', insertData)
 
       const { data, error } = await supabase
         .from('ai_assistants')
@@ -495,7 +487,6 @@ Remember: You ARE this character. Think, speak, and react as they would in every
         throw error
       }
 
-      console.log('Assistant created successfully:', data)
 
       toast({
         title: "Assistant created successfully",

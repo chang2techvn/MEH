@@ -99,9 +99,6 @@ export default function PostPreview({
 
     try {
       setIsPublishing(true)
-
-      // Use existing evaluation from step 3 - no new evaluation needed
-      console.log("🚀 Publishing with existing evaluation:", evaluation)
       
       try {
         await onPublish(evaluation)
@@ -146,8 +143,6 @@ export default function PostPreview({
       return
     }
 
-    // Use existing evaluation from step 3 - no new evaluation needed
-    console.log("✅ Using evaluation from step 3:", evaluation)
     onSubmit(evaluation || undefined)
   }
 

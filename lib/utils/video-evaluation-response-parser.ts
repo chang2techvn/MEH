@@ -11,9 +11,6 @@ import { extractScore, extractFeedback, extractBulletPoints, extractCategoryFeed
  */
 export function parseVideoEvaluationResponse(response: string, videoUrl?: string, caption?: string): VideoEvaluation {
   try {
-    console.log("🔍 Parsing AI Response:")
-    console.log("Response length:", response.length)
-    console.log("First 200 chars:", response.substring(0, 200))
     
     // Extract scores directly from AI response - trust the AI's judgment
     const overallScore = extractScore(response, "overall") || extractScore(response, "total") || 0
@@ -36,13 +33,6 @@ export function parseVideoEvaluationResponse(response: string, videoUrl?: string
     
     // Extract language detected info for transparency
     const languageDetected = response.match(/\*\*LANGUAGE DETECTED:\*\*\s*([^-\n]+)/i)?.[1]?.trim()
-    
-    console.log("✅ Extracted scores:", scores)
-    console.log("✅ Extracted keyPoints:", keyPoints.length, "items")
-    console.log("✅ Extracted nextSteps:", nextSteps.length, "items")
-    console.log("✅ Extracted strengths:", strengths.length, "items")
-    console.log("✅ Extracted weaknesses:", weaknesses.length, "items")
-    console.log("✅ Language detected:", languageDetected)
     
     return {
       score: scores.overall,

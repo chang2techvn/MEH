@@ -131,12 +131,6 @@ export function usePostManagement() {
     if (validFiles.length > 0) {
       setSelectedMedia([...selectedMedia, ...validFiles])
 
-      console.log("📁 Media files selected:", validFiles.map(f => ({
-        name: f.name,
-        size: formatFileSize(f.size),
-        type: f.type
-      })))
-
       toast({
         title: "Media selected",
         description: `${validFiles.length} file(s) added to your post.`,
@@ -191,16 +185,10 @@ export function usePostManagement() {
 
   // Handle post submission
   const handlePostSubmit = async () => {
-    console.log("🚀 handlePostSubmit called")
-    console.log("📝 newPostContent:", newPostContent)
-    console.log("🖼️ mediaPreviews:", mediaPreviews)
-    
     if (!newPostContent.trim() && mediaPreviews.length === 0) {
-      console.log("❌ No content or media, returning early")
       return
     }
 
-    console.log("🔄 Setting isPostingContent to true")
     setIsPostingContent(true)
 
     // Add haptic feedback if available
@@ -209,13 +197,10 @@ export function usePostManagement() {
     }
 
     try {
-      console.log("👤 Getting current user...")
       // Get current user
       const currentUser = await dbHelpers.getCurrentUser()
-      console.log("👤 Current user:", currentUser)
       
       if (!currentUser) {
-        console.log("❌ No current user found")
         toast({
           title: "Authentication required",
           description: "Please log in to create a post.",
@@ -228,20 +213,16 @@ export function usePostManagement() {
       // Prepare post content - CHỈ dùng nội dung chính, không thêm feeling, location, etc.
       let fullContent = newPostContent.trim()
 
-      console.log("📝 Clean content:", fullContent)
-
       // Determine post type and upload media if present
       let postType = 'text'
       let uploadedMediaUrls: string[] = []
 
       if (selectedMedia.length > 0) {
-        console.log("📁 Uploading media files...", selectedMedia.length)
         
         try {
           for (const file of selectedMedia) {
             const isVideo = file.type.startsWith("video/")
             
-            console.log(`📤 Uploading ${isVideo ? 'video' : 'image'}: ${file.name}`)
             
             let uploadedUrl: string
             if (isVideo) {
@@ -255,7 +236,6 @@ export function usePostManagement() {
             }
             
             uploadedMediaUrls.push(uploadedUrl)
-            console.log(`✅ Uploaded successfully: ${uploadedUrl}`)
           }
         } catch (uploadError: any) {
           console.error("❌ Media upload error:", uploadError)
@@ -268,9 +248,6 @@ export function usePostManagement() {
           return
         }
       }
-
-      console.log("📄 Post type:", postType)
-      console.log("📤 Creating post in Supabase...")
 
       // Create post in Supabase with media URLs
       const postData: any = {
@@ -292,12 +269,9 @@ export function usePostManagement() {
       }
 
       const { data: newPost, error } = await dbHelpers.createPost(postData)
-      
-      console.log("📤 Supabase response - data:", newPost)
-      console.log("📤 Supabase response - error:", error)
+
       
       if (error || !newPost) {
-        console.log("❌ Error creating post:", error)
         toast({
           title: "Error creating post",
           description: "There was an error publishing your post. Please try again.",
@@ -307,7 +281,6 @@ export function usePostManagement() {
         return
       }      
 
-      console.log("✅ Post created successfully!")
       
       // Add the new post to the feed với thông tin chính xác từ currentUser
       const newPostForFeed = {
@@ -329,7 +302,6 @@ export function usePostManagement() {
         isNew: true,
       }
 
-      console.log("🔄 Adding new post to feed...")
       setFeedPosts([newPostForFeed, ...feedPosts])
       
       // Tự động remove "New Post" badge sau 30 giây
@@ -341,7 +313,6 @@ export function usePostManagement() {
         )
       }, 30000) // 30 seconds
       
-      console.log("🧹 Resetting form...")
       // Reset form
       setNewPostContent("")
       setSelectedMedia([])
@@ -353,7 +324,6 @@ export function usePostManagement() {
       setTaggedPeople([])
       setSelectedDate(undefined)
 
-      console.log("✅ Post published successfully!")
       toast({
         title: "Post published!",
         description: "Your post has been published to the community feed.",
@@ -367,7 +337,6 @@ export function usePostManagement() {
         })
       }, 300)
     } catch (error) {
-      console.log("💥 Catch block error:", error)
       toast({
         title: "Error creating post",
         description: "There was an error publishing your post. Please try again.",

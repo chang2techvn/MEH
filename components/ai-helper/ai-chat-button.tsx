@@ -77,7 +77,6 @@ export function AIChatButton() {
   useEffect(() => {
     const loadAssistantData = async () => {
       try {
-        console.log('🔄 AI Chat Button: Loading assistant data...')
         
         // Initialize the service if needed
         await singleChatService.initializeConfig()
@@ -85,10 +84,7 @@ export function AIChatButton() {
         // Get dynamic avatar and name
         const avatar = singleChatService.getAssistantAvatar()
         const name = singleChatService.getAssistantName()
-        
-        console.log('📋 AI Chat Button: Loaded avatar:', avatar)
-        console.log('📋 AI Chat Button: Loaded name:', name)
-        
+
         setAssistantAvatar(avatar)
         setAssistantName(name)
       } catch (error) {
@@ -179,7 +175,6 @@ export function AIChatButton() {
   }
 
   const handleClick = () => {
-    console.log('Chat button clicked, current isOpen:', isOpen)
     
     if (!isOpen) {
       setIsOpen(true)

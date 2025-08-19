@@ -218,9 +218,7 @@ export function useUserProgress() {
         setLoading(true)
         setError(null)
         
-        console.log('Refetching user progress for user:', user.id)
         const progressData = await fetchUserProgressData(user.id)
-        console.log('Refetched progress data:', progressData)
         setProgressData(progressData)
 
       } catch (err) {

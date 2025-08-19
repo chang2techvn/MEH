@@ -254,8 +254,6 @@ export function useStories() {
       const fileExt = file.name.split('.').pop()
       const fileName = `${user.id}/${Date.now()}.${fileExt}`
 
-      console.log(`Uploading ${file.type} file: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`)
-
       const { data, error } = await supabase.storage
         .from('stories')
         .upload(fileName, file, {
@@ -273,7 +271,6 @@ export function useStories() {
         .from('stories')
         .getPublicUrl(fileName)
 
-      console.log('Upload successful, public URL:', urlData.publicUrl)
       return urlData.publicUrl
     } catch (err: any) {
       console.error('Error uploading story media:', err)

@@ -163,7 +163,6 @@ export function usePostInteractions(
       return
     }
     
-    console.log('🔥 Like button clicked!', { postId, liked: state.liked, likeCount: state.likeCount })
     
     try {
       if (!currentUser) {
@@ -175,19 +174,14 @@ export function usePostInteractions(
         })
         return
       }
-      
-      console.log('✅ Current user found:', { id: currentUser.id, email: currentUser.email })
-      
-      // Haptic feedback if available
+            
       if (navigator.vibrate) {
         navigator.vibrate(50)
       }
 
       if (state.liked) {
-        console.log('👎 Removing like...')
         // Remove like
         await removeLike(postId, currentUser.id)
-        console.log('✅ Like removed successfully')
         
         setState(prev => ({ 
           ...prev, 
@@ -201,10 +195,7 @@ export function usePostInteractions(
           description: "You unliked this post"
         })
       } else {
-        console.log('👍 Adding like...')
-        // Add like
         await addLike(postId, currentUser.id, 'like')
-        console.log('✅ Like added successfully')
         
         setState(prev => ({ 
           ...prev, 
@@ -288,9 +279,7 @@ export function usePostInteractions(
       console.warn('No postId provided for comment')
       return
     }
-    
-    console.log('💬 Comment button clicked!', { content: state.newComment })
-    
+        
     if (!state.newComment.trim()) {
       toast({
         title: "Comment required",

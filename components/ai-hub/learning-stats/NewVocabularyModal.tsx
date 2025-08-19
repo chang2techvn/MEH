@@ -99,13 +99,11 @@ Respond ONLY with valid JSON in this exact format (no extra text before or after
       }
 
       const data = await response.json();
-      console.log('AI Response:', data); // Debug log
       
       // Parse AI response with better error handling
       let aiResponse: AIVocabularyResponse;
       try {
         const content = data.content || data.message || data.response || '';
-        console.log('AI Content:', content); // Debug log
         
         // Try to extract JSON from the response
         let jsonStr = content;
@@ -125,7 +123,6 @@ Respond ONLY with valid JSON in this exact format (no extra text before or after
           jsonStr = jsonStr.replace(/```\s*/, '').replace(/```\s*$/, '');
         }
         
-        console.log('Parsed JSON string:', jsonStr); // Debug log
         aiResponse = JSON.parse(jsonStr);
         
       } catch (parseError) {
@@ -149,7 +146,6 @@ Respond ONLY with valid JSON in this exact format (no extra text before or after
             continue;
           }
 
-          console.log('Attempting to save vocabulary:', vocab.term);
           const result = await createVocabularyEntry({
             term: vocab.term,
             meaning: vocab.meaning,
@@ -162,7 +158,6 @@ Respond ONLY with valid JSON in this exact format (no extra text before or after
             source: 'AI Generated'
           });
           
-          console.log('Vocabulary saved successfully:', vocab.term, result);
           successCount++;
         } catch (saveError) {
           console.error('Failed to save vocabulary:', vocab.term, saveError);
@@ -181,7 +176,6 @@ Respond ONLY with valid JSON in this exact format (no extra text before or after
 
         // Call onSuccess callback first to refresh data
         if (onSuccess) {
-          console.log('Calling onSuccess callback to refresh data');
           await onSuccess();
         }
         

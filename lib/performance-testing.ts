@@ -196,26 +196,13 @@ export function usePerformanceMonitoring() {
         setMetrics(measuredMetrics);
         const check = checkPerformanceBudget(measuredMetrics, budget);
         setBudgetCheck(check);
-        
-        // Log results
-        console.group('📊 Performance Metrics');
-        console.log('FCP:', `${measuredMetrics.fcp}ms`);
-        console.log('LCP:', `${measuredMetrics.lcp}ms`);
-        console.log('FID:', `${measuredMetrics.fid}ms`);
-        console.log('CLS:', measuredMetrics.cls);
-        console.log('TTFB:', `${measuredMetrics.ttfb}ms`);
-        console.log('DOM Load:', `${measuredMetrics.domLoad}ms`);
-        if (measuredMetrics.memoryUsage) {
-          console.log('Memory:', `${measuredMetrics.memoryUsage.used}MB`);
-        }
+
         console.groupEnd();
 
         if (!check.passed) {
           console.group('❌ Performance Budget Violations');
           check.violations.forEach(violation => console.warn(violation));
           console.groupEnd();
-        } else {
-          console.log('✅ All performance budgets passed!');
         }
       });
     }
@@ -240,16 +227,7 @@ export function simulateDeviceConditions(device: 'mobile' | 'tablet' | 'desktop'
     desktop: { width: 1920, height: 1080 },
   };
 
-  const viewport = viewports[device];
-  
-  // This would typically be done in a testing environment
-  console.log(`🧪 Simulating ${device} device (${viewport.width}x${viewport.height}) with ${network} network`);
-  
-  // In a real testing environment, you would:
-  // 1. Set viewport size
-  // 2. Throttle network
-  // 3. Limit CPU
-  // 4. Measure performance
+
 }
 
 // Accessibility performance check

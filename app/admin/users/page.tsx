@@ -472,8 +472,6 @@ export default function UsersPage() {
 
   // Handle user actions
   const handleUserAction = async (action: string, user: UserData) => {
-    console.log('🔥🔥🔥 FUNCTION CALLED - handleUserAction:', { action, user: user.name, userId: user.id })
-    console.log('🔥 handleUserAction called:', { action, user: user.name, userId: user.id })
     setActionInProgress(user.id)
     closeAllDropdowns()
 
@@ -483,7 +481,6 @@ export default function UsersPage() {
 
       switch (action) {
         case "view-submissions":
-          console.log('📄 View submissions action triggered for user:', user.name)
           successMessage = "Submissions loaded"
           description = `Viewing submissions for ${user.name}`
           // TODO: Open submissions modal or navigate to submissions page
@@ -492,7 +489,6 @@ export default function UsersPage() {
           break
           
         case "view-progress":
-          console.log('📊 View progress action triggered for user:', user.name)
           successMessage = "Progress data loaded"
           description = `Viewing progress for ${user.name}`
           // TODO: Open progress modal or navigate to progress page
@@ -501,9 +497,7 @@ export default function UsersPage() {
           break
           
         case "suspend":
-          console.log('🚫 Suspend user action triggered for user:', user.name)
           const suspendSuccess = await updateDbUser(user.id, { status: "suspended" })
-          console.log('🚫 Suspend result:', suspendSuccess)
           if (suspendSuccess) {
             successMessage = "User suspended"
             description = `${user.name} has been suspended`
@@ -524,9 +518,7 @@ export default function UsersPage() {
           break
           
         case "activate":
-          console.log('✅ Activate user action triggered for user:', user.name)
           const activateSuccess = await updateDbUser(user.id, { status: "active" })
-          console.log('✅ Activate result:', activateSuccess)
           if (activateSuccess) {
             successMessage = "User activated"
             description = `${user.name} has been activated`
@@ -546,11 +538,9 @@ export default function UsersPage() {
           break
           
         case "delete":
-          console.log('🗑️ Delete user action triggered for user:', user.name)
           setUserToDelete(user)
           setShowDeleteConfirm(true)
           setActionInProgress(null)
-          console.log('🗑️ Delete confirmation dialog opened')
           return
       }
 
@@ -569,9 +559,7 @@ export default function UsersPage() {
   const confirmDeleteUser = async () => {
     if (!userToDelete) return
     
-    console.log('🗑️ Confirming delete for user:', userToDelete.name)
     const success = await deleteDbUser(userToDelete.id)
-    console.log('🗑️ Delete operation result:', success)
     
     if (success) {
       setSuccessMessage(`${userToDelete.name} has been deleted`)
@@ -660,13 +648,10 @@ export default function UsersPage() {
 
   // Toggle dropdown
   const toggleDropdown = (dropdownId: string) => {
-    console.log('🔽 Toggle dropdown called:', { dropdownId, currentActive: activeDropdown })
     if (activeDropdown === dropdownId) {
-      console.log('🔽 Closing dropdown:', dropdownId)
       setActiveDropdown(null)
       setShowDropdownBackdrop(false)
     } else {
-      console.log('🔽 Opening dropdown:', dropdownId)
       setActiveDropdown(dropdownId)
       setShowDropdownBackdrop(false) // Không dùng backdrop nữa
     }
@@ -674,7 +659,6 @@ export default function UsersPage() {
 
   // Close all dropdowns
   const closeAllDropdowns = () => {
-    console.log('🔽 Closing all dropdowns, current active:', activeDropdown)
     setActiveDropdown(null)
     setShowDropdownBackdrop(false)
   }
@@ -1015,7 +999,6 @@ export default function UsersPage() {
         <div 
           className="fixed inset-0 z-40 bg-transparent" 
           onClick={() => {
-            console.log('🎯 Backdrop clicked, closing dropdowns')
             closeAllDropdowns()
           }}
           aria-hidden="true"

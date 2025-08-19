@@ -27,8 +27,6 @@ export async function POST(request: NextRequest) {
       apiKeyRecovery: null as any
     }
 
-    // 1. Generate daily challenge (1 video for "Your Current Challenge")
-    console.log('\n🎯 === GENERATING DAILY CHALLENGE ===')
     try {
       const dailyResult = await createChallenge('daily', {
         minDuration: 180,  // 3 minutes
@@ -43,7 +41,6 @@ export async function POST(request: NextRequest) {
           difficulty: dailyResult.difficulty,
           challenge_type: 'daily'
         }
-        console.log(`✅ Daily challenge generated: ${dailyResult.title}`)
         
         // Notify success
         await notifyVideoGenerationSuccess({
@@ -53,7 +50,6 @@ export async function POST(request: NextRequest) {
           difficulty: dailyResult.difficulty
         })
       } else {
-        console.log('✅ Daily challenge already exists for today')
       }
     } catch (dailyError) {
       console.error('❌ Daily challenge generation failed:', dailyError)
@@ -66,14 +62,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 2. Generate practice challenges (3 per day: 1 beginner + 1 intermediate + 1 advanced)
-    console.log('\n📚 === GENERATING PRACTICE CHALLENGES (3 difficulties) ===')
     
     const difficulties: ('beginner' | 'intermediate' | 'advanced')[] = ['beginner', 'intermediate', 'advanced']
     
     for (const difficulty of difficulties) {
       try {
-        console.log(`\n🔄 Generating ${difficulty} practice challenge...`)
         
         const practiceResult = await createChallenge('practice', {
           difficulty: difficulty,
@@ -93,10 +86,7 @@ export async function POST(request: NextRequest) {
             difficulty: challenge.difficulty,
             challenge_type: 'practice'
           })
-          console.log(`✅ ${difficulty} practice challenge generated: ${challenge.title}`)
-        } else {
-          console.log(`✅ ${difficulty} practice challenge already exists for today`)
-        }
+        } 
         
         // Add small delay between requests to avoid rate limiting
         if (difficulty !== 'advanced') {
@@ -109,13 +99,10 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 3. API Key Recovery (Auto-reactivate keys that have been inactive for 24+ hours)
-    console.log('\n🔑 === API KEY RECOVERY ===')
     try {
       const recoveryResult = await recoverInactiveApiKeys('gemini')
       
       if (recoveryResult.success) {
-        console.log(`✅ API Key Recovery completed: ${recoveryResult.recoveredKeys}/${recoveryResult.totalInactiveKeys} keys recovered`)
         logData.apiKeyRecovery = {
           success: true,
           recoveredKeys: recoveryResult.recoveredKeys,
@@ -123,7 +110,6 @@ export async function POST(request: NextRequest) {
           errors: recoveryResult.errors
         }
       } else {
-        console.log(`⚠️ API Key Recovery completed with issues: ${recoveryResult.errors.join(', ')}`)
         logData.apiKeyRecovery = {
           success: false,
           recoveredKeys: recoveryResult.recoveredKeys,
@@ -145,14 +131,6 @@ export async function POST(request: NextRequest) {
 
     const endTime = Date.now()
     const duration = endTime - startTime
-
-    console.log(`\n🏁 === CRON JOB COMPLETED ===`)
-    console.log(`Duration: ${duration}ms`)
-    console.log(`Date: ${today}`)
-    console.log(`Daily Challenge: ${logData.dailyChallenge ? 'Generated' : 'Existed'}`)
-    console.log(`Practice Challenges: ${logData.practiceChallenges.length}/3 generated`)
-    console.log(`API Key Recovery: ${logData.apiKeyRecovery?.recoveredKeys || 0} keys recovered`)
-    console.log(`Errors: ${logData.errors.length}`)
 
     return NextResponse.json({
       success: true,

@@ -20,20 +20,11 @@ export async function uploadFile(
   folder: string = 'community-posts'
 ): Promise<UploadResult> {
   try {
-    console.log('📤 Starting file upload...', {
-      fileName: file.name,
-      fileSize: file.size,
-      fileType: file.type,
-      bucketName,
-      folder
-    })
 
     // Generate unique filename
     const fileExt = file.name.split('.').pop()
     const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`
     const filePath = `${folder}/${fileName}`
-
-    console.log('📁 Generated file path:', filePath)
 
     // Upload file to Supabase Storage
     const { data: uploadData, error: uploadError } = await supabase.storage
@@ -51,16 +42,12 @@ export async function uploadFile(
       }
     }
 
-    console.log('✅ Upload successful:', uploadData)
-
     // Get public URL
     const { data: urlData } = supabase.storage
       .from(bucketName)
       .getPublicUrl(filePath)
 
     const publicUrl = urlData.publicUrl
-
-    console.log('🌐 Public URL generated:', publicUrl)
 
     return {
       success: true,
@@ -133,7 +120,6 @@ export async function deleteFile(
   bucketName: string = 'posts'
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    console.log('🗑️ Deleting file:', filePath)
 
     const { error } = await supabase.storage
       .from(bucketName)
@@ -147,7 +133,6 @@ export async function deleteFile(
       }
     }
 
-    console.log('✅ File deleted successfully')
     return { success: true }
 
   } catch (error) {

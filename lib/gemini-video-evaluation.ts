@@ -31,45 +31,22 @@ export async function evaluateVideoSubmission(
   while (currentAttempt < maxRetries) {
     try {
       currentAttempt++
-      console.log(`🔄 Video evaluation attempt ${currentAttempt}/${maxRetries}`)
       
       // Step 1: Get active API key from database for this attempt
-      console.log("🔑 Getting active API key for video evaluation...")
       const apiKeyData = await getActiveApiKey('gemini')
-      console.log(`✅ Using API key: ${apiKeyData.key_name} for entire attempt`)
-
       // Step 2: Download video from Supabase and upload to Gemini with the SAME API key
-      console.log("🔄 Step 2: Uploading video to Gemini for analysis...")
       const geminiUpload = await downloadAndUploadToGeminiWithKey(videoUrl, apiKeyData.decrypted_key)
       geminiFileName = geminiUpload.fileName
 
       // Increment usage for the upload
       await incrementUsage(apiKeyData.id)
-      console.log(`📊 API key usage incremented for upload: ${apiKeyData.key_name}`)
-
-      console.log("✅ Video uploaded to Gemini successfully")
-      console.log("📁 File URI:", geminiUpload.fileUri)
-      console.log("📁 File size:", geminiUpload.sizeBytes, "bytes")
 
       // Step 3: Generate prompts
       const systemPrompt = generateSystemPrompt()
       const evaluationPrompt = generateEvaluationPrompt(videoUrl, caption, transcript, originalContent)
 
-      // Output prompts to terminal for debugging (only on first attempt)
-      if (currentAttempt === 1) {
-        console.log("\n" + "=".repeat(80))
-        console.log("🤖 GEMINI AI VIDEO EVALUATION - SYSTEM PROMPT")
-        console.log("=".repeat(80))
-        console.log(systemPrompt)
-        console.log("\n" + "=".repeat(80))
-        console.log("🎯 GEMINI AI VIDEO EVALUATION - EVALUATION PROMPT")
-        console.log("=".repeat(80))
-        console.log(evaluationPrompt)
-        console.log("=".repeat(80) + "\n")
-      }
 
       // Step 4: Send video and prompt to Gemini for analysis using the SAME API key
-      console.log("🔄 Step 4: Analyzing video with Gemini AI...")
       const response = await generateGeminiVideoResponseWithKey(
         evaluationPrompt, 
         geminiUpload.uploadedFile, 
@@ -79,21 +56,12 @@ export async function evaluateVideoSubmission(
       
       // Step 5: Increment API key usage
       await incrementUsage(apiKeyData.id)
-      console.log(`📊 API key usage incremented for: ${apiKeyData.key_name}`)
-      
-      // Output AI response to terminal for debugging
-      console.log("\n" + "=".repeat(80))
-      console.log("🎯 GEMINI AI RESPONSE - VIDEO EVALUATION")
-      console.log("=".repeat(80))
-      console.log(response)
-      console.log("=".repeat(80) + "\n")
       
       // Step 6: Parse the AI response and convert to structured format
       const evaluation = parseVideoEvaluationResponse(response, videoUrl, caption)
       
       // Step 7: Clean up - delete the file from Gemini
       if (geminiFileName) {
-        console.log("🗑️ Cleaning up: deleting video from Gemini...")
         await deleteGeminiFile(geminiFileName)
       }
       
@@ -105,7 +73,6 @@ export async function evaluateVideoSubmission(
       // Clean up uploaded file on error
       if (geminiFileName) {
         try {
-          console.log("🗑️ Error cleanup: deleting video from Gemini...")
           await deleteGeminiFile(geminiFileName)
         } catch (cleanupError) {
           console.error("❌ Failed to cleanup Gemini file:", cleanupError)
@@ -119,7 +86,6 @@ export async function evaluateVideoSubmission(
             error.message.includes("permission") || 
             error.message.includes("PERMISSION_DENIED") ||
             error.message.includes("Invalid API key")) {
-          console.log(`🔄 API key issue detected, retrying with new API key (attempt ${currentAttempt + 1}/${maxRetries})`)
           continue // Try again with a fresh API key and file upload
         }
       }

@@ -53,7 +53,6 @@ async function handleApiError(error: any, keyId?: string): Promise<{ shouldRetry
   const status = error.status || error.response?.status
   
   if (status === 503) {
-    console.log('🔄 Service unavailable (503), attempting key rotation...')
     if (keyId) {
       const rotation = await rotateToNextKey('gemini', keyId, 'Service unavailable (503)')
       if (rotation.success) {
@@ -62,14 +61,12 @@ async function handleApiError(error: any, keyId?: string): Promise<{ shouldRetry
       }
     }
   } else if (status === 429) {
-    console.log('⚠️ Quota exceeded (429), marking key as inactive...')
     if (keyId) {
       await markKeyAsInactive(keyId, 'Quota exceeded (429)')
       const newKey = await getGeminiApiKey()
       return { shouldRetry: true, newKey }
     }
   } else if (status === 403) {
-    console.log('❌ Invalid API key (403), marking as inactive...')
     if (keyId) {
       await markKeyAsInactive(keyId, 'Invalid API key (403)')
       const newKey = await getGeminiApiKey()
@@ -93,7 +90,6 @@ export async function generateGeminiResponse(prompt: string, systemPrompt?: stri
 
   while (currentAttempt < API_CONFIG.maxRetries) {
     try {
-      console.log(`🤖 Generating Gemini response (attempt ${currentAttempt + 1}/${API_CONFIG.maxRetries})`)
 
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.timeout)
@@ -133,7 +129,6 @@ export async function generateGeminiResponse(prompt: string, systemPrompt?: stri
         const errorResult = await handleApiError({ status: response.status, response }, currentKey.keyId)
         
         if (errorResult.shouldRetry && errorResult.newKey) {
-          console.log('🔄 Retrying with new API key...')
           currentKey = errorResult.newKey
           currentAttempt++
           await new Promise(resolve => setTimeout(resolve, API_CONFIG.retryDelay))
@@ -154,14 +149,12 @@ export async function generateGeminiResponse(prompt: string, systemPrompt?: stri
         await incrementUsage(currentKey.keyId)
       }
 
-      console.log('✅ Gemini response generated successfully')
       return assistantResponse
 
     } catch (error) {
       console.error(`❌ Attempt ${currentAttempt + 1} failed:`, error)
 
       if (error instanceof Error && error.name === 'AbortError') {
-        console.log('⏰ Request timeout, trying with different key...')
         const errorResult = await handleApiError({ status: 408 }, currentKey.keyId)
         if (errorResult.shouldRetry && errorResult.newKey) {
           currentKey = errorResult.newKey
@@ -197,10 +190,7 @@ export async function generateGeminiVideoResponse(
 ): Promise<string> {
   // Get current API key (no retries - this is handled at higher level)
   const currentKey = await getGeminiApiKey()
-  
-  console.log(`🎥 Generating Gemini video response`)
-  console.log("📁 File URI:", uploadedFile.uri)
-  console.log("💬 Prompt length:", prompt.length)
+
 
   // Initialize client with current API key
   const client = new GoogleGenAI({ apiKey: currentKey.key })
@@ -222,8 +212,6 @@ export async function generateGeminiVideoResponse(
     await incrementUsage(currentKey.keyId)
   }
 
-  console.log("✅ Received video response from Gemini")
-  console.log("📝 Response length:", text.length)
 
   return text
 }
@@ -242,9 +230,6 @@ export async function generateGeminiVideoResponseWithKey(
   systemPrompt: string | undefined,
   apiKey: string
 ): Promise<string> {
-  console.log(`🎥 Generating Gemini video response with provided key`)
-  console.log("📁 File URI:", uploadedFile.uri)
-  console.log("💬 Prompt length:", prompt.length)
 
   // Initialize client with provided API key
   const client = new GoogleGenAI({ apiKey })
@@ -260,9 +245,6 @@ export async function generateGeminiVideoResponseWithKey(
   })
 
   const text = result.text || ""
-
-  console.log("✅ Received video response from Gemini")
-  console.log("📝 Response length:", text.length)
 
   return text
 }

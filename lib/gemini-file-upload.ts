@@ -46,7 +46,6 @@ async function handleApiError(error: any, keyId?: string): Promise<{ shouldRetry
   const status = error.status || error.response?.status
   
   if (status === 503) {
-    console.log('🔄 Service unavailable (503), attempting key rotation...')
     if (keyId) {
       const rotation = await rotateToNextKey('gemini', keyId, 'Service unavailable (503)')
       if (rotation.success) {
@@ -55,14 +54,12 @@ async function handleApiError(error: any, keyId?: string): Promise<{ shouldRetry
       }
     }
   } else if (status === 429) {
-    console.log('⚠️ Quota exceeded (429), marking key as inactive...')
     if (keyId) {
       await markKeyAsInactive(keyId, 'Quota exceeded (429)')
       const newKey = await getGeminiApiKey()
       return { shouldRetry: true, newKey }
     }
   } else if (status === 403) {
-    console.log('❌ Invalid API key (403), marking as inactive...')
     if (keyId) {
       await markKeyAsInactive(keyId, 'Invalid API key (403)')
       const newKey = await getGeminiApiKey()
@@ -99,10 +96,7 @@ export async function uploadVideoToGemini(
 
   while (currentAttempt < UPLOAD_CONFIG.maxRetries) {
     try {
-      console.log(`🔄 Uploading video to Gemini Files API (attempt ${currentAttempt + 1}/${UPLOAD_CONFIG.maxRetries})`)
       const fileSize = videoFile instanceof Buffer ? videoFile.length : (videoFile as Blob).size
-      console.log("📁 File size:", fileSize)
-      console.log("📁 MIME type:", mimeType)
       
       // Initialize client with current API key
       const client = new GoogleGenAI({ apiKey: currentKey.key })
@@ -119,15 +113,10 @@ export async function uploadVideoToGemini(
       
       // Upload file to Gemini Files API using new SDK
       const uploadResult = await client.files.upload({ file: fileData })
-      
-      console.log("✅ Successfully uploaded video to Gemini:")
-      console.log("📁 File URI:", uploadResult.uri)
-      console.log("📁 File name:", uploadResult.name)
-      console.log("📁 State:", uploadResult.state)
+
       
       // Wait for file to be processed if needed
       if (uploadResult.state === 'PROCESSING') {
-        console.log("⏳ File is processing, waiting...")
         await waitForFileProcessing(uploadResult.name || '', currentKey.key)
       }
 
@@ -194,7 +183,6 @@ async function waitForFileProcessing(fileName: string, apiKey: string, maxWaitTi
       const fileInfo = await client.files.get({ name: fileName })
       
       if (fileInfo.state === 'ACTIVE') {
-        console.log("✅ File processing completed")
         return
       }
       
@@ -202,7 +190,6 @@ async function waitForFileProcessing(fileName: string, apiKey: string, maxWaitTi
         throw new Error("File processing failed")
       }
       
-      console.log("⏳ File still processing, waiting...")
       await new Promise(resolve => setTimeout(resolve, 2000))
       
     } catch (error) {
@@ -220,12 +207,10 @@ async function waitForFileProcessing(fileName: string, apiKey: string, maxWaitTi
  */
 export async function deleteGeminiFile(fileName: string): Promise<void> {
   try {
-    console.log("🗑️ Deleting file from Gemini:", fileName)
     const currentKey = await getGeminiApiKey()
     const client = new GoogleGenAI({ apiKey: currentKey.key })
     
     await client.files.delete({ name: fileName })
-    console.log("✅ Successfully deleted file from Gemini")
   } catch (error) {
     console.error("❌ Failed to delete file from Gemini:", error)
     // Don't throw error for cleanup operations
@@ -246,11 +231,8 @@ export async function uploadVideoToGeminiWithKey(
   displayName: string,
   apiKey: string
 ): Promise<GeminiFileUploadResult> {
-  console.log(`🔄 Uploading video to Gemini Files API with provided key`)
   const fileSize = videoFile instanceof Buffer ? videoFile.length : (videoFile as Blob).size
-  console.log("📁 File size:", fileSize)
-  console.log("📁 MIME type:", mimeType)
-  
+
   // Initialize client with provided API key
   const client = new GoogleGenAI({ apiKey })
   
@@ -266,15 +248,10 @@ export async function uploadVideoToGeminiWithKey(
   
   // Upload file to Gemini Files API using new SDK
   const uploadResult = await client.files.upload({ file: fileData })
-  
-  console.log("✅ Successfully uploaded video to Gemini:")
-  console.log("📁 File URI:", uploadResult.uri)
-  console.log("📁 File name:", uploadResult.name)
-  console.log("📁 State:", uploadResult.state)
+
   
   // Wait for file to be processed if needed
   if (uploadResult.state === 'PROCESSING') {
-    console.log("⏳ File is processing, waiting...")
     await waitForFileProcessing(uploadResult.name || '', apiKey)
   }
 
@@ -298,7 +275,6 @@ export async function downloadAndUploadToGeminiWithKey(
   supabaseVideoUrl: string, 
   apiKey: string
 ): Promise<GeminiFileUploadResult> {
-  console.log("🔄 Downloading video from Supabase:", supabaseVideoUrl)
   
   // Download video from Supabase
   const response = await fetch(supabaseVideoUrl)
@@ -308,9 +284,7 @@ export async function downloadAndUploadToGeminiWithKey(
 
   const videoBuffer = await response.arrayBuffer()
   const contentType = response.headers.get('content-type') || 'video/mp4'
-  
-  console.log("✅ Video downloaded, uploading to Gemini with specified key...")
-  
+    
   // Upload to Gemini using the provided API key
   return await uploadVideoToGeminiWithKey(
     Buffer.from(videoBuffer),
@@ -326,9 +300,7 @@ export async function downloadAndUploadToGeminiWithKey(
  * @returns Gemini file upload result
  */
 export async function downloadAndUploadToGemini(supabaseVideoUrl: string): Promise<GeminiFileUploadResult> {
-  try {
-    console.log("🔄 Downloading video from Supabase:", supabaseVideoUrl)
-    
+  try {    
     // Download video from Supabase
     const response = await fetch(supabaseVideoUrl)
     if (!response.ok) {
@@ -337,9 +309,7 @@ export async function downloadAndUploadToGemini(supabaseVideoUrl: string): Promi
 
     const videoBuffer = await response.arrayBuffer()
     const contentType = response.headers.get('content-type') || 'video/mp4'
-    
-    console.log("✅ Video downloaded, uploading to Gemini...")
-    
+        
     // Upload to Gemini using our improved upload function
     return await uploadVideoToGemini(
       Buffer.from(videoBuffer),

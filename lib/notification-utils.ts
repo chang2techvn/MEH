@@ -57,7 +57,6 @@ export async function sendNotificationToUsers(
       return { success: false, error }
     }
 
-    console.log(`✅ Sent notifications to ${userIds.length} users`)
     return { success: true, data }
   } catch (error) {
     console.error('Exception sending notifications:', error)

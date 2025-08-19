@@ -137,11 +137,6 @@ export function setStorageItem<T>(
     const storageInfo = getStorageInfo()
     const itemSize = serialized.length
     
-    if (storageInfo.percentage > STORAGE_QUOTA_WARNING) {
-      // Try to clean up first
-      const cleaned = cleanupStorage()
-      console.log(`Cleaned up ${cleaned} storage items`)
-    }
 
     // Try to store the item
     localStorage.setItem(key, serialized)

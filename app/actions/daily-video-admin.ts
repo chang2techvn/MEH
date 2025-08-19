@@ -250,17 +250,7 @@ export async function sendAdminNotification(
     // Log to console for now (can be extended to email/Slack/etc)
     const timestamp = new Date().toISOString()
     const logLevel = type === 'error' ? 'ERROR' : type === 'warning' ? 'WARN' : 'INFO'
-    
-    console.log(`[${timestamp}] ${logLevel} - ADMIN NOTIFICATION`)
-    console.log(`Title: ${title}`)
-    console.log(`Message: ${message}`)
-    if (metadata) {
-      console.log(`Metadata:`, JSON.stringify(metadata, null, 2))
-    }
-    
-    // Future: Could save to database notifications table
-    // Future: Could send to admin email/Slack webhook
-    // Future: Could trigger browser notifications
+
     
   } catch (error) {
     console.error('Failed to send admin notification:', error)

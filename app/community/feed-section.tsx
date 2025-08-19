@@ -18,11 +18,6 @@ export default function CommunityFeedSection() {
 
   // Create missing functions that were in the original component
   const refreshFeed = () => {
-    // Refresh logic would go here
-    console.log("Refreshing community feed...")
-    // Instead of page reload, trigger a re-fetch of feed data
-    // This would require adding a refresh function to useFeedData hook
-    // For now, use router.refresh() which is more efficient than window.location.reload()
     router.refresh()
   }
 

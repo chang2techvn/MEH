@@ -118,12 +118,10 @@ export function useNaturalConversation(selectedAIIds: string[]) {
   const handleAutoInteraction = async (type: 'ai_to_ai' | 'ai_to_user') => {
     // Don't trigger auto-interactions if user is actively using the system
     if (!currentSession || isAutoInteracting || isProcessing) {
-      console.log('🚫 Auto-interaction blocked - system busy');
       return;
     }
 
     try {
-      console.log(`🤖 Triggering auto-interaction: ${type}`);
       
       setIsAutoInteracting(true);
       
@@ -209,7 +207,6 @@ export function useNaturalConversation(selectedAIIds: string[]) {
           }
         }
         
-        console.log(`✅ Auto-interaction successful: ${data.interactions.length} messages`);
       }
     } catch (error) {
       console.error('❌ Auto-interaction error:', error);
@@ -341,17 +338,13 @@ export function useNaturalConversation(selectedAIIds: string[]) {
       
       // Create session if it doesn't exist
       if (!sessionToUse) {
-        console.log('🔄 Creating new session...');
         sessionToUse = await createSession();
         if (!sessionToUse) {
           console.error('❌ Failed to create session');
           setError('Failed to create conversation session');
           return;
         }
-        console.log('✅ Session created:', sessionToUse.id);
       }
-
-      console.log('📤 Sending message with session:', sessionToUse.id);
       
       // Only set processing state for user-initiated messages, not auto-interactions
       if (!isAutoInteracting) {

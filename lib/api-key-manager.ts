@@ -59,7 +59,6 @@ export async function getActiveApiKey(
   const serviceConfig = { ...DEFAULT_CONFIG, ...config, serviceName }
   
   try {
-    console.log(`🔑 Getting active API key for service: ${serviceName}`)
     
     // Query for active keys, ordered by usage (lowest first) and creation date
     const { data: keys, error } = await supabase
@@ -87,7 +86,6 @@ export async function getActiveApiKey(
       // Decrypt the API key
       const decryptedKey = decryptApiKey(key.encrypted_key)
       
-      console.log(`✅ Retrieved active API key: ${key.key_name} (Usage: ${key.current_usage}/${key.usage_limit})`)
       
       return {
         ...key,
@@ -115,7 +113,6 @@ export async function getActiveApiKey(
  */
 export async function markKeyAsInactive(keyId: string, reason: string): Promise<boolean> {
   try {
-    console.log(`🚫 Marking API key as inactive: ${keyId} - Reason: ${reason}`)
     
     const { error } = await supabase
       .from('api_keys')
@@ -130,7 +127,6 @@ export async function markKeyAsInactive(keyId: string, reason: string): Promise<
       throw createApiKeyError('DATABASE_ERROR', 'Failed to update key status', keyId, undefined, error)
     }
     
-    console.log(`✅ API key marked as inactive: ${keyId}`)
     return true
     
   } catch (error) {
@@ -146,7 +142,6 @@ export async function markKeyAsInactive(keyId: string, reason: string): Promise<
  */
 export async function incrementUsage(keyId: string): Promise<boolean> {
   try {
-    console.log(`📊 Incrementing usage for API key: ${keyId}`)
     
     // First get current usage
     const { data: currentKey, error: fetchError } = await supabase
@@ -174,7 +169,6 @@ export async function incrementUsage(keyId: string): Promise<boolean> {
       throw createApiKeyError('DATABASE_ERROR', 'Failed to update usage counter', keyId, undefined, error)
     }
     
-    console.log(`✅ Usage incremented for API key: ${keyId}`)
     return true
     
   } catch (error) {
@@ -196,7 +190,6 @@ export async function rotateToNextKey(
   reason: string = 'Service unavailable'
 ): Promise<ApiKeyRotationResult> {
   try {
-    console.log(`🔄 Rotating API key for service: ${serviceName} - Reason: ${reason}`)
     
     // Mark current key as inactive if provided
     if (currentKeyId) {
@@ -207,7 +200,6 @@ export async function rotateToNextKey(
     try {
       const nextKey = await getActiveApiKey(serviceName)
       
-      console.log(`✅ Successfully rotated to new API key: ${nextKey.key_name}`)
       
       return {
         success: true,
@@ -307,7 +299,6 @@ export async function getAllKeys(serviceName: string): Promise<ApiKey[]> {
  */
 export async function resetDailyUsage(serviceName: string): Promise<boolean> {
   try {
-    console.log(`🔄 Resetting daily usage for service: ${serviceName}`)
     
     const { error } = await supabase
       .from('api_keys')
@@ -322,7 +313,6 @@ export async function resetDailyUsage(serviceName: string): Promise<boolean> {
       return false
     }
     
-    console.log(`✅ Daily usage reset for service: ${serviceName}`)
     return true
     
   } catch (error) {
@@ -340,7 +330,6 @@ export async function getAllActiveApiKeys(
   serviceName: string = 'gemini'
 ): Promise<ApiKeyDecrypted[]> {
   try {
-    console.log(`🔑 Getting all active API keys for service: ${serviceName}`)
     
     // Query for all active keys, ordered by usage (lowest first) and creation date
     const { data: keys, error } = await supabase
@@ -372,9 +361,7 @@ export async function getAllActiveApiKeys(
           ...key,
           decrypted_key: decryptedKey
         })
-        
-        console.log(`✅ Decrypted API key: ${key.key_name} (Usage: ${key.current_usage}/${key.usage_limit})`)
-        
+                
       } catch (decryptError) {
         console.error(`❌ Failed to decrypt API key ${key.key_name}:`, decryptError)
         // Continue with other keys instead of failing completely
@@ -385,7 +372,6 @@ export async function getAllActiveApiKeys(
       throw createApiKeyError('DECRYPTION_FAILED', 'Failed to decrypt any API keys', undefined, serviceName)
     }
     
-    console.log(`✅ Retrieved ${decryptedKeys.length} active API keys for service: ${serviceName}`)
     return decryptedKeys
     
   } catch (error) {

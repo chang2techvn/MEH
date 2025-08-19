@@ -76,14 +76,11 @@ class SystemConfigService {
    * Get default assistant configuration
    */
   async getDefaultAssistant(): Promise<DefaultAssistantConfig> {
-    console.log('🔍 SystemConfigService: Getting default assistant config...')
     const config = await this.getConfig<DefaultAssistantConfig>('default_assistant')
     
-    console.log('📄 SystemConfigService: Config from database:', config)
     
     // Fallback to hardcoded values if config not found
     if (!config) {
-      console.log('⚠️ SystemConfigService: No config found, using fallback')
       return {
         id: 'hani-default',
         name: 'Hani',
@@ -95,7 +92,6 @@ class SystemConfigService {
       }
     }
 
-    console.log('✅ SystemConfigService: Using database config')
     return config
   }
 
@@ -133,7 +129,6 @@ class SystemConfigService {
    * Clear all cache (useful for debugging)
    */
   clearCache(): void {
-    console.log('🗑️ SystemConfigService: Clearing cache...')
     this.cache.clear()
     this.cacheExpiry.clear()
   }
@@ -142,7 +137,6 @@ class SystemConfigService {
    * Clear specific cache key
    */
   clearCacheKey(key: string): void {
-    console.log(`🗑️ SystemConfigService: Clearing cache for key: ${key}`)
     this.cache.delete(key)
     this.cacheExpiry.delete(key)
   }
