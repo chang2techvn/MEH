@@ -31,7 +31,7 @@ export function useSystemConfig() {
         // Immediately update local state for instant UI feedback
         setDefaultAssistant(config)
         // Clear cache to ensure fresh data on next fetch
-        systemConfigService.clearCache('default_assistant')
+        systemConfigService.clearCacheKey('default_assistant')
         
         // Verify the update by fetching from server
         setTimeout(async () => {
@@ -52,7 +52,7 @@ export function useSystemConfig() {
   }, [])
 
   const refreshConfig = useCallback(() => {
-    systemConfigService.clearCache('default_assistant')
+    systemConfigService.clearCacheKey('default_assistant')
     fetchDefaultAssistant()
   }, [fetchDefaultAssistant])
 
