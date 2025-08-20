@@ -8,6 +8,7 @@ import { type Challenge } from "@/lib/utils/challenge-constants"
 import { getVideoSettings } from "@/app/actions/admin-settings"
 import { formatTime } from "@/components/youtube/youtube-api"
 import { useChallenge } from "@/contexts/challenge-context"
+import { useAuth } from "@/contexts/auth-context"
 const HeroSection = lazy(() => import("@/components/home/hero-section"))
 const AssignedTask = lazy(() => import("@/components/home/assigned-task"))
 
@@ -45,6 +46,7 @@ export function CurrentChallengeSection({
 }: CurrentChallengeSectionProps) {
   const [watchTimeText, setWatchTimeText] = useState("3:00")
   const { challengeMode } = useChallenge()
+  const { user } = useAuth() // Get authenticated user
 
   useEffect(() => {
     const loadWatchTime = async () => {
@@ -99,16 +101,22 @@ export function CurrentChallengeSection({
       >
         <Suspense fallback={<LoadingFallback />}>
           {/* Remount AssignedTask on challenge change to reset step state */}
-          <AssignedTask
-            key={`${challengeMode}-${currentChallenge.id}`}
-            title={currentChallenge.title}
-            description={currentChallenge.description}
-            videoUrl={currentChallenge.videoUrl}
-            dueDate={new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
-            userId="current-user"
-            username="You"
-            userImage="/placeholder.svg?height=40&width=40"
-          />
+          {user?.id ? (
+            <AssignedTask
+              key={`${challengeMode}-${currentChallenge.id}`}
+              title={currentChallenge.title}
+              description={currentChallenge.description}
+              videoUrl={currentChallenge.videoUrl}
+              dueDate={new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
+              userId={user.id}
+              username={user.name || "You"}
+              userImage={user.avatar || "/placeholder.svg?height=40&width=40"}
+            />
+          ) : (
+            <div className="p-4 sm:p-6 text-center">
+              <p className="text-muted-foreground">Please log in to access daily challenges</p>
+            </div>
+          )}
         </Suspense>
       </HeroSection>
     </Suspense>

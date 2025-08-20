@@ -27,6 +27,7 @@ export function useCommunityData() {
   // Load initial posts (fast load for immediate UI)
   const loadInitialPosts = async () => {
     try {
+      console.log('🔄 Loading initial community posts...')
       
       const postsResult = await supabase
         .from('posts')
@@ -40,9 +41,12 @@ export function useCommunityData() {
         return
       }
       
+      console.log('✅ Posts query result:', postsResult.data?.length, 'posts found')
+      
       if (postsResult.data && postsResult.data.length > 0) {
         
         const transformedPosts = await transformPosts(postsResult.data)
+        console.log('✅ Posts transformed successfully:', transformedPosts.length)
         setFeedPosts(transformedPosts as Post[])
         setCurrentPage(1) // Mark that we've loaded the first "page"
         
@@ -50,10 +54,13 @@ export function useCommunityData() {
         if (postsResult.data.length < INITIAL_POSTS_COUNT) {
           setHasMorePosts(false)
         }
+      } else {
+        console.log('⚠️ No posts found in database')
       }
     } catch (error) {
       console.error("❌ Error loading initial posts:", error)
     } finally {
+      console.log('✅ Initial posts loading completed')
       setLoading(false) // Stop initial loading state
     }
   }
@@ -118,23 +125,33 @@ export function useCommunityData() {
 
   // Transform posts helper function
   const transformPosts = async (posts: any[]) => {
-    // Get unique user_ids from posts
-    const userIds = [...new Set(posts.map((post: any) => post.user_id))]
-    
-    // Get profiles for all users
-    const { data: profilesData } = await supabase
-      .from('profiles')
-      .select('user_id, full_name, username, avatar_url')
-      .in('user_id', userIds)
-    
-    // Create a lookup map
-    const profilesMap = new Map()
-    profilesData?.forEach((profile: any) => {
-      profilesMap.set(profile.user_id, profile)
-    })
-    
-    // Transform database posts to feed format
-    return posts.map((post: any) => {
+    try {
+      console.log('🔄 Transforming posts:', posts.length)
+      
+      // Get unique user_ids from posts
+      const userIds = [...new Set(posts.map((post: any) => post.user_id))]
+      console.log('🔍 Fetching profiles for users:', userIds.length)
+      
+      // Get profiles for all users
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('user_id, full_name, username, avatar_url')
+        .in('user_id', userIds)
+      
+      if (profilesError) {
+        console.error('❌ Error fetching profiles:', profilesError)
+      } else {
+        console.log('✅ Profiles fetched:', profilesData?.length)
+      }
+      
+      // Create a lookup map
+      const profilesMap = new Map()
+      profilesData?.forEach((profile: any) => {
+        profilesMap.set(profile.user_id, profile)
+      })
+      
+      // Transform database posts to feed format
+      const transformedPosts = posts.map((post: any) => {
       const profile = profilesMap.get(post.user_id)
       
       // Extract YouTube video ID if content contains YouTube links
@@ -194,6 +211,14 @@ export function useCommunityData() {
         isNew: false
       }
     })
+    
+    console.log('✅ Posts transformation completed')
+    return transformedPosts
+    
+    } catch (error) {
+      console.error('❌ Error transforming posts:', error)
+      return []
+    }
   }
 
   // Load remaining data in background (non-blocking)
@@ -296,6 +321,7 @@ export function useCommunityData() {
 
   // Initial data load - optimized for speed
   useEffect(() => {
+    console.log('🔄 Community data hook initializing...')
     // Load initial posts immediately (non-blocking UI)
     loadInitialPosts().then(() => {
       // Load remaining data in background
@@ -316,6 +342,43 @@ export function useCommunityData() {
       setContacts([])
     }
   }, [user?.id])
+
+  // Load a specific post if not in current list
+  const loadSpecificPost = async (postId: string) => {
+    try {
+      console.log('🔍 Loading specific post:', postId)
+      
+      // Check if post already exists
+      if (feedPosts.some(post => post.id === postId)) {
+        console.log('✅ Post already exists in feed')
+        return
+      }
+      
+      const postResult = await supabase
+        .from('posts')
+        .select('*')
+        .eq('id', postId)
+        .eq('is_public', true)
+        .single()
+      
+      if (postResult.error) {
+        console.error("❌ Error loading specific post:", postResult.error)
+        return
+      }
+      
+      if (postResult.data) {
+        const transformedPost = await transformPosts([postResult.data])
+        if (transformedPost.length > 0) {
+          // Add to beginning of feed for immediate visibility
+          setFeedPosts(prev => [transformedPost[0] as Post, ...prev])
+          console.log('✅ Specific post loaded and added to feed')
+        }
+      }
+      
+    } catch (error) {
+      console.error("❌ Error in loadSpecificPost:", error)
+    }
+  }
 
   return {
     // State
@@ -339,6 +402,7 @@ export function useCommunityData() {
     // Functions
     loadInitialPosts,
     loadMorePosts,
+    loadSpecificPost,
     checkAndPreloadPosts,
     loadBackgroundData,
     loadContacts,

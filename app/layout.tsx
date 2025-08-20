@@ -10,6 +10,10 @@ import ChatWindowsManager from "@/components/messages/chat-windows-manager"
 import MinimizedChatBar from "@/components/messages/minimized-chat-bar"
 import { ThemeProvider } from "@/contexts/theme-context"
 import { ChallengeProvider } from "@/contexts/challenge-context"
+import { CommunityProvider } from "@/contexts/community-context"
+import { ResourcesProvider } from "@/contexts/resources-context"
+import { ProfileProvider } from "@/contexts/profile-context"
+import { AdminProvider } from "@/contexts/admin-context"
 import Script from "next/script"
 import ServiceWorkerRegistration from "@/components/service-worker-registration"
 import { ScrollToTopButton } from "@/components/ui/scroll-to-top-button"
@@ -116,9 +120,9 @@ export default function RootLayout({
 
         {/* PWA assets */}
         <link rel="manifest" href="/manifest.json" />
-        <link rel="icon" href="/favicon.ico" sizes="any" />
-        <link rel="icon" href="/icon.svg" type="image/svg+xml" />
-        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+        <link rel="icon" href="/logo.svg" type="image/svg+xml" />
+        <link rel="apple-touch-icon" href="/logo.svg" />
 
         {/* Preload critical CSS */}
         <link rel="preload" href="/_next/static/css/app.css" as="style" />
@@ -126,17 +130,25 @@ export default function RootLayout({
       <body suppressHydrationWarning className={inter.className}>        <AuthProvider>
           <ThemeProvider>
             <ChallengeProvider>
-              <ChatProvider>
-                <ServiceInitializer />
-                <div className="flex min-h-screen flex-col">
-                  {children}
-                  <ChatWindowsManager />
-                  <MinimizedChatBar />
-                  <ScrollToTopButton showOnMobileOnly={true} threshold={500} />
-                </div>
-                <Toaster />
+              <CommunityProvider>
+                <ResourcesProvider>
+                  <ProfileProvider>
+                    <AdminProvider>
+                      <ChatProvider>
+                    <ServiceInitializer />
+                    <div className="flex min-h-screen flex-col">
+                      {children}
+                      <ChatWindowsManager />
+                      <MinimizedChatBar />
+                      <ScrollToTopButton showOnMobileOnly={true} threshold={500} />
+                    </div>
+                    <Toaster />
 
-              </ChatProvider>
+                  </ChatProvider>
+                </AdminProvider>
+              </ProfileProvider>
+            </ResourcesProvider>
+          </CommunityProvider>
             </ChallengeProvider>
           </ThemeProvider>
         </AuthProvider>

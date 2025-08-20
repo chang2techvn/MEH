@@ -14,7 +14,7 @@ import type { Conversation, User } from "@/components/messages/types"
 
 interface DatabaseUser {
   id: string
-  name: string
+  full_name: string
   email: string
   avatar: string
 }
@@ -54,27 +54,54 @@ function MessagesModalContent({ onClose }: { onClose: () => void }) {
       const pageSize = 20
       const offset = page * pageSize
       
+      // Query users with profiles - same approach as dropdown
       let query = supabase
-        .from('profiles')
-        .select('id, name, email, avatar')
+        .from('users')
+        .select(`
+          id, 
+          email, 
+          last_login,
+          name,
+          profiles (
+            username,
+            full_name,
+            avatar_url
+          )
+        `)
         .neq('id', currentUser.id)
+        .eq('is_active', true)
+        .order('last_login', { ascending: false })
         .range(offset, offset + pageSize - 1)
-        .order('name')
 
       if (searchTerm) {
-        query = query.or(`name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`)
+        query = query.or(`email.ilike.%${searchTerm}%,profiles.full_name.ilike.%${searchTerm}%,profiles.username.ilike.%${searchTerm}%`)
       }
 
       const { data: users, error } = await query
 
       if (error) throw error
 
-      const usersData: DatabaseUser[] = users?.map(user => ({
-        id: user.id,
-        name: user.name || user.email || 'Unknown',
-        email: user.email || '',
-        avatar: user.avatar || ''
-      })) || []
+      const usersData: DatabaseUser[] = (users || [])
+        .filter(user => user?.id && user.id !== currentUser.id)
+        .map(user => {
+          // Handle profiles data - could be an array or object
+          const profile = Array.isArray(user.profiles) ? user.profiles[0] : user.profiles
+          const safeProfile = profile || {}
+          
+          const displayName = 
+            user.name ||
+            safeProfile.full_name || 
+            safeProfile.username || 
+            user.email?.split('@')[0] || 
+            'Unknown User'
+            
+          return {
+            id: user.id,
+            full_name: displayName,
+            email: user.email || '',
+            avatar: safeProfile.avatar_url || ''
+          }
+        })
 
       if (page === 0) {
         setAvailableUsers(usersData)
@@ -293,14 +320,14 @@ function MessagesModalContent({ onClose }: { onClose: () => void }) {
                   onClick={() => createConversation(user.id)}
                 >
                   <Avatar className="h-10 w-10 border-2 border-white/20">
-                    <AvatarImage src={user.avatar} alt={user.name} />
+                    <AvatarImage src={user.avatar} alt={user.full_name} />
                     <AvatarFallback className="bg-gradient-to-br from-neo-mint to-purist-blue text-white text-sm font-semibold">
-                      {user.name.charAt(0).toUpperCase()}
+                      {user.full_name?.charAt(0).toUpperCase() || 'U'}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                      {user.name}
+                      {user.full_name}
                     </p>
                     <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
                       {user.email}

@@ -58,8 +58,8 @@ export default function AssignedTask({
     setSubmissionComplete(true)
   }
 
-  // If we have a userId, use the new DailyChallenge component
-  if (userId) {
+  // If we have a valid userId (not anonymous), use the new DailyChallenge component
+  if (userId && userId !== "anonymous") {
     return (
       <DailyChallenge
         userId={userId}

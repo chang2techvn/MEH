@@ -26,8 +26,12 @@ import { ChatInput } from '@/components/ai-hub/chat/ChatInput';
 import { supabase } from '@/lib/supabase';
 import { singleChatService } from '@/lib/single-chat-service';
 import { useResourcesPage } from '@/hooks/use-resources-page';
+import { useResourcesContext } from '@/contexts/resources-context';
 
 export default function ResourcesPage() {
+  // Get cached resources data from context
+  const resourcesContext = useResourcesContext()
+  
   // Use the comprehensive resources page hook
   const {
     router,
@@ -76,11 +80,11 @@ export default function ResourcesPage() {
     isAuthenticated,
     authChecked,
     setAuthChecked,
-    aiAssistants,
-    aiLoading,
-    aiError,
-    getAIById,
-    chatSessions,
+    aiAssistants: hookAiAssistants,
+    aiLoading: hookAiLoading,
+    aiError: hookAiError,
+    getAIById: hookGetAIById,
+    chatSessions: hookChatSessions,
     messages,
     isProcessing,
     isAutoInteracting,
@@ -114,7 +118,17 @@ export default function ResourcesPage() {
     getChatTitle,
     getChatSubtitle,
     getAIByName
-  } = useResourcesPage();
+  } = useResourcesPage()
+
+  // Use cached data when available, fallback to hook data
+  const aiAssistants = resourcesContext.isCacheReady ? resourcesContext.aiAssistants : hookAiAssistants
+  const aiLoading = resourcesContext.isCacheReady ? resourcesContext.aiLoading : hookAiLoading  
+  const aiError = resourcesContext.isCacheReady ? resourcesContext.aiError : hookAiError
+  const getAIById = resourcesContext.isCacheReady ? resourcesContext.getAIById : hookGetAIById
+  const chatSessions = resourcesContext.isCacheReady ? resourcesContext.chatSessions : hookChatSessions
+  
+  // Improved loading state - show content faster when cache is ready
+  const isContentReady = resourcesContext.isCacheReady || (!resourcesContext.isInitialLoad && aiAssistants.length > 0)
 
   // Early return for hydration - like other routes
   if (!mounted) {
@@ -147,8 +161,8 @@ export default function ResourcesPage() {
     );
   }
 
-  // Show loading state
-  if (aiLoading) {
+  // Show loading state only if content is not ready
+  if (!isContentReady && aiLoading) {
     return (
       <div className="flex min-h-screen flex-col bg-gradient-to-b from-background via-background to-background/80 dark:from-background dark:via-background/90 dark:to-background/80">
         <MainHeader mobileMenuOpen={mobileMenuOpen} setMobileMenuOpen={setMobileMenuOpen} />

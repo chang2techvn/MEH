@@ -51,6 +51,7 @@ import {
   type NewUser,
   type PopularResource
 } from "@/app/actions/admin-dashboard"
+import { useAdmin } from "@/contexts/admin-context"
 
 // Helper function to format duration in seconds to MM:SS format
 const formatDuration = (seconds: number | null | undefined): string => {
@@ -63,10 +64,15 @@ const formatDuration = (seconds: number | null | undefined): string => {
 export default function AdminDashboardPage() {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState("overview")
-  const [isLoading, setIsLoading] = useState(false)
+  const [dialogLoading, setDialogLoading] = useState(false) // For dialog operations
   
-  // Real data states
-  const [dashboardStats, setDashboardStats] = useState<DashboardStats>({
+  // Use admin context (with cached data)
+  const adminContext = useAdmin()
+  
+  // Override with cached data if available
+  const isLoading = adminContext.isCacheReady ? false : adminContext.isLoading
+  const dashboardStats = adminContext.isCacheReady ? adminContext.dashboardStats : null
+  const safeStats = dashboardStats || {
     totalUsers: 0,
     totalChallenges: 0,
     totalSubmissions: 0,
@@ -74,10 +80,30 @@ export default function AdminDashboardPage() {
     weeklyCompletionRate: 0,
     monthlyGrowthRate: 0,
     engagementRate: 0
-  })
-  const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([])
-  const [newUsers, setNewUsers] = useState<NewUser[]>([])
-  const [popularResources, setPopularResources] = useState<PopularResource[]>([])
+  }
+  const recentActivities = adminContext.isCacheReady ? adminContext.recentActivities : []
+  const newUsers = adminContext.isCacheReady ? adminContext.newUsers : []
+  const popularResources = adminContext.isCacheReady ? adminContext.popularResources : []
+  
+  // Methods from context
+  const { loadDashboardData, refreshData: contextRefreshData } = adminContext
+  
+  // Wrapper for refresh with toast
+  const refreshData = async () => {
+    try {
+      await contextRefreshData()
+      toast({
+        title: "Dashboard refreshed",
+        description: "Latest data has been loaded successfully",
+      })
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to refresh dashboard data",
+        variant: "destructive",
+      })
+    }
+  }
   
   const [showNotification, setShowNotification] = useState(false)
   const [showEventDialog, setShowEventDialog] = useState(false)
@@ -101,45 +127,13 @@ export default function AdminDashboardPage() {
   const [notificationMessage, setNotificationMessage] = useState("")
   const [notificationType, setNotificationType] = useState("all")
 
-  // Load real data
+  // Data loading handled by context
   useEffect(() => {
-    loadDashboardData()
-  }, [])
-
-  const loadDashboardData = async () => {
-    setIsLoading(true)
-    try {
-      const [stats, activities, users, resources] = await Promise.all([
-        getDashboardStats(),
-        getRecentActivities(),
-        getNewUsers(),
-        getPopularResources()
-      ])
-
-      setDashboardStats(stats)
-      setRecentActivities(activities)
-      setNewUsers(users)
-      setPopularResources(resources)
-    } catch (error) {
-      console.error('Error loading dashboard data:', error)
-      toast({
-        title: "Error",
-        description: "Failed to load dashboard data",
-        variant: "destructive",
-      })
-    } finally {
-      setIsLoading(false)
+    // No need to load data manually - context handles it
+    if (!adminContext.isCacheReady && !adminContext.isLoading) {
+      loadDashboardData()
     }
-  }
-
-  const refreshData = async () => {
-    setIsLoading(true)
-    await loadDashboardData()
-    toast({
-      title: "Dashboard refreshed",
-      description: "Latest data has been loaded successfully",
-    })
-  }
+  }, [])
 
   // Handle quick actions
   const handleQuickAction = (action: string) => {
@@ -200,11 +194,11 @@ export default function AdminDashboardPage() {
       return
     }
 
-    setIsLoading(true)
+    setDialogLoading(true)
 
     // Simulate API call
     setTimeout(() => {
-      setIsLoading(false)
+      setDialogLoading(false)
       setShowEventDialog(false)
       setEventTitle("")
       setEventDate("")
@@ -228,11 +222,11 @@ export default function AdminDashboardPage() {
       return
     }
 
-    setIsLoading(true)
+    setDialogLoading(true)
 
     // Simulate API call
     setTimeout(() => {
-      setIsLoading(false)
+      setDialogLoading(false)
       setShowResourceDialog(false)
       setResourceTitle("")
       setResourceType("video")
@@ -256,11 +250,11 @@ export default function AdminDashboardPage() {
       return
     }
 
-    setIsLoading(true)
+    setDialogLoading(true)
 
     // Simulate API call
     setTimeout(() => {
-      setIsLoading(false)
+      setDialogLoading(false)
       setShowUserDialog(false)
       setUserName("")
       setUserEmail("")
@@ -284,11 +278,11 @@ export default function AdminDashboardPage() {
       return
     }
 
-    setIsLoading(true)
+    setDialogLoading(true)
 
     // Simulate API call
     setTimeout(() => {
-      setIsLoading(false)
+      setDialogLoading(false)
       setShowChallengeDialog(false)
       setChallengeTitle("")
       setChallengeType("writing")
@@ -311,11 +305,11 @@ export default function AdminDashboardPage() {
       return
     }
 
-    setIsLoading(true)
+    setDialogLoading(true)
 
     // Simulate API call
     setTimeout(() => {
-      setIsLoading(false)
+      setDialogLoading(false)
       setShowNotificationDialog(false)
       setNotificationTitle("")
       setNotificationMessage("")
@@ -364,15 +358,15 @@ export default function AdminDashboardPage() {
           </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between">
-                <div className="text-3xl font-bold">{dashboardStats.totalUsers}</div>
+                <div className="text-3xl font-bold">{safeStats.totalUsers}</div>
                 <div className="flex items-center text-green-500 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded-full text-xs">
                   <ArrowUpRight className="h-3 w-3 mr-1" />
-                  <span className="font-medium">+{dashboardStats.monthlyGrowthRate}%</span>
+                  <span className="font-medium">+{safeStats.monthlyGrowthRate}%</span>
                 </div>
               </div>
               <p className="text-xs text-muted-foreground mt-2">Compared to previous month</p>
               <div className="mt-3">
-                <Progress value={Math.min(dashboardStats.monthlyGrowthRate, 100)} className="h-1.5" />
+                <Progress value={Math.min(safeStats.monthlyGrowthRate, 100)} className="h-1.5" />
               </div>
             </CardContent>
           </Card>
@@ -387,15 +381,15 @@ export default function AdminDashboardPage() {
           </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between">
-                <div className="text-3xl font-bold">{dashboardStats.dailyActiveUsers}</div>
+                <div className="text-3xl font-bold">{safeStats.dailyActiveUsers}</div>
                 <div className="flex items-center text-green-500 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded-full text-xs">
                   <ArrowUpRight className="h-3 w-3 mr-1" />
-                  <span className="font-medium">+{Math.round((dashboardStats.dailyActiveUsers / dashboardStats.totalUsers) * 100)}%</span>
+                  <span className="font-medium">+{Math.round((safeStats.dailyActiveUsers / safeStats.totalUsers) * 100)}%</span>
                 </div>
               </div>
               <p className="text-xs text-muted-foreground mt-2">Daily active users</p>
               <div className="mt-3">
-                <Progress value={Math.min((dashboardStats.dailyActiveUsers / dashboardStats.totalUsers) * 100, 100)} className="h-1.5" />
+                <Progress value={Math.min((safeStats.dailyActiveUsers / safeStats.totalUsers) * 100, 100)} className="h-1.5" />
               </div>
             </CardContent>
           </Card>
@@ -410,15 +404,15 @@ export default function AdminDashboardPage() {
           </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between">
-                <div className="text-3xl font-bold">{dashboardStats.weeklyCompletionRate}%</div>
+                <div className="text-3xl font-bold">{safeStats.weeklyCompletionRate}%</div>
                 <div className="flex items-center text-green-500 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded-full text-xs">
                   <ArrowUpRight className="h-3 w-3 mr-1" />
-                  <span className="font-medium">+{dashboardStats.weeklyCompletionRate > 50 ? Math.round(dashboardStats.weeklyCompletionRate - 50) : 0}%</span>
+                  <span className="font-medium">+{safeStats.weeklyCompletionRate > 50 ? Math.round(safeStats.weeklyCompletionRate - 50) : 0}%</span>
                 </div>
               </div>
               <p className="text-xs text-muted-foreground mt-2">Weekly completion rate</p>
               <div className="mt-3">
-                <Progress value={dashboardStats.weeklyCompletionRate} className="h-1.5" />
+                <Progress value={safeStats.weeklyCompletionRate} className="h-1.5" />
               </div>
             </CardContent>
           </Card>
@@ -433,23 +427,23 @@ export default function AdminDashboardPage() {
           </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between">
-                <div className="text-3xl font-bold">{dashboardStats.engagementRate}%</div>
+                <div className="text-3xl font-bold">{safeStats.engagementRate}%</div>
                 <div className={`flex items-center px-2 py-1 rounded-full text-xs ${
-                  dashboardStats.engagementRate > 50 
+                  safeStats.engagementRate > 50 
                     ? 'text-green-500 bg-green-50 dark:bg-green-900/20' 
                     : 'text-red-500 bg-red-50 dark:bg-red-900/20'
                 }`}>
-                  {dashboardStats.engagementRate > 50 ? (
+                  {safeStats.engagementRate > 50 ? (
                     <ArrowUpRight className="h-3 w-3 mr-1" />
                   ) : (
                     <ArrowDownRight className="h-3 w-3 mr-1" />
                   )}
-                  <span className="font-medium">{dashboardStats.engagementRate > 50 ? '+' : '-'}{Math.abs(dashboardStats.engagementRate - 50)}%</span>
+                  <span className="font-medium">{safeStats.engagementRate > 50 ? '+' : '-'}{Math.abs(safeStats.engagementRate - 50)}%</span>
                 </div>
               </div>
               <p className="text-xs text-muted-foreground mt-2">Weekly engagement rate</p>
               <div className="mt-3">
-                <Progress value={dashboardStats.engagementRate} className="h-1.5" />
+                <Progress value={safeStats.engagementRate} className="h-1.5" />
               </div>
             </CardContent>
           </Card>

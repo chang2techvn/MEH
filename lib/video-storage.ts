@@ -36,7 +36,7 @@ export interface VideoUploadProgress {
 }
 
 /**
- * Upload video file to Supabase Storage
+ * Upload video file to Supabase Storage with optimization
  */
 export async function uploadVideoToStorage(
   file: File,
@@ -44,6 +44,19 @@ export async function uploadVideoToStorage(
   onProgress?: (progress: VideoUploadProgress) => void
 ): Promise<VideoUploadResult> {
   try {
+    console.log('🎬 Starting simple video upload:', {
+      fileName: file.name,
+      fileSize: file.size,
+      userId: userId
+    })
+
+    // Check network connectivity
+    if (!navigator.onLine) {
+      return {
+        success: false,
+        error: 'No internet connection detected'
+      }
+    }
     
     // Validate file
     const validation = validateVideoFile(file)
@@ -55,58 +68,82 @@ export async function uploadVideoToStorage(
       }
     }
 
-    // Try direct API upload first
-    const directResult = await uploadVideoDirectAPI(file, userId, onProgress)
-    
-    if (directResult.success) {
-      return directResult
-    } 
+    // Initial progress
+    onProgress?.({ loaded: 0, total: file.size, percentage: 5 })
 
-    // Fallback to Supabase client method
-    const fileExtension = file.name.split('.').pop()
-    const fileName = `${userId}/${uuidv4()}.${fileExtension}`
+    // Compress video if needed (keep existing compression logic)
+    let fileToUpload = file
+    if (file.size > 15 * 1024 * 1024) {
+      console.log('📦 Compressing large video file...')
+      onProgress?.({ loaded: 0, total: file.size, percentage: 10 })
+      
+      try {
+        fileToUpload = await compressVideo(file)
+        console.log('✅ Video compressed:', { original: file.size, compressed: fileToUpload.size })
+      } catch (error) {
+        console.warn('⚠️ Compression failed, using original file:', error)
+        fileToUpload = file
+      }
+    }
+
+    console.log('🚀 Starting API upload (bypasses RLS)...')
+    onProgress?.({ loaded: 0, total: fileToUpload.size, percentage: 20 })
+
+    // Use API endpoint with service role (simple and reliable)
+    const formData = new FormData()
+    formData.append('file', fileToUpload)
+    formData.append('userId', userId)
+
+    // Set up progress tracking with XMLHttpRequest
+    const xhr = new XMLHttpRequest()
     
-    const uploadPromise = supabase.storage
-      .from(VIDEO_BUCKET)
-      .upload(fileName, file, {
-        cacheControl: '3600',
-        upsert: false,
+    return new Promise<VideoUploadResult>((resolve, reject) => {
+      xhr.upload.addEventListener('progress', (event) => {
+        if (event.lengthComputable) {
+          const baseProgress = 20 // Already at 20% from compression
+          const uploadProgress = Math.round((event.loaded / event.total) * 80) // Remaining 80%
+          const totalProgress = baseProgress + uploadProgress
+          
+          onProgress?.({ 
+            loaded: event.loaded, 
+            total: event.total, 
+            percentage: totalProgress
+          })
+          console.log(`📊 Upload progress: ${totalProgress}%`)
+        }
       })
 
-    // Shorter timeout for Supabase client
-    const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('Supabase client timeout after 15 seconds')), 15000)
-    )
+      xhr.addEventListener('load', () => {
+        if (xhr.status === 200) {
+          try {
+            const result = JSON.parse(xhr.responseText)
+            console.log('✅ API upload successful:', result)
+            onProgress?.({ loaded: fileToUpload.size, total: fileToUpload.size, percentage: 100 })
+            resolve(result)
+          } catch (error) {
+            console.error('❌ Failed to parse response:', error)
+            reject(new Error('Invalid response format'))
+          }
+        } else {
+          console.error('❌ API upload failed:', xhr.status, xhr.responseText)
+          reject(new Error(`Upload failed: ${xhr.status}`))
+        }
+      })
 
-    const { data, error } = await Promise.race([uploadPromise, timeoutPromise]) as any
+      xhr.addEventListener('error', () => {
+        console.error('❌ Network error during upload')
+        reject(new Error('Network error during upload'))
+      })
 
-    if (error) {
-      console.error('❌ Supabase client upload error:', error)
-      return {
-        success: false,
-        error: `Both upload methods failed. Last error: ${error.message}`
-      }
-    }
+      xhr.addEventListener('timeout', () => {
+        console.error('❌ Upload timeout')
+        reject(new Error('Upload timeout'))
+      })
 
-    const { data: publicUrlData } = supabase.storage
-      .from(VIDEO_BUCKET)
-      .getPublicUrl(fileName)
-
-    if (!publicUrlData?.publicUrl) {
-      console.error('❌ Failed to generate public URL')
-      return {
-        success: false,
-        error: 'Failed to generate public URL'
-      }
-    }
-
-
-    return {
-      success: true,
-      publicUrl: publicUrlData.publicUrl,
-      filePath: fileName,
-      fileSize: file.size
-    }
+      xhr.timeout = 60000 // 60 seconds timeout
+      xhr.open('POST', '/api/upload-video')
+      xhr.send(formData)
+    })
 
   } catch (error) {
     console.error('❌ Upload error:', error)
@@ -385,98 +422,6 @@ export async function testStorageConnection(): Promise<{ success: boolean; messa
   }
 }
 
-/**
- * Upload video using direct API call (fallback method)
- */
-export async function uploadVideoDirectAPI(
-  file: File,
-  userId: string,
-  onProgress?: (progress: VideoUploadProgress) => void
-): Promise<VideoUploadResult> {
-  try {
-    
-    // Validate file
-    const validation = validateVideoFile(file)
-    if (!validation.valid) {
-      return { success: false, error: validation.error }
-    }
-
-    // Generate filename
-    const fileExtension = file.name.split('.').pop()
-    const fileName = `${userId}/${uuidv4()}.${fileExtension}`
-    
-    // Create FormData
-    const formData = new FormData()
-    formData.append('file', file)
-
-    // Upload using fetch with XMLHttpRequest for progress
-    return new Promise((resolve) => {
-      const xhr = new XMLHttpRequest()
-      
-      xhr.upload.addEventListener('progress', (e) => {
-        if (e.lengthComputable && onProgress) {
-          const percentage = Math.round((e.loaded / e.total) * 100)
-          onProgress({
-            loaded: e.loaded,
-            total: e.total,
-            percentage
-          })
-        }
-      })
-      
-      xhr.addEventListener('load', () => {
-        if (xhr.status === 200) {
-          // Use cloud URL from environment variables
-          const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://127.0.0.1:54321'
-          const publicUrl = `${supabaseUrl}/storage/v1/object/public/videos/${fileName}`
-          resolve({
-            success: true,
-            publicUrl,
-            filePath: fileName,
-            fileSize: file.size
-          })
-        } else {
-          console.error('❌ Direct API upload failed:', xhr.status, xhr.responseText)
-          resolve({
-            success: false,
-            error: `Upload failed: ${xhr.status} ${xhr.statusText}`
-          })
-        }
-      })
-      
-      xhr.addEventListener('error', () => {
-        console.error('❌ Direct API upload error')
-        resolve({
-          success: false,
-          error: 'Network error during upload'
-        })
-      })
-      
-      xhr.addEventListener('timeout', () => {
-        console.error('❌ Direct API upload timeout')
-        resolve({
-          success: false,
-          error: 'Upload timeout'
-        })
-      })
-      
-      xhr.timeout = 60000 // 60 seconds
-      // Use cloud URL from environment variables
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://127.0.0.1:54321'
-      xhr.open('POST', `${supabaseUrl}/storage/v1/object/videos/${fileName}`)
-      xhr.setRequestHeader('Authorization', `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`)
-      xhr.send(formData)
-    })
-
-  } catch (error) {
-    console.error('❌ Direct API upload error:', error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
-    }
-  }
-}
-
 export default {
   uploadVideoToStorage,
   deleteVideoFromStorage,
@@ -486,6 +431,5 @@ export default {
   blobUrlToFile,
   compressVideo,
   validateVideoFile,
-  testStorageConnection,
-  uploadVideoDirectAPI
+  testStorageConnection
 }

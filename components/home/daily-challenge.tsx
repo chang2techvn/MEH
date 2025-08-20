@@ -36,6 +36,14 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
   const { user } = useAuthState() // Get authenticated user
   const { challengeMode, currentChallenge: practiceChallenge } = useChallenge()
   
+  // Debug auth state
+  console.log('🔍 DailyChallenge Auth State:', {
+    propUserId: userId,
+    authUser: user,
+    authUserId: user?.id,
+    isAuthenticated: !!user
+  })
+  
   // Helper function to extract YouTube video ID from URL
   const extractVideoId = (url: string): string => {
     if (!url) return ''
@@ -737,8 +745,19 @@ export default function DailyChallenge({ userId, username, userImage, onSubmissi
                             <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
                               <div className="text-center text-white">
                                 <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
-                                <p className="text-sm">Uploading to storage...</p>
-                                <p className="text-xs">{uploadProgress}%</p>
+                                <p className="text-sm font-medium">
+                                  {uploadProgress < 20 ? 'Preparing upload...' :
+                                   uploadProgress < 40 ? 'Optimizing video...' :
+                                   uploadProgress < 90 ? 'Uploading to cloud...' :
+                                   'Finalizing...'}
+                                </p>
+                                <div className="w-32 bg-white/20 rounded-full h-2 mx-auto mt-2">
+                                  <div 
+                                    className="bg-gradient-to-r from-neo-mint to-purist-blue h-2 rounded-full transition-all duration-500"
+                                    style={{ width: `${uploadProgress}%` }}
+                                  ></div>
+                                </div>
+                                <p className="text-xs mt-1">{uploadProgress}%</p>
                               </div>
                             </div>
                           )}

@@ -131,7 +131,19 @@ export default function RichTextEditor({
   }, [editor, imageUrl])
 
   if (!isMounted) {
-    return null
+    return (
+      <div
+        className={cn(
+          "relative border rounded-lg overflow-hidden bg-white/40 dark:bg-gray-900/40 backdrop-blur-xl",
+          className,
+        )}
+        style={{ minHeight }}
+      >
+        <div className="flex items-center justify-center h-full">
+          <div className="text-muted-foreground">Loading editor...</div>
+        </div>
+      </div>
+    )
   }
 
   if (!editor) {

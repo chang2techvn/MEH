@@ -1046,3 +1046,27 @@ button:active {
   scrollbar-width: thin;
   scrollbar-color: hsl(var(--muted-foreground) / 0.3) transparent;
 }
+
+/* Post highlight animation */
+.highlight-post {
+  animation: highlightPulse 2s ease-in-out;
+  transform: scale(1.02);
+  box-shadow: 0 0 20px rgba(245, 158, 11, 0.4);
+  border: 2px solid rgba(245, 158, 11, 0.6);
+  border-radius: 12px;
+}
+
+@keyframes highlightPulse {
+  0% {
+    box-shadow: 0 0 20px rgba(245, 158, 11, 0.4);
+    border-color: rgba(245, 158, 11, 0.6);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(245, 158, 11, 0.8);
+    border-color: rgba(245, 158, 11, 1);
+  }
+  100% {
+    box-shadow: 0 0 20px rgba(245, 158, 11, 0.4);
+    border-color: rgba(245, 158, 11, 0.6);
+  }
+}

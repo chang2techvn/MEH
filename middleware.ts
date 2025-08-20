@@ -69,9 +69,24 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  // Skip middleware checks for auth routes to avoid infinite loops
+  // Handle auth routes - redirect to home if already logged in
   if (request.nextUrl.pathname.startsWith('/auth/')) {
-    return response
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      
+      // If user is already logged in, redirect to home
+      if (user) {
+        console.log('✅ Middleware: User already logged in, redirecting to home from auth route')
+        return NextResponse.redirect(new URL('/', request.url))
+      }
+      
+      // If no user, allow access to auth routes
+      return response
+    } catch (error) {
+      console.error('❌ Middleware auth route error:', error)
+      // On error, allow access to auth routes
+      return response
+    }
   }
 
   // Protected routes that require authentication

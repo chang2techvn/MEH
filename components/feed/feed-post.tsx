@@ -75,6 +75,7 @@ export default function FeedPost({
   return (
     <TooltipProvider>
       <motion.div
+        id={`post-${id}`}
         ref={postRef}
         initial={{ opacity: 1, y: 0 }}
         animate={{ opacity: 1, y: 0 }}

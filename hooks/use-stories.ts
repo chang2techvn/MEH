@@ -55,11 +55,27 @@ export function useStories() {
     setError(null)
     
     try {
-      // Use the function instead of view
+      // Query stories with author profiles joined via users table
       const { data, error } = await supabase
-        .rpc('get_stories_with_user_data')
+        .from('stories')
+        .select(`
+          *,
+          users!stories_author_id_fkey(
+            profiles(
+              user_id,
+              username,
+              full_name,
+              avatar_url
+            )
+          )
+        `)
+        .eq('is_active', true)
+        .gte('expires_at', new Date().toISOString())
+        .order('created_at', { ascending: false })
 
       if (error) throw error
+
+      console.log('✅ Stories fetched successfully:', data?.length, 'stories found')
 
       // Transform data to match our interface
       const transformedStories: Story[] = (data || []).map((story: any) => ({
@@ -80,11 +96,11 @@ export function useStories() {
         created_at: story.created_at,
         updated_at: story.updated_at,
         expires_at: story.expires_at,
-        profiles: {
-          user_id: story.user_id,
-          username: story.username,
-          full_name: story.full_name,
-          avatar_url: story.avatar_url
+        profiles: story.users?.profiles || {
+          user_id: story.author_id,
+          username: 'Unknown',
+          full_name: 'Unknown User',
+          avatar_url: null
         }
       }))
 
@@ -198,8 +214,8 @@ export function useStories() {
       // Use the new function that handles author check and duplicate prevention
       const { data, error } = await supabase
         .rpc('record_story_view', { 
-          story_id: storyId, 
-          viewer_id: user.id 
+          p_story_id: storyId, 
+          p_viewer_id: user.id 
         })
 
       if (error) throw error

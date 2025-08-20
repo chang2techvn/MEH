@@ -16,10 +16,7 @@ import SEOMeta from "@/components/optimized/seo-meta"
 
 // Contexts and Hooks
 import { useAuthState, useAuthActions } from "@/contexts/auth-context"
-import { useProfileData } from "@/hooks/use-profile-data"
-import { useProfileUploads } from "@/hooks/use-profile-uploads"
-import { usePostsFilter } from "@/hooks/use-posts-filter"
-import { useProfileEdit } from "@/hooks/use-profile-edit"
+import { useProfile } from "@/contexts/profile-context"
 import { supabase } from "@/lib/supabase"
 
 interface UserStats {
@@ -53,10 +50,17 @@ export default function ProfilePage() {
   const { updateUser, refreshUser } = useAuthActions()
   const router = useRouter()
 
-  // Use profile data hook
-  const { userStats, userPosts, isLoadingPosts, fetchUserStats, fetchUserPosts } = useProfileData({ user, updateUser })
-
-  // Use profile uploads hook
+  // Use profile context (with cached data)
+  const profileContext = useProfile()
+  
+  // Override with cached data if available
+  const userStats = profileContext.isCacheReady ? profileContext.userStats : null
+  const userPosts = profileContext.isCacheReady ? profileContext.userPosts : []
+  const isLoadingPosts = profileContext.isCacheReady ? false : profileContext.isLoadingPosts
+  const fetchUserStats = profileContext.fetchUserStats
+  const fetchUserPosts = profileContext.fetchUserPosts
+  
+  // Profile uploads from context
   const {
     isUploading,
     isUploadingBackground,
@@ -72,18 +76,18 @@ export default function ProfilePage() {
     setSelectedBackgroundFile,
     setShowAvatarCropper,
     setSelectedAvatarFile
-  } = useProfileUploads({ user, updateUser, refreshUser })
+  } = profileContext
 
-  // Use posts filter hook
+  // Posts filter from context
   const {
     filteredPosts,
     searchQuery,
     setSearchQuery,
     activeFilter,
     setActiveFilter
-  } = usePostsFilter({ userPosts })
+  } = profileContext
 
-  // Use profile edit hook
+  // Profile edit from context
   const {
     isEditing,
     setIsEditing,
@@ -92,7 +96,7 @@ export default function ProfilePage() {
     handleProfileUpdate,
     handleShareProfile,
     handleCancelEdit
-  } = useProfileEdit({ user, updateUser, refreshUser })
+  } = profileContext
 
   // States
   const [mounted, setMounted] = useState(false) // Add mounted state like resources route
@@ -176,7 +180,9 @@ export default function ProfilePage() {
     }
   }, [user?.id, fetchUserStats, fetchUserPosts]) // Use functions from hook
 
-  // Loading state
+  // Loading state - show skeleton only if cache not ready
+  const isContentReady = profileContext.isCacheReady || mounted
+  
   if (authLoading || !mounted || !user) {
     return (
       <>
@@ -223,7 +229,7 @@ export default function ProfilePage() {
             onSaveClick={handleProfileUpdate}
             onCancelClick={handleCancelEdit}
             onAvatarUpload={handleAvatarUpload}
-            onEditProfileChange={(updates) => setEditProfile(prev => ({ ...prev, ...updates }))}
+            onEditProfileChange={(updates: any) => setEditProfile((prev: any) => ({ ...prev, ...updates }))}
           />
 
           {/* Content Section - Only Posts */}

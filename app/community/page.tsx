@@ -3,6 +3,7 @@
 import { motion, AnimatePresence } from "framer-motion"
 import { useState, useEffect, Suspense, lazy } from "react"
 import { toast } from "@/hooks/use-toast"
+import { useSearchParams } from "next/navigation"
 
 // Critical above-the-fold components - NO lazy loading
 import MainHeader from "@/components/ui/main-header"
@@ -20,7 +21,7 @@ import { useStories } from "@/hooks/use-stories"
 import { useAuth } from "@/contexts/auth-context"
 import { useStoryControls } from "@/hooks/use-story-controls"
 import { usePostManagement } from "@/hooks/use-post-management"
-import { useCommunityData } from "@/hooks/use-community-data"
+import { useCommunity } from "@/contexts/community-context"
 import { useInfiniteScroll } from "@/hooks/use-infinite-scroll"
 import { usePostPreloadTrigger } from "@/hooks/use-post-visibility"
 import { StoryViewer } from "@/components/community/story-viewer"
@@ -61,6 +62,9 @@ export default function CommunityPage() {
   const [windowWidth, setWindowWidth] = useState<number>(typeof window !== "undefined" ? window.innerWidth : 0)
   const [highlightPostId, setHighlightPostId] = useState<string | null>(null)
   
+  // Get search params for highlight detection
+  const searchParams = useSearchParams()
+  
   // Story state
   const [activeStory, setActiveStory] = useState<number | string | null>(null)
   const [activeUserStories, setActiveUserStories] = useState<Story[]>([])
@@ -68,7 +72,7 @@ export default function CommunityPage() {
   const [showStoryCreator, setShowStoryCreator] = useState(false)
 
   // Use custom hooks
-  const communityData = useCommunityData()
+  const communityData = useCommunity()
   const postManagement = usePostManagement()
   
   // Post preload trigger for smart loading
@@ -98,19 +102,96 @@ export default function CommunityPage() {
     }
   }, [inView, communityData.hasMorePosts, communityData.loadingMore, communityData.backgroundLoadCompleted, communityData.loadMorePosts])
 
-  // Extract highlight parameter from URL on mount
+  // Listen to URL search params changes for highlight
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const urlParams = new URLSearchParams(window.location.search)
-      const highlight = urlParams.get('highlight')
-      if (highlight) {
-        setHighlightPostId(highlight)
-        // Remove the parameter from URL after extracting
-        const newUrl = window.location.pathname
-        window.history.replaceState({}, '', newUrl)
+    const highlight = searchParams?.get('highlight')
+    console.log('🔍 Search params highlight changed:', highlight)
+    
+    if (highlight && highlight !== highlightPostId) {
+      setHighlightPostId(highlight)
+      console.log('✅ Setting NEW highlight post ID from search params:', highlight)
+      
+      // Force refresh with highlight to get latest data including the specific post
+      console.log('🚀 Force refreshing with highlight to get latest data...')
+      communityData.forceRefreshWithHighlight(highlight)
+    }
+  }, [searchParams]) // Listen to search params changes
+
+  // Extract highlight parameter from URL and listen for changes
+  useEffect(() => {
+    const handleHighlight = () => {
+      if (typeof window !== "undefined") {
+        const urlParams = new URLSearchParams(window.location.search)
+        const highlight = urlParams.get('highlight')
+        console.log('🔍 Community page highlight parameter:', highlight)
+        
+        if (highlight && highlight !== highlightPostId) {
+          setHighlightPostId(highlight)
+          console.log('✅ Setting NEW highlight post ID:', highlight)
+          
+          // Force refresh with highlight to get latest data including the specific post
+          console.log('🚀 Force refreshing with highlight to get latest data...')
+          communityData.forceRefreshWithHighlight(highlight)
+        }
       }
     }
-  }, [])
+    
+    // Run on mount
+    handleHighlight()
+    
+    // Listen for URL changes (when user navigates with highlight parameter)
+    window.addEventListener('popstate', handleHighlight)
+    
+    return () => {
+      window.removeEventListener('popstate', handleHighlight)
+    }
+  }, [highlightPostId]) // Depend on highlightPostId to detect changes
+
+  // Scroll to highlighted post when posts load and highlight is set
+  useEffect(() => {
+    if (highlightPostId && communityData.feedPosts.length > 0 && !communityData.loading) {
+      console.log('🎯 Attempting to scroll to highlighted post:', highlightPostId)
+      
+      const scrollToPost = (retryCount = 0) => {
+        const postElement = document.getElementById(`post-${highlightPostId}`)
+        if (postElement) {
+          console.log('✅ Found highlighted post element, scrolling...')
+          postElement.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'center' 
+          })
+          
+          // Add a highlight effect
+          postElement.classList.add('highlight-post')
+          setTimeout(() => {
+            postElement.classList.remove('highlight-post')
+          }, 3000)
+          
+          // Now safely remove the parameter from URL
+          const newUrl = window.location.pathname
+          window.history.replaceState({}, '', newUrl)
+          
+          // Clear highlight to prevent re-triggering
+          setHighlightPostId(null)
+        } else {
+          console.log('❌ Highlighted post element not found in DOM, retry:', retryCount)
+          console.log('📋 Available posts:', communityData.feedPosts.map(p => p.id))
+          
+          // Retry up to 3 times with increasing delays
+          if (retryCount < 3) {
+            setTimeout(() => scrollToPost(retryCount + 1), 1000 * (retryCount + 1))
+          } else {
+            // Try to load the specific post if still not found
+            console.log('🔄 Post not found after retries, trying to load specific post...')
+            communityData.loadSpecificPost(highlightPostId)
+          }
+        }
+      }
+      
+      // Initial attempt with short delay
+      setTimeout(() => scrollToPost(), 500)
+    }
+  }, [highlightPostId, communityData.loading])
 
   // Auto-advance stories when viewing multiple stories
   useEffect(() => {
@@ -302,7 +383,7 @@ export default function CommunityPage() {
 
                 {/* Feed Posts */}
                 <div className="space-y-2 sm:space-y-4">
-                  {communityData.initialLoad ? (
+                  {(communityData.initialLoad && !communityData.isCacheReady) ? (
                     Array(3)
                       .fill(0)
                       .map((_, i) => <PostSkeleton key={i} />)

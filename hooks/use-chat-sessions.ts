@@ -64,13 +64,15 @@ export function useChatSessions() {
       // For each session, get the last message
       const sessionsWithMessages = await Promise.all(
         (sessionsData || []).map(async (session) => {
-          const { data: lastMessage } = await supabase
+          // Get last message without using .single() to avoid 406 errors
+          const { data: messagesData } = await supabase
             .from('natural_conversation_messages')
             .select('content, created_at')
             .eq('session_id', session.id)
             .order('created_at', { ascending: false })
-            .limit(1)
-            .single();
+            .limit(1);
+
+          const lastMessage = messagesData?.[0];
 
           return {
             ...session,
