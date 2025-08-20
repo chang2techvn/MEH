@@ -73,12 +73,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   // Get user data from database
-  const getUserData = async (supabaseUser: SupabaseUser) => {
+  const getUserData = useCallback(async (supabaseUser: SupabaseUser) => {
     try {
+      console.log('🔄 Auth Context: Fetching user data for', supabaseUser.email)
+      
       const [profileData, userRecord] = await Promise.all([
-        supabase.from('profiles').select('full_name, avatar_url, background_url, role').eq('user_id', supabaseUser.id).single(),
-        supabase.from('users').select('role, account_status, is_active').eq('id', supabaseUser.id).single()
+        supabase.from('profiles').select('full_name, avatar_url, background_url, role').eq('user_id', supabaseUser.id).maybeSingle(),
+        supabase.from('users').select('role, account_status, is_active').eq('id', supabaseUser.id).maybeSingle()
       ])
+
+      console.log('🔍 Auth Context Query Results:', {
+        profileError: profileData.error?.message,
+        profileData: profileData.data,
+        userError: userRecord.error?.message,
+        userData: userRecord.data
+      })
 
       const profile = profileData.data
       const userInfo = userRecord.data
@@ -94,14 +103,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           accountStatus: userInfo?.account_status || 'approved',
           isActive: userInfo?.is_active !== false
         }
+        
+        console.log('✅ Auth Context: User data created successfully:', userData)
         persistUser(userData)
         return userData
+      } else {
+        console.warn('⚠️ Auth Context: No profile or user data found')
       }
     } catch (error) {
-      console.error('Error getting user data:', error)
+      console.error('❌ Auth Context: Error getting user data:', error)
     }
     return null
-  }
+  }, [persistUser, supabase])
 
   // Initialize auth
   useEffect(() => {
@@ -144,66 +157,77 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Login function
   const login = useCallback(async (email: string, password: string) => {
+    console.log('🔐 Auth Context: Starting login for', email)
     setIsLoading(true)
+    
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-      if (error) throw error
-
-      // Check user account status
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('account_status, is_active')
-        .eq('id', data.user.id)
-        .single()
-
-      if (userError) {
-        console.error('Error checking user status:', userError)
-      } else if (userData) {
-        if (userData.account_status === 'pending') {
-          await supabase.auth.signOut()
-          toast({
-            title: "Account pending approval",
-            description: "Your account is waiting for admin approval. Please wait.",
-            variant: "destructive",
-          })
-          throw new Error('Account pending approval')
-        } else if (userData.account_status === 'rejected') {
-          await supabase.auth.signOut()
-          toast({
-            title: "Account rejected",
-            description: "Your account has been rejected. Please contact support.",
-            variant: "destructive",
-          })
-          throw new Error('Account rejected')
-        } else if (userData.account_status === 'suspended') {
-          await supabase.auth.signOut()
-          toast({
-            title: "Account suspended",
-            description: "Your account has been suspended. Please contact support.",
-            variant: "destructive",
-          })
-          throw new Error('Account suspended')
-        } else if (!userData.is_active) {
-          await supabase.auth.signOut()
-          toast({
-            title: "Account inactive",
-            description: "Your account is inactive. Please contact support.",
-            variant: "destructive",
-          })
-          throw new Error('Account inactive')
-        }
+      if (error) {
+        console.error('❌ Auth Context: SignIn error:', error)
+        setIsLoading(false)
+        throw error
       }
 
-      // Force refresh session to ensure cookies are set
+      console.log('✅ Auth Context: SignIn successful for', data.user.email)
+
+      // Check user account status with better error handling
+      try {
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .select('account_status, is_active')
+          .eq('id', data.user.id)
+          .maybeSingle()
+
+        if (userError) {
+          console.error('⚠️ Auth Context: Error checking user status:', userError)
+          // Don't block login for user status check errors, just log them
+        } else if (userData) {
+          console.log('📋 Auth Context: User status check:', userData)
+          
+          // Only block if explicitly rejected or suspended
+          if (userData.account_status === 'rejected') {
+            await supabase.auth.signOut()
+            setIsLoading(false)
+            toast({
+              title: "Account rejected",
+              description: "Your account has been rejected. Please contact support.",
+              variant: "destructive",
+            })
+            throw new Error('Account rejected')
+          } else if (userData.account_status === 'suspended') {
+            await supabase.auth.signOut()
+            setIsLoading(false)
+            toast({
+              title: "Account suspended",
+              description: "Your account has been suspended. Please contact support.",
+              variant: "destructive",
+            })
+            throw new Error('Account suspended')
+          }
+          // Allow pending and approved accounts to proceed
+        }
+      } catch (statusError) {
+        console.error('⚠️ Auth Context: Status check failed, but allowing login to proceed:', statusError)
+      }
+
+      console.log('🔄 Auth Context: Refreshing session...')
       await supabase.auth.refreshSession()
 
+      console.log('✅ Auth Context: Login process completed successfully')
+      
+      // Reset loading state before showing success toast and redirecting
+      setIsLoading(false)
+      
       toast({ title: "Login successful", description: "Welcome back!" })
       
       const urlParams = new URLSearchParams(window.location.search)
       const redirectTo = urlParams.get('redirect')
       router.push(redirectTo || "/")
     } catch (error: any) {
-      console.error('❌ Login error:', error)
+      console.error('❌ Auth Context: Login failed:', error)
+      
+      // Ensure loading state is reset on error
+      setIsLoading(false)
       
       // Don't show the generic error message for our custom account status errors
       if (!error.message?.includes('Account')) {
@@ -214,8 +238,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         })
       }
       throw error
-    } finally {
-      setIsLoading(false)
     }
   }, [router])
 
@@ -264,6 +286,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (error) throw error
 
+      // Reset loading state immediately after successful registration
+      setIsLoading(false)
+
       toast({
         title: "Registration successful",
         description: "Your account has been created and is pending approval. You can now log in.",
@@ -291,9 +316,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           variant: "destructive",
         })
       }
-      throw error
-    } finally {
+      // Reset loading state on error
       setIsLoading(false)
+      throw error
     }
   }, [router, clearAllAuthData])
 
@@ -307,17 +332,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           redirectTo: `${window.location.origin}/callback`
         }
       })
-      if (error) throw error
+      
+      if (error) {
+        setIsLoading(false)
+        throw error
+      }
+      
+      // OAuth redirects away, so loading state will be reset on page navigation
     } catch (error: any) {
       console.error('Google login error:', error)
+      setIsLoading(false)
       toast({
         title: "Login failed",
         description: error.message || "Failed to login with Google",
         variant: "destructive",
       })
       throw error
-    } finally {
-      setIsLoading(false)
     }
   }, [])
 
@@ -337,17 +367,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           redirectTo: `${window.location.origin}/callback`
         }
       })
-      if (error) throw error
+      
+      if (error) {
+        setIsLoading(false)
+        throw error
+      }
+      
+      // OAuth redirects away, so loading state will be reset on page navigation
     } catch (error: any) {
       console.error('GitHub login error:', error)
+      setIsLoading(false)
       toast({
         title: "Login failed",
         description: error.message || "Failed to login with GitHub",
         variant: "destructive",
       })
       throw error
-    } finally {
-      setIsLoading(false)
     }
   }, [])
 
@@ -359,22 +394,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         redirectTo: `${window.location.origin}/auth/reset-password`
       })
 
-      if (error) throw error
+      if (error) {
+        setIsLoading(false)
+        throw error
+      }
 
+      setIsLoading(false)
       toast({
         title: "Reset email sent",
         description: "Please check your email for password reset instructions.",
       })
     } catch (error: any) {
       console.error('Reset password error:', error)
+      setIsLoading(false)
       toast({
         title: "Reset failed",
         description: error.message || "Failed to send reset email",
         variant: "destructive",
       })
       throw error
-    } finally {
-      setIsLoading(false)
     }
   }, [])
 

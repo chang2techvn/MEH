@@ -2,6 +2,40 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 
+// Helper function to check admin role with service key
+async function checkAdminRole(userId: string): Promise<boolean> {
+  try {
+    // Create service client with service key for admin checks
+    const serviceClient = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      {
+        cookies: {
+          get() { return undefined },
+          set() {},
+          remove() {},
+        },
+      }
+    )
+
+    const { data, error } = await serviceClient
+      .from('users')
+      .select('role')
+      .eq('id', userId)
+      .maybeSingle()
+
+    if (error || !data) {
+      console.log('❌ Admin check failed:', error?.message)
+      return false
+    }
+
+    return data.role === 'admin'
+  } catch (error) {
+    console.error('❌ Admin check error:', error)
+    return false
+  }
+}
+
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({
     request: {
@@ -60,42 +94,35 @@ export async function middleware(request: NextRequest) {
       // Get authenticated user from supabase auth
       const { data: { user }, error } = await supabase.auth.getUser()
       
+      console.log('🔍 Middleware Debug:', {
+        path: request.nextUrl.pathname,
+        hasUser: !!user,
+        userEmail: user?.email,
+        error: error?.message
+      })
+      
       // If no authenticated user or auth error, redirect to login
       if (!user || error) {
+        console.log('❌ Middleware: No user or auth error, redirecting to login')
         const redirectUrl = new URL('/auth/login', request.url)
         redirectUrl.searchParams.set('redirect', request.nextUrl.pathname)
         return NextResponse.redirect(redirectUrl)
       }
 
-      // Get user data from database for all protected routes
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('role, account_status, is_active')
-        .eq('id', user.id)
-        .single()
-
-      if (userError || !userData) {
-        const redirectUrl = new URL('/auth/login', request.url)
-        redirectUrl.searchParams.set('redirect', request.nextUrl.pathname)
-        return NextResponse.redirect(redirectUrl)
-      }
-
-      // Check account status for all protected routes
-      if (userData.account_status !== 'approved' || !userData.is_active) {
-        const redirectUrl = new URL('/auth/login', request.url)
-        redirectUrl.searchParams.set('message', 'account_not_approved')
-        return NextResponse.redirect(redirectUrl)
-      }
-
-      // Additional check for admin routes only
+      // For admin routes, check admin role
       if (request.nextUrl.pathname.startsWith('/admin')) {
-        // Check admin role
-        if (userData.role !== 'admin') {
+        const adminCheck = await checkAdminRole(user.id)
+        if (!adminCheck) {
+          console.log('❌ Middleware: User not admin, redirecting to home')
           return NextResponse.redirect(new URL('/', request.url))
         }
+        console.log('✅ Middleware: Admin access granted')
       }
+      
+      console.log('✅ Middleware: Access granted for protected route')
+      
     } catch (error) {
-      console.error('Middleware error:', error)
+      console.error('❌ Middleware error:', error)
       // On error, redirect to login for protected routes
       const redirectUrl = new URL('/auth/login', request.url)
       redirectUrl.searchParams.set('redirect', request.nextUrl.pathname)
