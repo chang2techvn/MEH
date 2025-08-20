@@ -19,7 +19,10 @@ export default function ChallengeGrid({
   selectedChallenges,
   toggleSelection,
 }: ChallengeGridProps) {
-  if (challenges.length === 0) {
+  // Ensure challenges is always an array
+  const safeChallenges = Array.isArray(challenges) ? challenges : []
+  
+  if (safeChallenges.length === 0) {
     return (
       <motion.div initial="hidden" animate="visible" variants={ANIMATION_VARIANTS.fadeIn}>
         <Card className="border-none shadow-neo">
@@ -41,7 +44,7 @@ export default function ChallengeGrid({
       className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
     >
       <AnimatePresence>
-        {challenges.map((challenge) => (
+        {safeChallenges.map((challenge) => (
           <motion.div
             key={challenge.id}
             variants={ANIMATION_VARIANTS.slideUp}

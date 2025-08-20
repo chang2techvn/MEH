@@ -397,10 +397,11 @@ export async function getChallenges(
   
   if (error) {
     console.error(`Error fetching ${challengeType} challenges:`, error)
-    throw error
+    // Return empty array instead of throwing error in production
+    return []
   }
   
-  return data || []
+  return Array.isArray(data) ? data : []
 }
 
 // Function to fetch random YouTube video
@@ -867,7 +868,18 @@ export async function getTodayVideo(): Promise<VideoData> {
       }
     }
     
-    throw error // Re-throw the original error
+    // Return a fallback video data instead of throwing error in production
+    return {
+      id: 'fallback-video',
+      title: 'English Learning Challenge',
+      description: 'Daily English learning video challenge',
+      thumbnailUrl: 'https://img.youtube.com/vi/dQw4w9WgXcQ/hqdefault.jpg',
+      videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+      embedUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+      duration: 300,
+      transcript: '',
+      topics: ['English Learning', 'Daily Challenge']
+    }
   }
 }
 

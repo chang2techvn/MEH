@@ -23,12 +23,18 @@ export function useChallengeState() {
       const cachedChallenges = localStorage.getItem(STORAGE_KEY)
 
       if (cachedChallenges && lastRefreshDate === today && !forceRefresh) {
-        const parsedChallenges = JSON.parse(cachedChallenges)
-        setChallenges(parsedChallenges)
-        setFilteredChallenges(parsedChallenges)
-        setLastRefreshed(lastRefreshDate)
-        setLoading(false)
-        return
+        try {
+          const parsedChallenges = JSON.parse(cachedChallenges)
+          const safeChallenges = Array.isArray(parsedChallenges) ? parsedChallenges : []
+          setChallenges(safeChallenges)
+          setFilteredChallenges(safeChallenges)
+          setLastRefreshed(lastRefreshDate)
+          setLoading(false)
+          return
+        } catch (parseError) {
+          console.error("Error parsing cached challenges:", parseError)
+          // Continue to fetch fresh data
+        }
       }
 
       const allChallenges = await fetchAllChallenges()
@@ -38,7 +44,12 @@ export function useChallengeState() {
       let userChallenges: Challenge[] = []
 
       if (userChallengesJson) {
-        userChallenges = JSON.parse(userChallengesJson)
+        try {
+          const parsed = JSON.parse(userChallengesJson)
+          userChallenges = Array.isArray(parsed) ? parsed : []
+        } catch (parseError) {
+          console.error("Error parsing user challenges:", parseError)
+        }
       }
 
       const combinedChallenges = [
@@ -70,13 +81,25 @@ export function useChallengeState() {
 
       const cachedChallenges = localStorage.getItem(STORAGE_KEY)
       if (cachedChallenges) {
-        const parsedChallenges = JSON.parse(cachedChallenges)
-        setChallenges(parsedChallenges)
-        setFilteredChallenges(parsedChallenges)
-        toast({
-          title: "Using cached data",
-          description: "Showing previously loaded challenges",
-        })
+        try {
+          const parsedChallenges = JSON.parse(cachedChallenges)
+          const safeChallenges = Array.isArray(parsedChallenges) ? parsedChallenges : []
+          setChallenges(safeChallenges)
+          setFilteredChallenges(safeChallenges)
+          toast({
+            title: "Using cached data",
+            description: "Showing previously loaded challenges",
+          })
+        } catch (parseError) {
+          console.error("Error parsing cached challenges:", parseError)
+          // Set empty arrays as fallback
+          setChallenges([])
+          setFilteredChallenges([])
+        }
+      } else {
+        // No cached data, set empty arrays
+        setChallenges([])
+        setFilteredChallenges([])
       }
     } finally {
       setLoading(false)
