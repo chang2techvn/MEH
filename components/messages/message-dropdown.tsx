@@ -29,7 +29,7 @@ function MessageDropdownContent() {
   // Helper function to get conversation title
   const getConversationTitle = useCallback((conv: Conversation) => {
     // Filter out current user from participants for title
-    const otherParticipants = conv.participants.filter((p: User) => p.id !== currentUser?.id)
+    const otherParticipants = (conv.participants || []).filter((p: User) => p.id !== currentUser?.id)
     return otherParticipants.map((p: User) => p.name).join(", ") || "Conversation"
   }, [currentUser])
 
@@ -349,7 +349,7 @@ function MessageDropdownContent() {
       }
 
       // Find other participants (not current user)
-      const otherParticipants = conv.participants.filter((p: User) => p.id !== currentUser.id)
+      const otherParticipants = (conv.participants || []).filter((p: User) => p.id !== currentUser.id)
       
       if (otherParticipants.length === 0) {
         return false
@@ -370,7 +370,7 @@ function MessageDropdownContent() {
     const conversationMap = new Map()
     
     validConversations.forEach(conv => {
-      const otherParticipant = conv.participants.find((p: User) => p.id !== currentUser.id)
+      const otherParticipant = (conv.participants || []).find((p: User) => p.id !== currentUser.id)
       if (otherParticipant) {
         const existingConv = conversationMap.get(otherParticipant.id)
         
@@ -584,7 +584,7 @@ function MessageDropdownContent() {
                   >
                     <div className="flex items-center space-x-3">
                       <Avatar className="h-10 w-10 border-2 border-white/20">
-                        <AvatarImage src={conversation.participants.find((p: User) => p.id !== currentUser?.id)?.avatar || ''} />
+                        <AvatarImage src={(conversation.participants || []).find((p: User) => p.id !== currentUser?.id)?.avatar || ''} />
                         <AvatarFallback className="bg-gradient-to-br from-neo-mint to-purist-blue text-white text-sm font-semibold">
                           {getConversationTitle(conversation).charAt(0).toUpperCase()}
                         </AvatarFallback>

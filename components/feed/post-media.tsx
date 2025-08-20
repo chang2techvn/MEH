@@ -122,6 +122,46 @@ export function PostMedia({
 
   // Enhanced video support for "video", "ai-submission" mediaTypes with videoUrl
   if ((mediaType === "video" || mediaType === "ai-submission") && mediaUrl) {
+    // Check if this is a YouTube URL and convert to iframe embed
+    const isYouTubeUrl = mediaUrl.includes('youtube.com') || mediaUrl.includes('youtu.be')
+    
+    if (isYouTubeUrl) {
+      // Convert YouTube URL to embed format
+      let embedUrl = mediaUrl
+      if (mediaUrl.includes('youtube.com/shorts/')) {
+        embedUrl = mediaUrl.replace('youtube.com/shorts/', 'youtube.com/embed/')
+          .replace('?feature=share', '')
+          .split('&')[0] // Remove additional parameters
+      } else if (mediaUrl.includes('youtube.com/watch?v=')) {
+        embedUrl = mediaUrl.replace('youtube.com/watch?v=', 'youtube.com/embed/')
+          .split('&')[0] // Remove additional parameters  
+      } else if (mediaUrl.includes('youtu.be/')) {
+        embedUrl = mediaUrl.replace('youtu.be/', 'youtube.com/embed/')
+          .split('?')[0] // Remove additional parameters
+      }
+      
+      return (
+        <motion.div
+          className="mt-4 rounded-xl overflow-hidden"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          <div className="relative w-full" style={{ paddingBottom: "56.25%" }}>
+            <iframe
+              src={embedUrl}
+              className="absolute top-0 left-0 w-full h-full"
+              frameBorder="0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              title={content}
+            />
+          </div>
+        </motion.div>
+      )
+    }
+    
+    // For non-YouTube videos, use video element
     return (
       <motion.div
         className="mt-4 rounded-xl overflow-hidden bg-white/20 dark:bg-gray-800/20 backdrop-blur-sm"

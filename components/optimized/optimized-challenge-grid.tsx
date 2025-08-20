@@ -82,9 +82,12 @@ const ChallengeGrid = memo(function ChallengeGrid({
   userId?: string
   onChallengeDeleted?: (id: string) => void
 }) {
+  // Ensure challenges is always an array
+  const safeChallenges = Array.isArray(challenges) ? challenges : []
+  
   return (
     <div className="challenge-grid-container grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 md:gap-6 w-full px-2 sm:px-0">
-      {challenges.map((challenge, index) => (
+      {safeChallenges.map((challenge, index) => (
         <div key={challenge.id} className="challenge-grid-item h-full">
           <LazyComponent
             threshold={0.1}
@@ -127,6 +130,9 @@ export default memo(function OptimizedChallengeGrid({
   userId,
   onChallengeDeleted,
 }: ChallengeGridProps) {
+  
+  // Ensure challenges is always an array to prevent map errors
+  const safeChallenges = Array.isArray(challenges) ? challenges : []
   
   // Memoize render item function for virtual scroll
   const renderChallengeItem = useCallback((challenge: Challenge, index: number) => (

@@ -161,7 +161,22 @@ export default function PostPreview({
           <div className="space-y-6">
             <div className="aspect-video rounded-xl overflow-hidden">
               <div className="relative w-full h-full">
-                <video className="w-full h-full object-contain" controls src={videoUrl} />
+                {videoUrl && (videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be')) ? (
+                  // For YouTube URLs, use iframe embed instead of video element
+                  <iframe
+                    src={videoUrl.includes('youtube.com/shorts/') 
+                      ? videoUrl.replace('youtube.com/shorts/', 'youtube.com/embed/').replace('?feature=share', '') 
+                      : videoUrl.replace('youtube.com/watch?v=', 'youtube.com/embed/').replace('youtu.be/', 'youtube.com/embed/')
+                    }
+                    className="w-full h-full"
+                    frameBorder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  />
+                ) : (
+                  // For other video URLs, use video element
+                  <video className="w-full h-full object-contain" controls src={videoUrl} />
+                )}
               </div>
             </div>
 

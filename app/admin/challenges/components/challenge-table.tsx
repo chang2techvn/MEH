@@ -30,7 +30,10 @@ export default function ChallengeTable({
   toggleSelectAll,
   allSelected,
 }: ChallengeTableProps) {
-  if (challenges.length === 0) {
+  // Ensure challenges is always an array
+  const safeChallenges = Array.isArray(challenges) ? challenges : []
+  
+  if (safeChallenges.length === 0) {
     return (
       <motion.div initial="hidden" animate="visible" variants={ANIMATION_VARIANTS.fadeIn}>
         <Card className="border-none shadow-neo">
@@ -68,7 +71,7 @@ export default function ChallengeTable({
             </TableHeader>
             <TableBody>
               <AnimatePresence>
-                {challenges.map((challenge) => (
+                {safeChallenges.map((challenge) => (
                   <motion.tr
                     key={challenge.id}
                     variants={ANIMATION_VARIANTS.slideUp}

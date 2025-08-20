@@ -39,7 +39,7 @@ function MessagesModalContent({ onClose }: { onClose: () => void }) {
 
   // Helper function to get conversation title
   const getConversationTitle = useCallback((conv: Conversation) => {
-    const otherParticipants = conv.participants.filter((p: User) => p.id !== currentUser?.id)
+    const otherParticipants = (conv.participants || []).filter((p: User) => p.id !== currentUser?.id)
     return otherParticipants.map((p: User) => p.name).join(", ") || "Conversation"
   }, [currentUser])
 
@@ -206,7 +206,7 @@ function MessagesModalContent({ onClose }: { onClose: () => void }) {
       const isParticipant = conv.participants.some((p: User) => p.id === currentUser.id)
       if (!isParticipant) return false
 
-      const otherParticipants = conv.participants.filter((p: User) => p.id !== currentUser.id)
+      const otherParticipants = (conv.participants || []).filter((p: User) => p.id !== currentUser.id)
       if (otherParticipants.length === 0) return false
 
       if (searchQuery) {
