@@ -67,7 +67,7 @@ export default function ChallengeTabs({
   const saveToLocalStorage = useCallback((key: string, data: any) => {
     try {
       // Only save essential data to localStorage
-      const essentialData = data.map((challenge: Challenge) => ({
+      const essentialData = (data || []).map((challenge: Challenge) => ({
         id: challenge.id,
         title: challenge.title,
         description: challenge.description,
@@ -102,16 +102,16 @@ export default function ChallengeTabs({
       setLoading(false)
 
       // Load practice challenges and user challenges in parallel
-      const [practiceData, userData] = await Promise.all([
-        getChallenges('practice', { limit: 15 }), // Get latest 15 practice videos
+      const [practiceData = [], userData = []] = await Promise.all([
+        getChallenges('practice', { limit: 15 }).catch(() => []), // Get latest 15 practice videos
         getChallenges('user_generated', { 
           limit: 50,
           userId: user?.id // Only get challenges created by current user
-        })
+        }).catch(() => [])
       ])
 
       // Convert to Challenge format if needed
-      const practicesChallenges: Challenge[] = practiceData.map((challenge: any) => {
+      const practicesChallenges: Challenge[] = (practiceData || []).map((challenge: any) => {
         // Extract video ID from video_url for YouTube player functionality
         let videoId = challenge.id // Default to challenge ID
         
@@ -148,7 +148,7 @@ export default function ChallengeTabs({
         }
       })
 
-      const userCreatedChallenges: Challenge[] = userData.map((challenge: any) => {
+      const userCreatedChallenges: Challenge[] = (userData || []).map((challenge: any) => {
         // Extract video ID from video_url for YouTube player functionality
         let videoId = challenge.id // Default to challenge ID
         
