@@ -78,10 +78,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       console.log('🔄 Auth Context: Fetching user data for', supabaseUser.email)
       
-      const [profileData, userRecord] = await Promise.all([
+      // Add timeout protection
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('User data fetch timeout')), 10000)
+      )
+      
+      const fetchPromise = Promise.all([
         supabase.from('profiles').select('full_name, avatar_url, background_url, role').eq('user_id', supabaseUser.id).maybeSingle(),
         supabase.from('users').select('role, account_status, is_active').eq('id', supabaseUser.id).maybeSingle()
       ])
+
+      const [profileData, userRecord] = await Promise.race([fetchPromise, timeoutPromise]) as any
 
       console.log('🔍 Auth Context Query Results:', {
         profileError: profileData.error?.message,
@@ -110,18 +117,52 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return userData
       } else {
         console.warn('⚠️ Auth Context: No profile or user data found')
+        // Create basic user data from auth info
+        const userData: User = {
+          id: supabaseUser.id,
+          email: supabaseUser.email!,
+          name: supabaseUser.email?.split('@')[0],
+          role: 'student',
+          accountStatus: 'approved',
+          isActive: true
+        }
+        persistUser(userData)
+        return userData
       }
     } catch (error) {
       console.error('❌ Auth Context: Error getting user data:', error)
+      // Create fallback user data
+      const userData: User = {
+        id: supabaseUser.id,
+        email: supabaseUser.email!,
+        name: supabaseUser.email?.split('@')[0],
+        role: 'student',
+        accountStatus: 'approved',
+        isActive: true
+      }
+      persistUser(userData)
+      return userData
     }
-    return null
   }, [persistUser, supabase])
 
   // Initialize auth
   useEffect(() => {
     const initAuth = async () => {
       try {
-        // Get current session from cookies
+        console.log('🔄 Initializing auth...')
+        
+        // First check for stored session
+        const storedSession = getStoredSession()
+        const storedUser = getStoredUserData()
+        
+        if (storedUser && storedSession && isSessionValid(storedSession)) {
+          console.log('✅ Using stored session and user data')
+          setUser(storedUser)
+          setIsLoading(false)
+          return
+        }
+        
+        // Get current session from Supabase
         const { data: { session }, error } = await supabase.auth.getSession()
         
         if (error) {
@@ -133,7 +174,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             console.error('Session error:', error)
           }
         } else if (session?.user) {
+          console.log('✅ Found valid session, getting user data')
+          saveSession(session)
           await getUserData(session.user)
+        } else {
+          console.log('ℹ️ No active session found')
         }
       } catch (error) {
         console.error('Auth init error:', error)
@@ -191,6 +236,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       console.log('✅ Auth Context: SignIn successful for', data.user.email)
 
+      // Save session immediately
+      if (data.session) {
+        saveSession(data.session)
+      }
+
       // Check user account status with better error handling
       try {
         const { data: userData, error: userError } = await supabase
@@ -231,8 +281,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.error('⚠️ Auth Context: Status check failed, but allowing login to proceed:', statusError)
       }
 
-      console.log('🔄 Auth Context: Refreshing session...')
-      await supabase.auth.refreshSession()
+      // Get user data
+      await getUserData(data.user)
 
       console.log('✅ Auth Context: Login process completed successfully')
       
@@ -241,9 +291,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       toast({ title: "Login successful", description: "Welcome back!" })
       
-      const urlParams = new URLSearchParams(window.location.search)
-      const redirectTo = urlParams.get('redirect')
-      router.push(redirectTo || "/")
+      // Use setTimeout to ensure state updates are processed
+      setTimeout(() => {
+        const urlParams = new URLSearchParams(window.location.search)
+        const redirectTo = urlParams.get('redirect')
+        router.push(redirectTo || "/")
+      }, 100)
     } catch (error: any) {
       console.error('❌ Auth Context: Login failed:', error)
       
