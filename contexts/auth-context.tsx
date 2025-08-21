@@ -78,17 +78,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       console.log('🔄 Auth Context: Fetching user data for', supabaseUser.email)
       
-      // Add timeout protection
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('User data fetch timeout')), 10000)
-      )
-      
-      const fetchPromise = Promise.all([
+      const [profileData, userRecord] = await Promise.all([
         supabase.from('profiles').select('full_name, avatar_url, background_url, role').eq('user_id', supabaseUser.id).maybeSingle(),
         supabase.from('users').select('role, account_status, is_active').eq('id', supabaseUser.id).maybeSingle()
       ])
-
-      const [profileData, userRecord] = await Promise.race([fetchPromise, timeoutPromise]) as any
 
       console.log('🔍 Auth Context Query Results:', {
         profileError: profileData.error?.message,

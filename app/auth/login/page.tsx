@@ -68,13 +68,7 @@ export default function LoginPage() {
     try {
       console.log('🔐 Login form: Starting login process')
       
-      // Add timeout protection for login
-      const loginPromise = login(formData.email, formData.password)
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Login timeout - please try again')), 15000)
-      )
-      
-      await Promise.race([loginPromise, timeoutPromise])
+      await login(formData.email, formData.password)
       
       console.log('✅ Login form: Login completed successfully')
       // The login function will handle the redirect and toast notification
@@ -82,13 +76,7 @@ export default function LoginPage() {
       console.error("Login submission error:", error)
       
       // Show user-friendly error messages
-      if (error.message?.includes('timeout')) {
-        toast({
-          title: "Login Timeout",
-          description: "The login process took too long. Please try again.",
-          variant: "destructive"
-        })
-      } else if (error.message?.includes('Invalid login credentials')) {
+      if (error.message?.includes('Invalid login credentials')) {
         toast({
           title: "Invalid Credentials", 
           description: "Please check your email and password.",
