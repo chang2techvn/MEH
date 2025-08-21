@@ -6,8 +6,18 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
 /** @type {import('next').NextConfig} */
-const nextConfig = {  reactStrictMode: true,
+const nextConfig = {  
+  reactStrictMode: true,
   // Removed swcMinify as it's no longer supported in Next.js 15
+  
+  // Enable cookies for authentication
+  serverRuntimeConfig: {
+    // Will only be available on the server side
+  },
+  publicRuntimeConfig: {
+    // Will be available on both server and client
+  },
+  
   images: {
     formats: ['image/avif', 'image/webp'],
     remotePatterns: [

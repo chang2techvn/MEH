@@ -52,17 +52,32 @@ export async function middleware(request: NextRequest) {
           return request.cookies.get(name)?.value
         },
         set(name: string, value: string, options: CookieOptions) {
+          // Update the request cookies for this middleware
+          request.cookies.set(name, value)
+          
+          // Set the cookie in the response
           response.cookies.set({
             name,
             value,
             ...options,
+            path: '/',
+            httpOnly: false, // Allow client-side access
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            maxAge: 60 * 60 * 24 * 7 * 4 // 4 weeks
           })
         },
         remove(name: string, options: CookieOptions) {
+          // Remove from request cookies
+          request.cookies.delete(name)
+          
+          // Remove from response cookies
           response.cookies.set({
             name,
             value: '',
             ...options,
+            path: '/',
+            maxAge: 0
           })
         },
       },

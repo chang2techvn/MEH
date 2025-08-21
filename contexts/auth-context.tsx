@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { toast } from "@/hooks/use-toast"
 import { supabase } from "@/lib/supabase"
 import { clearBrowserAuthCache, isJWTError, createCleanSupabaseSession } from "@/lib/auth-utils"
+import { saveSession, getStoredSession, clearStoredSession, saveUserData, getStoredUserData, isSessionValid } from "@/lib/session-utils"
 import type { User as SupabaseUser } from "@supabase/supabase-js"
 
 // Simplified User type for UI
@@ -48,9 +49,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const persistUser = useCallback((userData: User | null) => {
     if (typeof window !== 'undefined') {
       if (userData) {
-        localStorage.setItem('user_data', JSON.stringify(userData))
+        saveUserData(userData)
       } else {
-        localStorage.removeItem('user_data')
+        clearStoredSession()
       }
     }
     setUser(userData)
@@ -148,11 +149,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (event === 'SIGNED_IN' && session?.user) {
         await getUserData(session.user)
       } else if (event === 'SIGNED_OUT') {
-        persistUser(null)
+        await clearAllAuthData()
+      } else if (event === 'TOKEN_REFRESHED' && session?.user) {
+        // Refresh user data when token is refreshed
+        console.log('✅ Token refreshed, updating user data')
+        await getUserData(session.user)
       }
     })
 
-    return () => subscription.unsubscribe()
+    // Auto-refresh session every 30 minutes to prevent expiration
+    const refreshInterval = setInterval(async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (session) {
+          // Refresh the session
+          await supabase.auth.refreshSession()
+        }
+      } catch (error) {
+        console.error('Session refresh error:', error)
+      }
+    }, 30 * 60 * 1000) // 30 minutes
+
+    return () => {
+      subscription.unsubscribe()
+      clearInterval(refreshInterval)
+    }
   }, [clearAllAuthData, getUserData, persistUser])
 
   // Login function
